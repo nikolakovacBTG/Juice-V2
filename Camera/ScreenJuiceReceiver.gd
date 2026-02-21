@@ -83,7 +83,8 @@ var _was_active: bool = false
 
 func _ready() -> void:
 	if instance != null and instance != self:
-		push_warning("[%s] Multiple ScreenJuiceReceivers detected — only one is supported. Replacing previous instance." % name)
+		if debug_enabled:
+			print("[%s] Replacing previous ScreenJuiceReceiver instance (expected during scene transitions)." % name)
 
 	instance = self
 
