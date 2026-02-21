@@ -36,11 +36,25 @@ extends JuiceCompBase
 # SIGNALS
 # =============================================================================
 
-## Emitted when BULLET_TIME starts. Compensation factor = 1.0 / target_scale
-## Player can multiply movement by this to maintain normal speed during slow-mo
+## Emitted when FREEZE starts. freeze_frames = how many frames the freeze lasts.
+## Useful for driving hitstop SFX or visual effects.
+signal freeze_started(freeze_frames: int)
+
+## Emitted when FREEZE ends (timer expired).
+signal freeze_ended()
+
+## Emitted when SLOW_MO begins transitioning to target_scale.
+## target_scale = the time scale being transitioned to (e.g. 0.1 for 10% speed).
+signal slow_mo_started(target_scale: float)
+
+## Emitted when SLOW_MO animate_out completes and time is fully restored.
+signal slow_mo_ended()
+
+## Emitted when BULLET_TIME starts. Compensation factor = 1.0 / target_scale.
+## Player can multiply movement by this to maintain normal speed during slow-mo.
 signal bullet_time_started(compensation_factor: float)
 
-## Emitted when BULLET_TIME ends (either complete or interrupted)
+## Emitted when BULLET_TIME ends (either complete or interrupted).
 signal bullet_time_ended()
 
 ## Layer 2 escape hatch: emitted instead of touching Engine.time_scale when
@@ -239,6 +253,20 @@ func _ready() -> void:
 # JUICE COMP OVERRIDES
 # =============================================================================
 
+func _process(delta: float) -> void:
+	# TimeJuiceComp must animate in real (wall-clock) time, not engine-scaled time.
+	# Without this, animate_out from slow-mo feels sluggish because delta is reduced
+	# by the very time scale we're trying to restore.
+	# FREEZE mode uses a process_always timer instead of progress, so it's unaffected.
+	if Engine.time_scale > 0.001:
+		var real_delta := delta / Engine.time_scale
+		super._process(real_delta)
+	else:
+		# Time is frozen (scale ~0) — delta is also ~0.
+		# FREEZE mode handles completion via its own real-time timer, so this is fine.
+		super._process(delta)
+
+
 func _on_animate_start() -> void:
 	## Called when animation begins. Sets up time manipulation.
 	
@@ -290,10 +318,15 @@ func _on_animate_out_complete() -> void:
 	
 	_release_time_request()
 	
-	if time_mode == TimeMode.BULLET_TIME:
-		_restore_exempt_nodes()
-		if emit_compensation_signal:
-			bullet_time_ended.emit()
+	match time_mode:
+		TimeMode.SLOW_MO:
+			slow_mo_ended.emit()
+			if debug_enabled:
+				print("[%s] Emitted slow_mo_ended" % name)
+		TimeMode.BULLET_TIME:
+			_restore_exempt_nodes()
+			if emit_compensation_signal:
+				bullet_time_ended.emit()
 	
 	if debug_enabled:
 		print("[%s] Animate OUT complete - time restored" % name)
@@ -322,6 +355,10 @@ func _start_freeze() -> void:
 	# Request complete time stop
 	_update_time_request(0.0)
 	
+	freeze_started.emit(freeze_frames)
+	if debug_enabled:
+		print("[%s] Emitted freeze_started(%d)" % [name, freeze_frames])
+	
 	# Create real-time timer (process_always) that will end the freeze
 	# We need to manually handle completion since _process won't run at time_scale=0
 	_freeze_timer = get_tree().create_timer(freeze_time, true, false, true)
@@ -339,8 +376,9 @@ func _on_freeze_complete() -> void:
 	# Stop the juice component (we're done)
 	_finish_animation()
 	
+	freeze_ended.emit()
 	if debug_enabled:
-		print("[%s] FREEZE complete" % name)
+		print("[%s] FREEZE complete — emitted freeze_ended" % name)
 
 
 func _start_slow_mo() -> void:
@@ -352,6 +390,10 @@ func _start_slow_mo() -> void:
 	# Initial request at current interpolated value
 	# _apply_effect will update this each frame
 	_update_time_request(1.0)
+	
+	slow_mo_started.emit(target_scale)
+	if debug_enabled:
+		print("[%s] Emitted slow_mo_started(%.2f)" % [name, target_scale])
 
 
 func _start_bullet_time() -> void:
