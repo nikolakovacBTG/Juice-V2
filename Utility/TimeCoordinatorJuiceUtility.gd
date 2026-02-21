@@ -1,7 +1,7 @@
 extends Node
-class_name JuiceTimeCoordinator
+class_name TimeCoordinatorJuiceUtility
 ## ============================================================================
-## JUICE TIME COORDINATOR — Optional Time Scale Manager
+## TIME COORDINATOR JUICE UTILITY — Optional Time Scale Manager
 ## ============================================================================
 ## Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances
 ## (and any other system) to prevent conflicts when several effects manipulate
@@ -24,7 +24,7 @@ class_name JuiceTimeCoordinator
 ##
 ## DISCOVERY:
 ## Uses a static instance pattern. TimeJuiceComp checks
-## JuiceTimeCoordinator.instance on _ready(). If found, all time requests
+## TimeCoordinatorJuiceUtility.instance on _ready(). If found, all time requests
 ## go through the coordinator. If not found, TimeJuiceComp falls back to
 ## its built-in static request system.
 ##
@@ -46,8 +46,8 @@ class_name JuiceTimeCoordinator
 # =============================================================================
 
 ## Global reference for TimeJuiceComp to find the coordinator.
-## Only one JuiceTimeCoordinator should exist at a time.
-static var instance: JuiceTimeCoordinator = null
+## Only one TimeCoordinatorJuiceUtility should exist at a time.
+static var instance: TimeCoordinatorJuiceUtility = null
 
 
 # =============================================================================
@@ -99,19 +99,19 @@ var _pitch_effect_index: int = -1
 func _ready() -> void:
 	if instance != null and instance != self:
 		if debug_enabled:
-			push_warning("[JuiceTimeCoordinator] Multiple instances detected — replacing previous.")
+			push_warning("[TimeCoordinatorJuiceUtility] Multiple instances detected — replacing previous.")
 	instance = self
 
 	# Cache audio bus index if configured
 	if affect_audio_bus != &"":
 		_audio_bus_index = AudioServer.get_bus_index(affect_audio_bus)
 		if _audio_bus_index == -1:
-			push_warning("[JuiceTimeCoordinator] Audio bus '%s' not found" % affect_audio_bus)
+			push_warning("[TimeCoordinatorJuiceUtility] Audio bus '%s' not found" % affect_audio_bus)
 		else:
 			_find_pitch_effect()
 
 	if debug_enabled:
-		print("[JuiceTimeCoordinator] Ready (static instance registered). Audio bus: '%s'" % affect_audio_bus)
+		print("[TimeCoordinatorJuiceUtility] Ready (static instance registered). Audio bus: '%s'" % affect_audio_bus)
 
 
 func _exit_tree() -> void:
@@ -122,7 +122,7 @@ func _exit_tree() -> void:
 	if Engine.time_scale != 1.0:
 		Engine.time_scale = 1.0
 		if debug_enabled:
-			print("[JuiceTimeCoordinator] Restored Engine.time_scale to 1.0 on exit")
+			print("[TimeCoordinatorJuiceUtility] Restored Engine.time_scale to 1.0 on exit")
 
 
 # =============================================================================
@@ -137,14 +137,14 @@ func request_time_scale(requester: Node, scale: float) -> void:
 	## @param scale: Desired time scale (0.0 = freeze, <1.0 = slow, >1.0 = fast)
 
 	if not is_instance_valid(requester):
-		push_warning("[JuiceTimeCoordinator] Invalid requester node")
+		push_warning("[TimeCoordinatorJuiceUtility] Invalid requester node")
 		return
 
 	var requester_id := requester.get_instance_id()
 	_requests[requester_id] = scale
 
 	if debug_enabled:
-		print("[JuiceTimeCoordinator] Request from '%s': scale=%.2f (total: %d)" % [
+		print("[TimeCoordinatorJuiceUtility] Request from '%s': scale=%.2f (total: %d)" % [
 			requester.name, scale, _requests.size()
 		])
 
@@ -166,7 +166,7 @@ func release_time_scale(requester: Node) -> void:
 		_requests.erase(requester_id)
 
 		if debug_enabled:
-			print("[JuiceTimeCoordinator] Released by '%s' (remaining: %d)" % [
+			print("[TimeCoordinatorJuiceUtility] Released by '%s' (remaining: %d)" % [
 				requester.name, _requests.size()
 			])
 
@@ -189,7 +189,7 @@ func clear_all_requests() -> void:
 	_update_effective_scale()
 
 	if debug_enabled:
-		print("[JuiceTimeCoordinator] All requests cleared")
+		print("[TimeCoordinatorJuiceUtility] All requests cleared")
 
 
 # =============================================================================
@@ -226,7 +226,7 @@ func _update_effective_scale() -> void:
 		_apply_audio_pitch()
 
 		if debug_enabled:
-			print("[JuiceTimeCoordinator] Scale changed: %.2f → %.2f" % [old_scale, _effective_scale])
+			print("[TimeCoordinatorJuiceUtility] Scale changed: %.2f → %.2f" % [old_scale, _effective_scale])
 
 		time_scale_changed.emit(_effective_scale, old_scale)
 
@@ -242,11 +242,11 @@ func _find_pitch_effect() -> void:
 		if effect is AudioEffectPitchShift:
 			_pitch_effect_index = i
 			if debug_enabled:
-				print("[JuiceTimeCoordinator] Found PitchShift effect at index %d" % i)
+				print("[TimeCoordinatorJuiceUtility] Found PitchShift effect at index %d" % i)
 			return
 
 	if debug_enabled:
-		push_warning("[JuiceTimeCoordinator] No PitchShift effect on bus '%s'" % affect_audio_bus)
+		push_warning("[TimeCoordinatorJuiceUtility] No PitchShift effect on bus '%s'" % affect_audio_bus)
 
 
 func _apply_audio_pitch() -> void:
@@ -260,4 +260,4 @@ func _apply_audio_pitch() -> void:
 		effect.pitch_scale = pitch
 
 		if debug_enabled:
-			print("[JuiceTimeCoordinator] Audio pitch set to %.2f" % pitch)
+			print("[TimeCoordinatorJuiceUtility] Audio pitch set to %.2f" % pitch)

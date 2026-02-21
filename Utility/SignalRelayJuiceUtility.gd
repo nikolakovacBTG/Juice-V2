@@ -1,9 +1,9 @@
 ## SignalRelayJuiceUtility.gd
 ## ============================================================================
 ## WHAT: Lightweight relay that listens for a signal on a local node and
-##       re-emits a named signal on the global SignalBus autoload.
+##       re-emits a named signal on a global signal bus autoload.
 ## WHY: Bridges the gap between local triggers (clicks, collisions) and
-##      remote juice components that listen on SignalBus. Essential for the
+##      remote juice components that listen on a signal bus. Essential for the
 ##      signal relay pattern where juice comps live on a persistent camera
 ##      rig or screen receiver in a different scene than the trigger.
 ## SYSTEM: Juicing System (addons/juice/) - Utility
@@ -12,9 +12,9 @@
 ## USAGE:
 ## 1. Add as child of a node that emits a signal (Clickable3DComp, Button, etc.)
 ## 2. Set listen_signal to the local signal name (e.g., "left_clicked", "pressed")
-## 3. Set emit_signal_name to the SignalBus signal (e.g., "camera_shake_test_requested")
+## 3. Set emit_signal_name to the signal bus signal (e.g., "camera_shake_test_requested")
 ## 4. The remote juice comp uses manual_trigger_signal + trigger_source_path
-##    pointed at /root/SignalBus to receive the relayed signal.
+##    pointed at your signal bus autoload to receive the relayed signal.
 ## ============================================================================
 
 class_name SignalRelayJuiceUtility
@@ -33,9 +33,15 @@ extends Node
 ## Leave empty to use parent node.
 @export_node_path("Node") var listen_source_path: NodePath
 
-## Signal name to emit on SignalBus when the listen signal fires.
-## Must match a signal declared on the SignalBus autoload.
+## Signal name to emit on the signal bus when the listen signal fires.
+## Must match a signal declared on the target signal bus autoload.
 @export var emit_signal_name: String = ""
+
+## Path to the signal bus node that receives emitted signals.
+## Autoloads in Godot are children of /root/, so an autoload named
+## "SignalBus" is reached at "/root/SignalBus". Change this if your
+## project uses a different autoload name (e.g., "/root/EventBus").
+@export_node_path("Node") var signal_bus_path: NodePath = "/root/SignalBus"
 
 @export_group("Debug")
 @export var debug_enabled: bool = false
@@ -68,19 +74,20 @@ func _ready() -> void:
 
 	var bus := _get_signal_bus()
 	if bus == null:
-		push_warning("[%s] SignalRelay: SignalBus autoload not found" % name)
+		push_warning("[%s] SignalRelay: signal bus not found at '%s'" % [
+			name, signal_bus_path])
 		return
 
 	if not bus.has_signal(emit_signal_name):
-		push_warning("[%s] SignalRelay: SignalBus has no signal '%s'" % [
-			name, emit_signal_name])
+		push_warning("[%s] SignalRelay: signal bus at '%s' has no signal '%s'" % [
+			name, signal_bus_path, emit_signal_name])
 		return
 
 	source.connect(listen_signal, _on_source_triggered)
 
 	if debug_enabled:
-		print("[%s] SignalRelay: '%s' on '%s' → SignalBus.'%s'" % [
-			name, listen_signal, source.name, emit_signal_name])
+		print("[%s] SignalRelay: '%s' on '%s' → '%s'.'%s'" % [
+			name, listen_signal, source.name, signal_bus_path, emit_signal_name])
 
 
 func _on_source_triggered(_interactor: Variant = null) -> void:
@@ -88,9 +95,9 @@ func _on_source_triggered(_interactor: Variant = null) -> void:
 	if bus:
 		bus.emit_signal(emit_signal_name)
 		if debug_enabled:
-			print("[%s] SignalRelay: emitted '%s' on SignalBus" % [
-				name, emit_signal_name])
+			print("[%s] SignalRelay: emitted '%s' on '%s'" % [
+				name, emit_signal_name, signal_bus_path])
 
 
 func _get_signal_bus() -> Node:
-	return get_node_or_null("/root/SignalBus")
+	return get_node_or_null(signal_bus_path)

@@ -16,7 +16,7 @@ extends JuiceCompBase
 ##   Layer 2 (signal): Set use_external_coordinator = true. The component emits
 ##     time_scale_requested() instead of touching Engine.time_scale. Connect
 ##     to your own time system.
-##   Layer 3 (coordinator): Add a JuiceTimeCoordinator node to your scene tree
+##   Layer 3 (coordinator): Add a TimeCoordinatorJuiceUtility node to your scene tree
 ##     (or as an autoload). TimeJuiceComp discovers it automatically and routes
 ##     all requests through it. Gives you audio pitch sync, priority resolution,
 ##     and a central time_scale_changed signal.
@@ -29,7 +29,7 @@ extends JuiceCompBase
 ## DOES NOT HANDLE:
 ## - World time (day/night) — game-specific
 ## - Per-object time scaling — Godot limitation
-## - Audio pitch — use JuiceTimeCoordinator for that
+## - Audio pitch — use TimeCoordinatorJuiceUtility for that
 ## ============================================================================
 
 # =============================================================================
@@ -192,8 +192,8 @@ func _get(prop: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-## Cached reference to JuiceTimeCoordinator (Layer 3), if one exists in the tree
-var _coordinator: JuiceTimeCoordinator = null
+## Cached reference to TimeCoordinatorJuiceUtility (Layer 3), if one exists in the tree
+var _coordinator: TimeCoordinatorJuiceUtility = null
 
 ## Whether we currently have an active time scale request
 var _has_active_request: bool = false
@@ -210,7 +210,7 @@ var _freeze_timer: SceneTreeTimer = null
 static var _static_requests: Dictionary = {}
 
 ## Computes effective time scale from all static requests.
-## Uses same resolution as JuiceTimeCoordinator: slowest slow-mo wins.
+## Uses same resolution as TimeCoordinatorJuiceUtility: slowest slow-mo wins.
 static func _compute_static_scale() -> float:
 	if _static_requests.is_empty():
 		return 1.0
@@ -239,13 +239,13 @@ func _ready() -> void:
 	super._ready()
 	
 	# Discover coordinator (Layer 3) if one exists
-	_coordinator = JuiceTimeCoordinator.instance
+	_coordinator = TimeCoordinatorJuiceUtility.instance
 	
 	if debug_enabled:
 		if use_external_coordinator:
 			print("[%s] Using Layer 2: signal mode (use_external_coordinator)" % name)
 		elif _coordinator:
-			print("[%s] Using Layer 3: JuiceTimeCoordinator found" % name)
+			print("[%s] Using Layer 3: TimeCoordinatorJuiceUtility found" % name)
 		else:
 			print("[%s] Using Layer 1: built-in static request system" % name)
 
@@ -433,7 +433,7 @@ func _update_time_request(scale: float) -> void:
 		return
 	
 	if _coordinator:
-		# Layer 3: route through JuiceTimeCoordinator
+		# Layer 3: route through TimeCoordinatorJuiceUtility
 		_coordinator.request_time_scale(self, scale)
 	else:
 		# Layer 1: built-in static request system
