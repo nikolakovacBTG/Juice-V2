@@ -8,26 +8,28 @@ extends JuiceCompBase
 ## Manipulates Engine.time_scale for gameplay time effects.
 ## Provides three modes: FREEZE (hitstop), SLOW_MO, and BULLET_TIME.
 ##
-## RESPONSIBILITIES:
-## - Request time scale changes via EngineTimeCoordinator
-## - Handle smooth transitions between time scales
-## - Manage exempt nodes for BULLET_TIME mode
-## - Emit signals for player speed compensation
+## SYSTEM: Juice System (addons/juice/Events and Time/)
 ##
-## DOES NOT HANDLE:
-## - World time (day/night) - that's WorldTimeManager
-## - Per-object time scaling - Godot doesn't support this natively
-## - Audio pitch - delegated to EngineTimeCoordinator
-##
-## CONNECTIONS:
-## - EngineTimeCoordinator: Registers/releases time scale requests
-## - Access: GameController.time_coordinator
-## - Signals: bullet_time_started, bullet_time_ended for player compensation
+## TIME MANAGEMENT (3-layer hybrid):
+##   Layer 1 (default): Built-in static request system. Multiple TimeJuiceComps
+##     coordinate automatically — slowest slow-mo wins, no setup required.
+##   Layer 2 (signal): Set use_external_coordinator = true. The component emits
+##     time_scale_requested() instead of touching Engine.time_scale. Connect
+##     to your own time system.
+##   Layer 3 (coordinator): Add a JuiceTimeCoordinator node to your scene tree
+##     (or as an autoload). TimeJuiceComp discovers it automatically and routes
+##     all requests through it. Gives you audio pitch sync, priority resolution,
+##     and a central time_scale_changed signal.
 ##
 ## MODES:
 ## - FREEZE: Instant stop (scale=0) for duration, then release (hitstop)
 ## - SLOW_MO: Smooth transition to target_scale, smooth return on one_shot
 ## - BULLET_TIME: Like SLOW_MO but exempts specified nodes from slowdown
+##
+## DOES NOT HANDLE:
+## - World time (day/night) — game-specific
+## - Per-object time scaling — Godot limitation
+## - Audio pitch — use JuiceTimeCoordinator for that
 ## ============================================================================
 
 # =============================================================================
@@ -40,6 +42,11 @@ signal bullet_time_started(compensation_factor: float)
 
 ## Emitted when BULLET_TIME ends (either complete or interrupted)
 signal bullet_time_ended()
+
+## Layer 2 escape hatch: emitted instead of touching Engine.time_scale when
+## use_external_coordinator is true. Connect this to your own time system.
+## scale = desired time scale (0.0 = freeze, <1.0 = slow, 1.0 = normal)
+signal time_scale_requested(scale: float)
 
 # =============================================================================
 # MODE CONFIGURATION
@@ -59,6 +66,11 @@ enum TimeMode {
 	set(value):
 		time_mode = value
 		notify_property_list_changed()
+
+## Layer 2: If true, this component emits time_scale_requested() instead of
+## setting Engine.time_scale directly. Connect the signal to your own time
+## management system. Overrides both built-in static system and coordinator.
+@export var use_external_coordinator: bool = false
 
 ## Target time scale (0.0 = freeze, <1.0 = slow, >1.0 = fast)
 ## Only shown for SLOW_MO and BULLET_TIME modes (FREEZE always uses 0.0)
@@ -166,8 +178,8 @@ func _get(prop: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-## Cached reference to EngineTimeCoordinator
-var _time_coordinator: EngineTimeCoordinator = null
+## Cached reference to JuiceTimeCoordinator (Layer 3), if one exists in the tree
+var _coordinator: JuiceTimeCoordinator = null
 
 ## Whether we currently have an active time scale request
 var _has_active_request: bool = false
@@ -177,6 +189,29 @@ var _exempt_original_modes: Dictionary = {}  # Node instance_id -> ProcessMode
 
 ## Timer for FREEZE mode (real-time, not affected by time_scale)
 var _freeze_timer: SceneTreeTimer = null
+
+# --- Layer 1: Built-in static request system (fallback when no coordinator) ---
+
+## Active time scale requests from all TimeJuiceComp instances: instance_id → scale
+static var _static_requests: Dictionary = {}
+
+## Computes effective time scale from all static requests.
+## Uses same resolution as JuiceTimeCoordinator: slowest slow-mo wins.
+static func _compute_static_scale() -> float:
+	if _static_requests.is_empty():
+		return 1.0
+	var slow_scales: Array[float] = []
+	var fast_scales: Array[float] = []
+	for scale: float in _static_requests.values():
+		if scale <= 1.0:
+			slow_scales.append(scale)
+		else:
+			fast_scales.append(scale)
+	if not slow_scales.is_empty():
+		return slow_scales.min()
+	if not fast_scales.is_empty():
+		return fast_scales.max()
+	return 1.0
 
 # =============================================================================
 # LIFECYCLE
@@ -189,27 +224,16 @@ func _ready() -> void:
 	# Call parent _ready after setting process_mode
 	super._ready()
 	
-	# Cache coordinator reference
-	_cache_coordinator()
-
-
-func _cache_coordinator() -> void:
-	## Attempts to find EngineTimeCoordinator via GameController.
-	## If not found, component will still work but with warnings.
+	# Discover coordinator (Layer 3) if one exists
+	_coordinator = JuiceTimeCoordinator.instance
 	
-	# Try to get GameController autoload — uses typed access for safety
-	var game_controller := get_node_or_null("/root/GameController")
-	if game_controller == null:
-		if debug_enabled:
-			push_warning("[%s] GameController not found - time effects disabled" % name)
-		return
-	
-	# Get time_coordinator from GameController via typed property access
-	_time_coordinator = game_controller.get("time_coordinator")
-	
-	if _time_coordinator == null:
-		if debug_enabled:
-			push_warning("[%s] EngineTimeCoordinator not found on GameController" % name)
+	if debug_enabled:
+		if use_external_coordinator:
+			print("[%s] Using Layer 2: signal mode (use_external_coordinator)" % name)
+		elif _coordinator:
+			print("[%s] Using Layer 3: JuiceTimeCoordinator found" % name)
+		else:
+			print("[%s] Using Layer 1: built-in static request system" % name)
 
 # =============================================================================
 # JUICE COMP OVERRIDES
@@ -357,29 +381,42 @@ func _start_bullet_time() -> void:
 # =============================================================================
 
 func _update_time_request(scale: float) -> void:
-	## Updates or creates a time scale request with the coordinator.
+	## Routes the time scale request through the appropriate layer.
+	## Layer 2 (signal) > Layer 3 (coordinator) > Layer 1 (static fallback)
 	
-	if _time_coordinator == null:
-		# Fallback: directly set Engine.time_scale (not recommended)
-		Engine.time_scale = scale
+	if use_external_coordinator:
+		# Layer 2: emit signal, don't touch Engine.time_scale
+		time_scale_requested.emit(scale)
 		_has_active_request = true
 		return
 	
-	_time_coordinator.request_time_scale(self, scale)
+	if _coordinator:
+		# Layer 3: route through JuiceTimeCoordinator
+		_coordinator.request_time_scale(self, scale)
+	else:
+		# Layer 1: built-in static request system
+		_static_requests[get_instance_id()] = scale
+		Engine.time_scale = _compute_static_scale()
+	
 	_has_active_request = true
 
 
 func _release_time_request() -> void:
-	## Releases our time scale request from the coordinator.
+	## Releases our time scale request from whichever layer is active.
 	
 	if not _has_active_request:
 		return
 	
-	if _time_coordinator == null:
-		# Fallback: directly restore Engine.time_scale
-		Engine.time_scale = 1.0
+	if use_external_coordinator:
+		# Layer 2: signal normal time
+		time_scale_requested.emit(1.0)
+	elif _coordinator:
+		# Layer 3: release from coordinator
+		_coordinator.release_time_scale(self)
 	else:
-		_time_coordinator.release_time_scale(self)
+		# Layer 1: remove from static requests
+		_static_requests.erase(get_instance_id())
+		Engine.time_scale = _compute_static_scale()
 	
 	_has_active_request = false
 
@@ -454,11 +491,13 @@ func _exit_tree() -> void:
 	
 	# Cancel freeze timer if active
 	if _freeze_timer != null:
-		# SceneTreeTimer doesn't have a cancel method, but it will be freed
 		_freeze_timer = null
 	
-	# Release any active time request
+	# Release any active time request (handles all 3 layers)
 	_release_time_request()
+	
+	# Safety: ensure our instance_id is cleaned from static requests
+	_static_requests.erase(get_instance_id())
 	
 	# Restore exempt nodes
 	_restore_exempt_nodes()
