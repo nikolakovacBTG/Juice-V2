@@ -34,6 +34,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseControl.svg")
 class_name ShakeControlJuiceComp
 extends JuiceCompBase
 

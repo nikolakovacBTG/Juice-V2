@@ -25,6 +25,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseEvents.svg")
 class_name RandomJuiceComp
 extends JuiceCompBase
 

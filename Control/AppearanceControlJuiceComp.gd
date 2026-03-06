@@ -33,6 +33,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseControl.svg")
 class_name AppearanceControlJuiceComp
 extends JuiceCompBase
 

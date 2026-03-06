@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: Composable, single-axis deterministic camera effect for Camera3D.
 ##       Animates position offset, rotation offset, or FOV zoom on the active
-##       Camera3D via its CameraJuiceReceiverComp. Each instance handles ONE
+##       Camera3D via its CameraJuiceUtility. Each instance handles ONE
 ##       target axis — stack multiple for compound effects.
 ##
 ## WHY: Replaces the monolithic Camera3DJuiceComp (5-mode switcher) with
@@ -20,7 +20,7 @@
 ## DOES NOT: Handle screen-space effects (use ScreenMotionJuiceComp).
 ##
 ## REQUIREMENTS:
-## The active Camera3D must have a CameraJuiceReceiverComp child.
+## The active Camera3D must have a CameraJuiceUtility child.
 ## This comp auto-discovers it at animation start via viewport.get_camera_3d().
 ##
 ## PLACEMENT:
@@ -29,6 +29,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseCamera3D.svg")
 class_name Camera3DJuiceComp
 extends JuiceCompBase
 
@@ -79,7 +80,7 @@ var fov_offset: float = -10.0
 # =============================================================================
 
 ## Discovered receiver on the active Camera3D
-var _receiver: CameraJuiceReceiverComp = null
+var _receiver: CameraJuiceUtility = null
 
 ## Delta-first contribution tracking.
 ## Each tracks what THIS comp has contributed to the receiver's property.
@@ -265,7 +266,7 @@ func _remove_contribution() -> void:
 # RECEIVER DISCOVERY
 # =============================================================================
 
-## Finds the active Camera3D and its CameraJuiceReceiverComp.
+## Finds the active Camera3D and its CameraJuiceUtility.
 ## Type-safe discovery: searches children by `is` check, not by name.
 func _find_receiver() -> void:
 	if is_instance_valid(_receiver):
@@ -282,9 +283,9 @@ func _find_receiver() -> void:
 		return
 
 	for child in cam3d.get_children():
-		if child is CameraJuiceReceiverComp:
+		if child is CameraJuiceUtility:
 			_receiver = child
 			return
 
 	if debug_enabled:
-		push_warning("[%s] No CameraJuiceReceiverComp found on Camera3D '%s'" % [name, cam3d.name])
+		push_warning("[%s] No CameraJuiceUtility found on Camera3D '%s'" % [name, cam3d.name])

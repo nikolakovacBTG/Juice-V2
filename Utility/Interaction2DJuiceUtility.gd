@@ -36,6 +36,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityArea2D.svg")
 class_name Interaction2DJuiceUtility
 extends Area2D
 
@@ -278,9 +279,17 @@ func _get_configuration_warnings() -> PackedStringArray:
 		if child is JuiceCompBase:
 			has_juice = true
 			break
+		var child_script := child.get_script()
+		if child_script and child_script.get_global_name() and child_script.get_global_name().ends_with("JuiceUtility"):
+			has_juice = true
+			break
 	if not has_juice and get_parent():
 		for sibling in get_parent().get_children():
-			if sibling is JuiceCompBase and sibling != self:
+			if sibling != self and sibling is JuiceCompBase:
+				has_juice = true
+				break
+			var sibling_script := sibling.get_script()
+			if sibling_script and sibling_script.get_global_name() and sibling_script.get_global_name().ends_with("JuiceUtility"):
 				has_juice = true
 				break
 	if not has_juice:
@@ -350,7 +359,7 @@ func _ensure_shapes() -> void:
 			break
 	if not has_root_shape:
 		var shape_node := CollisionShape2D.new()
-		shape_node.name = "CollisionShape2D"
+		shape_node.name = "Juice_CollisionShape2D"
 		var circle := CircleShape2D.new()
 		circle.radius = 48.0 if mode == Mode.TRIGGER_ZONE else 24.0
 		shape_node.shape = circle
@@ -370,7 +379,7 @@ func _ensure_shapes() -> void:
 			add_child(tz)
 			tz.owner = scene_root
 			var tz_shape := CollisionShape2D.new()
-			tz_shape.name = "TriggerZoneShape"
+			tz_shape.name = "Juice_TriggerZoneShape2D"
 			var circle := CircleShape2D.new()
 			circle.radius = 48.0
 			tz_shape.shape = circle

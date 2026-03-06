@@ -1,10 +1,11 @@
+@icon("res://addons/juice/Icons/JuiceBaseCamera.svg")
 extends Node
-class_name CameraJuiceReceiverComp
+class_name CameraJuiceUtility
 ## ============================================================================
-## CAMERA JUICE RECEIVER COMPONENT
+## CAMERA JUICE UTILITY
 ## ============================================================================
 ## Receives and applies juice offsets to its parent camera (2D or 3D).
-## This component allows camera juice effects to work WITHOUT modifying
+## This utility allows camera juice effects to work WITHOUT modifying
 ## the user's camera script - just attach this as a child of any camera.
 ##
 ## RESPONSIBILITIES:
@@ -31,7 +32,7 @@ class_name CameraJuiceReceiverComp
 ## - Any future camera juice: Same pattern
 ##
 ## SETUP:
-## 1. Add this component as child of your Camera3D or Camera2D
+## 1. Add this utility as child of your Camera3D or Camera2D
 ## 2. Configure max_position_offset and max_rotation_offset in inspector
 ## 3. Done - camera juice effects will now work additively
 ## ============================================================================

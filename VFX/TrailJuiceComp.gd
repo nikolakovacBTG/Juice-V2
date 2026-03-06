@@ -16,6 +16,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseVFX.svg")
 class_name TrailJuiceComp
 extends JuiceCompBase
 

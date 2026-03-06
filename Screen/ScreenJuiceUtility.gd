@@ -1,4 +1,4 @@
-## ScreenJuiceReceiver — Full-Screen Post-Process Juice Accumulator
+## ScreenJuiceUtility — Full-Screen Post-Process Juice Accumulator
 ## ============================================================================
 ## PURPOSE:
 ## A full-screen ColorRect overlay that reads the final composited screen image
@@ -19,7 +19,7 @@
 ##
 ## DISCOVERY:
 ## Uses a static instance pattern — zero autoload dependency, works in any project.
-## ScreenMotionJuiceComp accesses via: ScreenJuiceReceiver.instance
+## ScreenMotionJuiceComp accesses via: ScreenJuiceUtility.instance
 ##
 ## PLACEMENT:
 ## Add as child of a CanvasLayer with a high layer number (e.g., 100) so it
@@ -33,7 +33,8 @@
 ## - Juice timing or triggering (ScreenMotionJuiceComp handles that)
 ## ============================================================================
 
-class_name ScreenJuiceReceiver
+@icon("res://addons/juice/Icons/JuiceUtilityScreen.svg")
+class_name ScreenJuiceUtility
 extends ColorRect
 
 
@@ -42,8 +43,8 @@ extends ColorRect
 # =============================================================================
 
 ## Global reference for ScreenMotionJuiceComp to find the receiver.
-## Only one ScreenJuiceReceiver should exist at a time.
-static var instance: ScreenJuiceReceiver = null
+## Only one ScreenJuiceUtility should exist at a time.
+static var instance: ScreenJuiceUtility = null
 
 
 # =============================================================================

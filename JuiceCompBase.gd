@@ -29,6 +29,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase.svg")
 class_name JuiceCompBase
 extends Node
 

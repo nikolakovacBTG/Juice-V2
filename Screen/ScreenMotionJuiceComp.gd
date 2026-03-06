@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: Composable, single-axis deterministic screen-space effect.
 ##       Animates UV offset, rotation, or zoom on the full-screen post-process
-##       overlay via ScreenJuiceReceiver. Each instance handles ONE target axis
+##       overlay via ScreenJuiceUtility. Each instance handles ONE target axis
 ##       — stack multiple for compound effects.
 ##
 ## WHY: Replaces the monolithic ScreenMotionJuiceComp (5-mode switcher) with
@@ -19,8 +19,8 @@
 ## DOES NOT: Handle camera-specific effects (use CameraTransform3D/2DJuiceComp).
 ##
 ## REQUIREMENTS:
-## A ScreenJuiceReceiver must exist in the scene tree. This comp discovers it
-## via the static ScreenJuiceReceiver.instance reference.
+## A ScreenJuiceUtility must exist in the scene tree. This comp discovers it
+## via the static ScreenJuiceUtility.instance reference.
 ##
 ## PLACEMENT:
 ## Add as child of the entity that triggers the screen effect (enemy, button,
@@ -28,6 +28,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityScreen.svg")
 class_name ScreenMotionJuiceComp
 extends JuiceCompBase
 
@@ -70,8 +71,8 @@ var screen_zoom_offset: float = 0.05
 # INTERNAL STATE
 # =============================================================================
 
-## Discovered ScreenJuiceReceiver (via static instance)
-var _receiver: ScreenJuiceReceiver = null
+## Discovered ScreenJuiceUtility (via static instance)
+var _receiver: ScreenJuiceUtility = null
 
 ## Delta-first contribution tracking.
 var _my_offset_contribution: Vector2 = Vector2.ZERO
@@ -235,12 +236,12 @@ func _remove_contribution() -> void:
 # RECEIVER DISCOVERY
 # =============================================================================
 
-## Finds the ScreenJuiceReceiver via its static instance.
+## Finds the ScreenJuiceUtility via its static instance.
 func _find_receiver() -> void:
 	if is_instance_valid(_receiver):
 		return
 
-	_receiver = ScreenJuiceReceiver.instance
+	_receiver = ScreenJuiceUtility.instance
 
 	if _receiver == null and debug_enabled:
-		push_warning("[%s] No ScreenJuiceReceiver found in scene" % name)
+		push_warning("[%s] No ScreenJuiceUtility found in scene" % name)

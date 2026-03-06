@@ -30,6 +30,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase3D.svg")
 class_name SquashStretch3DJuiceComp
 extends JuiceCompBase
 

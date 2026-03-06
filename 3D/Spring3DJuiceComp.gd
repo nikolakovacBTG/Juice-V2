@@ -42,6 +42,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase3D.svg")
 class_name Spring3DJuiceComp
 extends JuiceCompBase
 

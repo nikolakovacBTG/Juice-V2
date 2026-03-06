@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: Composable, single-axis deterministic camera effect for Camera2D.
 ##       Animates position offset, rotation offset, or zoom on the active
-##       Camera2D via its CameraJuiceReceiverComp. Each instance handles ONE
+##       Camera2D via its CameraJuiceUtility. Each instance handles ONE
 ##       target axis — stack multiple for compound effects.
 ##
 ## WHY: Replaces the monolithic Camera2DJuiceComp (5-mode switcher) with
@@ -20,7 +20,7 @@
 ## DOES NOT: Handle screen-space effects (use ScreenTransformJuiceComp).
 ##
 ## REQUIREMENTS:
-## The active Camera2D must have a CameraJuiceReceiverComp child.
+## The active Camera2D must have a CameraJuiceUtility child.
 ## This comp auto-discovers it at animation start via viewport.get_camera_2d().
 ##
 ## PLACEMENT:
@@ -73,7 +73,7 @@ var zoom_offset: float = 0.2
 # =============================================================================
 
 ## Discovered receiver on the active Camera2D
-var _receiver: CameraJuiceReceiverComp = null
+var _receiver: CameraJuiceUtility = null
 
 ## Delta-first contribution tracking.
 ## Position stored as Vector3 (X/Y used, Z=0) to match receiver's interface.
@@ -246,7 +246,7 @@ func _remove_contribution() -> void:
 # RECEIVER DISCOVERY
 # =============================================================================
 
-## Finds the active Camera2D and its CameraJuiceReceiverComp.
+## Finds the active Camera2D and its CameraJuiceUtility.
 ## Type-safe discovery: searches children by `is` check, not by name.
 func _find_receiver() -> void:
 	if is_instance_valid(_receiver):
@@ -263,9 +263,9 @@ func _find_receiver() -> void:
 		return
 
 	for child in cam2d.get_children():
-		if child is CameraJuiceReceiverComp:
+		if child is CameraJuiceUtility:
 			_receiver = child
 			return
 
 	if debug_enabled:
-		push_warning("[%s] No CameraJuiceReceiverComp found on Camera2D '%s'" % [name, cam2d.name])
+		push_warning("[%s] No CameraJuiceUtility found on Camera2D '%s'" % [name, cam2d.name])

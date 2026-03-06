@@ -31,6 +31,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityArea2D.svg")
 class_name SoftTrigger2DJuiceUtility
 extends Area2D
 
@@ -310,7 +311,7 @@ func _ensure_collision_shape() -> void:
 
 	# Auto-create a CollisionShape2D with RectangleShape2D
 	var col := CollisionShape2D.new()
-	col.name = "CollisionShape2D"
+	col.name = "Juice_CollisionShape2D"
 	var rect_shape := RectangleShape2D.new()
 	rect_shape.size = detection_size
 	col.shape = rect_shape

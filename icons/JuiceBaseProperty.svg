@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="Juice-Property" serif:id="Juice Property">
+        <g transform="matrix(0.042759,0,0,0.042759,-11.609965,-21.653277)">
+            <path d="M618,616C616.153,649.031 604.92,758.777 598,783C588.225,817.219 549.585,863.99 488,864C448.419,864.006 387.494,841.631 374,782C359.29,716.993 448.666,699.913 455,751.075C457.285,769.532 450.718,776.241 461,785C491.613,811.078 519.582,780.568 522,754C524.418,727.432 521.278,699.604 523,658C491.385,669.153 475.388,657.942 468,624C465.778,613.79 467.646,605.407 478,604C488.354,602.593 565.35,584.607 584,585C602.65,585.393 619.918,581.701 618,616Z" style="fill:rgb(254,169,2);"/>
+        </g>
+        <g transform="matrix(0.9,0,0,0.9,-3.194791,-3.6)">
+            <path d="M7,4L7,13L9,13L9,10L10,10C11.646,10 13,8.646 13,7C13,5.354 11.646,4 10,4L7,4ZM9,6L10,6C10.549,6 11,6.451 11,7C11,7.549 10.549,8 10,8L9,8L9,6ZM5.111,11C4.563,11 4.111,11.451 4.111,12C4.111,12.549 4.563,13 5.111,13C5.66,13 6.111,12.549 6.111,12C6.111,11.451 5.66,11 5.111,11Z" style="fill:rgb(224,224,224);fill-rule:nonzero;"/>
+        </g>
+    </g>
+</svg>

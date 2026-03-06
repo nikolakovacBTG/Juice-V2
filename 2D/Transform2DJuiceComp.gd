@@ -47,6 +47,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase2D.svg")
 class_name Transform2DJuiceComp
 extends JuiceCompBase
 

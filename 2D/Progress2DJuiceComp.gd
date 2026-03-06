@@ -39,6 +39,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase.svg")
 class_name Progress2DJuiceComp
 extends JuiceCompBase
 

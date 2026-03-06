@@ -27,6 +27,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityMethods.svg")
 class_name CallMethodJuiceUtility
 extends JuiceCompBase
 

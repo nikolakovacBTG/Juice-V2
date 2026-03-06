@@ -1,56 +1,57 @@
-## Transform3DJuiceComp.gd
-## ============================================================================
-## WHAT: Consolidated deterministic transform effect for Node3D nodes. Combines
-##       position, rotation, and scale animation into a single component with a
-##       TransformTarget selector. Uses _get_property_list() to conditionally
-##       show only relevant exports in the inspector.
-## WHY: Replaces 3 separate scripts (Position3DJuiceComp, Rotation3DJuiceComp,
-##      Scale3DJuiceComp) with one unified component, reducing file count and
-##      ensuring consistent behavior across transform types.
-##
-## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this comp's
-##   contribution: node.property += (desired - _my_contribution). This enables
-##   stacking with other effects and preserves external changes to the node.
-## SYSTEM: Juicing System (addons/juice/) - 3D Domain
-## DOES NOT: Handle Control or Node2D targets (use TransformControl/Transform2D).
-## DOES NOT: Handle procedural effects like shake or noise (use Shake/Noise comps).
-## DOES NOT: Handle arbitrary property animation (use PropertyShake/PropertyNoise).
-## ============================================================================
-##
-## TRANSFORM TARGETS:
-## - POSITION: Animates Node3D.position with Vector3 offset + OffsetUnit3D system.
-##   Supports WORLD_UNITS, FRACTION_OWN, FRACTION_PARENT units. Uses size
-##   inference (MeshInstance3D AABB, CollisionShape3D, recursive child bounds).
-## - ROTATION: Animates Node3D rotation with Vector3 offset (degrees/radians).
-##   Uses Quaternion slerp for smooth interpolation. Supports pivot_offset for
-##   rotation around arbitrary points (door hinges, lever bases, chest lids).
-##   Pivot is Transform3D-based: fixed_pivot = base_origin + base_basis * pivot,
-##   new_origin = fixed_pivot - new_basis * pivot.
-## - SCALE: Animates Node3D.scale with Vector3 offset + pivot mode.
-##   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
-##
-## PIVOT (ROTATION):
-## Uses a Vector3 pivot_offset from node origin (local space). The pivot point
-## is pre-computed in parent space at animation start and stays fixed.
-##
-## PIVOT (SCALE):
-## - AUTO_CENTER: Infers center from MeshInstance3D AABB / CollisionShape3D.
-## - INHERIT: Scales from node origin (no compensation).
-## - CUSTOM: Scales from custom_pivot (local-space world units).
-##
-## TRANSFORM TARGET NODE (optional):
-## When transform_target_node points to a Node3D node, manual offset fields are
-## ignored. Instead, the offset is computed per-frame from the animated node's
-## base transform to the target node's current global transform. Supports moving targets.
-## For ROTATION in target mode, quaternion slerp is used instead of euler deltas,
-## which correctly handles rotations >180° with no gimbal lock.
-##
-## CONDITIONAL EXPORTS:
-## Changing transform_target triggers notify_property_list_changed() which
-## shows/hides the relevant parameters via _get_property_list().
-## ============================================================================
+# Transform3DJuiceComp.gd
+# ============================================================================
+# WHAT: Consolidated deterministic transform effect for Node3D nodes. Combines
+#       position, rotation, and scale animation into a single component with a
+#       TransformTarget selector. Uses _get_property_list() to conditionally
+#       show only relevant exports in the inspector.
+# WHY: Replaces 3 separate scripts (Position3DJuiceComp, Rotation3DJuiceComp,
+#      Scale3DJuiceComp) with one unified component, reducing file count and
+#      ensuring consistent behavior across transform types.
+#
+# WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this comp's
+#   contribution: node.property += (desired - _my_contribution). This enables
+#   stacking with other effects and preserves external changes to the node.
+# SYSTEM: Juicing System (addons/juice/) - 3D Domain
+# DOES NOT: Handle Control or Node2D targets (use TransformControl/Transform2D).
+# DOES NOT: Handle procedural effects like shake or noise (use Shake/Noise comps).
+# DOES NOT: Handle arbitrary property animation (use PropertyShake/PropertyNoise).
+# ============================================================================
+#
+# TRANSFORM TARGETS:
+# - POSITION: Animates Node3D.position with Vector3 offset + OffsetUnit3D system.
+#   Supports WORLD_UNITS, FRACTION_OWN, FRACTION_PARENT units. Uses size
+#   inference (MeshInstance3D AABB, CollisionShape3D, recursive child bounds).
+# - ROTATION: Animates Node3D rotation with Vector3 offset (degrees/radians).
+#   Uses Quaternion slerp for smooth interpolation. Supports pivot_offset for
+#   rotation around arbitrary points (door hinges, lever bases, chest lids).
+#   Pivot is Transform3D-based: fixed_pivot = base_origin + base_basis * pivot,
+#   new_origin = fixed_pivot - new_basis * pivot.
+# - SCALE: Animates Node3D.scale with Vector3 offset + pivot mode.
+#   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
+#
+# PIVOT (ROTATION):
+# Uses a Vector3 pivot_offset from node origin (local space). The pivot point
+# is pre-computed in parent space at animation start and stays fixed.
+#
+# PIVOT (SCALE):
+# - AUTO_CENTER: Infers center from MeshInstance3D AABB / CollisionShape3D.
+# - INHERIT: Scales from node origin (no compensation).
+# - CUSTOM: Scales from custom_pivot (local-space world units).
+#
+# TRANSFORM TARGET NODE (optional):
+# When transform_target_node points to a Node3D node, manual offset fields are
+# ignored. Instead, the offset is computed per-frame from the animated node's
+# base transform to the target node's current global transform. Supports moving targets.
+# For ROTATION in target mode, quaternion slerp is used instead of euler deltas,
+# which correctly handles rotations >180° with no gimbal lock.
+#
+# CONDITIONAL EXPORTS:
+# Changing transform_target triggers notify_property_list_changed() which
+# shows/hides the relevant parameters via _get_property_list().
+# ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseControl.svg")
 class_name Transform3DJuiceComp
 extends JuiceCompBase
 

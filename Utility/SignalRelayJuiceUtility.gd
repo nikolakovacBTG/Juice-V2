@@ -17,6 +17,8 @@
 ##    pointed at your signal bus autoload to receive the relayed signal.
 ## ============================================================================
 
+@tool
+@icon("res://addons/juice/Icons/JuiceUtilitySignals.svg")
 class_name SignalRelayJuiceUtility
 extends Node
 

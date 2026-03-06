@@ -41,6 +41,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityArea3D.svg")
 class_name SoftTrigger3DJuiceUtility
 extends Area3D
 
@@ -467,7 +468,7 @@ func _ensure_collision_shape() -> void:
 		return
 
 	var col := CollisionShape3D.new()
-	col.name = "CollisionShape3D"
+	col.name = "Juice_CollisionShape3D"
 	var box_shape := BoxShape3D.new()
 	box_shape.size = detection_size
 	col.shape = box_shape
