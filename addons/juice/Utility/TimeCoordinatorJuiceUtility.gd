@@ -1,5 +1,4 @@
-extends Node
-class_name TimeCoordinatorJuiceUtility
+
 ## ============================================================================
 ## TIME COORDINATOR JUICE UTILITY — Optional Time Scale Manager
 ## ============================================================================
@@ -40,6 +39,10 @@ class_name TimeCoordinatorJuiceUtility
 ##   - Juice timing or triggering (TimeJuiceComp handles that)
 ## ============================================================================
 
+@tool
+@icon("res://addons/juice/Icons/JuiceUtilityTimeCoord.svg")
+class_name TimeCoordinatorJuiceUtility
+extends Node
 
 # =============================================================================
 # STATIC INSTANCE (auto-discovery by TimeJuiceComp)

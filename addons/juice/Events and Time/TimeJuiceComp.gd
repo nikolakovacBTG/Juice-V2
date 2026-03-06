@@ -1,7 +1,4 @@
-@tool
-## @icon — custom icon will be added in addons/juice/icons/ later
-class_name TimeJuiceComp
-extends JuiceCompBase
+
 ## ============================================================================
 ## TIME JUICE COMPONENT
 ## ============================================================================
@@ -31,6 +28,12 @@ extends JuiceCompBase
 ## - Per-object time scaling — Godot limitation
 ## - Audio pitch — use TimeCoordinatorJuiceUtility for that
 ## ============================================================================
+
+
+@tool
+@icon("res://addons/juice/Icons/JuiceUtilityTimeCoord.svg")
+class_name TimeJuiceComp
+extends JuiceCompBase
 
 # =============================================================================
 # SIGNALS

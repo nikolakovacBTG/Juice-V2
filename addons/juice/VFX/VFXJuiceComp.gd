@@ -28,6 +28,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseVFX.svg")
 class_name VFXJuiceComp
 extends JuiceCompBase
 

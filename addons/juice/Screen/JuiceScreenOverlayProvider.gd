@@ -22,6 +22,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityScreen.svg")
 class_name JuiceScreenOverlayProvider
 extends RefCounted
 

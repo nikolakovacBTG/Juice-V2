@@ -26,6 +26,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilitySignals.svg")
 class_name SignalEmitJuiceUtility
 extends JuiceCompBase
 

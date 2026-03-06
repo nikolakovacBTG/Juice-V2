@@ -37,6 +37,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseVisibility.svg")
 class_name VisibilityJuiceComp
 extends JuiceCompBase
 

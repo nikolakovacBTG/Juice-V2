@@ -37,6 +37,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBase2D.svg")
 class_name Noise2DJuiceComp
 extends JuiceCompBase
 

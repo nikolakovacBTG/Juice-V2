@@ -30,6 +30,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceUtilityTriggerControl.svg")
 class_name SoftTriggerControlJuiceUtility
 extends Control
 

@@ -29,6 +29,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/juice/Icons/JuiceBaseProperty.svg")
 class_name ShaderPropertyJuiceComp
 extends JuiceCompBase
 
