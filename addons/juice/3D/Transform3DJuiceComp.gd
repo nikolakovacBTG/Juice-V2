@@ -21,7 +21,7 @@
 # - POSITION: Animates Node3D.position with Vector3 offset + OffsetUnit3D system.
 #   Supports WORLD_UNITS, FRACTION_OWN, FRACTION_PARENT units. Uses size
 #   inference (MeshInstance3D AABB, CollisionShape3D, recursive child bounds).
-# - ROTATION: Animates Node3D rotation with Vector3 offset (degrees/radians).
+# - ROTATION: Animates Node3D rotation via From/To model (degrees/radians).
 #   Uses Quaternion slerp for smooth interpolation. Supports pivot_offset for
 #   rotation around arbitrary points (door hinges, lever bases, chest lids).
 #   Pivot is Transform3D-based: fixed_pivot = base_origin + base_basis * pivot,
@@ -49,7 +49,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/juice/Icons/JuiceBaseControl.svg")
+@icon("res://addons/juice/Icons/JuiceBase3D.svg")
 class_name Transform3DJuiceComp
 extends JuiceCompBase
 
@@ -87,11 +87,11 @@ enum PivotMode {
 	CUSTOM        ## Scale from custom_pivot (local-space world units)
 }
 
-## Reference type for Position From/To axes
-enum PositionReference {
-	CUSTOM,       ## Explicit position value (Vector3) with coordinate unit
-	SELF,         ## This object's current position (captured at capture_at moment)
-	TARGET_NODE   ## Another object's position (tracked live every frame)
+## Reference type for From/To axes (shared by Position, Rotation, and Scale)
+enum TransformReference {
+	CUSTOM,       ## Explicit value supplied by the user
+	SELF,         ## This object's current value (captured at capture_at moment)
+	TARGET_NODE   ## Another object's value (tracked live every frame)
 }
 
 ## How to interpret custom position values (3D — no viewport fraction)
@@ -99,20 +99,6 @@ enum PositionIn3D {
 	WORLD_UNITS,      ## Position in world units
 	FRACTION_OWN,     ## Position in fraction of object's own AABB
 	FRACTION_PARENT   ## Position in fraction of parent's AABB
-}
-
-## Reference type for Rotation From/To axes
-enum RotationReference {
-	CUSTOM,       ## Explicit rotation value (degrees/radians per RotationUnit)
-	SELF,         ## This object's current rotation (captured at capture_at moment)
-	TARGET_NODE   ## Another object's rotation (tracked live every frame)
-}
-
-## Reference type for Scale From/To axes
-enum ScaleReference {
-	CUSTOM,       ## Explicit scale value (Vector3)
-	SELF,         ## This object's current scale (captured at capture_at moment)
-	TARGET_NODE   ## Another object's scale (tracked live every frame)
 }
 
 ## When to capture Self's transform value
@@ -148,27 +134,29 @@ var rotation_unit: int = RotationUnit.DEGREES
 ## Useful for doors (hinge), levers (base), lids (back edge).
 var rotation_pivot_offset: Vector3 = Vector3.ZERO
 
-# --- SCALE (From/To model) ---
-## Reference type for the From axis of the scale animation
-var from_reference: int = ScaleReference.CUSTOM:
+# --- SHARED FROM/TO (used by all transform types) ---
+## Reference type for the From endpoint (CUSTOM, SELF, or TARGET_NODE)
+var from_reference: int = TransformReference.CUSTOM:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
-## Reference type for the To axis of the scale animation
-var to_reference: int = ScaleReference.SELF:
+## Reference type for the To endpoint (CUSTOM, SELF, or TARGET_NODE)
+var to_reference: int = TransformReference.SELF:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
-## Custom From scale value (shown when from_reference == CUSTOM)
-var from_scale: Vector3 = Vector3.ZERO
-## Custom To scale value (shown when to_reference == CUSTOM)
-var to_scale: Vector3 = Vector3.ONE
 ## Target node for From reference (shown when from_reference == TARGET_NODE)
 var from_target_node: NodePath
 ## Target node for To reference (shown when to_reference == TARGET_NODE)
 var to_target_node: NodePath
-## When to capture Self's scale (shown inside From/To group when reference == SELF)
+## When to capture Self's transform value (shown when reference == SELF)
 var capture_at: int = CaptureAt.TRIGGER
+
+# --- SCALE (From/To model) ---
+## Custom From scale value (shown when from_reference == CUSTOM)
+var from_scale: Vector3 = Vector3.ZERO
+## Custom To scale value (shown when to_reference == CUSTOM)
+var to_scale: Vector3 = Vector3.ONE
 ## Pivot mode for scaling
 var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
@@ -183,6 +171,8 @@ var scale_custom_pivot: Vector3 = Vector3.ZERO
 
 var _base_position: Vector3 = Vector3.ZERO
 var _base_transform: Transform3D = Transform3D.IDENTITY
+var _base_euler: Vector3 = Vector3.ZERO
+var _base_quat: Quaternion = Quaternion.IDENTITY
 var _base_scale: Vector3 = Vector3.ONE
 
 ## Whether base has been captured
@@ -257,7 +247,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if from_reference == PositionReference.CUSTOM:
+	if from_reference == TransformReference.CUSTOM:
 		pos_props.append({
 			"name": "from_position_in",
 			"type": TYPE_INT,
@@ -270,7 +260,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
-	elif from_reference == PositionReference.SELF:
+	elif from_reference == TransformReference.SELF:
 		pos_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -278,7 +268,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif from_reference == PositionReference.TARGET_NODE:
+	elif from_reference == TransformReference.TARGET_NODE:
 		pos_props.append({
 			"name": "from_target_node",
 			"type": TYPE_NODE_PATH,
@@ -297,7 +287,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if to_reference == PositionReference.CUSTOM:
+	if to_reference == TransformReference.CUSTOM:
 		pos_props.append({
 			"name": "to_position_in",
 			"type": TYPE_INT,
@@ -310,7 +300,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
-	elif to_reference == PositionReference.SELF:
+	elif to_reference == TransformReference.SELF:
 		pos_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -318,7 +308,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif to_reference == PositionReference.TARGET_NODE:
+	elif to_reference == TransformReference.TARGET_NODE:
 		pos_props.append({
 			"name": "to_target_node",
 			"type": TYPE_NODE_PATH,
@@ -344,7 +334,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if from_reference == RotationReference.CUSTOM:
+	if from_reference == TransformReference.CUSTOM:
 		rot_props.append({
 			"name": "from_rotation",
 			"type": TYPE_VECTOR3,
@@ -357,7 +347,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Degrees,Radians",
 		})
-	elif from_reference == RotationReference.SELF:
+	elif from_reference == TransformReference.SELF:
 		rot_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -365,7 +355,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif from_reference == RotationReference.TARGET_NODE:
+	elif from_reference == TransformReference.TARGET_NODE:
 		rot_props.append({
 			"name": "from_target_node",
 			"type": TYPE_NODE_PATH,
@@ -384,14 +374,14 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if to_reference == RotationReference.CUSTOM:
+	if to_reference == TransformReference.CUSTOM:
 		rot_props.append({
 			"name": "to_rotation",
 			"type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
 		# Only show rotation_unit once (shared between From/To custom)
-		if from_reference != RotationReference.CUSTOM:
+		if from_reference != TransformReference.CUSTOM:
 			rot_props.append({
 				"name": "rotation_unit",
 				"type": TYPE_INT,
@@ -399,7 +389,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 				"hint": PROPERTY_HINT_ENUM,
 				"hint_string": "Degrees,Radians",
 			})
-	elif to_reference == RotationReference.SELF:
+	elif to_reference == TransformReference.SELF:
 		rot_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -407,7 +397,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif to_reference == RotationReference.TARGET_NODE:
+	elif to_reference == TransformReference.TARGET_NODE:
 		rot_props.append({
 			"name": "to_target_node",
 			"type": TYPE_NODE_PATH,
@@ -442,13 +432,13 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if from_reference == ScaleReference.CUSTOM:
+	if from_reference == TransformReference.CUSTOM:
 		scale_props.append({
 			"name": "from_scale",
 			"type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
-	elif from_reference == ScaleReference.SELF:
+	elif from_reference == TransformReference.SELF:
 		scale_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -456,7 +446,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif from_reference == ScaleReference.TARGET_NODE:
+	elif from_reference == TransformReference.TARGET_NODE:
 		scale_props.append({
 			"name": "from_target_node",
 			"type": TYPE_NODE_PATH,
@@ -475,13 +465,13 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 		"hint_string": "Custom,Self,Target Node",
 	})
 
-	if to_reference == ScaleReference.CUSTOM:
+	if to_reference == TransformReference.CUSTOM:
 		scale_props.append({
 			"name": "to_scale",
 			"type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
-	elif to_reference == ScaleReference.SELF:
+	elif to_reference == TransformReference.SELF:
 		scale_props.append({
 			"name": "capture_at",
 			"type": TYPE_INT,
@@ -489,7 +479,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready",
 		})
-	elif to_reference == ScaleReference.TARGET_NODE:
+	elif to_reference == TransformReference.TARGET_NODE:
 		scale_props.append({
 			"name": "to_target_node",
 			"type": TYPE_NODE_PATH,
@@ -583,7 +573,9 @@ func _ready() -> void:
 	super._ready()
 	# All transform types now use From/To model — capture base early
 	call_deferred("_capture_base")
-	if capture_at == CaptureAt.READY:
+	# If Self reference uses CaptureAt.READY, snapshot now (only if SELF is actually used)
+	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
+	if uses_self and capture_at == CaptureAt.READY:
 		match transform_target:
 			TransformTarget.POSITION:
 				call_deferred("_capture_self_position_snapshot")
@@ -637,15 +629,15 @@ func _on_animate_start() -> void:
 
 	# All transform types now use From/To model
 	_resolve_from_to_refs()
-	match transform_target:
-		TransformTarget.POSITION:
-			if capture_at == CaptureAt.TRIGGER:
+	# Capture Self snapshot at trigger time (only if SELF is actually used)
+	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
+	if uses_self and capture_at == CaptureAt.TRIGGER:
+		match transform_target:
+			TransformTarget.POSITION:
 				_capture_self_position_snapshot()
-		TransformTarget.ROTATION:
-			if capture_at == CaptureAt.TRIGGER:
+			TransformTarget.ROTATION:
 				_capture_self_rotation_snapshot()
-		TransformTarget.SCALE:
-			if capture_at == CaptureAt.TRIGGER:
+			TransformTarget.SCALE:
 				_capture_self_scale_snapshot()
 
 	# Resolve scale pivot if needed
@@ -697,11 +689,11 @@ func _apply_position_effect(progress: float, n3d: Node3D) -> void:
 ## Resolve the From position to an absolute Vector3 in local space
 func _resolve_from_position(animated: Node3D) -> Vector3:
 	match from_reference:
-		PositionReference.CUSTOM:
+		TransformReference.CUSTOM:
 			return _base_position + _convert_to_world_units(from_position, from_position_in)
-		PositionReference.SELF:
+		TransformReference.SELF:
 			return _self_position_snapshot
-		PositionReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_position(_from_ref, animated)
 			return _base_position
@@ -711,11 +703,11 @@ func _resolve_from_position(animated: Node3D) -> Vector3:
 ## Resolve the To position to an absolute Vector3 in local space
 func _resolve_to_position(animated: Node3D) -> Vector3:
 	match to_reference:
-		PositionReference.CUSTOM:
+		TransformReference.CUSTOM:
 			return _base_position + _convert_to_world_units(to_position, to_position_in)
-		PositionReference.SELF:
+		TransformReference.SELF:
 			return _self_position_snapshot
-		PositionReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_position(_to_ref, animated)
 			return _base_position
@@ -757,9 +749,8 @@ func _apply_rotation_effect(progress: float, n3d: Node3D) -> void:
 	var current_quat := from_quat.slerp(to_quat, progress)
 
 	# Convert back to euler for delta-first application
-	var base_euler := _base_transform.basis.orthonormalized().get_euler()
 	var desired_euler := Basis(current_quat).get_euler()
-	var desired_offset := desired_euler - base_euler
+	var desired_offset := desired_euler - _base_euler
 	var rot_delta := desired_offset - _my_rotation_contribution
 
 	# Pivot compensation
@@ -778,34 +769,32 @@ func _apply_rotation_effect(progress: float, n3d: Node3D) -> void:
 
 ## Resolve the From rotation to an absolute Quaternion in local space
 func _resolve_from_rotation_quat(animated: Node3D) -> Quaternion:
-	var base_quat := Quaternion(_base_transform.basis.orthonormalized())
 	match from_reference:
-		RotationReference.CUSTOM:
+		TransformReference.CUSTOM:
 			var offset_rad := _rotation_to_radians(from_rotation)
-			return base_quat * Quaternion.from_euler(offset_rad)
-		RotationReference.SELF:
+			return _base_quat * Quaternion.from_euler(offset_rad)
+		TransformReference.SELF:
 			return Quaternion.from_euler(_self_rotation_snapshot)
-		RotationReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_rotation_quat(_from_ref, animated)
-			return base_quat
-	return base_quat
+			return _base_quat
+	return _base_quat
 
 
 ## Resolve the To rotation to an absolute Quaternion in local space
 func _resolve_to_rotation_quat(animated: Node3D) -> Quaternion:
-	var base_quat := Quaternion(_base_transform.basis.orthonormalized())
 	match to_reference:
-		RotationReference.CUSTOM:
+		TransformReference.CUSTOM:
 			var offset_rad := _rotation_to_radians(to_rotation)
-			return base_quat * Quaternion.from_euler(offset_rad)
-		RotationReference.SELF:
+			return _base_quat * Quaternion.from_euler(offset_rad)
+		TransformReference.SELF:
 			return Quaternion.from_euler(_self_rotation_snapshot)
-		RotationReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_rotation_quat(_to_ref, animated)
-			return base_quat
-	return base_quat
+			return _base_quat
+	return _base_quat
 
 
 ## Convert a rotation Vector3 from configured rotation_unit to radians
@@ -863,11 +852,11 @@ func _apply_scale_effect(progress: float, n3d: Node3D) -> void:
 ## Resolve the From scale value to an absolute Vector3 based on from_reference
 func _resolve_from_scale(n3d: Node3D) -> Vector3:
 	match from_reference:
-		ScaleReference.CUSTOM:
+		TransformReference.CUSTOM:
 			return from_scale
-		ScaleReference.SELF:
+		TransformReference.SELF:
 			return _self_scale_snapshot
-		ScaleReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_scale(_from_ref, n3d)
 			return _base_scale
@@ -877,11 +866,11 @@ func _resolve_from_scale(n3d: Node3D) -> Vector3:
 ## Resolve the To scale value to an absolute Vector3 based on to_reference
 func _resolve_to_scale(n3d: Node3D) -> Vector3:
 	match to_reference:
-		ScaleReference.CUSTOM:
+		TransformReference.CUSTOM:
 			return to_scale
-		ScaleReference.SELF:
+		TransformReference.SELF:
 			return _self_scale_snapshot
-		ScaleReference.TARGET_NODE:
+		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_scale(_to_ref, n3d)
 			return _base_scale
@@ -907,10 +896,9 @@ func _get_ref_local_scale(ref: Node3D, animated: Node3D) -> Vector3:
 func _resolve_from_to_refs() -> void:
 	_from_ref = null
 	_to_ref = null
-	# ScaleReference and PositionReference have identical TARGET_NODE values (2)
-	if from_reference == ScaleReference.TARGET_NODE:
+	if from_reference == TransformReference.TARGET_NODE:
 		_from_ref = _resolve_node_path_to_node3d(from_target_node, "from_target_node")
-	if to_reference == ScaleReference.TARGET_NODE:
+	if to_reference == TransformReference.TARGET_NODE:
 		_to_ref = _resolve_node_path_to_node3d(to_target_node, "to_target_node")
 
 
@@ -993,6 +981,9 @@ func _capture_base() -> void:
 	var n3d := _target_node as Node3D
 	_base_position = n3d.position
 	_base_transform = n3d.transform
+	var ortho_basis := _base_transform.basis.orthonormalized()
+	_base_euler = ortho_basis.get_euler()
+	_base_quat = Quaternion(ortho_basis)
 	_base_scale = n3d.scale
 
 	# Pre-compute the fixed pivot position in parent space for rotation.
@@ -1167,7 +1158,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if target and not target is Node3D:
 		warnings.append("Transform3DJuiceComp requires a Node3D parent. Current parent is: " + target.get_class())
 	# From/To: warn if both reference Self (no visible effect)
-	if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
+	if from_reference == TransformReference.SELF and to_reference == TransformReference.SELF:
 		warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
 	return warnings
 

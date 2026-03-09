@@ -99,9 +99,13 @@ metadata/_custom_type_script = "uid://umlva67rt4ud"
 
 [node name="Transform2DJuiceComp" type="Node" parent="Node2D/SequencerJuiceComp"]
 script = ExtResource("11_r852d")
-transform_target_node = NodePath("")
-position_offset = Vector2(0, 550)
-position_offset_unit = 0
+from_reference = 0
+from_position_in = 3
+from_position = Vector2(0, -1)
+to_reference = 0
+to_position_in = 0
+to_position = Vector2(0, 550)
+auto_connect_parent = false
 trigger_on = 8
 duration_in = 0.3
 transition_in = 6
@@ -118,49 +122,41 @@ metadata/_custom_type_script = "uid://cquadl5sa07sy"
 
 [node name="Slice3" type="Sprite2D" parent="Node2D2"]
 position = Vector2(-318, -69)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("10_2nye2")
 
 [node name="Slice4" type="Sprite2D" parent="Node2D2"]
 position = Vector2(-205, -9)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("11_o2e6s")
 
 [node name="Slice5" type="Sprite2D" parent="Node2D2"]
 position = Vector2(-39, 8)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("12_7fq1n")
 
 [node name="Slice6" type="Sprite2D" parent="Node2D2"]
 position = Vector2(82, -96)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("13_uaibf")
 
 [node name="Slice7" type="Sprite2D" parent="Node2D2"]
 position = Vector2(58, 7)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("14_g1way")
 
 [node name="Slice8" type="Sprite2D" parent="Node2D2"]
 position = Vector2(147, 0)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("15_hfiu5")
 
 [node name="Slice9" type="Sprite2D" parent="Node2D2"]
 position = Vector2(277, 0)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("16_jlm4u")
 
 [node name="Slice10" type="Sprite2D" parent="Node2D2"]
 position = Vector2(385, 50)
-rotation = -1.5707964
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("17_tusjn")
 
@@ -188,8 +184,10 @@ metadata/_custom_type_script = "uid://umlva67rt4ud"
 [node name="Transform2DJuiceComp" type="Node" parent="Node2D2/SequencerJuiceComp2"]
 script = ExtResource("11_r852d")
 transform_target = 2
-transform_target_node = NodePath("../../Node2D")
-scale_offset = Vector2(0, 0)
+from_reference = 0
+from_scale = null
+to_reference = 0
+to_scale = Vector2(0.418, 0.418)
 pivot_mode = 0
 auto_connect_parent = false
 trigger_on = 8
@@ -207,8 +205,10 @@ metadata/_custom_type_script = "uid://cquadl5sa07sy"
 [node name="Transform2DJuiceComp2" type="Node" parent="Node2D2/SequencerJuiceComp2"]
 script = ExtResource("11_r852d")
 transform_target = 1
-transform_target_node = NodePath("")
-rotation_offset_degrees = 90.0
+from_reference = 0
+from_rotation_degrees = -90.0
+to_reference = 0
+to_rotation_degrees = 0.0
 pivot_mode = 0
 auto_connect_parent = false
 trigger_on = 8
@@ -222,6 +222,3 @@ next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://cquadl5sa07sy"
-
-[node name="Node2D" type="Node2D" parent="Node2D2"]
-scale = Vector2(0.418, 0.418)
