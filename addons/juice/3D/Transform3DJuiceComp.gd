@@ -89,6 +89,19 @@ enum PivotMode {
 	CUSTOM        ## Scale from custom_pivot (local-space world units)
 }
 
+## Reference type for Scale From/To axes
+enum ScaleReference {
+	CUSTOM,       ## Explicit scale value (Vector3)
+	SELF,         ## This object's current scale (captured at capture_at moment)
+	TARGET_NODE   ## Another object's scale (tracked live every frame)
+}
+
+## When to capture Self's transform value
+enum CaptureAt {
+	TRIGGER,  ## Capture when animation starts (default)
+	READY     ## Capture when scene loads / _ready()
+}
+
 # =============================================================================
 # CONDITIONAL BACKING VARIABLES
 # These are NOT @export — they are shown/hidden via _get_property_list()
@@ -117,9 +130,27 @@ var rotation_pivot_offset: Vector3 = Vector3.ZERO
 ## For ROTATION, quaternion slerp replaces euler deltas in target mode.
 var transform_target_node: NodePath
 
-# --- SCALE ---
-## How much to change scale at progress=1.0 (added to base scale)
-var scale_offset: Vector3 = Vector3(0.1, 0.1, 0.1)
+# --- SCALE (From/To model) ---
+## Reference type for the From axis of the scale animation
+var from_reference: int = ScaleReference.CUSTOM:
+	set(value):
+		from_reference = value
+		notify_property_list_changed()
+## Reference type for the To axis of the scale animation
+var to_reference: int = ScaleReference.SELF:
+	set(value):
+		to_reference = value
+		notify_property_list_changed()
+## Custom From scale value (shown when from_reference == CUSTOM)
+var from_scale: Vector3 = Vector3.ZERO
+## Custom To scale value (shown when to_reference == CUSTOM)
+var to_scale: Vector3 = Vector3.ONE
+## Target node for From reference (shown when from_reference == TARGET_NODE)
+var from_target_node: NodePath
+## Target node for To reference (shown when to_reference == TARGET_NODE)
+var to_target_node: NodePath
+## When to capture Self's scale (shown inside From/To group when reference == SELF)
+var capture_at: int = CaptureAt.TRIGGER
 ## Pivot mode for scaling
 var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
@@ -159,9 +190,17 @@ var _my_scale_contribution: Vector3 = Vector3.ZERO
 var _debug_last_logged_decile: int = -1
 
 ## Resolved reference to the transform target node (cached at animation start)
+## Used by POSITION and ROTATION (old offset model)
 var _target_ref: Node3D = null
-## Whether to use target node offset instead of manual offset
+## Whether to use target node offset instead of manual offset (POSITION/ROTATION)
 var _use_target_node: bool = false
+
+## Resolved references for Scale From/To target nodes (cached at animation start)
+var _from_ref: Node3D = null
+var _to_ref: Node3D = null
+## Self scale snapshot — captured once at the moment chosen by capture_at
+var _self_scale_snapshot: Vector3 = Vector3.ONE
+var _has_self_scale_snapshot: bool = false
 
 
 # =============================================================================
@@ -171,17 +210,16 @@ var _use_target_node: bool = false
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
-	# Transform target node slot — always visible, type-safe to Node3D only
-	props.append({
-		"name": "transform_target_node",
-		"type": TYPE_NODE_PATH,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-		"hint_string": "Node3D",
-	})
-
 	match transform_target:
 		TransformTarget.POSITION:
+			# Position still uses old offset model (Phase 2 will upgrade)
+			props.append({
+				"name": "transform_target_node",
+				"type": TYPE_NODE_PATH,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+				"hint_string": "Node3D",
+			})
 			props.append({
 				"name": "position_offset",
 				"type": TYPE_VECTOR3,
@@ -197,6 +235,14 @@ func _get_property_list() -> Array[Dictionary]:
 			})
 
 		TransformTarget.ROTATION:
+			# Rotation still uses old offset model (Phase 3 will upgrade)
+			props.append({
+				"name": "transform_target_node",
+				"type": TYPE_NODE_PATH,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+				"hint_string": "Node3D",
+			})
 			props.append({
 				"name": "rotation_offset",
 				"type": TYPE_VECTOR3,
@@ -218,63 +264,153 @@ func _get_property_list() -> Array[Dictionary]:
 			})
 
 		TransformTarget.SCALE:
-			props.append({
-				"name": "scale_offset",
-				"type": TYPE_VECTOR3,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NONE,
-			})
-			props.append({
-				"name": "scale_pivot_mode",
-				"type": TYPE_INT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Auto Center,Inherit,Custom",
-			})
-			# Only show scale_custom_pivot input when scale_pivot_mode is CUSTOM
-			if scale_pivot_mode == PivotMode.CUSTOM:
-				props.append({
-					"name": "scale_custom_pivot",
-					"type": TYPE_VECTOR3,
-					"usage": PROPERTY_USAGE_DEFAULT,
-					"hint": PROPERTY_HINT_NONE,
-				})
+			props.append_array(_get_scale_from_to_properties())
+			props.append_array(_get_scale_pivot_properties())
 
 	return props
 
 
+## Scale From/To inspector properties (new model)
+func _get_scale_from_to_properties() -> Array[Dictionary]:
+	var scale_props: Array[Dictionary] = []
+
+	# --- From group ---
+	scale_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	scale_props.append({
+		"name": "from_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if from_reference == ScaleReference.CUSTOM:
+		scale_props.append({
+			"name": "from_scale",
+			"type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif from_reference == ScaleReference.SELF:
+		scale_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif from_reference == ScaleReference.TARGET_NODE:
+		scale_props.append({
+			"name": "from_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node3D",
+		})
+
+	# --- To group ---
+	scale_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	scale_props.append({
+		"name": "to_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if to_reference == ScaleReference.CUSTOM:
+		scale_props.append({
+			"name": "to_scale",
+			"type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif to_reference == ScaleReference.SELF:
+		scale_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif to_reference == ScaleReference.TARGET_NODE:
+		scale_props.append({
+			"name": "to_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node3D",
+		})
+
+	return scale_props
+
+
+## Scale pivot properties (extracted for clarity)
+func _get_scale_pivot_properties() -> Array[Dictionary]:
+	var pivot_props: Array[Dictionary] = [{
+		"name": "scale_pivot_mode",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Auto Center,Inherit,Custom",
+	}]
+	# Only show scale_custom_pivot input when scale_pivot_mode is CUSTOM
+	if scale_pivot_mode == PivotMode.CUSTOM:
+		pivot_props.append({
+			"name": "scale_custom_pivot",
+			"type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NONE,
+		})
+	return pivot_props
+
+
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		# Position
+		# Position (old model)
 		&"position_offset": position_offset = value; return true
 		&"position_offset_unit": position_offset_unit = value; return true
-		# Rotation
+		# Rotation (old model)
 		&"rotation_offset": rotation_offset = value; return true
 		&"rotation_unit": rotation_unit = value; return true
 		&"rotation_pivot_offset": rotation_pivot_offset = value; return true
-		# Scale
-		&"scale_offset": scale_offset = value; return true
+		# Scale (From/To model)
+		&"from_reference": from_reference = value; return true
+		&"to_reference": to_reference = value; return true
+		&"from_scale": from_scale = value; return true
+		&"to_scale": to_scale = value; return true
+		&"from_target_node": from_target_node = value; return true
+		&"to_target_node": to_target_node = value; return true
+		&"capture_at": capture_at = value; return true
+		# Legacy: old scenes may have scale_offset — accept but ignore
+		&"scale_offset": return true
+		# Scale pivot
 		&"scale_pivot_mode": scale_pivot_mode = value; return true
 		&"scale_custom_pivot": scale_custom_pivot = value; return true
-		# Transform target node
+		# Transform target node (position/rotation old model)
 		&"transform_target_node": transform_target_node = value; return true
 	return false
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		# Position
+		# Position (old model)
 		&"position_offset": return position_offset
 		&"position_offset_unit": return position_offset_unit
-		# Rotation
+		# Rotation (old model)
 		&"rotation_offset": return rotation_offset
 		&"rotation_unit": return rotation_unit
 		&"rotation_pivot_offset": return rotation_pivot_offset
-		# Scale
-		&"scale_offset": return scale_offset
+		# Scale (From/To model)
+		&"from_reference": return from_reference
+		&"to_reference": return to_reference
+		&"from_scale": return from_scale
+		&"to_scale": return to_scale
+		&"from_target_node": return from_target_node
+		&"to_target_node": return to_target_node
+		&"capture_at": return capture_at
+		# Scale pivot
 		&"scale_pivot_mode": return scale_pivot_mode
 		&"scale_custom_pivot": return scale_custom_pivot
-		# Transform target node
+		# Transform target node (position/rotation old model)
 		&"transform_target_node": return transform_target_node
 	return null
 
@@ -287,12 +423,18 @@ func _ready() -> void:
 	super._ready()
 	if transform_target == TransformTarget.SCALE:
 		call_deferred("_capture_base")
+		# If Self reference uses CaptureAt.READY, snapshot scale now
+		if capture_at == CaptureAt.READY:
+			call_deferred("_capture_self_scale_snapshot")
 
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_scale_pivot_resolved = false
 	_use_target_node = false
+	_from_ref = null
+	_to_ref = null
+	_has_self_scale_snapshot = false
 	_my_position_contribution = Vector3.ZERO
 	_my_rotation_contribution = Vector3.ZERO
 	_my_scale_contribution = Vector3.ZERO
@@ -327,8 +469,16 @@ func _on_animate_start() -> void:
 	if not _has_base:
 		_capture_base()
 
-	# Resolve transform target node if path is set
-	_resolve_transform_target()
+	match transform_target:
+		TransformTarget.POSITION, TransformTarget.ROTATION:
+			# Position/Rotation still use old offset model
+			_resolve_transform_target()
+		TransformTarget.SCALE:
+			# Scale uses new From/To model — resolve reference nodes
+			_resolve_scale_refs()
+			# Capture Self snapshot at trigger time if configured
+			if capture_at == CaptureAt.TRIGGER:
+				_capture_self_scale_snapshot()
 
 	# Resolve scale pivot if needed
 	if transform_target == TransformTarget.SCALE and not _scale_pivot_resolved:
@@ -450,34 +600,73 @@ func _get_rotation_offset_radians() -> Vector3:
 # SCALE EFFECT (with pivot compensation)
 # =============================================================================
 
-## Apply scale with pivot compensation. Node3D has no native pivot property,
-## so we adjust position: pos += pivot * (ONE - scale_ratio).
+## Apply scale using From/To lerp model with pivot compensation.
+## Node3D has no native pivot property, so we adjust position:
+##   pos += pivot * (ONE - scale_ratio)
 func _apply_scale_effect(progress: float, n3d: Node3D) -> void:
-	var actual_scale_offset: Vector3
-	if _use_target_node and is_instance_valid(_target_ref):
-		actual_scale_offset = _compute_target_scale_offset(n3d)
-	else:
-		actual_scale_offset = scale_offset
-	var desired_scale_offset := actual_scale_offset * progress
-	var scale_delta := desired_scale_offset - _my_scale_contribution
+	# Resolve absolute From and To values, then lerp between them
+	var from_value := _resolve_from_scale(n3d)
+	var to_value := _resolve_to_scale(n3d)
+	var desired_absolute := from_value.lerp(to_value, progress)
+
+	# Convert absolute scale to delta from base (for delta-first write pattern)
+	var desired_offset := desired_absolute - _base_scale
+	var scale_delta := desired_offset - _my_scale_contribution
 
 	# Pivot compensation: adjust position so the pivot point stays stationary
 	if _scale_pivot_point != Vector3.ZERO:
-		var target_scale := _base_scale + desired_scale_offset
-		var scale_ratio := target_scale / _base_scale
+		var scale_ratio := desired_absolute / _base_scale
 		var desired_pos_offset := _scale_pivot_point * (Vector3.ONE - scale_ratio)
 		var pos_delta := desired_pos_offset - _my_position_contribution
 		n3d.position += pos_delta
 		_my_position_contribution = desired_pos_offset
 
 	n3d.scale += scale_delta
-	_my_scale_contribution = desired_scale_offset
+	_my_scale_contribution = desired_offset
 
 	# Throttle to ~10% progress milestones to avoid flooding debug buffer
 	var scale_decile := int(progress * 10)
 	if debug_enabled and scale_decile != _debug_last_logged_decile:
 		_debug_last_logged_decile = scale_decile
 		print("[%s] _apply_effect: progress=%.2f, scale=%s" % [name, progress, n3d.scale])
+
+
+## Resolve the From scale value to an absolute Vector3 based on from_reference
+func _resolve_from_scale(n3d: Node3D) -> Vector3:
+	match from_reference:
+		ScaleReference.CUSTOM:
+			return from_scale
+		ScaleReference.SELF:
+			return _self_scale_snapshot
+		ScaleReference.TARGET_NODE:
+			if is_instance_valid(_from_ref):
+				return _get_ref_local_scale(_from_ref, n3d)
+			return _base_scale
+	return _base_scale
+
+
+## Resolve the To scale value to an absolute Vector3 based on to_reference
+func _resolve_to_scale(n3d: Node3D) -> Vector3:
+	match to_reference:
+		ScaleReference.CUSTOM:
+			return to_scale
+		ScaleReference.SELF:
+			return _self_scale_snapshot
+		ScaleReference.TARGET_NODE:
+			if is_instance_valid(_to_ref):
+				return _get_ref_local_scale(_to_ref, n3d)
+			return _base_scale
+	return _base_scale
+
+
+## Convert a reference node's global scale to the animated node's parent-local scale
+func _get_ref_local_scale(ref: Node3D, animated: Node3D) -> Vector3:
+	var ref_global_scale := ref.global_transform.basis.get_scale()
+	var parent_scale := Vector3.ONE
+	var parent := animated.get_parent()
+	if parent is Node3D:
+		parent_scale = (parent as Node3D).global_transform.basis.get_scale()
+	return ref_global_scale / parent_scale
 
 
 # =============================================================================
@@ -567,16 +756,52 @@ func _apply_rotation_to_target(progress: float, n3d: Node3D) -> void:
 			name, progress, n3d.rotation_degrees])
 
 
-## Compute scale offset: target's global scale converted to parent-local scale,
-## minus the base scale.
-func _compute_target_scale_offset(n3d: Node3D) -> Vector3:
-	var target_global_scale := _target_ref.global_transform.basis.get_scale()
-	var parent_scale := Vector3.ONE
-	var parent := n3d.get_parent()
-	if parent is Node3D:
-		parent_scale = (parent as Node3D).global_transform.basis.get_scale()
-	var desired_local := target_global_scale / parent_scale
-	return desired_local - _base_scale
+# =============================================================================
+# SCALE REFERENCE RESOLUTION (From/To model)
+# =============================================================================
+
+## Resolve from_target_node and to_target_node NodePaths to cached references.
+## Called once per animation start when transform_target == SCALE.
+func _resolve_scale_refs() -> void:
+	_from_ref = null
+	_to_ref = null
+	if from_reference == ScaleReference.TARGET_NODE:
+		_from_ref = _resolve_node_path_to_node3d(from_target_node, "from_target_node")
+	if to_reference == ScaleReference.TARGET_NODE:
+		_to_ref = _resolve_node_path_to_node3d(to_target_node, "to_target_node")
+
+
+## Capture Self's current scale as a stable snapshot for use during animation.
+## Called at the moment chosen by capture_at (READY or TRIGGER).
+func _capture_self_scale_snapshot() -> void:
+	if _has_self_scale_snapshot:
+		return
+	if _target_node is Node3D:
+		_self_scale_snapshot = (_target_node as Node3D).scale
+	else:
+		_self_scale_snapshot = Vector3.ONE
+	_has_self_scale_snapshot = true
+	if debug_enabled:
+		print("[%s] Captured self scale snapshot: %s" % [name, _self_scale_snapshot])
+
+
+## Helper: resolve a NodePath to a Node3D, with debug warnings on failure.
+## Returns null if the path is empty, unresolvable, or not a Node3D.
+func _resolve_node_path_to_node3d(path: NodePath, path_name: String) -> Node3D:
+	if path.is_empty():
+		return null
+	var resolved := get_node_or_null(path)
+	if resolved == null:
+		if debug_enabled:
+			push_warning("[%s] %s path '%s' could not be resolved" % [name, path_name, path])
+		return null
+	if not (resolved is Node3D):
+		if debug_enabled:
+			push_warning("[%s] %s '%s' is not a Node3D (is %s)" % [name, path_name, resolved.name, resolved.get_class()])
+		return null
+	if debug_enabled:
+		print("[%s] Resolved %s: '%s'" % [name, path_name, resolved.name])
+	return resolved as Node3D
 
 
 # =============================================================================
@@ -770,6 +995,10 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var target := get_parent()
 	if target and not target is Node3D:
 		warnings.append("Transform3DJuiceComp requires a Node3D parent. Current parent is: " + target.get_class())
+	# Scale From/To: warn if both reference Self (no visible effect)
+	if transform_target == TransformTarget.SCALE:
+		if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
+			warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
 	return warnings
 
 
@@ -808,6 +1037,8 @@ func _recipe_apply_natural(_target: Node, natural: Variant) -> void:
 		TransformTarget.SCALE:
 			_base_scale = dict.get("scale", Vector3.ONE) as Vector3
 			_base_position = dict.get("position", Vector3.ZERO) as Vector3
+			# Reset self snapshot so it gets re-captured for this target
+			_has_self_scale_snapshot = false
 
 	_has_base = true
 	_scale_pivot_resolved = false
