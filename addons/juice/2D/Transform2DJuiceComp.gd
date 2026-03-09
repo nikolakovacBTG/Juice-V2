@@ -35,10 +35,9 @@
 ## - INHERIT: No position compensation (rotate/scale from node origin).
 ## - CUSTOM: User-specified local-space pivot point (pixels).
 ##
-## TRANSFORM TARGET NODE (optional):
-## When transform_target_node points to a Node2D node, manual offset fields are
-## ignored. Instead, the offset is computed per-frame from the animated node's
-## base transform to the target node's current global transform. Supports moving targets.
+## FROM/TO MODEL (Position, Rotation, Scale):
+## All transform types use a unified "From [source] To [destination]" model.
+## Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
 ##
 ## CONDITIONAL EXPORTS:
 ## Changing transform_target triggers notify_property_list_changed() which
@@ -93,6 +92,13 @@ enum PositionIn {
 	FRACTION_VIEWPORT ## Position in fraction of viewport size
 }
 
+## Reference type for Rotation From/To axes
+enum RotationReference {
+	CUSTOM,       ## Explicit rotation value (degrees)
+	SELF,         ## This object's current rotation (captured at capture_at moment)
+	TARGET_NODE   ## Another object's rotation (tracked live every frame)
+}
+
 ## Reference type for Scale From/To axes
 enum ScaleReference {
 	CUSTOM,       ## Explicit scale value (Vector2)
@@ -121,9 +127,11 @@ var to_position: Vector2 = Vector2.ZERO
 ## How to interpret To position values
 var to_position_in: int = PositionIn.PIXELS
 
-# --- ROTATION ---
-## Rotation offset in degrees applied at progress=1.0
-var rotation_offset_degrees: float = 15.0
+# --- ROTATION (From/To model) ---
+## Custom From rotation offset in degrees (shown when from_reference == CUSTOM)
+var from_rotation_degrees: float = 0.0
+## Custom To rotation offset in degrees (shown when to_reference == CUSTOM)
+var to_rotation_degrees: float = 15.0
 
 # --- SCALE (From/To model) ---
 ## Reference type for the From axis of the scale animation
@@ -146,12 +154,6 @@ var from_target_node: NodePath
 var to_target_node: NodePath
 ## When to capture Self's scale (shown inside From/To group when reference == SELF)
 var capture_at: int = CaptureAt.TRIGGER
-
-# --- TRANSFORM TARGET NODE (used by ROTATION — old model) ---
-## Optional: drag a Node2D here to animate TOWARD its transform.
-## When set, manual offset fields are ignored — offset is computed per-frame
-## from the animated node's base to the target node's current global transform.
-var transform_target_node: NodePath
 
 # --- PIVOT (ROTATION + SCALE) ---
 var pivot_mode: int = PivotMode.AUTO_CENTER:
@@ -187,19 +189,16 @@ var _my_position_contribution: Vector2 = Vector2.ZERO
 var _my_rotation_contribution: float = 0.0
 var _my_scale_contribution: Vector2 = Vector2.ZERO
 
-## Resolved reference to the transform target node (cached at animation start)
-## Used by ROTATION only (old offset model)
-var _target_ref: Node2D = null
-## Whether to use target node offset instead of manual offset (ROTATION only)
-var _use_target_node: bool = false
-
 ## Resolved references for From/To target nodes (cached at animation start)
-## Shared by Position and Scale From/To models
+## Shared by Position, Rotation, and Scale From/To models
 var _from_ref: Node2D = null
 var _to_ref: Node2D = null
 ## Self position snapshot — captured once at the moment chosen by capture_at
 var _self_position_snapshot: Vector2 = Vector2.ZERO
 var _has_self_position_snapshot: bool = false
+## Self rotation snapshot — captured once at the moment chosen by capture_at (radians)
+var _self_rotation_snapshot: float = 0.0
+var _has_self_rotation_snapshot: bool = false
 ## Self scale snapshot — captured once at the moment chosen by capture_at
 var _self_scale_snapshot: Vector2 = Vector2.ONE
 var _has_self_scale_snapshot: bool = false
@@ -217,20 +216,7 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append_array(_get_position_from_to_properties())
 
 		TransformTarget.ROTATION:
-			# Rotation still uses old offset model (Phase 3 will upgrade)
-			props.append({
-				"name": "transform_target_node",
-				"type": TYPE_NODE_PATH,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-				"hint_string": "Node2D",
-			})
-			props.append({
-				"name": "rotation_offset_degrees",
-				"type": TYPE_FLOAT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NONE,
-			})
+			props.append_array(_get_rotation_from_to_properties())
 			props.append_array(_get_pivot_properties())
 
 		TransformTarget.SCALE:
@@ -325,6 +311,79 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		})
 
 	return pos_props
+
+
+## Rotation From/To inspector properties (new model)
+func _get_rotation_from_to_properties() -> Array[Dictionary]:
+	var rot_props: Array[Dictionary] = []
+
+	# --- From group ---
+	rot_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	rot_props.append({
+		"name": "from_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if from_reference == RotationReference.CUSTOM:
+		rot_props.append({
+			"name": "from_rotation_degrees",
+			"type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif from_reference == RotationReference.SELF:
+		rot_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif from_reference == RotationReference.TARGET_NODE:
+		rot_props.append({
+			"name": "from_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node2D",
+		})
+
+	# --- To group ---
+	rot_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	rot_props.append({
+		"name": "to_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if to_reference == RotationReference.CUSTOM:
+		rot_props.append({
+			"name": "to_rotation_degrees",
+			"type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif to_reference == RotationReference.SELF:
+		rot_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif to_reference == RotationReference.TARGET_NODE:
+		rot_props.append({
+			"name": "to_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node2D",
+		})
+
+	return rot_props
 
 
 ## Scale From/To inspector properties (new model)
@@ -432,23 +491,27 @@ func _set(property: StringName, value: Variant) -> bool:
 		# Legacy: old scenes may have position_offset — accept but ignore
 		&"position_offset": return true
 		&"position_offset_unit": return true
-		# Rotation (old model)
-		&"rotation_offset_degrees": rotation_offset_degrees = value; return true
-		# Scale (From/To model)
+		# Rotation (From/To model)
+		&"from_rotation_degrees": from_rotation_degrees = value; return true
+		&"to_rotation_degrees": to_rotation_degrees = value; return true
+		# Legacy: old scenes may have rotation_offset_degrees — accept but ignore
+		&"rotation_offset_degrees": return true
+		# Shared From/To
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
-		&"from_scale": from_scale = value; return true
-		&"to_scale": to_scale = value; return true
 		&"from_target_node": from_target_node = value; return true
 		&"to_target_node": to_target_node = value; return true
 		&"capture_at": capture_at = value; return true
+		# Scale (From/To model)
+		&"from_scale": from_scale = value; return true
+		&"to_scale": to_scale = value; return true
 		# Legacy: old scenes may have scale_offset — accept but ignore
 		&"scale_offset": return true
 		# Pivot
 		&"pivot_mode": pivot_mode = value; return true
 		&"custom_pivot": custom_pivot = value; return true
-		# Transform target node (rotation old model)
-		&"transform_target_node": transform_target_node = value; return true
+		# Legacy: old scenes may have transform_target_node — accept but ignore
+		&"transform_target_node": return true
 	return false
 
 
@@ -459,21 +522,21 @@ func _get(property: StringName) -> Variant:
 		&"from_position_in": return from_position_in
 		&"to_position": return to_position
 		&"to_position_in": return to_position_in
-		# Rotation (old model)
-		&"rotation_offset_degrees": return rotation_offset_degrees
-		# Scale (From/To model)
+		# Rotation (From/To model)
+		&"from_rotation_degrees": return from_rotation_degrees
+		&"to_rotation_degrees": return to_rotation_degrees
+		# Shared From/To
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
-		&"from_scale": return from_scale
-		&"to_scale": return to_scale
 		&"from_target_node": return from_target_node
 		&"to_target_node": return to_target_node
 		&"capture_at": return capture_at
+		# Scale (From/To model)
+		&"from_scale": return from_scale
+		&"to_scale": return to_scale
 		# Pivot
 		&"pivot_mode": return pivot_mode
 		&"custom_pivot": return custom_pivot
-		# Transform target node (rotation old model)
-		&"transform_target_node": return transform_target_node
 	return null
 
 
@@ -483,23 +546,26 @@ func _get(property: StringName) -> Variant:
 
 func _ready() -> void:
 	super._ready()
-	if transform_target == TransformTarget.POSITION or transform_target == TransformTarget.SCALE:
-		call_deferred("_capture_base")
-		# If Self reference uses CaptureAt.READY, snapshot now
-		if capture_at == CaptureAt.READY:
-			if transform_target == TransformTarget.POSITION:
+	# All transform types now use From/To model — capture base early
+	call_deferred("_capture_base")
+	# If Self reference uses CaptureAt.READY, snapshot now
+	if capture_at == CaptureAt.READY:
+		match transform_target:
+			TransformTarget.POSITION:
 				call_deferred("_capture_self_position_snapshot")
-			elif transform_target == TransformTarget.SCALE:
+			TransformTarget.ROTATION:
+				call_deferred("_capture_self_rotation_snapshot")
+			TransformTarget.SCALE:
 				call_deferred("_capture_self_scale_snapshot")
 
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_resolved = false
-	_use_target_node = false
 	_from_ref = null
 	_to_ref = null
 	_has_self_position_snapshot = false
+	_has_self_rotation_snapshot = false
 	_has_self_scale_snapshot = false
 	_my_position_contribution = Vector2.ZERO
 	_my_rotation_contribution = 0.0
@@ -535,18 +601,16 @@ func _on_animate_start() -> void:
 	if not _has_base:
 		_capture_base()
 
+	# All transform types now use From/To model
+	_resolve_from_to_refs()
 	match transform_target:
 		TransformTarget.POSITION:
-			# Position uses new From/To model
-			_resolve_from_to_refs()
 			if capture_at == CaptureAt.TRIGGER:
 				_capture_self_position_snapshot()
 		TransformTarget.ROTATION:
-			# Rotation still uses old offset model
-			_resolve_transform_target()
+			if capture_at == CaptureAt.TRIGGER:
+				_capture_self_rotation_snapshot()
 		TransformTarget.SCALE:
-			# Scale uses new From/To model
-			_resolve_from_to_refs()
 			if capture_at == CaptureAt.TRIGGER:
 				_capture_self_scale_snapshot()
 
@@ -655,31 +719,65 @@ func _get_ref_local_position(ref: Node2D, animated: Node2D) -> Vector2:
 # ROTATION EFFECT
 # =============================================================================
 
-## Apply rotation with pivot compensation. Node2D lacks native pivot_offset,
-## so we adjust position to keep the pivot point stationary during rotation:
+## Apply rotation using From/To lerp model with pivot compensation.
+## Node2D lacks native pivot_offset, so we adjust position to keep
+## the pivot point stationary during rotation:
 ##   fixed_pivot = base_pos + pivot.rotated(base_rot)
 ##   new_pos = fixed_pivot - pivot.rotated(new_rot)
 func _apply_rotation_effect(progress: float, target: Node2D) -> void:
-	var offset_radians: float
-	if _use_target_node and is_instance_valid(_target_ref):
-		offset_radians = _compute_target_rotation_offset(target)
-	else:
-		offset_radians = deg_to_rad(rotation_offset_degrees)
-	var desired_rot := offset_radians * progress
-	var rot_delta := desired_rot - _my_rotation_contribution
+	var from_rad := _resolve_from_rotation(target)
+	var to_rad := _resolve_to_rotation(target)
+	var desired_absolute := lerp_angle(from_rad, to_rad, progress)
+
+	# Convert absolute rotation to delta from base (for delta-first write pattern)
+	var desired_offset := desired_absolute - _base_rotation_radians
+	var rot_delta := desired_offset - _my_rotation_contribution
 	target.rotation += rot_delta
-	_my_rotation_contribution = desired_rot
+	_my_rotation_contribution = desired_offset
 
 	# Pivot compensation: position depends on the full rotation.
-	# Use the base reference to compute exact pivot-compensated position,
-	# then write position as a delta.
 	if _pivot_point != Vector2.ZERO:
-		var full_rotation := _base_rotation_radians + desired_rot
-		var desired_pos := _fixed_pivot_parent - _pivot_point.rotated(full_rotation)
+		var desired_pos := _fixed_pivot_parent - _pivot_point.rotated(desired_absolute)
 		var desired_pos_offset := desired_pos - _base_position
 		var pos_delta := desired_pos_offset - _my_position_contribution
 		target.position += pos_delta
 		_my_position_contribution = desired_pos_offset
+
+
+## Resolve the From rotation to an absolute value in radians (local space)
+func _resolve_from_rotation(animated: Node2D) -> float:
+	match from_reference:
+		RotationReference.CUSTOM:
+			return _base_rotation_radians + deg_to_rad(from_rotation_degrees)
+		RotationReference.SELF:
+			return _self_rotation_snapshot
+		RotationReference.TARGET_NODE:
+			if is_instance_valid(_from_ref):
+				return _get_ref_local_rotation(_from_ref, animated)
+			return _base_rotation_radians
+	return _base_rotation_radians
+
+
+## Resolve the To rotation to an absolute value in radians (local space)
+func _resolve_to_rotation(animated: Node2D) -> float:
+	match to_reference:
+		RotationReference.CUSTOM:
+			return _base_rotation_radians + deg_to_rad(to_rotation_degrees)
+		RotationReference.SELF:
+			return _self_rotation_snapshot
+		RotationReference.TARGET_NODE:
+			if is_instance_valid(_to_ref):
+				return _get_ref_local_rotation(_to_ref, animated)
+			return _base_rotation_radians
+	return _base_rotation_radians
+
+
+## Convert a reference node's global rotation to the animated node's parent-local rotation
+func _get_ref_local_rotation(ref: Node2D, animated: Node2D) -> float:
+	var parent := animated.get_parent()
+	if parent is Node2D:
+		return ref.global_rotation - (parent as Node2D).global_rotation
+	return ref.global_rotation
 
 
 # =============================================================================
@@ -751,52 +849,11 @@ func _get_ref_local_scale(ref: Node2D, animated: Node2D) -> Vector2:
 
 
 # =============================================================================
-# TRANSFORM TARGET NODE — RESOLUTION & PER-FRAME OFFSET COMPUTATION
-# =============================================================================
-
-## Resolve the transform_target_node NodePath to a cached node reference.
-## Called once per animation start. Per-frame validity is checked in _apply_*_effect.
-func _resolve_transform_target() -> void:
-	_use_target_node = false
-	_target_ref = null
-	if transform_target_node.is_empty():
-		return
-	var resolved := get_node_or_null(transform_target_node)
-	if resolved == null:
-		if debug_enabled:
-			push_warning("[%s] transform_target_node path '%s' could not be resolved" % [name, transform_target_node])
-		return
-	if not (resolved is Node2D):
-		if debug_enabled:
-			push_warning("[%s] transform_target_node '%s' is not a Node2D (is %s)" % [name, resolved.name, resolved.get_class()])
-		return
-	if resolved == _target_node:
-		if debug_enabled:
-			push_warning("[%s] transform_target_node points to self — offset will be zero" % [name])
-	_target_ref = resolved as Node2D
-	_use_target_node = true
-	if debug_enabled:
-		print("[%s] Resolved transform target: '%s'" % [name, resolved.name])
-
-
-## Compute rotation offset: difference between target's global rotation and
-## animated node's base global rotation, yielding the local-space radians needed.
-func _compute_target_rotation_offset(animated: Node2D) -> float:
-	var target_global_rot := _target_ref.global_rotation
-	var parent_global_rot: float = 0.0
-	var parent := animated.get_parent()
-	if parent is Node2D:
-		parent_global_rot = (parent as Node2D).global_rotation
-	# desired_local = target_global - parent_global; offset = desired_local - base
-	return (target_global_rot - parent_global_rot) - _base_rotation_radians
-
-
-# =============================================================================
-# SCALE REFERENCE RESOLUTION (From/To model)
+# FROM/TO REFERENCE RESOLUTION (shared by Position, Rotation, and Scale)
 # =============================================================================
 
 ## Resolve from_target_node and to_target_node NodePaths to cached references.
-## Called once per animation start for Position and Scale From/To models.
+## Called once per animation start for all From/To models.
 func _resolve_from_to_refs() -> void:
 	_from_ref = null
 	_to_ref = null
@@ -804,6 +861,21 @@ func _resolve_from_to_refs() -> void:
 		_from_ref = _resolve_node_path_to_node2d(from_target_node, "from_target_node")
 	if to_reference == ScaleReference.TARGET_NODE:
 		_to_ref = _resolve_node_path_to_node2d(to_target_node, "to_target_node")
+
+
+## Capture Self's current rotation as a stable snapshot for use during animation.
+## Called at the moment chosen by capture_at (READY or TRIGGER).
+func _capture_self_rotation_snapshot() -> void:
+	if _has_self_rotation_snapshot:
+		return
+	var target := _get_target_node2d()
+	if target == null:
+		_self_rotation_snapshot = 0.0
+	else:
+		_self_rotation_snapshot = target.rotation
+	_has_self_rotation_snapshot = true
+	if debug_enabled:
+		print("[%s] Captured self rotation snapshot: %s rad" % [name, _self_rotation_snapshot])
 
 
 ## Capture Self's current position as a stable snapshot for use during animation.
@@ -1121,6 +1193,8 @@ func _recipe_apply_natural(_target: Node, natural: Variant) -> void:
 		TransformTarget.ROTATION:
 			_base_rotation_radians = dict.get("rotation", 0.0) as float
 			_base_position = dict.get("position", Vector2.ZERO) as Vector2
+			# Reset self snapshot so it gets re-captured for this target
+			_has_self_rotation_snapshot = false
 		TransformTarget.SCALE:
 			_base_scale = dict.get("scale", Vector2.ONE) as Vector2
 			_base_position = dict.get("position", Vector2.ZERO) as Vector2
@@ -1157,7 +1231,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if parent and not parent is Node2D:
 		warnings.append("Parent must be a Node2D node. Use TransformControl/Transform3D for other domains. (ignore if comp is a child of a sequencer)")
 	# From/To: warn if both reference Self (no visible effect)
-	if transform_target in [TransformTarget.POSITION, TransformTarget.SCALE]:
-		if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
-			warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
+	if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
+		warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
 	return warnings

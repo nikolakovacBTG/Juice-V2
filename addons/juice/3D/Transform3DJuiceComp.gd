@@ -38,12 +38,10 @@
 # - INHERIT: Scales from node origin (no compensation).
 # - CUSTOM: Scales from custom_pivot (local-space world units).
 #
-# TRANSFORM TARGET NODE (optional):
-# When transform_target_node points to a Node3D node, manual offset fields are
-# ignored. Instead, the offset is computed per-frame from the animated node's
-# base transform to the target node's current global transform. Supports moving targets.
-# For ROTATION in target mode, quaternion slerp is used instead of euler deltas,
-# which correctly handles rotations >180° with no gimbal lock.
+# FROM/TO MODEL (Position, Rotation, Scale):
+# All transform types use a unified "From [source] To [destination]" model.
+# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
+# Rotation uses quaternion slerp for correct interpolation (no gimbal lock).
 #
 # CONDITIONAL EXPORTS:
 # Changing transform_target triggers notify_property_list_changed() which
@@ -103,6 +101,13 @@ enum PositionIn3D {
 	FRACTION_PARENT   ## Position in fraction of parent's AABB
 }
 
+## Reference type for Rotation From/To axes
+enum RotationReference {
+	CUSTOM,       ## Explicit rotation value (degrees/radians per RotationUnit)
+	SELF,         ## This object's current rotation (captured at capture_at moment)
+	TARGET_NODE   ## Another object's rotation (tracked live every frame)
+}
+
 ## Reference type for Scale From/To axes
 enum ScaleReference {
 	CUSTOM,       ## Explicit scale value (Vector3)
@@ -131,22 +136,17 @@ var to_position: Vector3 = Vector3.ZERO
 ## How to interpret To position values
 var to_position_in: int = PositionIn3D.WORLD_UNITS
 
-# --- ROTATION ---
-## How much to rotate when animated in (degrees on each axis)
-var rotation_offset: Vector3 = Vector3(0, 90, 0)
+# --- ROTATION (From/To model) ---
+## Custom From rotation offset (shown when from_reference == CUSTOM)
+var from_rotation: Vector3 = Vector3.ZERO
+## Custom To rotation offset (shown when to_reference == CUSTOM)
+var to_rotation: Vector3 = Vector3(0, 90, 0)
 ## Unit for rotation values (degrees is more intuitive for most users)
 var rotation_unit: int = RotationUnit.DEGREES
 ## Pivot point offset from node origin (local space).
 ## Rotation appears to happen around this point.
 ## Useful for doors (hinge), levers (base), lids (back edge).
 var rotation_pivot_offset: Vector3 = Vector3.ZERO
-
-# --- TRANSFORM TARGET NODE (used by ROTATION — old model) ---
-## Optional: drag a Node3D here to animate TOWARD its transform.
-## When set, manual offset fields are ignored — offset is computed per-frame
-## from the animated node's base to the target node's current global transform.
-## For ROTATION, quaternion slerp replaces euler deltas in target mode.
-var transform_target_node: NodePath
 
 # --- SCALE (From/To model) ---
 ## Reference type for the From axis of the scale animation
@@ -207,19 +207,16 @@ var _my_scale_contribution: Vector3 = Vector3.ZERO
 ## Logs at ~10% intervals instead of every frame to avoid flooding the buffer.
 var _debug_last_logged_decile: int = -1
 
-## Resolved reference to the transform target node (cached at animation start)
-## Used by POSITION and ROTATION (old offset model)
-var _target_ref: Node3D = null
-## Whether to use target node offset instead of manual offset (POSITION/ROTATION)
-var _use_target_node: bool = false
-
 ## Resolved references for From/To target nodes (cached at animation start)
-## Shared by Position and Scale From/To models
+## Shared by Position, Rotation, and Scale From/To models
 var _from_ref: Node3D = null
 var _to_ref: Node3D = null
 ## Self position snapshot — captured once at the moment chosen by capture_at
 var _self_position_snapshot: Vector3 = Vector3.ZERO
 var _has_self_position_snapshot: bool = false
+## Self rotation snapshot — captured once at the moment chosen by capture_at (euler radians)
+var _self_rotation_snapshot: Vector3 = Vector3.ZERO
+var _has_self_rotation_snapshot: bool = false
 ## Self scale snapshot — captured once at the moment chosen by capture_at
 var _self_scale_snapshot: Vector3 = Vector3.ONE
 var _has_self_scale_snapshot: bool = false
@@ -237,33 +234,7 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append_array(_get_position_from_to_properties())
 
 		TransformTarget.ROTATION:
-			# Rotation still uses old offset model (Phase 3 will upgrade)
-			props.append({
-				"name": "transform_target_node",
-				"type": TYPE_NODE_PATH,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-				"hint_string": "Node3D",
-			})
-			props.append({
-				"name": "rotation_offset",
-				"type": TYPE_VECTOR3,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NONE,
-			})
-			props.append({
-				"name": "rotation_unit",
-				"type": TYPE_INT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Degrees,Radians",
-			})
-			props.append({
-				"name": "rotation_pivot_offset",
-				"type": TYPE_VECTOR3,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NONE,
-			})
+			props.append_array(_get_rotation_from_to_properties())
 
 		TransformTarget.SCALE:
 			props.append_array(_get_scale_from_to_properties())
@@ -357,6 +328,104 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		})
 
 	return pos_props
+
+
+## Rotation From/To inspector properties (new model)
+func _get_rotation_from_to_properties() -> Array[Dictionary]:
+	var rot_props: Array[Dictionary] = []
+
+	# --- From group ---
+	rot_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	rot_props.append({
+		"name": "from_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if from_reference == RotationReference.CUSTOM:
+		rot_props.append({
+			"name": "from_rotation",
+			"type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+		rot_props.append({
+			"name": "rotation_unit",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Degrees,Radians",
+		})
+	elif from_reference == RotationReference.SELF:
+		rot_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif from_reference == RotationReference.TARGET_NODE:
+		rot_props.append({
+			"name": "from_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node3D",
+		})
+
+	# --- To group ---
+	rot_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	rot_props.append({
+		"name": "to_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if to_reference == RotationReference.CUSTOM:
+		rot_props.append({
+			"name": "to_rotation",
+			"type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+		# Only show rotation_unit once (shared between From/To custom)
+		if from_reference != RotationReference.CUSTOM:
+			rot_props.append({
+				"name": "rotation_unit",
+				"type": TYPE_INT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": "Degrees,Radians",
+			})
+	elif to_reference == RotationReference.SELF:
+		rot_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif to_reference == RotationReference.TARGET_NODE:
+		rot_props.append({
+			"name": "to_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node3D",
+		})
+
+	# Rotation pivot (always shown for rotation)
+	rot_props.append({"name": "Pivot", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	rot_props.append({
+		"name": "rotation_pivot_offset",
+		"type": TYPE_VECTOR3,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_NONE,
+	})
+
+	return rot_props
 
 
 ## Scale From/To inspector properties (new model)
@@ -462,25 +531,29 @@ func _set(property: StringName, value: Variant) -> bool:
 		# Legacy: old scenes may have position_offset — accept but ignore
 		&"position_offset": return true
 		&"position_offset_unit": return true
-		# Rotation (old model)
-		&"rotation_offset": rotation_offset = value; return true
+		# Rotation (From/To model)
+		&"from_rotation": from_rotation = value; return true
+		&"to_rotation": to_rotation = value; return true
 		&"rotation_unit": rotation_unit = value; return true
 		&"rotation_pivot_offset": rotation_pivot_offset = value; return true
-		# Scale (From/To model)
+		# Legacy: old scenes may have rotation_offset — accept but ignore
+		&"rotation_offset": return true
+		# Shared From/To
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
-		&"from_scale": from_scale = value; return true
-		&"to_scale": to_scale = value; return true
 		&"from_target_node": from_target_node = value; return true
 		&"to_target_node": to_target_node = value; return true
 		&"capture_at": capture_at = value; return true
+		# Scale (From/To model)
+		&"from_scale": from_scale = value; return true
+		&"to_scale": to_scale = value; return true
 		# Legacy: old scenes may have scale_offset — accept but ignore
 		&"scale_offset": return true
 		# Scale pivot
 		&"scale_pivot_mode": scale_pivot_mode = value; return true
 		&"scale_custom_pivot": scale_custom_pivot = value; return true
-		# Transform target node (rotation old model)
-		&"transform_target_node": transform_target_node = value; return true
+		# Legacy: old scenes may have transform_target_node — accept but ignore
+		&"transform_target_node": return true
 	return false
 
 
@@ -491,23 +564,23 @@ func _get(property: StringName) -> Variant:
 		&"from_position_in": return from_position_in
 		&"to_position": return to_position
 		&"to_position_in": return to_position_in
-		# Rotation (old model)
-		&"rotation_offset": return rotation_offset
+		# Rotation (From/To model)
+		&"from_rotation": return from_rotation
+		&"to_rotation": return to_rotation
 		&"rotation_unit": return rotation_unit
 		&"rotation_pivot_offset": return rotation_pivot_offset
-		# Scale (From/To model)
+		# Shared From/To
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
-		&"from_scale": return from_scale
-		&"to_scale": return to_scale
 		&"from_target_node": return from_target_node
 		&"to_target_node": return to_target_node
 		&"capture_at": return capture_at
+		# Scale (From/To model)
+		&"from_scale": return from_scale
+		&"to_scale": return to_scale
 		# Scale pivot
 		&"scale_pivot_mode": return scale_pivot_mode
 		&"scale_custom_pivot": return scale_custom_pivot
-		# Transform target node (rotation old model)
-		&"transform_target_node": return transform_target_node
 	return null
 
 
@@ -517,22 +590,25 @@ func _get(property: StringName) -> Variant:
 
 func _ready() -> void:
 	super._ready()
-	if transform_target == TransformTarget.POSITION or transform_target == TransformTarget.SCALE:
-		call_deferred("_capture_base")
-		if capture_at == CaptureAt.READY:
-			if transform_target == TransformTarget.POSITION:
+	# All transform types now use From/To model — capture base early
+	call_deferred("_capture_base")
+	if capture_at == CaptureAt.READY:
+		match transform_target:
+			TransformTarget.POSITION:
 				call_deferred("_capture_self_position_snapshot")
-			elif transform_target == TransformTarget.SCALE:
+			TransformTarget.ROTATION:
+				call_deferred("_capture_self_rotation_snapshot")
+			TransformTarget.SCALE:
 				call_deferred("_capture_self_scale_snapshot")
 
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_scale_pivot_resolved = false
-	_use_target_node = false
 	_from_ref = null
 	_to_ref = null
 	_has_self_position_snapshot = false
+	_has_self_rotation_snapshot = false
 	_has_self_scale_snapshot = false
 	_my_position_contribution = Vector3.ZERO
 	_my_rotation_contribution = Vector3.ZERO
@@ -568,18 +644,16 @@ func _on_animate_start() -> void:
 	if not _has_base:
 		_capture_base()
 
+	# All transform types now use From/To model
+	_resolve_from_to_refs()
 	match transform_target:
 		TransformTarget.POSITION:
-			# Position uses new From/To model
-			_resolve_from_to_refs()
 			if capture_at == CaptureAt.TRIGGER:
 				_capture_self_position_snapshot()
 		TransformTarget.ROTATION:
-			# Rotation still uses old offset model
-			_resolve_transform_target()
+			if capture_at == CaptureAt.TRIGGER:
+				_capture_self_rotation_snapshot()
 		TransformTarget.SCALE:
-			# Scale uses new From/To model
-			_resolve_from_to_refs()
 			if capture_at == CaptureAt.TRIGGER:
 				_capture_self_scale_snapshot()
 
@@ -680,33 +754,26 @@ func _get_ref_local_position(ref: Node3D, animated: Node3D) -> Vector3:
 
 
 # =============================================================================
-# ROTATION EFFECT (Quaternion slerp with Transform3D pivot)
+# ROTATION EFFECT (From/To with Quaternion slerp + pivot)
 # =============================================================================
 
-## Apply rotation using Quaternion math. Supports pivot_offset for rotating
-## around arbitrary points (e.g., door hinges). The pivot point is fixed in
-## parent space at animation start so it doesn't drift during the animation.
+## Apply rotation using From/To model with Quaternion slerp.
+## Supports pivot_offset for rotating around arbitrary points (e.g., door hinges).
+## The pivot point is fixed in parent space at animation start.
 func _apply_rotation_effect(progress: float, n3d: Node3D) -> void:
-	# Target node mode: use quaternion slerp (handles >180°, no gimbal lock)
-	if _use_target_node and is_instance_valid(_target_ref):
-		_apply_rotation_to_target(progress, n3d)
-		return
+	var from_quat := _resolve_from_rotation_quat(n3d)
+	var to_quat := _resolve_to_rotation_quat(n3d)
+	var current_quat := from_quat.slerp(to_quat, progress)
 
-	# Manual offset mode: euler deltas (existing logic)
-	var offset_rad := _get_rotation_offset_radians()
+	# Convert back to euler for delta-first application
+	var base_euler := _base_transform.basis.orthonormalized().get_euler()
+	var desired_euler := Basis(current_quat).get_euler()
+	var desired_offset := desired_euler - base_euler
+	var rot_delta := desired_offset - _my_rotation_contribution
 
-	# Desired euler offset at this progress
-	var desired_rot := offset_rad * progress
-	var rot_delta := desired_rot - _my_rotation_contribution
-
+	# Pivot compensation
 	if rotation_pivot_offset != Vector3.ZERO:
-		# Pivot compensation: position depends on the full rotation.
-		# Use quaternion math to compute exact pivot-compensated position,
-		# then write position as a delta.
-		var rotation_quat := Quaternion.from_euler(desired_rot)
-		var base_quat := _base_transform.basis.get_rotation_quaternion()
-		var target_quat := base_quat * rotation_quat
-		var new_basis := Basis(target_quat)
+		var new_basis := Basis(current_quat)
 		var desired_pos := _fixed_pivot_parent - new_basis * rotation_pivot_offset
 		var desired_pos_offset := desired_pos - _base_position
 		var pos_delta := desired_pos_offset - _my_position_contribution
@@ -715,26 +782,56 @@ func _apply_rotation_effect(progress: float, n3d: Node3D) -> void:
 
 	# Apply rotation as euler delta (composable with other effects)
 	n3d.rotation += rot_delta
-	_my_rotation_contribution = desired_rot
-
-	# Throttle to ~10% progress milestones to avoid flooding debug buffer
-	var decile := int(progress * 10)
-	if debug_enabled and decile != _debug_last_logged_decile:
-		_debug_last_logged_decile = decile
-		print("[%s] _apply_effect: progress=%.2f, rotation=%s" % [
-			name, progress, n3d.rotation_degrees])
+	_my_rotation_contribution = desired_offset
 
 
-## Convert configured rotation offset to radians
-func _get_rotation_offset_radians() -> Vector3:
+## Resolve the From rotation to an absolute Quaternion in local space
+func _resolve_from_rotation_quat(animated: Node3D) -> Quaternion:
+	var base_quat := Quaternion(_base_transform.basis.orthonormalized())
+	match from_reference:
+		RotationReference.CUSTOM:
+			var offset_rad := _rotation_to_radians(from_rotation)
+			return base_quat * Quaternion.from_euler(offset_rad)
+		RotationReference.SELF:
+			return Quaternion.from_euler(_self_rotation_snapshot)
+		RotationReference.TARGET_NODE:
+			if is_instance_valid(_from_ref):
+				return _get_ref_local_rotation_quat(_from_ref, animated)
+			return base_quat
+	return base_quat
+
+
+## Resolve the To rotation to an absolute Quaternion in local space
+func _resolve_to_rotation_quat(animated: Node3D) -> Quaternion:
+	var base_quat := Quaternion(_base_transform.basis.orthonormalized())
+	match to_reference:
+		RotationReference.CUSTOM:
+			var offset_rad := _rotation_to_radians(to_rotation)
+			return base_quat * Quaternion.from_euler(offset_rad)
+		RotationReference.SELF:
+			return Quaternion.from_euler(_self_rotation_snapshot)
+		RotationReference.TARGET_NODE:
+			if is_instance_valid(_to_ref):
+				return _get_ref_local_rotation_quat(_to_ref, animated)
+			return base_quat
+	return base_quat
+
+
+## Convert a rotation Vector3 from configured rotation_unit to radians
+func _rotation_to_radians(rot: Vector3) -> Vector3:
 	if rotation_unit == RotationUnit.DEGREES:
-		return Vector3(
-			deg_to_rad(rotation_offset.x),
-			deg_to_rad(rotation_offset.y),
-			deg_to_rad(rotation_offset.z)
-		)
-	else:
-		return rotation_offset
+		return Vector3(deg_to_rad(rot.x), deg_to_rad(rot.y), deg_to_rad(rot.z))
+	return rot
+
+
+## Convert a reference node's global rotation to the animated node's parent-local Quaternion
+func _get_ref_local_rotation_quat(ref: Node3D, animated: Node3D) -> Quaternion:
+	var ref_global_basis := ref.global_transform.basis.orthonormalized()
+	var parent_basis := Basis.IDENTITY
+	if animated.get_parent() is Node3D:
+		parent_basis = (animated.get_parent() as Node3D).global_transform.basis.orthonormalized()
+	var local_basis := parent_basis.inverse() * ref_global_basis
+	return Quaternion(local_basis)
 
 
 # =============================================================================
@@ -811,86 +908,11 @@ func _get_ref_local_scale(ref: Node3D, animated: Node3D) -> Vector3:
 
 
 # =============================================================================
-# TRANSFORM TARGET NODE — RESOLUTION & PER-FRAME OFFSET COMPUTATION
-# =============================================================================
-
-## Resolve the transform_target_node NodePath to a cached node reference.
-## Called once per animation start. Per-frame validity is checked in _apply_*_effect.
-func _resolve_transform_target() -> void:
-	_use_target_node = false
-	_target_ref = null
-	if transform_target_node.is_empty():
-		return
-	var resolved := get_node_or_null(transform_target_node)
-	if resolved == null:
-		if debug_enabled:
-			push_warning("[%s] transform_target_node path '%s' could not be resolved" % [name, transform_target_node])
-		return
-	if not (resolved is Node3D):
-		if debug_enabled:
-			push_warning("[%s] transform_target_node '%s' is not a Node3D (is %s)" % [name, resolved.name, resolved.get_class()])
-		return
-	if resolved == _target_node:
-		if debug_enabled:
-			push_warning("[%s] transform_target_node points to self — offset will be zero" % [name])
-	_target_ref = resolved as Node3D
-	_use_target_node = true
-	if debug_enabled:
-		print("[%s] Resolved transform target: '%s'" % [name, resolved.name])
-
-
-## Apply rotation toward target using quaternion slerp. Handles rotations >180°
-## correctly with no gimbal lock. Converts result back to euler for the delta-first
-## write pattern so it remains composable with other effects.
-func _apply_rotation_to_target(progress: float, n3d: Node3D) -> void:
-	# Base rotation quaternion (local space, captured at animation start)
-	var base_basis := _base_transform.basis.orthonormalized()
-	var base_quat := Quaternion(base_basis)
-
-	# Target's rotation converted to animated node's parent (local) space
-	var target_global_basis := _target_ref.global_transform.basis.orthonormalized()
-	var parent_basis := Basis.IDENTITY
-	if n3d.get_parent() is Node3D:
-		parent_basis = (n3d.get_parent() as Node3D).global_transform.basis.orthonormalized()
-	var target_local_basis := parent_basis.inverse() * target_global_basis
-	var target_quat := Quaternion(target_local_basis)
-
-	# Slerp from base to target at current progress
-	var current_quat := base_quat.slerp(target_quat, progress)
-
-	# Convert back to euler for delta-first application
-	var desired_euler := Basis(current_quat).get_euler()
-	var base_euler := base_basis.get_euler()
-	var desired_offset := desired_euler - base_euler
-	var rot_delta := desired_offset - _my_rotation_contribution
-
-	# Pivot compensation (if configured)
-	if rotation_pivot_offset != Vector3.ZERO:
-		var new_basis := Basis(current_quat)
-		var desired_pos := _fixed_pivot_parent - new_basis * rotation_pivot_offset
-		var desired_pos_offset := desired_pos - _base_position
-		var pos_delta := desired_pos_offset - _my_position_contribution
-		n3d.position += pos_delta
-		_my_position_contribution = desired_pos_offset
-
-	# Apply rotation as euler delta (composable with other effects)
-	n3d.rotation += rot_delta
-	_my_rotation_contribution = desired_offset
-
-	# Throttle debug to ~10% progress milestones
-	var decile := int(progress * 10)
-	if debug_enabled and decile != _debug_last_logged_decile:
-		_debug_last_logged_decile = decile
-		print("[%s] _apply_rotation_to_target: progress=%.2f, rotation=%s" % [
-			name, progress, n3d.rotation_degrees])
-
-
-# =============================================================================
-# FROM/TO REFERENCE RESOLUTION (shared by Position and Scale)
+# FROM/TO REFERENCE RESOLUTION (shared by Position, Rotation, and Scale)
 # =============================================================================
 
 ## Resolve from_target_node and to_target_node NodePaths to cached references.
-## Called once per animation start for Position and Scale From/To models.
+## Called once per animation start for all From/To models.
 func _resolve_from_to_refs() -> void:
 	_from_ref = null
 	_to_ref = null
@@ -899,6 +921,20 @@ func _resolve_from_to_refs() -> void:
 		_from_ref = _resolve_node_path_to_node3d(from_target_node, "from_target_node")
 	if to_reference == ScaleReference.TARGET_NODE:
 		_to_ref = _resolve_node_path_to_node3d(to_target_node, "to_target_node")
+
+
+## Capture Self's current rotation as a stable snapshot for use during animation.
+## Called at the moment chosen by capture_at (READY or TRIGGER). Stores euler radians.
+func _capture_self_rotation_snapshot() -> void:
+	if _has_self_rotation_snapshot:
+		return
+	if _target_node is Node3D:
+		_self_rotation_snapshot = (_target_node as Node3D).rotation
+	else:
+		_self_rotation_snapshot = Vector3.ZERO
+	_has_self_rotation_snapshot = true
+	if debug_enabled:
+		print("[%s] Captured self rotation snapshot: %s" % [name, _self_rotation_snapshot])
 
 
 ## Capture Self's current position as a stable snapshot for use during animation.
@@ -1140,9 +1176,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if target and not target is Node3D:
 		warnings.append("Transform3DJuiceComp requires a Node3D parent. Current parent is: " + target.get_class())
 	# From/To: warn if both reference Self (no visible effect)
-	if transform_target in [TransformTarget.POSITION, TransformTarget.SCALE]:
-		if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
-			warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
+	if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
+		warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
 	return warnings
 
 
@@ -1180,6 +1215,8 @@ func _recipe_apply_natural(_target: Node, natural: Variant) -> void:
 			_base_position = _base_transform.origin
 			# Re-compute fixed pivot
 			_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
+			# Reset self snapshot so it gets re-captured for this target
+			_has_self_rotation_snapshot = false
 		TransformTarget.SCALE:
 			_base_scale = dict.get("scale", Vector3.ONE) as Vector3
 			_base_position = dict.get("position", Vector3.ZERO) as Vector3
