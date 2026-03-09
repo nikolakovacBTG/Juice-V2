@@ -28,6 +28,7 @@ The world is full of mediocre code — and AI generates more of it by default. T
 | **1** | Inventory | Cold Soul | Complete comp/utility table with domain coverage |
 | **2** | Code Review (Alpha → Beta) | Cold Soul | All review items resolved, code is clean and optimized |
 | **2.5** | Test Harness | Cold Soul | Automated regression tests for all comps |
+| **2.6** | Performance Profiling | Cold Soul / Juice Demo | Stress tests confirm production viability |
 | **3** | Demo Project & Beta Testing | Juice Demo | All comps have polished demos, bugs found and fixed |
 | **4** | Documentation & Polish | Juice Demo | User docs, README, marketplace listing |
 | **5** | Ship | Marketplace | Golden version released |
@@ -222,6 +223,36 @@ A test scene (`res://addons/juice/tests/juice_test_runner.tscn`) with a script t
 
 ---
 
+## Phase 2.6: Performance Profiling
+
+### Goal
+Verify that the composition-heavy Juice architecture performs well enough for production use. Identify bottlenecks before shipping.
+
+### When
+After all demo scenes are feature-complete and all comps are documented. Before final shipping polish. Profiling results inform whether any optimization is needed.
+
+### Approach
+
+A dedicated stress test scene (`res://addons/juice/tests/juice_profiler.tscn`) that:
+
+1. **Spawns N targets** (100, 500, 1000, 5000) each with a juice stack
+2. **Triggers all simultaneously** and measures performance
+3. **Collects metrics**:
+   - Frame time (ms) via `Performance.get_monitor(Performance.TIME_PROCESS)`
+   - Node count via `Performance.get_monitor(Performance.OBJECT_NODE_COUNT)`
+   - Memory via `Performance.get_monitor(Performance.MEMORY_STATIC)`
+   - Per-comp cost via `Time.get_ticks_usec()` around `_apply_effect`
+4. **Test variants**: With/without Interaction comps (physics overhead), with/without pivot resolution (math overhead), idle stacks vs all-animating
+5. **Output**: CSV or on-screen overlay with frame budget breakdown
+
+### Expected Thresholds
+
+- Hundreds of simultaneously-animating juice stacks should be fine
+- Thousands may need profiling to confirm
+- Real bottleneck is usually targets (draw calls, physics bodies), not juice nodes
+
+---
+
 ## Phase 3: Demo Project & Beta Testing
 
 ### Goal
@@ -355,6 +386,7 @@ git subtree pull --prefix=addons/juice juice-standalone v0.9-beta --squash
 | 1 — Inventory | 🔲 IN PROGRESS | |
 | 2 — Code Review | 🔲 NOT STARTED | Previous beta review (R1-R6) complete |
 | 2.5 — Test Harness | 🔲 NOT STARTED | |
+| 2.6 — Performance Profiling | 🔲 NOT STARTED | After demo is feature-complete |
 | 3 — Demo Project | 🔲 NOT STARTED | |
 | 4 — Docs & Polish | 🔲 NOT STARTED | |
 | 5 — Ship | 🔲 NOT STARTED | |

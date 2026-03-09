@@ -215,6 +215,19 @@ Comprehensive documentation for the Juice system, suitable for:
 
 ---
 
+## B9. Performance Profiling
+
+**Owner:** Cascade
+**Status:** Not started — after demo is feature-complete
+
+### Goal
+Verify that the composition-heavy Juice architecture performs well enough for production use. Stress test with increasing target counts to identify bottlenecks.
+
+### Details
+See `Juice_Shipping_Plan.md` Phase 2.6 for full test plan (metrics, variants, thresholds).
+
+---
+
 ## Execution Order Summary
 
 | Phase | Task | Blocked By | Priority |
@@ -227,6 +240,7 @@ Comprehensive documentation for the Juice system, suitable for:
 | B6 | Demo Project | B5 | High |
 | B7 | Documentation & GIFs | B3, B6 | Medium |
 | B8 | Marketing & Tutorials | B7 | Low (next phase) |
+| B9 | Performance Profiling | B6 | Medium (pre-ship) |
 
 > **Rationale:** Clean the code first (B1 → B2 → B3), then extract to sub-module (B5), then build the demo (B6) and docs (B7). Icons (B4) can happen in parallel whenever designs are ready.
 
