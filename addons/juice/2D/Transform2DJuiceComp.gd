@@ -4,8 +4,6 @@
 ## a From/To animation using [code]CUSTOM[/code] values, [code]SELF[/code] snapshots,
 ## or live [code]TARGET_NODE[/code] references. Supports pivot modes for rotation and
 ## scale. Add as a child of any [Node2D] and trigger via [method animate_in].
-##
-## @experimental
 
 # ============================================================================
 # WHAT: Consolidated deterministic transform effect for Node2D nodes. Combines

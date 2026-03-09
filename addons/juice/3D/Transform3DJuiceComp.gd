@@ -4,8 +4,6 @@
 ## a From/To animation using [code]CUSTOM[/code] values, [code]SELF[/code] snapshots,
 ## or live [code]TARGET_NODE[/code] references. Rotation uses quaternion slerp for
 ## smooth interpolation. Add as a child of any [Node3D] and trigger via [method animate_in].
-##
-## @experimental
 
 # ============================================================================
 # WHAT: Consolidated deterministic transform effect for Node3D nodes. Combines
