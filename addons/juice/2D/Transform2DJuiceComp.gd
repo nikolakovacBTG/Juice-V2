@@ -78,6 +78,21 @@ enum PivotMode {
 	CUSTOM        ## Rotate/scale from custom_pivot (local-space pixels)
 }
 
+## Reference type for Position From/To axes
+enum PositionReference {
+	CUSTOM,       ## Explicit position value (Vector2) with coordinate unit
+	SELF,         ## This object's current position (captured at capture_at moment)
+	TARGET_NODE   ## Another object's position (tracked live every frame)
+}
+
+## How to interpret custom position values (2D)
+enum PositionIn {
+	PIXELS,           ## Position in absolute pixels
+	FRACTION_OWN,     ## Position in fraction of object's own size
+	FRACTION_PARENT,  ## Position in fraction of parent's size
+	FRACTION_VIEWPORT ## Position in fraction of viewport size
+}
+
 ## Reference type for Scale From/To axes
 enum ScaleReference {
 	CUSTOM,       ## Explicit scale value (Vector2)
@@ -96,11 +111,15 @@ enum CaptureAt {
 # These are NOT @export — they are shown/hidden via _get_property_list()
 # =============================================================================
 
-# --- POSITION ---
-## Offset to apply at progress=1.0. For fraction units, 0.5 = 50%.
-var position_offset: Vector2 = Vector2(-50, 0)
-## How to interpret the offset values
-var position_offset_unit: int = OffsetUnit.FRACTION_OWN
+# --- POSITION (From/To model) ---
+## Custom From position value (shown when from_reference == CUSTOM)
+var from_position: Vector2 = Vector2.ZERO
+## How to interpret From position values
+var from_position_in: int = PositionIn.PIXELS
+## Custom To position value (shown when to_reference == CUSTOM)
+var to_position: Vector2 = Vector2.ZERO
+## How to interpret To position values
+var to_position_in: int = PositionIn.PIXELS
 
 # --- ROTATION ---
 ## Rotation offset in degrees applied at progress=1.0
@@ -128,7 +147,7 @@ var to_target_node: NodePath
 ## When to capture Self's scale (shown inside From/To group when reference == SELF)
 var capture_at: int = CaptureAt.TRIGGER
 
-# --- TRANSFORM TARGET NODE (used by POSITION and ROTATION — old model) ---
+# --- TRANSFORM TARGET NODE (used by ROTATION — old model) ---
 ## Optional: drag a Node2D here to animate TOWARD its transform.
 ## When set, manual offset fields are ignored — offset is computed per-frame
 ## from the animated node's base to the target node's current global transform.
@@ -169,14 +188,18 @@ var _my_rotation_contribution: float = 0.0
 var _my_scale_contribution: Vector2 = Vector2.ZERO
 
 ## Resolved reference to the transform target node (cached at animation start)
-## Used by POSITION and ROTATION (old offset model)
+## Used by ROTATION only (old offset model)
 var _target_ref: Node2D = null
-## Whether to use target node offset instead of manual offset (POSITION/ROTATION)
+## Whether to use target node offset instead of manual offset (ROTATION only)
 var _use_target_node: bool = false
 
-## Resolved references for Scale From/To target nodes (cached at animation start)
+## Resolved references for From/To target nodes (cached at animation start)
+## Shared by Position and Scale From/To models
 var _from_ref: Node2D = null
 var _to_ref: Node2D = null
+## Self position snapshot — captured once at the moment chosen by capture_at
+var _self_position_snapshot: Vector2 = Vector2.ZERO
+var _has_self_position_snapshot: bool = false
 ## Self scale snapshot — captured once at the moment chosen by capture_at
 var _self_scale_snapshot: Vector2 = Vector2.ONE
 var _has_self_scale_snapshot: bool = false
@@ -191,27 +214,7 @@ func _get_property_list() -> Array[Dictionary]:
 
 	match transform_target:
 		TransformTarget.POSITION:
-			# Position still uses old offset model (Phase 2 will upgrade)
-			props.append({
-				"name": "transform_target_node",
-				"type": TYPE_NODE_PATH,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-				"hint_string": "Node2D",
-			})
-			props.append({
-				"name": "position_offset",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_NONE,
-			})
-			props.append({
-				"name": "position_offset_unit",
-				"type": TYPE_INT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Pixels,Fraction Own,Fraction Parent,Fraction Viewport",
-			})
+			props.append_array(_get_position_from_to_properties())
 
 		TransformTarget.ROTATION:
 			# Rotation still uses old offset model (Phase 3 will upgrade)
@@ -235,6 +238,93 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append_array(_get_pivot_properties())
 
 	return props
+
+
+## Position From/To inspector properties (new model)
+func _get_position_from_to_properties() -> Array[Dictionary]:
+	var pos_props: Array[Dictionary] = []
+
+	# --- From group ---
+	pos_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	pos_props.append({
+		"name": "from_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if from_reference == PositionReference.CUSTOM:
+		pos_props.append({
+			"name": "from_position_in",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Pixels,Fraction Own,Fraction Parent,Fraction Viewport",
+		})
+		pos_props.append({
+			"name": "from_position",
+			"type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif from_reference == PositionReference.SELF:
+		pos_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif from_reference == PositionReference.TARGET_NODE:
+		pos_props.append({
+			"name": "from_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node2D",
+		})
+
+	# --- To group ---
+	pos_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+	pos_props.append({
+		"name": "to_reference",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Custom,Self,Target Node",
+	})
+
+	if to_reference == PositionReference.CUSTOM:
+		pos_props.append({
+			"name": "to_position_in",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Pixels,Fraction Own,Fraction Parent,Fraction Viewport",
+		})
+		pos_props.append({
+			"name": "to_position",
+			"type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+	elif to_reference == PositionReference.SELF:
+		pos_props.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Trigger,Ready",
+		})
+	elif to_reference == PositionReference.TARGET_NODE:
+		pos_props.append({
+			"name": "to_target_node",
+			"type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+			"hint_string": "Node2D",
+		})
+
+	return pos_props
 
 
 ## Scale From/To inspector properties (new model)
@@ -334,9 +424,14 @@ func _get_pivot_properties() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		# Position (old model)
-		&"position_offset": position_offset = value; return true
-		&"position_offset_unit": position_offset_unit = value; return true
+		# Position (From/To model)
+		&"from_position": from_position = value; return true
+		&"from_position_in": from_position_in = value; return true
+		&"to_position": to_position = value; return true
+		&"to_position_in": to_position_in = value; return true
+		# Legacy: old scenes may have position_offset — accept but ignore
+		&"position_offset": return true
+		&"position_offset_unit": return true
 		# Rotation (old model)
 		&"rotation_offset_degrees": rotation_offset_degrees = value; return true
 		# Scale (From/To model)
@@ -352,16 +447,18 @@ func _set(property: StringName, value: Variant) -> bool:
 		# Pivot
 		&"pivot_mode": pivot_mode = value; return true
 		&"custom_pivot": custom_pivot = value; return true
-		# Transform target node (position/rotation old model)
+		# Transform target node (rotation old model)
 		&"transform_target_node": transform_target_node = value; return true
 	return false
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		# Position (old model)
-		&"position_offset": return position_offset
-		&"position_offset_unit": return position_offset_unit
+		# Position (From/To model)
+		&"from_position": return from_position
+		&"from_position_in": return from_position_in
+		&"to_position": return to_position
+		&"to_position_in": return to_position_in
 		# Rotation (old model)
 		&"rotation_offset_degrees": return rotation_offset_degrees
 		# Scale (From/To model)
@@ -375,7 +472,7 @@ func _get(property: StringName) -> Variant:
 		# Pivot
 		&"pivot_mode": return pivot_mode
 		&"custom_pivot": return custom_pivot
-		# Transform target node (position/rotation old model)
+		# Transform target node (rotation old model)
 		&"transform_target_node": return transform_target_node
 	return null
 
@@ -386,11 +483,14 @@ func _get(property: StringName) -> Variant:
 
 func _ready() -> void:
 	super._ready()
-	if transform_target == TransformTarget.SCALE:
+	if transform_target == TransformTarget.POSITION or transform_target == TransformTarget.SCALE:
 		call_deferred("_capture_base")
-		# If Self reference uses CaptureAt.READY, snapshot scale now
+		# If Self reference uses CaptureAt.READY, snapshot now
 		if capture_at == CaptureAt.READY:
-			call_deferred("_capture_self_scale_snapshot")
+			if transform_target == TransformTarget.POSITION:
+				call_deferred("_capture_self_position_snapshot")
+			elif transform_target == TransformTarget.SCALE:
+				call_deferred("_capture_self_scale_snapshot")
 
 
 func _invalidate_base_cache() -> void:
@@ -399,6 +499,7 @@ func _invalidate_base_cache() -> void:
 	_use_target_node = false
 	_from_ref = null
 	_to_ref = null
+	_has_self_position_snapshot = false
 	_has_self_scale_snapshot = false
 	_my_position_contribution = Vector2.ZERO
 	_my_rotation_contribution = 0.0
@@ -435,13 +536,17 @@ func _on_animate_start() -> void:
 		_capture_base()
 
 	match transform_target:
-		TransformTarget.POSITION, TransformTarget.ROTATION:
-			# Position/Rotation still use old offset model
+		TransformTarget.POSITION:
+			# Position uses new From/To model
+			_resolve_from_to_refs()
+			if capture_at == CaptureAt.TRIGGER:
+				_capture_self_position_snapshot()
+		TransformTarget.ROTATION:
+			# Rotation still uses old offset model
 			_resolve_transform_target()
 		TransformTarget.SCALE:
-			# Scale uses new From/To model — resolve reference nodes
-			_resolve_scale_refs()
-			# Capture Self snapshot at trigger time if configured
+			# Scale uses new From/To model
+			_resolve_from_to_refs()
 			if capture_at == CaptureAt.TRIGGER:
 				_capture_self_scale_snapshot()
 
@@ -477,33 +582,73 @@ func _apply_effect(progress: float) -> void:
 # POSITION EFFECT
 # =============================================================================
 
+## Apply position using From/To lerp model.
+## Both From and To are resolved to world pixels, then interpolated.
 func _apply_position_effect(progress: float, target: Node2D) -> void:
-	var actual_offset: Vector2
-	if _use_target_node and is_instance_valid(_target_ref):
-		actual_offset = _compute_target_position_offset(target)
-	else:
-		actual_offset = _calculate_position_offset()
-	var desired := actual_offset * progress
-	var delta := desired - _my_position_contribution
+	var from_value := _resolve_from_position(target)
+	var to_value := _resolve_to_position(target)
+	var desired_absolute := from_value.lerp(to_value, progress)
+
+	# Convert absolute position to delta from base (for delta-first write pattern)
+	var desired_offset := desired_absolute - _base_position
+	var delta := desired_offset - _my_position_contribution
 	target.position += delta
-	_my_position_contribution = desired
+	_my_position_contribution = desired_offset
 
 
-## Resolve position offset using the configured unit
-func _calculate_position_offset() -> Vector2:
-	match position_offset_unit:
-		OffsetUnit.PIXELS:
-			return position_offset
-		OffsetUnit.FRACTION_OWN:
+## Resolve the From position to an absolute Vector2 in local space
+func _resolve_from_position(animated: Node2D) -> Vector2:
+	match from_reference:
+		PositionReference.CUSTOM:
+			return _base_position + _convert_to_world_pixels(from_position, from_position_in)
+		PositionReference.SELF:
+			return _self_position_snapshot
+		PositionReference.TARGET_NODE:
+			if is_instance_valid(_from_ref):
+				return _get_ref_local_position(_from_ref, animated)
+			return _base_position
+	return _base_position
+
+
+## Resolve the To position to an absolute Vector2 in local space
+func _resolve_to_position(animated: Node2D) -> Vector2:
+	match to_reference:
+		PositionReference.CUSTOM:
+			return _base_position + _convert_to_world_pixels(to_position, to_position_in)
+		PositionReference.SELF:
+			return _self_position_snapshot
+		PositionReference.TARGET_NODE:
+			if is_instance_valid(_to_ref):
+				return _get_ref_local_position(_to_ref, animated)
+			return _base_position
+	return _base_position
+
+
+## Convert a position value from its PositionIn unit to world pixels (offset)
+func _convert_to_world_pixels(position: Vector2, position_in: int) -> Vector2:
+	match position_in:
+		PositionIn.PIXELS:
+			return position
+		PositionIn.FRACTION_OWN:
 			var size := _infer_node2d_size(_target_node as Node2D)
-			return Vector2(position_offset.x * size.x, position_offset.y * size.y)
-		OffsetUnit.FRACTION_PARENT:
+			return Vector2(position.x * size.x, position.y * size.y)
+		PositionIn.FRACTION_PARENT:
 			var size := _infer_parent_size()
-			return Vector2(position_offset.x * size.x, position_offset.y * size.y)
-		OffsetUnit.FRACTION_VIEWPORT:
+			return Vector2(position.x * size.x, position.y * size.y)
+		PositionIn.FRACTION_VIEWPORT:
 			var size := _get_viewport_size()
-			return Vector2(position_offset.x * size.x, position_offset.y * size.y)
-	return position_offset
+			return Vector2(position.x * size.x, position.y * size.y)
+	return position
+
+
+## Convert a reference node's global position to the animated node's parent-local position
+func _get_ref_local_position(ref: Node2D, animated: Node2D) -> Vector2:
+	var parent := animated.get_parent()
+	if parent is Node2D:
+		return (parent as Node2D).global_transform.affine_inverse() * ref.global_position
+	elif parent is Control:
+		return (parent as Control).get_global_transform().affine_inverse() * ref.global_position
+	return ref.global_position
 
 
 # =============================================================================
@@ -634,20 +779,6 @@ func _resolve_transform_target() -> void:
 		print("[%s] Resolved transform target: '%s'" % [name, resolved.name])
 
 
-## Compute position offset: target's global position converted to animated node's parent space,
-## minus the base position. Recomputed every frame to support moving targets.
-func _compute_target_position_offset(animated: Node2D) -> Vector2:
-	var parent := animated.get_parent()
-	var target_in_parent: Vector2
-	if parent is Node2D:
-		target_in_parent = (parent as Node2D).global_transform.affine_inverse() * _target_ref.global_position
-	elif parent is Control:
-		target_in_parent = (parent as Control).get_global_transform().affine_inverse() * _target_ref.global_position
-	else:
-		target_in_parent = _target_ref.global_position
-	return target_in_parent - _base_position
-
-
 ## Compute rotation offset: difference between target's global rotation and
 ## animated node's base global rotation, yielding the local-space radians needed.
 func _compute_target_rotation_offset(animated: Node2D) -> float:
@@ -665,14 +796,29 @@ func _compute_target_rotation_offset(animated: Node2D) -> float:
 # =============================================================================
 
 ## Resolve from_target_node and to_target_node NodePaths to cached references.
-## Called once per animation start when transform_target == SCALE.
-func _resolve_scale_refs() -> void:
+## Called once per animation start for Position and Scale From/To models.
+func _resolve_from_to_refs() -> void:
 	_from_ref = null
 	_to_ref = null
 	if from_reference == ScaleReference.TARGET_NODE:
 		_from_ref = _resolve_node_path_to_node2d(from_target_node, "from_target_node")
 	if to_reference == ScaleReference.TARGET_NODE:
 		_to_ref = _resolve_node_path_to_node2d(to_target_node, "to_target_node")
+
+
+## Capture Self's current position as a stable snapshot for use during animation.
+## Called at the moment chosen by capture_at (READY or TRIGGER).
+func _capture_self_position_snapshot() -> void:
+	if _has_self_position_snapshot:
+		return
+	var target := _get_target_node2d()
+	if target == null:
+		_self_position_snapshot = Vector2.ZERO
+	else:
+		_self_position_snapshot = target.position
+	_has_self_position_snapshot = true
+	if debug_enabled:
+		print("[%s] Captured self position snapshot: %s" % [name, _self_position_snapshot])
 
 
 ## Capture Self's current scale as a stable snapshot for use during animation.
@@ -970,6 +1116,8 @@ func _recipe_apply_natural(_target: Node, natural: Variant) -> void:
 	match transform_target:
 		TransformTarget.POSITION:
 			_base_position = dict.get("position", Vector2.ZERO) as Vector2
+			# Reset self snapshot so it gets re-captured for this target
+			_has_self_position_snapshot = false
 		TransformTarget.ROTATION:
 			_base_rotation_radians = dict.get("rotation", 0.0) as float
 			_base_position = dict.get("position", Vector2.ZERO) as Vector2
@@ -1008,8 +1156,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var parent := get_parent()
 	if parent and not parent is Node2D:
 		warnings.append("Parent must be a Node2D node. Use TransformControl/Transform3D for other domains. (ignore if comp is a child of a sequencer)")
-	# Scale From/To: warn if both reference Self (no visible effect)
-	if transform_target == TransformTarget.SCALE:
+	# From/To: warn if both reference Self (no visible effect)
+	if transform_target in [TransformTarget.POSITION, TransformTarget.SCALE]:
 		if from_reference == ScaleReference.SELF and to_reference == ScaleReference.SELF:
 			warnings.append("Both From and To reference Self \u2014 animation will have no visible effect.")
 	return warnings
