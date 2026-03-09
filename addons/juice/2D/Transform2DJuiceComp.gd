@@ -488,14 +488,9 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"from_position_in": from_position_in = value; return true
 		&"to_position": to_position = value; return true
 		&"to_position_in": to_position_in = value; return true
-		# Legacy: old scenes may have position_offset — accept but ignore
-		&"position_offset": return true
-		&"position_offset_unit": return true
 		# Rotation (From/To model)
 		&"from_rotation_degrees": from_rotation_degrees = value; return true
 		&"to_rotation_degrees": to_rotation_degrees = value; return true
-		# Legacy: old scenes may have rotation_offset_degrees — accept but ignore
-		&"rotation_offset_degrees": return true
 		# Shared From/To
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
@@ -505,13 +500,9 @@ func _set(property: StringName, value: Variant) -> bool:
 		# Scale (From/To model)
 		&"from_scale": from_scale = value; return true
 		&"to_scale": to_scale = value; return true
-		# Legacy: old scenes may have scale_offset — accept but ignore
-		&"scale_offset": return true
 		# Pivot
 		&"pivot_mode": pivot_mode = value; return true
 		&"custom_pivot": custom_pivot = value; return true
-		# Legacy: old scenes may have transform_target_node — accept but ignore
-		&"transform_target_node": return true
 	return false
 
 
