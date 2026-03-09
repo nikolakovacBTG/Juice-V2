@@ -898,6 +898,39 @@ All current behaviors map cleanly to new system:
 
 ### Implementation Priority
 
-1. **Scale** (HIGH) — Most requested feature, foundation for the pattern
-2. **Position** (HIGH) — Very common use cases, retains coordinate system
-3. **Rotation** (MEDIUM) — Adds target node capability, completes the suite
+1. **Scale** (HIGH) — ✅ DONE
+2. **Position** (HIGH) — ✅ DONE
+3. **Rotation** (MEDIUM) — ✅ DONE
+
+### Post-Implementation Notes
+
+- All three transform types implemented with From/To model in both 2D and 3D
+- Separate `PositionReference`, `RotationReference`, `ScaleReference` enums unified into single `TransformReference` enum
+- Class docs brought up to spec (brief + description in `##`, dev notes demoted to `#`)
+- Base euler/quaternion caching added in 3D for performance
+- Snapshot captures guarded — only if SELF is actually referenced
+
+---
+
+## Performance Profiling (Future — Post-Demo, Pre-Ship)
+
+### When
+
+After all demo scenes are feature-complete and all comps are documented. Before final shipping polish. Profiling results inform whether any optimization is needed.
+
+### What to Test
+
+1. **Stress test scene** — Spawn N targets (100, 500, 1000, 5000) each with a juice stack, trigger all simultaneously
+2. **Metrics**:
+   - Frame time (ms) via `Performance.get_monitor(Performance.TIME_PROCESS)`
+   - Node count via `Performance.get_monitor(Performance.OBJECT_NODE_COUNT)`
+   - Memory via `Performance.get_monitor(Performance.MEMORY_STATIC)`
+   - Per-comp cost via `Time.get_ticks_usec()` around `_apply_effect`
+3. **Variants**: With/without Interaction comps (physics overhead), with/without pivot resolution (math overhead), idle stacks vs all-animating
+4. **Output**: CSV or on-screen overlay with frame budget breakdown
+
+### Expected Thresholds
+
+- Hundreds of simultaneously-animating juice stacks should be fine
+- Thousands may need profiling to confirm
+- Real bottleneck is usually targets (draw calls, physics bodies), not juice nodes
