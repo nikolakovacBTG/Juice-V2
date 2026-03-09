@@ -99,9 +99,16 @@ enum PositionIn3D {
 # --- Rotation ---
 
 enum RotationReference {
-    CUSTOM,         # Explicit rotation value (degrees)
+    CUSTOM,         # Explicit rotation value
     SELF,           # This object's current rotation (captured at capture_at moment)
     TARGET_NODE     # Another object's rotation (tracked live — NEW)
+}
+
+## 3D only — rotation values can be entered in degrees or radians.
+## 2D rotation is always a single float in degrees (no unit picker needed).
+enum RotationUnit {
+    DEGREES,    # More intuitive for most users (default)
+    RADIANS     # For precise control
 }
 
 # --- Scale ---
@@ -146,9 +153,12 @@ var from_position_in: int = PositionIn.PIXELS     # PositionIn3D for 3D
 var to_position: Vector2 = Vector2.ZERO
 var to_position_in: int = PositionIn.PIXELS
 
-# Rotation
-var from_rotation_degrees: float = 0.0
-var to_rotation_degrees: float = 0.0
+# Rotation (2D: single float in degrees. 3D: Vector3 + RotationUnit)
+var from_rotation_degrees: float = 0.0       # 2D only
+var to_rotation_degrees: float = 0.0         # 2D only
+var from_rotation: Vector3 = Vector3.ZERO     # 3D only
+var to_rotation: Vector3 = Vector3.ZERO       # 3D only
+var rotation_unit: int = RotationUnit.DEGREES # 3D only — applies to Custom values
 
 # Scale
 var from_scale: Vector2 = Vector2.ZERO            # Vector3 for 3D
@@ -338,6 +348,94 @@ func _get_rotation_properties() -> Array[Dictionary]:
             "hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
             "hint_string": "Node2D",
         })
+    
+    return props
+```
+
+#### Rotation Properties (3D version — Vector3 + RotationUnit + pivot)
+
+3D rotation differs from 2D in three ways:
+- **3-axis rotation** (Vector3 instead of float)
+- **RotationUnit** picker (Degrees/Radians) shown when any Custom reference is selected
+- **rotation_pivot_offset** (Vector3) for rotating around arbitrary points (door hinges, levers)
+- **Quaternion slerp** used for Target Node mode (handles >180°, no gimbal lock)
+
+```gdscript
+# 3D variant — differences from 2D marked with # <<< 3D
+func _get_rotation_properties() -> Array[Dictionary]:
+    var props: Array[Dictionary] = []
+    
+    # --- From group ---
+    props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+    props.append({
+        "name": "from_reference",
+        "type": TYPE_INT,
+        "usage": PROPERTY_USAGE_DEFAULT,
+        "hint": PROPERTY_HINT_ENUM,
+        "hint_string": "Custom,Self,Target Node",
+    })
+    
+    if from_reference == RotationReference.CUSTOM:
+        props.append({
+            "name": "from_rotation",                            # <<< 3D: Vector3
+            "type": TYPE_VECTOR3,                               # <<< 3D
+            "usage": PROPERTY_USAGE_DEFAULT,
+        })
+    elif from_reference == RotationReference.SELF:
+        _append_capture_at(props)
+    elif from_reference == RotationReference.TARGET_NODE:
+        props.append({
+            "name": "from_target_node",
+            "type": TYPE_NODE_PATH,
+            "usage": PROPERTY_USAGE_DEFAULT,
+            "hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+            "hint_string": "Node3D",                            # <<< 3D
+        })
+    
+    # --- To group ---
+    props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+    props.append({
+        "name": "to_reference",
+        "type": TYPE_INT,
+        "usage": PROPERTY_USAGE_DEFAULT,
+        "hint": PROPERTY_HINT_ENUM,
+        "hint_string": "Custom,Self,Target Node",
+    })
+    
+    if to_reference == RotationReference.CUSTOM:
+        props.append({
+            "name": "to_rotation",                              # <<< 3D: Vector3
+            "type": TYPE_VECTOR3,                               # <<< 3D
+            "usage": PROPERTY_USAGE_DEFAULT,
+        })
+    elif to_reference == RotationReference.SELF:
+        _append_capture_at(props)
+    elif to_reference == RotationReference.TARGET_NODE:
+        props.append({
+            "name": "to_target_node",
+            "type": TYPE_NODE_PATH,
+            "usage": PROPERTY_USAGE_DEFAULT,
+            "hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
+            "hint_string": "Node3D",                            # <<< 3D
+        })
+    
+    # --- Rotation settings (3D only, shown when any Custom is selected) ---
+    if from_reference == RotationReference.CUSTOM or to_reference == RotationReference.CUSTOM:
+        props.append({"name": "Rotation Settings", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
+        props.append({
+            "name": "rotation_unit",
+            "type": TYPE_INT,
+            "usage": PROPERTY_USAGE_DEFAULT,
+            "hint": PROPERTY_HINT_ENUM,
+            "hint_string": "Degrees,Radians",
+        })
+    
+    # rotation_pivot_offset — always shown for rotation (3D only)
+    props.append({
+        "name": "rotation_pivot_offset",
+        "type": TYPE_VECTOR3,
+        "usage": PROPERTY_USAGE_DEFAULT,
+    })
     
     return props
 ```
@@ -704,6 +802,63 @@ func _get_interpolated_position(progress: float) -> Vector2:
 
 Add to `_get_configuration_warnings()`:
 - **Self + Self**: "Both From and To reference Self — animation will have no visible effect."
+
+#### Animation Math Change: Offset → Lerp
+
+The current system uses **offset * progress**:
+```gdscript
+# CURRENT: offset model
+var desired := scale_offset * progress
+var delta := desired - _my_scale_contribution
+target.scale += delta
+```
+
+The new system uses **lerp(from, to, progress)** with delta-first writes:
+```gdscript
+# NEW: From/To model
+var from_value := _resolve_from_scale()   # Custom value, Self snapshot, or Target live
+var to_value := _resolve_to_scale()       # Custom value, Self snapshot, or Target live
+var desired := from_value.lerp(to_value, progress)
+var desired_offset := desired - _base_scale  # Convert absolute to delta from base
+var delta := desired_offset - _my_scale_contribution
+target.scale += delta
+_my_scale_contribution = desired_offset
+```
+
+Key difference: `_resolve_from/to_*()` returns **absolute values** (not offsets).
+The delta-first write pattern is preserved — only the value resolution changes.
+
+#### Internal Naming: `_target_node` vs Reference Nodes
+
+`_target_node` already exists in `JuiceCompBase` (line 415) as **the node being animated**
+(usually the parent). The new `from_target_node` / `to_target_node` are **external reference
+nodes** whose transforms are read as From/To values.
+
+| Name | What it is | Defined in |
+|---|---|---|
+| `_target_node` | The node being animated (parent) | `JuiceCompBase` — do NOT rename |
+| `from_target_node` | Inspector NodePath for From reference | New backing var |
+| `to_target_node` | Inspector NodePath for To reference | New backing var |
+| `_from_ref` | Cached resolved node from `from_target_node` | New internal var |
+| `_to_ref` | Cached resolved node from `to_target_node` | New internal var |
+
+The old `_target_ref` (single cached reference) is replaced by `_from_ref` and `_to_ref`.
+
+#### 3D Rotation Specifics
+
+3D rotation has significant differences from 2D that must be preserved:
+
+| Aspect | 2D | 3D |
+|---|---|---|
+| **Custom value type** | `float` (degrees) | `Vector3` + `RotationUnit` (degrees/radians) |
+| **Inspector field** | `from/to_rotation_degrees` | `from/to_rotation` (Vector3) |
+| **Target Node mode** | Simple float difference | Quaternion slerp (handles >180°, no gimbal lock) |
+| **Pivot** | `pivot_mode` + `custom_pivot` (Vector2) | `rotation_pivot_offset` (Vector3, always shown) |
+| **Interpolation** | Linear float lerp | Quaternion slerp for smooth 3D interpolation |
+| **Internal base** | `_base_rotation_radians: float` | `_base_transform: Transform3D` (full transform for quat math) |
+
+For 3D Target Node mode, the existing quaternion slerp in `_apply_rotation_to_target()` maps
+directly to the new From/To model — it already computes `base_quat.slerp(target_quat, progress)`.
 
 #### General
 
