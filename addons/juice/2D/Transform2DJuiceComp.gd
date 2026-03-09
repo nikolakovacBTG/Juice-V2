@@ -1,49 +1,57 @@
-## Transform2DJuiceComp.gd
-## ============================================================================
-## WHAT: Consolidated deterministic transform effect for Node2D nodes. Combines
-##       position, rotation, and scale animation into a single component with a
-##       TransformTarget selector. Uses _get_property_list() to conditionally
-##       show only relevant exports in the inspector.
-## WHY: Replaces 3 separate scripts (Position2DJuiceComp, Rotation2DJuiceComp,
-##      Scale2DJuiceComp) with one unified component, reducing file count and
-##      ensuring consistent behavior across transform types.
+## Animate position, rotation, or scale of a [Node2D] with tween-based easing.
 ##
-## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this comp's
-##   contribution: node.property += (desired - _my_contribution). This enables
-##   stacking with other effects and preserves external changes to the node.
-## SYSTEM: Juicing System (addons/juice/) - 2D Domain
-## DOES NOT: Handle Control or Node3D targets (use TransformControl/Transform3D).
-## DOES NOT: Handle procedural effects like shake or noise (use Shake/Noise comps).
-## DOES NOT: Handle arbitrary property animation (use PropertyShake/PropertyNoise).
-## ============================================================================
+## Select a [member transform_target] (Position, Rotation, or Scale) and configure
+## a From/To animation using [code]CUSTOM[/code] values, [code]SELF[/code] snapshots,
+## or live [code]TARGET_NODE[/code] references. Supports pivot modes for rotation and
+## scale. Add as a child of any [Node2D] and trigger via [method animate_in].
 ##
-## TRANSFORM TARGETS:
-## - POSITION: Animates Node2D.position via From/To model + PositionIn unit system.
-##   Supports PIXELS, FRACTION_OWN, FRACTION_PARENT, FRACTION_VIEWPORT units.
-##   Uses size inference (Sprite2D, AnimatedSprite2D, CollisionShape2D, Polygon2D,
-##   recursive child bounds) for fraction-based offset resolution.
-## - ROTATION: Animates Node2D.rotation via From/To model (degrees) + pivot mode.
-##   Node2D lacks native pivot_offset, so pivot is achieved by position
-##   compensation: fixed_pivot = base_pos + pivot.rotated(base_rot),
-##   new_pos = fixed_pivot - pivot.rotated(new_rot).
-## - SCALE: Animates Node2D.scale via From/To model + pivot mode.
-##   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
-##
-## PIVOT (ROTATION and SCALE only):
-## - AUTO_CENTER: Infers visual center from Sprite2D/CollisionShape2D/etc.
-##   Node2D content is typically centered at origin, so center is often (0,0).
-## - INHERIT: No position compensation (rotate/scale from node origin).
-## - CUSTOM: User-specified local-space pivot point (pixels).
-##
-## FROM/TO MODEL (Position, Rotation, Scale):
-## All transform types use a unified "From [source] To [destination]" model.
-## Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
-##
-## CONDITIONAL EXPORTS:
-## Changing transform_target triggers notify_property_list_changed() which
-## shows/hides the relevant parameters via _get_property_list(). Properties
-## added this way appear AFTER all @export properties in the inspector.
-## ============================================================================
+## @experimental
+
+# ============================================================================
+# WHAT: Consolidated deterministic transform effect for Node2D nodes. Combines
+#       position, rotation, and scale animation into a single component with a
+#       TransformTarget selector. Uses _get_property_list() to conditionally
+#       show only relevant exports in the inspector.
+# WHY: Replaces 3 separate scripts (Position2DJuiceComp, Rotation2DJuiceComp,
+#      Scale2DJuiceComp) with one unified component, reducing file count and
+#      ensuring consistent behavior across transform types.
+#
+# WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this comp's
+#   contribution: node.property += (desired - _my_contribution). This enables
+#   stacking with other effects and preserves external changes to the node.
+# SYSTEM: Juicing System (addons/juice/) - 2D Domain
+# DOES NOT: Handle Control or Node3D targets (use TransformControl/Transform3D).
+# DOES NOT: Handle procedural effects like shake or noise (use Shake/Noise comps).
+# DOES NOT: Handle arbitrary property animation (use PropertyShake/PropertyNoise).
+# ============================================================================
+#
+# TRANSFORM TARGETS:
+# - POSITION: Animates Node2D.position via From/To model + PositionIn unit system.
+#   Supports PIXELS, FRACTION_OWN, FRACTION_PARENT, FRACTION_VIEWPORT units.
+#   Uses size inference (Sprite2D, AnimatedSprite2D, CollisionShape2D, Polygon2D,
+#   recursive child bounds) for fraction-based offset resolution.
+# - ROTATION: Animates Node2D.rotation via From/To model (degrees) + pivot mode.
+#   Node2D lacks native pivot_offset, so pivot is achieved by position
+#   compensation: fixed_pivot = base_pos + pivot.rotated(base_rot),
+#   new_pos = fixed_pivot - pivot.rotated(new_rot).
+# - SCALE: Animates Node2D.scale via From/To model + pivot mode.
+#   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
+#
+# PIVOT (ROTATION and SCALE only):
+# - AUTO_CENTER: Infers visual center from Sprite2D/CollisionShape2D/etc.
+#   Node2D content is typically centered at origin, so center is often (0,0).
+# - INHERIT: No position compensation (rotate/scale from node origin).
+# - CUSTOM: User-specified local-space pivot point (pixels).
+#
+# FROM/TO MODEL (Position, Rotation, Scale):
+# All transform types use a unified "From [source] To [destination]" model.
+# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
+#
+# CONDITIONAL EXPORTS:
+# Changing transform_target triggers notify_property_list_changed() which
+# shows/hides the relevant parameters via _get_property_list(). Properties
+# added this way appear AFTER all @export properties in the inspector.
+# ============================================================================
 
 @tool
 @icon("res://addons/juice/Icons/JuiceBase2D.svg")

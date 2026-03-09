@@ -1,4 +1,12 @@
-# Transform3DJuiceComp.gd
+## Animate position, rotation, or scale of a [Node3D] with tween-based easing.
+##
+## Select a [member transform_target] (Position, Rotation, or Scale) and configure
+## a From/To animation using [code]CUSTOM[/code] values, [code]SELF[/code] snapshots,
+## or live [code]TARGET_NODE[/code] references. Rotation uses quaternion slerp for
+## smooth interpolation. Add as a child of any [Node3D] and trigger via [method animate_in].
+##
+## @experimental
+
 # ============================================================================
 # WHAT: Consolidated deterministic transform effect for Node3D nodes. Combines
 #       position, rotation, and scale animation into a single component with a
