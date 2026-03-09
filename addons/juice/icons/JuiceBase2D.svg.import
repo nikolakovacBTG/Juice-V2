@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://drv65d0hpjaiy"
-path="res://.godot/imported/JuiceBase2D.svg-86300f1cd9fe418140128ec6948c8978.ctex"
+path="res://.godot/imported/JuiceBase2D.svg-1376a59c29822afd0ac120e056038df8.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/juice/Icons/JuiceBase2D.svg"
-dest_files=["res://.godot/imported/JuiceBase2D.svg-86300f1cd9fe418140128ec6948c8978.ctex"]
+source_file="res://addons/juice/icons/JuiceBase2D.svg"
+dest_files=["res://.godot/imported/JuiceBase2D.svg-1376a59c29822afd0ac120e056038df8.ctex"]
 
 [params]
 

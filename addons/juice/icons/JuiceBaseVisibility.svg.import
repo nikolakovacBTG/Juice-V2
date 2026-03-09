@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://e70sqjop1xnu"
-path="res://.godot/imported/JuiceBaseVisibility.svg-e3784000bd1d1c12fa7e0bcaa8699102.ctex"
+path="res://.godot/imported/JuiceBaseVisibility.svg-4104d63466ed58c65f2660217a535354.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/juice/Icons/JuiceBaseVisibility.svg"
-dest_files=["res://.godot/imported/JuiceBaseVisibility.svg-e3784000bd1d1c12fa7e0bcaa8699102.ctex"]
+source_file="res://addons/juice/icons/JuiceBaseVisibility.svg"
+dest_files=["res://.godot/imported/JuiceBaseVisibility.svg-4104d63466ed58c65f2660217a535354.ctex"]
 
 [params]
 

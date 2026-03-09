@@ -305,5 +305,5 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	var parent := get_parent()
 	if parent and not parent is Control:
-		warnings.append("Parent must be a Control node. Use Appearance2D/3D for other domains.")
+		warnings.append("Parent must be a Control node. Use Appearance2D/3D for other domains. (ignore if comp is a child of a sequencer)")
 	return warnings

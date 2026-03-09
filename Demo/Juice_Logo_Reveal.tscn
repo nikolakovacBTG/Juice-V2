@@ -1,0 +1,227 @@
+[gd_scene load_steps=20 format=3 uid="uid://ged086sfs7k0"]
+
+[ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
+[ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
+[ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="3_vfe5a"]
+[ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="4_orfff"]
+[ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="5_r852d"]
+[ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="6_8smnx"]
+[ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="7_wm0iw"]
+[ext_resource type="Texture2D" uid="uid://cmwpcwscfhv5i" path="res://Textures/Logo/slice17.png" id="8_7frtj"]
+[ext_resource type="Texture2D" uid="uid://qvbev42i0u4p" path="res://Textures/Logo/slice18.png" id="9_y27hi"]
+[ext_resource type="Texture2D" uid="uid://bif3av5rbnaec" path="res://Textures/Logo/slice3.png" id="10_2nye2"]
+[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="10_orfff"]
+[ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="11_o2e6s"]
+[ext_resource type="Script" uid="uid://cquadl5sa07sy" path="res://addons/juice/2D/Transform2DJuiceComp.gd" id="11_r852d"]
+[ext_resource type="Texture2D" uid="uid://bgv1hww8ounvj" path="res://Textures/Logo/slice5.png" id="12_7fq1n"]
+[ext_resource type="Texture2D" uid="uid://023fqnaaoqwl" path="res://Textures/Logo/slice6.png" id="13_uaibf"]
+[ext_resource type="Texture2D" uid="uid://jijmr37fhkid" path="res://Textures/Logo/slice7.png" id="14_g1way"]
+[ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="15_hfiu5"]
+[ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="16_jlm4u"]
+[ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="17_tusjn"]
+
+[node name="JuiceLogoReveal" type="Node2D"]
+
+[node name="JuiceLogoSeparated" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(0.75, -1)
+scale = Vector2(0.41744664, 0.41795665)
+texture = ExtResource("1_6a25c")
+metadata/_edit_lock_ = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="Camera2D"]
+
+[node name="Node2D" type="Node2D" parent="."]
+position = Vector2(0, -550)
+
+[node name="Slice11" type="Sprite2D" parent="Node2D"]
+position = Vector2(-320, -64)
+scale = Vector2(0.4152831, 0.4152831)
+texture = ExtResource("2_kljto")
+
+[node name="Slice12" type="Sprite2D" parent="Node2D"]
+position = Vector2(-205.00002, -1)
+scale = Vector2(0.4152831, 0.4168708)
+texture = ExtResource("3_vfe5a")
+
+[node name="Slice13" type="Sprite2D" parent="Node2D"]
+position = Vector2(-40, 15)
+scale = Vector2(0.4133329, 0.4186288)
+texture = ExtResource("4_orfff")
+
+[node name="Slice14" type="Sprite2D" parent="Node2D"]
+position = Vector2(82.00001, -90)
+scale = Vector2(0.41803548, 0.42369977)
+texture = ExtResource("5_r852d")
+
+[node name="Slice15" type="Sprite2D" parent="Node2D"]
+position = Vector2(57, 16)
+scale = Vector2(0.4152831, 0.4152831)
+texture = ExtResource("6_8smnx")
+
+[node name="Slice16" type="Sprite2D" parent="Node2D"]
+position = Vector2(147, 7)
+scale = Vector2(0.41179833, 0.41899928)
+texture = ExtResource("7_wm0iw")
+
+[node name="Slice17" type="Sprite2D" parent="Node2D"]
+position = Vector2(276, 8)
+scale = Vector2(0.4152831, 0.41877186)
+texture = ExtResource("8_7frtj")
+
+[node name="Slice18" type="Sprite2D" parent="Node2D"]
+position = Vector2(385.00003, 58.000004)
+scale = Vector2(0.4152831, 0.42053574)
+texture = ExtResource("9_y27hi")
+
+[node name="SequencerJuiceComp" type="Node" parent="Node2D"]
+script = ExtResource("10_orfff")
+juice_source = 0
+target_scope = 0
+sequence_type = 0
+stagger_delay = 0.1
+mirror_stagger_on_exit = true
+skip_invisible = true
+skip_self = true
+skip_juice_components = true
+hide_parent_on_reverse_complete = false
+trigger_on = 8
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://umlva67rt4ud"
+
+[node name="Transform2DJuiceComp" type="Node" parent="Node2D/SequencerJuiceComp"]
+script = ExtResource("11_r852d")
+transform_target_node = NodePath("")
+position_offset = Vector2(0, 550)
+position_offset_unit = 0
+trigger_on = 8
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.5
+elastic_period_in = 0.65
+custom_curve_in = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cquadl5sa07sy"
+
+[node name="Node2D2" type="Node2D" parent="."]
+
+[node name="Slice3" type="Sprite2D" parent="Node2D2"]
+position = Vector2(-318, -69)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("10_2nye2")
+
+[node name="Slice4" type="Sprite2D" parent="Node2D2"]
+position = Vector2(-205, -9)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("11_o2e6s")
+
+[node name="Slice5" type="Sprite2D" parent="Node2D2"]
+position = Vector2(-39, 8)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("12_7fq1n")
+
+[node name="Slice6" type="Sprite2D" parent="Node2D2"]
+position = Vector2(82, -96)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("13_uaibf")
+
+[node name="Slice7" type="Sprite2D" parent="Node2D2"]
+position = Vector2(58, 7)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("14_g1way")
+
+[node name="Slice8" type="Sprite2D" parent="Node2D2"]
+position = Vector2(147, 0)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("15_hfiu5")
+
+[node name="Slice9" type="Sprite2D" parent="Node2D2"]
+position = Vector2(277, 0)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("16_jlm4u")
+
+[node name="Slice10" type="Sprite2D" parent="Node2D2"]
+position = Vector2(385, 50)
+rotation = -1.5707964
+scale = Vector2(1e-05, 1e-05)
+texture = ExtResource("17_tusjn")
+
+[node name="SequencerJuiceComp2" type="Node" parent="Node2D2"]
+script = ExtResource("10_orfff")
+juice_source = 0
+target_scope = 0
+sequence_type = 0
+stagger_delay = 0.1
+mirror_stagger_on_exit = true
+skip_invisible = true
+skip_self = true
+skip_juice_components = true
+hide_parent_on_reverse_complete = false
+trigger_on = 8
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://umlva67rt4ud"
+
+[node name="Transform2DJuiceComp" type="Node" parent="Node2D2/SequencerJuiceComp2"]
+script = ExtResource("11_r852d")
+transform_target = 2
+transform_target_node = NodePath("../../Node2D")
+scale_offset = Vector2(0, 0)
+pivot_mode = 0
+auto_connect_parent = false
+trigger_on = 8
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.5
+elastic_period_in = 0.65
+custom_curve_in = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cquadl5sa07sy"
+
+[node name="Transform2DJuiceComp2" type="Node" parent="Node2D2/SequencerJuiceComp2"]
+script = ExtResource("11_r852d")
+transform_target = 1
+transform_target_node = NodePath("")
+rotation_offset_degrees = 90.0
+pivot_mode = 0
+auto_connect_parent = false
+trigger_on = 8
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.5
+elastic_period_in = 0.65
+custom_curve_in = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cquadl5sa07sy"
+
+[node name="Node2D" type="Node2D" parent="Node2D2"]
+scale = Vector2(0.418, 0.418)

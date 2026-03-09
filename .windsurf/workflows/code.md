@@ -255,3 +255,18 @@ This ensures:
 - Refactor-proof (renaming nodes doesn't break discovery)
 - Type-safe (compiler catches errors)
 - Marketable (works in any project without path assumptions)
+
+---
+
+### 11. Juice Subtree Sync (Demo Project Only)
+
+Before starting new Juice development in the Demo project, ensure you have the latest changes:
+
+// turbo
+```powershell
+git subtree pull --prefix=addons/juice juice-standalone main --squash
+```
+
+**Why this matters:** The Demo project's `addons/juice/` is a read-only subtree. All Juice development happens in Cold Soul, then gets synced here.
+
+**Rule:** Do NOT modify files inside `addons/juice/` directly in the Demo project. If you find a bug, document it and fix it in Cold Soul, then sync.

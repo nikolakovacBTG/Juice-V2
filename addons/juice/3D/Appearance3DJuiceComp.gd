@@ -489,5 +489,5 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	var parent := get_parent()
 	if parent and not parent is Node3D:
-		warnings.append("Parent must be a Node3D node. Use AppearanceControl/Appearance2D for other domains.")
+		warnings.append("Parent must be a Node3D node. Use AppearanceControl/Appearance2D for other domains. (ignore if comp is a child of a sequencer)")
 	return warnings

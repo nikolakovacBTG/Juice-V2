@@ -9,9 +9,8 @@ This is the **Juice Demo Project** — a standalone Godot 4.x project that showc
 3. **Preset library** — ready-to-copy recipe scenes
 4. **Documentation source** — footage capture, tutorials, GIFs
 
-**Development source of truth:** Cold Soul project (where Juice was developed).
 **Sync method:** Git Subtree via standalone Juice repo.
-**Fix flow:** Demo discovers bug → fix in Cold Soul → subtree push to standalone → subtree pull into Demo.
+**Fix flow:** Fix directly in Demo → subtree push to standalone repo → pull into other projects as needed.
 
 ---
 
@@ -30,8 +29,7 @@ This is the **Juice Demo Project** — a standalone Godot 4.x project that showc
 - Do NOT use string IDs in arrays — use typed resource arrays
 - Do NOT hardcode magic numbers — expose in inspector with clear names
 - Do NOT find nodes by hardcoded string names — use type-safe discovery (see below)
-- Do NOT modify files inside `addons/juice/` directly — fixes go through Cold Soul first
-- Do NOT add Cold Soul dependencies (GameController, SignalBus, etc.)
+- Do NOT add external project dependencies (GameController, SignalBus, etc.)
 
 ## Type-Safe Discovery Pattern
 
@@ -97,7 +95,7 @@ Every script must have:
 # Pull latest Juice from standalone repo into Demo
 git subtree pull --prefix=addons/juice juice-standalone main --squash
 
-# If you need to push Demo fixes upstream (rare — prefer fixing in Cold Soul)
+# Push Demo fixes upstream to standalone repo
 git subtree push --prefix=addons/juice juice-standalone main
 ```
 

@@ -20,4 +20,4 @@ project/assembly_name="Juice Demo"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/juice/plugin.cfg")
+enabled=PackedStringArray("res://addons/anthonyec.camera_preview/plugin.cfg", "res://addons/juice/plugin.cfg")
