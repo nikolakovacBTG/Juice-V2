@@ -18,7 +18,7 @@
 ## ============================================================================
 ##
 ## TRANSFORM TARGETS:
-## - POSITION: Animates Node2D.position with Vector2 offset + OffsetUnit system.
+## - POSITION: Animates Node2D.position via From/To model + PositionIn unit system.
 ##   Supports PIXELS, FRACTION_OWN, FRACTION_PARENT, FRACTION_VIEWPORT units.
 ##   Uses size inference (Sprite2D, AnimatedSprite2D, CollisionShape2D, Polygon2D,
 ##   recursive child bounds) for fraction-based offset resolution.
@@ -26,7 +26,7 @@
 ##   Node2D lacks native pivot_offset, so pivot is achieved by position
 ##   compensation: fixed_pivot = base_pos + pivot.rotated(base_rot),
 ##   new_pos = fixed_pivot - pivot.rotated(new_rot).
-## - SCALE: Animates Node2D.scale with Vector2 offset + pivot mode.
+## - SCALE: Animates Node2D.scale via From/To model + pivot mode.
 ##   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
 ##
 ## PIVOT (ROTATION and SCALE only):

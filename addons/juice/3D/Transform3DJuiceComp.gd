@@ -18,7 +18,7 @@
 # ============================================================================
 #
 # TRANSFORM TARGETS:
-# - POSITION: Animates Node3D.position with Vector3 offset + OffsetUnit3D system.
+# - POSITION: Animates Node3D.position via From/To model + PositionIn3D unit system.
 #   Supports WORLD_UNITS, FRACTION_OWN, FRACTION_PARENT units. Uses size
 #   inference (MeshInstance3D AABB, CollisionShape3D, recursive child bounds).
 # - ROTATION: Animates Node3D rotation via From/To model (degrees/radians).
@@ -26,7 +26,7 @@
 #   rotation around arbitrary points (door hinges, lever bases, chest lids).
 #   Pivot is Transform3D-based: fixed_pivot = base_origin + base_basis * pivot,
 #   new_origin = fixed_pivot - new_basis * pivot.
-# - SCALE: Animates Node3D.scale with Vector3 offset + pivot mode.
+# - SCALE: Animates Node3D.scale via From/To model + pivot mode.
 #   Pivot compensation via: pos += pivot * (ONE - scale_ratio).
 #
 # PIVOT (ROTATION):
