@@ -32,7 +32,7 @@
 ## EXAMPLES:
 ## - Glow: property=EMISSION_ENERGY, float_offset=2.0
 ## - Damage red: property=ALBEDO_COLOR, color_target=Red, color_blend_mode=MULTIPLY
-## - Hit flash: property=ALBEDO_COLOR, color_target=White, color_blend_mode=ADDITIVE, hold_time=0.1
+## - Hit flash: property=ALBEDO_COLOR, color_target=White, color_blend_mode=ADDITIVE, hold_at_peak=0.1
 ## - Outline grow: property=GROW, float_offset=0.05
 ## ============================================================================
 
@@ -76,10 +76,6 @@ enum MaterialProperty {
 ## Target color for color properties (ALBEDO_COLOR, EMISSION)
 ## Lerps from base color to this
 @export var color_target: Color = Color.WHITE
-
-## Time to hold at peak value before animating out (seconds)
-## Set to 0 for no hold (default). Useful for hit-flash effects on materials.
-@export var hold_time: float = 0.0
 
 ## For Node3D: Which child GeometryInstance3D to affect (leave empty to search)
 @export_node_path("GeometryInstance3D") var geometry_path: NodePath
@@ -172,12 +168,6 @@ var _has_base_value: bool = false
 ## Whether we duplicated the material
 var _is_material_duplicated: bool = false
 
-## Currently in the hold phase at peak value
-var _in_hold_phase: bool = false
-
-## Timer for hold phase
-var _hold_timer: float = 0.0
-
 
 # =============================================================================
 # LIFECYCLE
@@ -194,16 +184,6 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# Handle hold phase timing before letting base class process
-	if _in_hold_phase:
-		_hold_timer += delta
-		if _hold_timer >= hold_time:
-			_in_hold_phase = false
-			_hold_timer = 0.0
-			animate_out()
-		return
-
-	# Let base class handle normal animation
 	super._process(delta)
 
 
@@ -215,8 +195,6 @@ func _invalidate_base_cache() -> void:
 	_has_base_value = false
 	_target_material = null
 	_is_material_duplicated = false
-	_in_hold_phase = false
-	_hold_timer = 0.0
 
 
 func _on_animate_start() -> void:
@@ -249,15 +227,6 @@ func _apply_effect(progress: float) -> void:
 	# Calculate and apply new value
 	var new_value: Variant = _calculate_value(progress)
 	_set_material_property(new_value)
-
-
-func _on_animate_in_complete() -> void:
-	# Hold at peak value if configured, then auto-trigger animate_out
-	if hold_time > 0.0:
-		_in_hold_phase = true
-		_hold_timer = 0.0
-		if debug_enabled:
-			print("[%s] Appearance3D peak reached, holding for %.2fs" % [name, hold_time])
 
 
 func _on_animate_out_complete() -> void:

@@ -5,7 +5,7 @@
 ##       component that handles all color/tint/flash effects via blend modes.
 ## WHY:  Artists think in terms of "change how this looks" — one component for
 ##       all appearance changes reduces cognitive load and fills feature gaps
-##       (blend modes, hold_time, HDR now available everywhere).
+##       (blend modes, hold_at_peak, HDR now available everywhere).
 ## SYSTEM: Juicing System (addons/juice/) - Appearance Family
 ## DOES NOT: Handle 3D material properties — use Appearance3DJuiceComp for that.
 ## DOES NOT: Handle alpha/visibility toggling — use VisibilityJuiceComp for that.
@@ -25,8 +25,8 @@
 ## - REPLACE: Directly lerps from color_from to color_to. Hard color swaps.
 ##
 ## COMMON SETUPS:
-## - Hit flash: ADDITIVE, from=White, to=White, hold_time=0.05, PLAY_IN_AND_OUT
-## - Damage tint: MULTIPLY, from=White, to=Red, hold_time=0.1
+## - Hit flash: ADDITIVE, from=White, to=White, hold_at_peak=0.05, PLAY_IN_AND_OUT
+## - Damage tint: MULTIPLY, from=White, to=Red, hold_at_peak=0.1
 ## - HDR glow: ADDITIVE, to=Color(3,3,3), allow_hdr=true
 ## - Hover highlight: REPLACE, from=White, to=Color(1.2,1.2,1.0)
 ## - Selection pulse: REPLACE, from=White, to=Yellow, loop_count=-1
@@ -56,10 +56,6 @@ enum BlendMode {
 
 ## Color at progress=1 (peak state). The "target" or "flash" color.
 @export var color_to: Color = Color.RED
-
-## Time to hold at peak (progress=1.0) before animate_out begins. 0 = no hold.
-## Creates the classic "flash" feel: quick in → hold at peak → quick out.
-@export var hold_time: float = 0.0
 
 ## If true, alpha is interpolated along with RGB.
 ## If false, the target's original alpha is preserved throughout.
@@ -121,12 +117,6 @@ var _base_color: Color = Color.WHITE
 ## Guard to avoid re-capturing base color during a running animation
 var _has_base_color: bool = false
 
-## Whether we're currently in the hold phase at peak intensity
-var _in_hold_phase: bool = false
-
-## Elapsed time during hold phase
-var _hold_timer: float = 0.0
-
 
 # =============================================================================
 # LIFECYCLE
@@ -137,18 +127,6 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# Handle hold phase timing before letting base class process.
-	# During hold, the base class animation is paused — we just count time,
-	# then trigger animate_out when the hold period expires.
-	if _in_hold_phase:
-		_hold_timer += delta
-		if _hold_timer >= hold_time:
-			_in_hold_phase = false
-			_hold_timer = 0.0
-			animate_out()
-		return
-
-	# Normal animation — let base class drive progress and call _apply_effect
 	super._process(delta)
 
 
@@ -159,8 +137,6 @@ func _process(delta: float) -> void:
 ## Reset base color cache when target changes (recipe mode, editor preview)
 func _invalidate_base_cache() -> void:
 	_has_base_color = false
-	_in_hold_phase = false
-	_hold_timer = 0.0
 
 
 ## Called at the start of every animation cycle
@@ -170,7 +146,7 @@ func _on_animate_start() -> void:
 
 	if debug_enabled:
 		print("[%s] Appearance start: %s → %s (blend=%s, hold=%.2fs, hdr=%s)" % [
-			name, color_from, color_to, BlendMode.keys()[blend_mode], hold_time, allow_hdr
+			name, color_from, color_to, BlendMode.keys()[blend_mode], hold_at_peak, allow_hdr
 		])
 
 
@@ -178,17 +154,6 @@ func _on_animate_start() -> void:
 func _apply_effect(progress: float) -> void:
 	var result_color := _calculate_color(progress)
 	_set_target_color(result_color)
-
-
-## Called when animate_in reaches peak (progress=1.0)
-func _on_animate_in_complete() -> void:
-	# If hold_time is configured, pause here before triggering animate_out.
-	# This creates the classic "flash" feel: ramp up → hold → ramp down.
-	if hold_time > 0.0:
-		_in_hold_phase = true
-		_hold_timer = 0.0
-		if debug_enabled:
-			print("[%s] Appearance peak reached, holding for %.2fs" % [name, hold_time])
 
 
 ## Called when animate_out completes — restore to clean state

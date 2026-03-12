@@ -52,22 +52,32 @@ signal completed
 ## Delay before effect starts (seconds)
 @export var start_delay: float = 0.0
 
-## Number of times to loop (-1 = infinite, 0 = don't play, 1+ = play N times)
-@export var loop_count: int = 1
+## Number of times to loop (-1 = infinite, 0 = don't play, 1+ = play N times).
+## Setter triggers inspector refresh because ping_pong, loop_delay, and
+## loop_phase_offset are hidden when loop_count == 1 (single play).
+@export var loop_count: int = 1:
+	set(value):
+		loop_count = value
+		notify_property_list_changed()
 
 ## When true, loops reverse direction each cycle like a tape rewind.
 ## OFF: replays the same direction each loop (default behavior).
 ## ON: reverses direction each cycle:
 ##   - PLAY_IN_ONLY/OUT_ONLY: 2-phase bounce (forward + reversed, same curve)
 ##   - PLAY_IN_AND_OUT: 4-phase tape rewind (IN▶ OUT▶ ◀OUT ◀IN)
+## Hidden when loop_count == 1 (no looping) via _validate_property.
 @export var ping_pong: bool = false
 
-## Delay between loops (seconds)
+## Delay between loop cycles (seconds). Also applies at the peak transition
+## in 4-phase ping-pong mode (PLAY_IN_AND_OUT + ping_pong) where it acts as
+## the pause between the forward IN▶/OUT▶ and the reversed ◀OUT/◀IN phases.
+## Hidden when loop_count == 1 (no looping) via _validate_property.
 @export var loop_delay: float = 0.0
 
 ## Starting phase offset for looping animations (0.0 = start, 0.5 = midpoint, 1.0 = end)
-## Useful for creating phase-shifted sinusoidal patterns with multiple looping juice components
-## Only affects the first cycle — subsequent loops start from the beginning
+## Useful for creating phase-shifted sinusoidal patterns with multiple looping juice components.
+## Only affects the first cycle — subsequent loops start from the beginning.
+## Hidden when loop_count == 1 (no looping) via _validate_property.
 @export_range(0.0, 1.0) var loop_phase_offset: float = 0.0
 
 # =============================================================================
@@ -141,16 +151,23 @@ enum RetriggerPolicy {
 	QUEUE_ONE
 }
 
-@export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
+## Setter triggers inspector refresh because crossfade_time is only
+## relevant when retrigger_policy == RESTART (mid-animation direction switch).
+@export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART:
+	set(value):
+		retrigger_policy = value
+		notify_property_list_changed()
 
 ## Smoothly blend the visual state when switching direction mid-animation.
-## Unbounded on purpose; long crossfades can be useful for slow effects.
+## Only relevant when retrigger_policy == RESTART, which is the only policy
+## that can cause a mid-animation direction switch. Unbounded on purpose.
+## Hidden via _validate_property when retrigger_policy != RESTART.
 @export var crossfade_time: float = 0.0
 
 # Animate In/Out, Mirror button, Chaining, and Debug are CONDITIONAL BACKING
 # VARIABLES below. Their visibility and ordering is controlled by
 # _get_property_list() so they appear in the correct inspector order:
-#   Triggers -> Animate In -> [Mirror] -> Animate Out -> Chaining -> Debug
+#   Animate In -> [Mirror] -> Animate Out -> Chaining -> Debug
 
 # =============================================================================
 # CONDITIONAL BACKING VARIABLES
@@ -158,6 +175,11 @@ enum RetriggerPolicy {
 # =============================================================================
 
 # --- ANIMATE IN ---
+
+## Time to hold at peak (progress=1.0) before animate_out or ping-pong
+## reversal begins. Creates "flash" or "sustain" feel: quick in → hold → out.
+## 0 = no hold (immediate transition). Shown at end of Animate In group.
+var hold_at_peak: float = 0.0
 
 ## Duration of animate_in (seconds)
 var duration_in: float = 0.3
@@ -250,12 +272,26 @@ const _TRANSITION_HINT := "Linear,Sine,Quint,Quart,Quad,Expo,Elastic,Cubic,Circ,
 const _EASE_HINT := "In,Out,In-Out,Out-In"
 
 
+## Conditionally hide @export properties based on other settings.
+## - ping_pong, loop_delay, loop_phase_offset: hidden when loop_count == 1 (no looping)
+## - crossfade_time: hidden when retrigger_policy != RESTART (no mid-animation switch)
+func _validate_property(property: Dictionary) -> void:
+	var is_looping := loop_count != 1
+	
+	# Hide loop-only settings when not looping
+	if property.name in ["ping_pong", "loop_delay", "loop_phase_offset"] and not is_looping:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	
+	# Crossfade only matters when retrigger can switch direction mid-animation
+	if property.name == "crossfade_time" and retrigger_policy != RetriggerPolicy.RESTART:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+
+
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
 	var show_in := trigger_behaviour != TriggerBehaviour.PLAY_OUT_ONLY
 	var show_out := trigger_behaviour != TriggerBehaviour.PLAY_IN_ONLY
-
 	# --- Animate In group ---
 	if show_in:
 		props.append({"name": "Animate In", "type": TYPE_NIL,
@@ -282,6 +318,10 @@ func _get_property_list() -> Array[Dictionary]:
 					"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "custom_curve_in", "type": TYPE_OBJECT,
 			"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		# hold_at_peak at end of Animate In — holds at progress=1.0 before
+		# animate_out or ping-pong reversal begins
+		props.append({"name": "hold_at_peak", "type": TYPE_FLOAT,
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Animate Out group ---
@@ -346,6 +386,7 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"elastic_amplitude_in": elastic_amplitude_in = value; return true
 		&"elastic_period_in": elastic_period_in = value; return true
 		&"back_overshoot_in": back_overshoot_in = value; return true
+		&"hold_at_peak": hold_at_peak = value; return true
 		# Animate Out
 		&"duration_out": duration_out = value; return true
 		&"transition_out": transition_out = value; return true
@@ -372,6 +413,7 @@ func _get(property: StringName) -> Variant:
 		&"elastic_amplitude_in": return elastic_amplitude_in
 		&"elastic_period_in": return elastic_period_in
 		&"back_overshoot_in": return back_overshoot_in
+		&"hold_at_peak": return hold_at_peak
 		# Animate Out
 		&"duration_out": return duration_out
 		&"transition_out": return transition_out
@@ -416,6 +458,10 @@ var _target_node: Node
 
 ## Currently playing flag
 var _is_playing: bool = false
+
+## True when animation is paused at peak (progress=1.0) during hold_at_peak.
+## Used by stop()/stop_and_hold() to cancel the hold timer cleanly.
+var _in_hold_at_peak: bool = false
 
 ## Current loop iteration
 var _current_loop: int = 0
@@ -880,6 +926,7 @@ func _animate_to(target_progress: float, is_one_shot_return: bool = false) -> vo
 ## Stop the effect immediately and reset to natural state (progress = 0)
 func stop() -> void:
 	_is_playing = false
+	_in_hold_at_peak = false
 	set_process(false)
 	_animation_progress = 0.0
 	_reset_ping_pong()
@@ -892,6 +939,7 @@ func stop() -> void:
 ## Stop effect but keep current state (don't reset)
 func stop_and_hold() -> void:
 	_is_playing = false
+	_in_hold_at_peak = false
 	set_process(false)
 	_reset_ping_pong()
 	
@@ -952,7 +1000,7 @@ func _exit_editor_preview() -> void:
 
 ## Compute what animation progress this comp should display at a given wall-clock time.
 ## Used by the scrub slider to map a time position (in seconds) to the correct
-## visual state, accounting for start_delay, duration_in/out, and easing.
+## visual state, accounting for start_delay, duration_in, hold_at_peak, duration_out.
 ## Does NOT modify any internal state — pure computation.
 func get_progress_at_time(time: float) -> float:
 	# Determine if this comp has an OUT phase based on trigger_behaviour
@@ -968,15 +1016,18 @@ func get_progress_at_time(time: float) -> float:
 	# Phase 2: IN animation
 	if t < duration_in:
 		var normalized := t / duration_in if duration_in > 0.0 else 1.0
-		# Eased progress goes 0→1 during IN phase
 		return apply_easing_for_direction(normalized, true)
 	
-	# Phase 3: OUT animation (if applicable)
+	# Phase 3: Hold at peak (if configured and has OUT phase)
 	if has_out:
-		var out_t := t - duration_in
+		var after_in := t - duration_in
+		if after_in < hold_at_peak:
+			return 1.0  # Sustained at peak during hold
+		
+		# Phase 4: OUT animation
+		var out_t := after_in - hold_at_peak
 		if out_t < duration_out:
 			var normalized := out_t / duration_out if duration_out > 0.0 else 1.0
-			# Progress goes 1→0 during OUT phase: lerp(1.0, 0.0, eased)
 			return 1.0 - apply_easing_for_direction(normalized, false)
 		else:
 			return 0.0  # OUT complete — back to natural
@@ -986,14 +1037,14 @@ func get_progress_at_time(time: float) -> float:
 
 
 ## Get the total wall-clock duration for one full preview cycle.
-## Includes start_delay + duration_in, plus duration_out if trigger_behaviour
-## implies an OUT phase. Used by the director to set the scrub slider range.
+## Includes start_delay + duration_in + hold_at_peak + duration_out.
+## Used by the director to set the scrub slider range.
 func get_total_preview_duration() -> float:
 	var total := start_delay + duration_in
 	var has_out := trigger_behaviour == TriggerBehaviour.PLAY_IN_AND_OUT \
 		or trigger_behaviour == TriggerBehaviour.TOGGLE_IN_AND_OUT
 	if has_out:
-		total += duration_out
+		total += hold_at_peak + duration_out
 	return total
 
 
@@ -1690,9 +1741,22 @@ func _on_cycle_complete() -> void:
 		var next_phase := (_ping_pong_phase + 1) % phases_per_cycle
 		
 		if next_phase != 0:
-			# Mid-cycle: advance phase and continue seamlessly (no loop_delay between phases)
+			# Mid-cycle: advance phase
 			# Capture completed phase's duration BEFORE configuring the new phase
 			var completed_duration := _get_current_duration()
+			
+			# Hold at peak if this phase ended at peak (phase 0 always goes toward 1.0).
+			# Pause processing during hold, then resume for the next phase.
+			if _ping_pong_phase == 0 and hold_at_peak > 0.0:
+				_in_hold_at_peak = true
+				set_process(false)
+				if debug_enabled:
+					print("[%s] Ping-pong: holding at peak for %.2fs" % [name, hold_at_peak])
+				await get_tree().create_timer(hold_at_peak).timeout
+				_in_hold_at_peak = false
+				if not _is_playing:
+					return  # Stopped during hold
+			
 			_ping_pong_phase = next_phase
 			_configure_ping_pong_phase()
 			# Carry over excess time so phases don't accumulate ~1 frame of drift each
@@ -1702,6 +1766,8 @@ func _on_cycle_complete() -> void:
 				var rev_str := " REVERSED" if _pp_reversed else ""
 				print("[%s] Ping-pong phase %d: %.1f → %.1f (%s%s)" % [
 					name, _ping_pong_phase, _start_progress, _target_progress, curve_str, rev_str])
+			# Resume processing for the next phase (may have been paused by hold)
+			set_process(true)
 			return
 		
 		# Full cycle complete — fall through to loop counting below
@@ -1846,8 +1912,7 @@ func _finish() -> void:
 	
 	var just_animated_in := _animation_progress >= 0.5
 	
-	# Check if we need to chain into animate_out immediately (PLAY_IN_AND_OUT pattern).
-	# If so, skip set_process(false) to avoid a 1-frame hold at peak.
+	# Check if we need to chain into animate_out (PLAY_IN_AND_OUT pattern).
 	# In PING_PONG mode, the OUT phase is part of the ping-pong cycle,
 	# so _finish() should never chain to animate_out — the cycle already handled it.
 	var will_chain_out := just_animated_in and not _is_one_shot_return and (
@@ -1855,6 +1920,22 @@ func _finish() -> void:
 	) and not ping_pong
 	
 	if will_chain_out:
+		# Notify subclass that IN phase reached peak (before hold/out chain)
+		_on_animate_in_complete()
+		
+		# Hold at peak if configured — pause processing while we wait,
+		# then chain to animate_out after the hold expires.
+		if hold_at_peak > 0.0:
+			_in_hold_at_peak = true
+			set_process(false)
+			if debug_enabled:
+				print("[%s] _finish(): holding at peak for %.2fs" % [name, hold_at_peak])
+			await get_tree().create_timer(hold_at_peak).timeout
+			_in_hold_at_peak = false
+			# Could have been stopped during hold (e.g., stop() called externally)
+			if not _is_playing:
+				return
+		
 		if debug_enabled:
 			print("[%s] _finish(): chaining OUT (one_shot_return)" % name)
 		_is_play_in_and_out_active = true
