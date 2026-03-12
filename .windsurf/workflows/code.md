@@ -227,8 +227,9 @@ If the design is unclear or missing:
 The following patterns are established for this project. Follow them for consistency:
 
 #### Addon Boundary
-- `addons/juice/` is a **read-only subtree**. Do NOT modify files in it directly.
-- If a bug is found, document it and fix in Cold Soul, then sync via subtree.
+- `addons/juice/` is **actively developed** in this project (Juice Demo).
+- Fix directly in Demo → subtree push to standalone repo → pull into other projects as needed.
+- See AGENTS.md for subtree sync commands.
 
 #### Demo Scene Pattern
 - Each demo showcases 1-3 related comps in a visually appealing context
