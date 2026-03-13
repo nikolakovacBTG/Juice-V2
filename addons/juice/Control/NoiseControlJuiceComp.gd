@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: Consolidated noise effect for Control nodes. Combines position, rotation,
 ##       and scale noise into a single component with a TransformTarget selector.
-##       Uses _get_property_list() to conditionally show only relevant exports.
+##       Uses _validate_property() to conditionally show only relevant exports.
 ## WHY: Replaces 3 separate scripts (PositionNoiseControl, RotationNoiseControl,
 ##      ScaleNoiseControl) with one unified component, reducing file count and
 ##      ensuring consistent behavior across transform types.
@@ -32,8 +32,10 @@
 ## of the control's size. INHERIT leaves whatever pivot_offset is already set.
 ##
 ## CONDITIONAL EXPORTS:
-## Changing transform_target triggers notify_property_list_changed() which
-## shows/hides the relevant parameters via _get_property_list().
+## All conditional properties are @export with _validate_property() for visibility.
+## This ensures Vector2/3 fields render inline (horizontal) matching Godot's native
+## inspector look. Changing transform_target, fractal_type, domain_warp_enabled,
+## scale_uniform, or pivot_mode triggers conditional show/hide.
 ## ============================================================================
 
 @tool
@@ -42,7 +44,7 @@ class_name NoiseControlJuiceComp
 extends JuiceCompBase
 
 # =============================================================================
-# TRANSFORM TARGET SELECTION
+# ENUMS
 # =============================================================================
 
 ## Which transform property to drive with noise
@@ -52,79 +54,12 @@ enum TransformTarget {
 	SCALE      ## Scale Control.scale (XY)
 }
 
-@export var transform_target: TransformTarget = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
-
-# =============================================================================
-# NOISE DESIGN (always visible)
-# =============================================================================
-
-@export_group("Noise Design")
-
-## Which noise algorithm to use — each produces distinctly different motion character
-## Simplex Smooth: Flowing, organic. Cellular: Quantized jumps. Value: Subtle jitter.
-@export var noise_type: FastNoiseLite.NoiseType = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-
-## Controls the spatial scale of the noise pattern
-## Lower values = smoother, broader curves. Higher values = tighter, choppier motion.
-@export var noise_frequency: float = 1.0
-
-## Seed for reproducible noise. 0 = random seed at runtime.
-@export var noise_seed: int = 0
-
-@export_subgroup("Advanced Noise")
-
-## Fractal layering mode — adds detail at multiple scales
-## FBM: Rich organic detail. Ridged: Sharp direction changes. Ping Pong: Bouncy oscillation.
-@export var fractal_type: FastNoiseLite.FractalType = FastNoiseLite.FRACTAL_NONE
-
-## Number of fractal octaves (layers of detail). More = richer but costlier.
-@export_range(1, 6) var octaves: int = 1
-
-## Frequency multiplier per octave. Higher = more high-frequency detail per layer.
-@export var lacunarity: float = 2.0
-
-## Amplitude multiplier per octave. Lower = less influence from higher octaves.
-@export var gain: float = 0.5
-
-## Warp the noise input coordinates with another noise layer for swirling, flowing motion
-@export var domain_warp_enabled: bool = false
-
-## Strength of domain warp displacement
-@export var domain_warp_amplitude: float = 30.0
-
-## Frequency of the domain warp noise
-@export var domain_warp_frequency: float = 0.5
-
-# =============================================================================
-# SHARED MOTION (always visible)
-# =============================================================================
-
-@export_group("Motion")
-
-## How fast we traverse the noise field — higher = faster motion
-@export var speed: float = 1.0
-
-@export_subgroup("Advanced Motion")
-
-## When enabled, noise output is [0, 1] instead of [-1, 1]
-## Creates one-directional displacement (only positive offset)
-@export var absolute_mode: bool = false
-
-## Invert noise output — flips displacement direction
-@export var invert_output: bool = false
-
-## Clamp noise output minimum (applied after absolute/invert, before amplitude)
-@export var output_min: float = -1.0
-
-## Clamp noise output maximum (applied after absolute/invert, before amplitude)
-@export var output_max: float = 1.0
-
-# =============================================================================
-# PIVOT MODE (shown for ROTATION and SCALE only, via _get_property_list)
-# =============================================================================
+## Controls the direction of noise displacement
+enum NoiseDirection {
+	BOTH,           ## Full range: positive and negative displacement (-1 to 1)
+	POSITIVE_ONLY,  ## One-directional: only positive displacement (0 to 1)
+	NEGATIVE_ONLY   ## One-directional: only negative displacement (-1 to 0)
+}
 
 ## How the pivot point is determined for Control nodes.
 ## AUTO_CENTER: Automatically centers pivot on the control (updates on resize).
@@ -137,35 +72,133 @@ enum PivotMode {
 }
 
 # =============================================================================
-# CONDITIONAL BACKING VARIABLES
-# These are NOT @export — they are shown/hidden via _get_property_list()
+# EFFECT CONFIGURATION
 # =============================================================================
 
-# --- POSITION ---
-## Maximum displacement per axis in pixels
-var position_amplitude: Vector2 = Vector2(5.0, 5.0)
-## Per-axis speed multiplier — e.g., fast horizontal jitter + slow vertical drift
-var position_speed_scale: Vector2 = Vector2(1.0, 1.0)
+@export_group("Effect")
 
-# --- ROTATION ---
-## Maximum rotation amplitude in degrees
-var rotation_amplitude: float = 5.0
+## Which transform property to drive with noise.
+## Changing this shows/hides the relevant amplitude, axis speed, and pivot settings.
+@export var transform_target: TransformTarget = TransformTarget.POSITION:
+	set(value):
+		transform_target = value
+		notify_property_list_changed()
 
-# --- SCALE ---
-## Maximum scale deviation per axis (added to base scale)
-var scale_amplitude: Vector2 = Vector2(0.1, 0.1)
-## Per-axis speed multiplier
-var scale_speed_scale: Vector2 = Vector2(1.0, 1.0)
-## Sample the same noise value for all axes — preserves aspect ratio
-var scale_uniform: bool = true
+## Maximum displacement per axis in pixels.
+## Hidden when transform_target != POSITION.
+@export var position_amplitude: Vector2 = Vector2(5.0, 5.0)
 
-# --- PIVOT (ROTATION + SCALE) ---
-var pivot_mode: int = PivotMode.AUTO_CENTER:
+## Maximum rotation amplitude in degrees.
+## Hidden when transform_target != ROTATION.
+@export var rotation_amplitude: float = 5.0
+
+## Maximum scale deviation per axis (added to base scale).
+## Hidden when transform_target != SCALE.
+@export var scale_amplitude: Vector2 = Vector2(0.1, 0.1)
+
+## How fast the noise evolves — higher = faster motion.
+## This is temporal speed (how fast you move through the noise field).
+## See also noise_frequency which controls spatial scale of the pattern.
+@export var noise_speed: float = 1.0
+
+## Controls the direction of noise displacement.
+## BOTH: Full range positive and negative. POSITIVE_ONLY / NEGATIVE_ONLY: one-directional.
+@export var noise_direction: NoiseDirection = NoiseDirection.BOTH
+
+## Use the same noise value for all axes — preserves aspect ratio during scale noise.
+## Hidden when transform_target != SCALE.
+@export var scale_uniform: bool = true:
+	set(value):
+		scale_uniform = value
+		notify_property_list_changed()
+
+## How the pivot point is determined for rotation/scale transforms.
+## Hidden when transform_target == POSITION (pivot is irrelevant for position noise).
+@export var pivot_mode: PivotMode = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
 		notify_property_list_changed()
-## Custom pivot as a fraction of the control's size (only used when pivot_mode = CUSTOM)
-var custom_pivot: Vector2 = Vector2(0.5, 0.5)
+
+## Custom pivot as a fraction of the control's size (0.5, 0.5 = center).
+## Hidden when transform_target == POSITION or pivot_mode != CUSTOM.
+@export var custom_pivot: Vector2 = Vector2(0.5, 0.5)
+
+# =============================================================================
+# NOISE PATTERN
+# =============================================================================
+
+@export_group("Noise Pattern")
+
+## Which noise algorithm to use — each produces distinctly different motion character.
+## Simplex Smooth: Flowing, organic. Cellular: Quantized jumps. Value: Subtle jitter.
+@export var noise_type: FastNoiseLite.NoiseType = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+
+## Spatial scale of the noise pattern — affects motion character.
+## Lower = smoother, broader curves. Higher = tighter, choppier motion.
+## This is different from noise_speed which controls temporal rate.
+@export var noise_frequency: float = 1.0
+
+## Seed for reproducible noise. 0 = random seed at runtime.
+@export var noise_seed: int = 0
+
+@export_subgroup("Fractal")
+
+## Fractal layering mode — adds detail at multiple scales.
+## None: Single noise layer. FBM: Rich organic detail.
+## Ridged: Sharp direction changes. Ping Pong: Bouncy oscillation.
+@export var fractal_type: FastNoiseLite.FractalType = FastNoiseLite.FRACTAL_NONE:
+	set(value):
+		fractal_type = value
+		notify_property_list_changed()
+
+## Number of fractal layers of detail. More = richer but costlier.
+## Hidden when fractal_type == NONE.
+@export_range(1, 6) var fractal_octaves: int = 1
+
+## How much the frequency increases per octave. Higher = more fine detail per layer.
+## Hidden when fractal_type == NONE.
+@export var lacunarity: float = 2.0
+
+## How much each octave contributes to the result. Lower = subtler higher octaves.
+## Hidden when fractal_type == NONE.
+@export var fractal_gain: float = 0.5
+
+@export_subgroup("Domain Warp")
+
+## Warp the noise input coordinates with another noise layer for swirling, flowing motion.
+@export var domain_warp_enabled: bool = false:
+	set(value):
+		domain_warp_enabled = value
+		notify_property_list_changed()
+
+## Strength of domain warp displacement.
+## Hidden when domain_warp_enabled == false.
+@export var domain_warp_amplitude: float = 30.0
+
+## Frequency of the domain warp noise.
+## Hidden when domain_warp_enabled == false.
+@export var domain_warp_frequency: float = 0.5
+
+# =============================================================================
+# ADVANCED
+# =============================================================================
+
+@export_group("Advanced")
+
+## Per-axis speed relative to Noise Speed for position noise.
+## (1,1) = uniform speed. (2, 0.5) = X twice as fast, Y half as fast.
+## Hidden when transform_target != POSITION.
+@export var position_axis_speed: Vector2 = Vector2(1.0, 1.0)
+
+## Per-axis speed relative to Noise Speed for scale noise.
+## Hidden when transform_target != SCALE or when scale_uniform == true.
+@export var scale_axis_speed: Vector2 = Vector2(1.0, 1.0)
+
+## Minimum noise output value (applied after direction, before amplitude).
+@export var clamp_min: float = -1.0
+
+## Maximum noise output value (applied after direction, before amplitude).
+@export var clamp_max: float = 1.0
 
 # =============================================================================
 # INTERNAL STATE
@@ -187,97 +220,43 @@ var _has_base: bool = false
 var _pivot_applied: bool = false
 
 # =============================================================================
-# CONDITIONAL EXPORT SYSTEM
+# CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
 
-func _get_property_list() -> Array[Dictionary]:
-	var props: Array[Dictionary] = []
+func _validate_property(property: Dictionary) -> void:
+	super._validate_property(property)
 
-	match transform_target:
-		TransformTarget.POSITION:
-			props.append({
-				"name": "position_amplitude",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append({
-				"name": "position_speed_scale",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
+	var is_position := transform_target == TransformTarget.POSITION
+	var is_rotation := transform_target == TransformTarget.ROTATION
+	var is_scale := transform_target == TransformTarget.SCALE
 
-		TransformTarget.ROTATION:
-			props.append({
-				"name": "rotation_amplitude",
-				"type": TYPE_FLOAT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append_array(_get_pivot_properties())
+	# Effect group: show only relevant amplitude/settings per transform target
+	if property.name == "position_amplitude" and not is_position:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "rotation_amplitude" and not is_rotation:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "scale_amplitude" and not is_scale:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "scale_uniform" and not is_scale:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "pivot_mode" and is_position:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "custom_pivot" and (is_position or pivot_mode != PivotMode.CUSTOM):
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
-		TransformTarget.SCALE:
-			props.append({
-				"name": "scale_amplitude",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append({
-				"name": "scale_speed_scale",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append({
-				"name": "scale_uniform",
-				"type": TYPE_BOOL,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append_array(_get_pivot_properties())
+	# Fractal: hide detail settings when no fractal layering
+	if property.name in ["fractal_octaves", "lacunarity", "fractal_gain"] and fractal_type == FastNoiseLite.FRACTAL_NONE:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	return props
+	# Domain warp: hide settings when warp is disabled
+	if property.name in ["domain_warp_amplitude", "domain_warp_frequency"] and not domain_warp_enabled:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
-
-func _get_pivot_properties() -> Array[Dictionary]:
-	var pivot_props: Array[Dictionary] = [
-		{
-			"name": "pivot_mode",
-			"type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Auto Center,Inherit,Custom",
-		},
-	]
-	if pivot_mode == PivotMode.CUSTOM:
-		pivot_props.append({
-			"name": "custom_pivot",
-			"type": TYPE_VECTOR2,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-	return pivot_props
-
-
-func _set(property: StringName, value: Variant) -> bool:
-	match property:
-		&"position_amplitude": position_amplitude = value; return true
-		&"position_speed_scale": position_speed_scale = value; return true
-		&"rotation_amplitude": rotation_amplitude = value; return true
-		&"scale_amplitude": scale_amplitude = value; return true
-		&"scale_speed_scale": scale_speed_scale = value; return true
-		&"scale_uniform": scale_uniform = value; return true
-		&"pivot_mode": pivot_mode = value; return true
-		&"custom_pivot": custom_pivot = value; return true
-	return false
-
-
-func _get(property: StringName) -> Variant:
-	match property:
-		&"position_amplitude": return position_amplitude
-		&"position_speed_scale": return position_speed_scale
-		&"rotation_amplitude": return rotation_amplitude
-		&"scale_amplitude": return scale_amplitude
-		&"scale_speed_scale": return scale_speed_scale
-		&"scale_uniform": return scale_uniform
-		&"pivot_mode": return pivot_mode
-		&"custom_pivot": return custom_pivot
-	return null
+	# Advanced: show only relevant axis speed per transform target
+	if property.name == "position_axis_speed" and not is_position:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "scale_axis_speed" and (not is_scale or scale_uniform):
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 # =============================================================================
 # LIFECYCLE
@@ -311,7 +290,7 @@ func _on_animate_start() -> void:
 
 	if debug_enabled:
 		var target_name: String = TransformTarget.keys()[transform_target]
-		print("[%s] Noise Control start (%s). Speed: %.2f" % [name, target_name, speed])
+		print("[%s] Noise Control start (%s). Speed: %.2f" % [name, target_name, noise_speed])
 
 
 func _apply_effect(progress: float) -> void:
@@ -416,8 +395,8 @@ func _recipe_restore_natural(target: Node, natural: Variant) -> void:
 func _apply_position_noise(intensity: float) -> void:
 	var ctrl := _target_node as Control
 
-	var sample_x := _sample_noise(0.0, position_speed_scale.x)
-	var sample_y := _sample_noise(100.0, position_speed_scale.y)
+	var sample_x := _sample_noise(0.0, position_axis_speed.x)
+	var sample_y := _sample_noise(100.0, position_axis_speed.y)
 
 	var offset := Vector2(
 		position_amplitude.x * sample_x * intensity,
@@ -453,8 +432,8 @@ func _apply_scale_noise(intensity: float) -> void:
 		sample_x = sample
 		sample_y = sample
 	else:
-		sample_x = _sample_noise(0.0, scale_speed_scale.x)
-		sample_y = _sample_noise(100.0, scale_speed_scale.y)
+		sample_x = _sample_noise(0.0, scale_axis_speed.x)
+		sample_y = _sample_noise(100.0, scale_axis_speed.y)
 
 	var scale_offset := Vector2(
 		scale_amplitude.x * sample_x * intensity,
@@ -511,9 +490,9 @@ func _setup_noise() -> void:
 	_noise.seed = noise_seed if noise_seed != 0 else randi()
 
 	_noise.fractal_type = fractal_type
-	_noise.fractal_octaves = octaves
+	_noise.fractal_octaves = fractal_octaves
 	_noise.fractal_lacunarity = lacunarity
-	_noise.fractal_gain = gain
+	_noise.fractal_gain = fractal_gain
 
 	if domain_warp_enabled:
 		_noise.domain_warp_enabled = true
@@ -525,15 +504,16 @@ func _setup_noise() -> void:
 
 ## Sample noise at the current time with per-axis Y-offset for decorrelated motion
 func _sample_noise(y_offset: float, axis_speed: float) -> float:
-	var t := _noise_time * speed * axis_speed
+	var t := _noise_time * noise_speed * axis_speed
 	var raw := _noise.get_noise_2d(t, y_offset)
 
-	if absolute_mode:
-		raw = absf(raw)
-	if invert_output:
-		raw = -raw
+	match noise_direction:
+		NoiseDirection.POSITIVE_ONLY:
+			raw = absf(raw)
+		NoiseDirection.NEGATIVE_ONLY:
+			raw = -absf(raw)
 
-	raw = clampf(raw, output_min, output_max)
+	raw = clampf(raw, clamp_min, clamp_max)
 	return raw
 
 

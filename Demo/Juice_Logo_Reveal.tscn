@@ -1,10 +1,12 @@
-[gd_scene load_steps=22 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=26 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
 [ext_resource type="Script" uid="uid://btetvglttqxnm" path="res://addons/juice/2D/Progress2DJuiceComp.gd" id="2_r852d"]
+[ext_resource type="Texture2D" uid="uid://biid6tmycb4mg" path="res://Textures/Sprites/fluff.png" id="2_wm0iw"]
 [ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="3_8smnx"]
 [ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="3_vfe5a"]
+[ext_resource type="Script" uid="uid://ycb0ph5piuur" path="res://addons/juice/2D/Noise2DJuiceComp.gd" id="4_7frtj"]
 [ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="4_orfff"]
 [ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="5_r852d"]
 [ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="6_8smnx"]
@@ -22,7 +24,29 @@
 [ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="16_jlm4u"]
 [ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="17_tusjn"]
 
-[node name="JuiceLogoReveal" type="Node2D"]
+[sub_resource type="Gradient" id="Gradient_8smnx"]
+interpolation_mode = 2
+colors = PackedColorArray(0.22556596, 0.30204913, 0.6691687, 1, 0.17467946, 0.2330068, 0.47322208, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_wm0iw"]
+gradient = SubResource("Gradient_8smnx")
+fill = 1
+fill_from = Vector2(0.52136755, 0.48290598)
+
+[node name="JuiceLogoReveal" type="MarginContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(576, 324)
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+texture = SubResource("GradientTexture2D_wm0iw")
+expand_mode = 2
 
 [node name="JuiceLogoSeparated" type="Sprite2D" parent="."]
 visible = false
@@ -32,10 +56,53 @@ texture = ExtResource("1_6a25c")
 metadata/_edit_lock_ = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="Camera2D"]
 
+[node name="Node2D" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="Node2D"]
+modulate = Color(0.6862745, 0.27058825, 0.35686275, 0)
+position = Vector2(205, 191)
+texture = ExtResource("2_wm0iw")
+
+[node name="Appearance2DJuiceComp2" type="Node" parent="Node2D/Sprite2D"]
+script = ExtResource("3_8smnx")
+color_from = Color(0.6862745, 0.27058825, 0.35686275, 0)
+color_to = Color(0.6856915, 0.2708442, 0.35664394, 0.5411765)
+animate_alpha = true
+loop_count = -1
+ping_pong = true
+loop_delay = 3.0
+trigger_on = 8
+duration_in = 5.0
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="Noise2DJuiceComp" type="Node" parent="Node2D/Sprite2D"]
+script = ExtResource("4_7frtj")
+absolute_mode = true
+position_amplitude = Vector2(500, 500)
+position_speed_scale = Vector2(1, 1)
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://ycb0ph5piuur"
+
 [node name="Full logo" type="Node2D" parent="."]
+position = Vector2(576, 324)
 
 [node name="Progress2DJuiceComp" type="Node" parent="Full logo"]
 script = ExtResource("2_r852d")
@@ -48,6 +115,7 @@ duration_in = 0.3
 transition_in = 4
 ease_in = 1
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -57,12 +125,13 @@ metadata/_custom_type_script = "uid://btetvglttqxnm"
 script = ExtResource("3_8smnx")
 color_to = Color(1, 1, 1, 0)
 animate_alpha = true
-start_delay = 2.0
+start_delay = 2.5
 trigger_on = 8
-duration_in = 2.0
+duration_in = 1.0
 transition_in = 4
 ease_in = 1
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -123,10 +192,12 @@ skip_self = true
 skip_juice_components = true
 hide_parent_on_reverse_complete = false
 trigger_on = 8
+retrigger_policy = 1
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -148,6 +219,7 @@ ease_in = 1
 elastic_amplitude_in = 1.0
 elastic_period_in = 0.65
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -212,6 +284,7 @@ duration_in = 0.3
 transition_in = 4
 ease_in = 1
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -234,6 +307,7 @@ ease_in = 1
 elastic_amplitude_in = 1.5
 elastic_period_in = 0.65
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
@@ -256,6 +330,7 @@ ease_in = 1
 elastic_amplitude_in = 1.5
 elastic_period_in = 0.65
 custom_curve_in = null
+hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false

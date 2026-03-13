@@ -38,8 +38,9 @@
 ## Property type must be specified so the correct noise math is applied.
 ##
 ## CONDITIONAL EXPORTS:
-## Changing property_type triggers notify_property_list_changed() which
-## shows/hides the relevant per-type amplitude values via _get_property_list().
+## All conditional properties are @export with _validate_property() for visibility.
+## Changing property_type, fractal_type, or domain_warp_enabled triggers
+## conditional show/hide of relevant parameters.
 ##
 ## REFERENCE:
 ## Property resolution pattern adapted from ShakePropertyJuiceComp.
@@ -50,6 +51,26 @@
 @icon("res://addons/juice/Icons/JuiceBaseProperty.svg")
 class_name NoisePropertyJuiceComp
 extends JuiceCompBase
+
+# =============================================================================
+# ENUMS
+# =============================================================================
+
+## Type of the property value — determines which amplitude export is shown
+## and which math is used for oscillation.
+enum PropertyType {
+	FLOAT,
+	VECTOR2,
+	VECTOR3,
+	COLOR
+}
+
+## Controls the direction of noise displacement
+enum NoiseDirection {
+	BOTH,           ## Full range: positive and negative displacement (-1 to 1)
+	POSITIVE_ONLY,  ## One-directional: only positive displacement (0 to 1)
+	NEGATIVE_ONLY   ## One-directional: only negative displacement (-1 to 0)
+}
 
 # =============================================================================
 # PROPERTY TARGET CONFIGURATION
@@ -67,97 +88,109 @@ extends JuiceCompBase
 
 ## Type of the property value — determines which amplitude export is shown
 ## and which math is used for oscillation.
-enum PropertyType {
-	FLOAT,
-	VECTOR2,
-	VECTOR3,
-	COLOR
-}
-
 @export var property_type: PropertyType = PropertyType.FLOAT:
 	set(value):
 		property_type = value
 		notify_property_list_changed()
 
 # =============================================================================
-# NOISE DESIGN (always visible)
+# EFFECT CONFIGURATION
 # =============================================================================
 
-@export_group("Noise Design")
+@export_group("Effect")
 
-## Which noise algorithm to use — each produces distinctly different motion character
+## Maximum noise offset for float properties.
+## Hidden when property_type != FLOAT.
+@export var float_amplitude: float = 0.5
+
+## Maximum noise offset per axis for Vector2 properties.
+## Hidden when property_type != VECTOR2.
+@export var vector2_amplitude: Vector2 = Vector2(0.1, 0.1)
+
+## Maximum noise offset per axis for Vector3 properties.
+## Hidden when property_type != VECTOR3.
+@export var vector3_amplitude: Vector3 = Vector3(0.1, 0.1, 0.1)
+
+## Maximum noise offset per channel for Color properties (RGBA).
+## Hidden when property_type != COLOR.
+@export var color_amplitude: Color = Color(0.1, 0.1, 0.1, 0.0)
+
+## How fast the noise evolves — higher = faster motion.
+## This is temporal speed (how fast you move through the noise field).
+## See also noise_frequency which controls spatial scale of the pattern.
+@export var noise_speed: float = 1.0
+
+## Controls the direction of noise displacement.
+## BOTH: Full range positive and negative. POSITIVE_ONLY / NEGATIVE_ONLY: one-directional.
+@export var noise_direction: NoiseDirection = NoiseDirection.BOTH
+
+# =============================================================================
+# NOISE PATTERN
+# =============================================================================
+
+@export_group("Noise Pattern")
+
+## Which noise algorithm to use — each produces distinctly different motion character.
 ## Simplex Smooth: Flowing, organic. Cellular: Quantized jumps. Value: Subtle jitter.
 @export var noise_type: FastNoiseLite.NoiseType = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 
-## Controls the spatial scale of the noise pattern
-## Lower values = smoother, broader curves. Higher values = tighter, choppier motion.
+## Spatial scale of the noise pattern — affects motion character.
+## Lower = smoother, broader curves. Higher = tighter, choppier motion.
+## This is different from noise_speed which controls temporal rate.
 @export var noise_frequency: float = 1.0
 
 ## Seed for reproducible noise. 0 = random seed at runtime.
 @export var noise_seed: int = 0
 
-@export_subgroup("Advanced Noise")
+@export_subgroup("Fractal")
 
-## Fractal layering mode — adds detail at multiple scales
-@export var fractal_type: FastNoiseLite.FractalType = FastNoiseLite.FRACTAL_NONE
+## Fractal layering mode — adds detail at multiple scales.
+## None: Single noise layer. FBM: Rich organic detail.
+## Ridged: Sharp direction changes. Ping Pong: Bouncy oscillation.
+@export var fractal_type: FastNoiseLite.FractalType = FastNoiseLite.FRACTAL_NONE:
+	set(value):
+		fractal_type = value
+		notify_property_list_changed()
 
-## Number of fractal octaves (layers of detail). More = richer but costlier.
-@export_range(1, 6) var octaves: int = 1
+## Number of fractal layers of detail. More = richer but costlier.
+## Hidden when fractal_type == NONE.
+@export_range(1, 6) var fractal_octaves: int = 1
 
-## Frequency multiplier per octave.
+## How much the frequency increases per octave. Higher = more fine detail per layer.
+## Hidden when fractal_type == NONE.
 @export var lacunarity: float = 2.0
 
-## Amplitude multiplier per octave.
-@export var gain: float = 0.5
+## How much each octave contributes to the result. Lower = subtler higher octaves.
+## Hidden when fractal_type == NONE.
+@export var fractal_gain: float = 0.5
 
-## Warp the noise input coordinates with another noise layer for swirling, flowing motion
-@export var domain_warp_enabled: bool = false
+@export_subgroup("Domain Warp")
 
-## Strength of domain warp displacement
+## Warp the noise input coordinates with another noise layer for swirling, flowing motion.
+@export var domain_warp_enabled: bool = false:
+	set(value):
+		domain_warp_enabled = value
+		notify_property_list_changed()
+
+## Strength of domain warp displacement.
+## Hidden when domain_warp_enabled == false.
 @export var domain_warp_amplitude: float = 30.0
 
-## Frequency of the domain warp noise
+## Frequency of the domain warp noise.
+## Hidden when domain_warp_enabled == false.
 @export var domain_warp_frequency: float = 0.5
 
 # =============================================================================
-# SHARED MOTION (always visible)
+# ADVANCED
 # =============================================================================
 
-@export_group("Motion")
+@export_group("Advanced")
 
-## How fast we traverse the noise field — higher = faster motion
-@export var speed: float = 1.0
+## Minimum noise output value (applied after direction, before amplitude).
+@export var clamp_min: float = -1.0
 
-@export_subgroup("Advanced Motion")
-
-## When enabled, noise output is [0, 1] instead of [-1, 1]
-@export var absolute_mode: bool = false
-
-## Invert noise output — flips displacement direction
-@export var invert_output: bool = false
-
-## Clamp noise output minimum (applied after absolute/invert, before amplitude)
-@export var output_min: float = -1.0
-
-## Clamp noise output maximum (applied after absolute/invert, before amplitude)
-@export var output_max: float = 1.0
-
-# =============================================================================
-# CONDITIONAL BACKING VARIABLES
-# These are NOT @export — they are shown/hidden via _get_property_list()
-# =============================================================================
-
-## Maximum noise offset for float properties
-var float_amplitude: float = 0.5
-
-## Maximum noise offset per axis for Vector2 properties
-var vector2_amplitude: Vector2 = Vector2(0.1, 0.1)
-
-## Maximum noise offset per axis for Vector3 properties
-var vector3_amplitude: Vector3 = Vector3(0.1, 0.1, 0.1)
-
-## Maximum noise offset per channel for Color properties (RGBA)
-var color_amplitude: Color = Color(0.1, 0.1, 0.1, 0.0)
+## Maximum noise output value (applied after direction, before amplitude).
+@export var clamp_max: float = 1.0
 
 # =============================================================================
 # INTERNAL STATE
@@ -191,57 +224,29 @@ var _current_intensity: float = 0.0
 var _my_contribution: Variant = null
 
 # =============================================================================
-# CONDITIONAL EXPORT SYSTEM
+# CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
 
-func _get_property_list() -> Array[Dictionary]:
-	var props: Array[Dictionary] = []
+func _validate_property(property: Dictionary) -> void:
+	super._validate_property(property)
 
-	match property_type:
-		PropertyType.FLOAT:
-			props.append({
-				"name": "float_amplitude",
-				"type": TYPE_FLOAT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-		PropertyType.VECTOR2:
-			props.append({
-				"name": "vector2_amplitude",
-				"type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-		PropertyType.VECTOR3:
-			props.append({
-				"name": "vector3_amplitude",
-				"type": TYPE_VECTOR3,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-		PropertyType.COLOR:
-			props.append({
-				"name": "color_amplitude",
-				"type": TYPE_COLOR,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
+	# Effect group: show only relevant amplitude per property type
+	if property.name == "float_amplitude" and property_type != PropertyType.FLOAT:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "vector2_amplitude" and property_type != PropertyType.VECTOR2:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "vector3_amplitude" and property_type != PropertyType.VECTOR3:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if property.name == "color_amplitude" and property_type != PropertyType.COLOR:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	return props
+	# Fractal: hide detail settings when no fractal layering
+	if property.name in ["fractal_octaves", "lacunarity", "fractal_gain"] and fractal_type == FastNoiseLite.FRACTAL_NONE:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
-
-func _set(property: StringName, value: Variant) -> bool:
-	match property:
-		&"float_amplitude": float_amplitude = value; return true
-		&"vector2_amplitude": vector2_amplitude = value; return true
-		&"vector3_amplitude": vector3_amplitude = value; return true
-		&"color_amplitude": color_amplitude = value; return true
-	return false
-
-
-func _get(property: StringName) -> Variant:
-	match property:
-		&"float_amplitude": return float_amplitude
-		&"vector2_amplitude": return vector2_amplitude
-		&"vector3_amplitude": return vector3_amplitude
-		&"color_amplitude": return color_amplitude
-	return null
+	# Domain warp: hide settings when warp is disabled
+	if property.name in ["domain_warp_amplitude", "domain_warp_frequency"] and not domain_warp_enabled:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 # =============================================================================
 # LIFECYCLE
@@ -306,7 +311,7 @@ func _on_animate_start() -> void:
 	if debug_enabled:
 		print("[%s] PropertyNoise start. Path: %s, Type: %s, Base: %s, Speed: %.2f" % [
 			name, property_path, PropertyType.keys()[property_type],
-			_base_value, speed
+			_base_value, noise_speed
 		])
 
 
@@ -477,9 +482,9 @@ func _setup_noise() -> void:
 	_noise.seed = noise_seed if noise_seed != 0 else randi()
 
 	_noise.fractal_type = fractal_type
-	_noise.fractal_octaves = octaves
+	_noise.fractal_octaves = fractal_octaves
 	_noise.fractal_lacunarity = lacunarity
-	_noise.fractal_gain = gain
+	_noise.fractal_gain = fractal_gain
 
 	if domain_warp_enabled:
 		_noise.domain_warp_enabled = true
@@ -491,15 +496,16 @@ func _setup_noise() -> void:
 
 ## Sample noise at the current time with per-axis Y-offset for decorrelated motion
 func _sample_noise(y_offset: float, axis_speed: float) -> float:
-	var t := _noise_time * speed * axis_speed
+	var t := _noise_time * noise_speed * axis_speed
 	var raw := _noise.get_noise_2d(t, y_offset)
 
-	if absolute_mode:
-		raw = absf(raw)
-	if invert_output:
-		raw = -raw
+	match noise_direction:
+		NoiseDirection.POSITIVE_ONLY:
+			raw = absf(raw)
+		NoiseDirection.NEGATIVE_ONLY:
+			raw = -absf(raw)
 
-	raw = clampf(raw, output_min, output_max)
+	raw = clampf(raw, clamp_min, clamp_max)
 	return raw
 
 # =============================================================================

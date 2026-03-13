@@ -70,16 +70,43 @@ This explanation must be readable by a non-author.
 
 ---
 
-### 2b. Conditional Export Display (`_get_property_list` Pattern)
+### 2b. Conditional Export Display (Hybrid Approach)
 
-When a property should only appear in the inspector based on the value of another property (e.g., `custom_pivot` only visible when `pivot_mode == CUSTOM`):
+Two approaches exist for conditionally showing/hiding inspector properties. Choose based on what you need:
 
-**Use `_get_property_list()` + `_set()` + `_get()` for dynamic properties.** Do NOT use `@export` for properties that need conditional visibility.
+#### Approach A: `_validate_property` (preferred for simple show/hide)
+
+Use when you need to **show/hide individual @export properties** within a **static group structure** (groups and subgroups are always present, only individual properties toggle). This is simpler and produces fewer lines of code.
+
+**Key rules:**
+
+1. Properties are normal `@export var`. They always exist and serialize, but are hidden in the inspector when not relevant.
+2. **Controlling variable** MUST have a **GDScript setter** that calls `notify_property_list_changed()`:
+   ```gdscript
+   @export var transform_target: TransformTarget = TransformTarget.POSITION:
+       set(value):
+           transform_target = value
+           notify_property_list_changed()
+   ```
+3. **Override `_validate_property()`** to hide properties by setting `PROPERTY_USAGE_NO_EDITOR`:
+   ```gdscript
+   func _validate_property(property: Dictionary) -> void:
+       super._validate_property(property)
+       if property.name == "position_amplitude" and transform_target != TransformTarget.POSITION:
+           property.usage = PROPERTY_USAGE_NO_EDITOR
+   ```
+4. Always call `super._validate_property(property)` first — the base class has its own conditional rules.
+
+**When to use:** Noise comps, Shake comps, any comp where groups are static but properties within them toggle based on a selector (e.g., transform_target, fractal_type, domain_warp_enabled).
+
+#### Approach B: `_get_property_list` + `_set` + `_get` (required for dynamic groups)
+
+Use when you need **entire groups to appear/disappear**, **custom property ordering**, or **properties that should NOT serialize when hidden**.
 
 **Key rules:**
 
 1. **Backing variables** must be plain `var` (not `@export`). They are shown/hidden by `_get_property_list()`.
-2. **Controlling variable** (the one that determines visibility of others) MUST have a **GDScript setter** that calls `notify_property_list_changed()`:
+2. **Controlling variable** MUST have a **GDScript setter** that calls `notify_property_list_changed()`:
    ```gdscript
    var pivot_mode: int = PivotMode.AUTO_CENTER:
        set(value):
@@ -97,7 +124,13 @@ When a property should only appear in the inspector based on the value of anothe
    ```
 4. **`_set()` and `_get()`** must handle ALL conditional properties (even when hidden) so serialization works.
 
+**When to use:** JuiceCompBase (Animate In/Out groups appear/disappear based on trigger_behaviour), or any case where the group header itself is conditional.
+
+#### Shared Rules (both approaches)
+
 **CRITICAL: Do NOT rely on `notify_property_list_changed()` called only from `_set()`.** Godot may bypass `_set()` and set the member variable directly when a matching variable name exists on the class. The GDScript setter on the variable itself is the only reliable way to trigger the inspector refresh.
+
+**@tool lifecycle note:** Both approaches require `@tool`. After modifying `@tool` script structure (adding/removing properties, changing _validate_property or _get_property_list logic), you may need to **restart the editor** for changes to take effect. This is a known Godot @tool lifecycle issue affecting both approaches equally.
 
 ---
 
