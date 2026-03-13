@@ -1,12 +1,13 @@
-[gd_scene load_steps=25 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=36 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
 [ext_resource type="Script" uid="uid://btetvglttqxnm" path="res://addons/juice/2D/Progress2DJuiceComp.gd" id="2_r852d"]
-[ext_resource type="PackedScene" uid="uid://pwrkiujy8etm" path="res://Demo/Prefabs/fluff.tscn" id="2_wm0iw"]
 [ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="3_8smnx"]
 [ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="3_vfe5a"]
+[ext_resource type="Shader" uid="uid://krad382t6m3a" path="res://addons/juice/Shaders/outline_2d.gdshader" id="3_y27hi"]
 [ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="4_orfff"]
+[ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/juice/Shaders/dissolve_2d.gdshader" id="5_2nye2"]
 [ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="5_r852d"]
 [ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="6_8smnx"]
 [ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="7_wm0iw"]
@@ -22,6 +23,7 @@
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="15_hfiu5"]
 [ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="16_jlm4u"]
 [ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="17_tusjn"]
+[ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/juice/Shaders/grayscale_2d.gdshader" id="23_7frtj"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -31,6 +33,38 @@ colors = PackedColorArray(0.22556596, 0.30204913, 0.6691687, 1, 0.17467946, 0.23
 gradient = SubResource("Gradient_8smnx")
 fill = 1
 fill_from = Vector2(0.52136755, 0.48290598)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7frtj"]
+shader = ExtResource("3_y27hi")
+shader_parameter/outline_width = 0.0
+shader_parameter/outline_color = Color(0, 0.48745775, 0.3118408, 1)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_y27hi"]
+blend_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_o2e6s"]
+blend_mode = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7fq1n"]
+shader = ExtResource("23_7frtj")
+shader_parameter/amount = 0.0
+
+[sub_resource type="Gradient" id="Gradient_y27hi"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_2nye2"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_g1way"]
+noise = SubResource("FastNoiseLite_2nye2")
+color_ramp = SubResource("Gradient_y27hi")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_y27hi"]
+shader = ExtResource("5_2nye2")
+shader_parameter/threshold = 0.0
+shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_g1way")
+shader_parameter/edge_color = Color(1, 0.5, 0, 1)
+shader_parameter/edge_width = 0.05
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_2nye2"]
 
 [node name="JuiceLogoReveal" type="MarginContainer"]
 anchors_preset = 15
@@ -61,73 +95,8 @@ anchor_mode = 0
 
 [node name="Node2D" type="Node2D" parent="."]
 
-[node name="Fluff" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(205, 191)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-
-[node name="Noise2DJuiceComp" parent="Node2D/Fluff" index="1"]
-start_delay = 2.2
-
-[node name="Fluff2" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(405, 440)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff2" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 0.705
-
-[node name="Fluff3" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(878, 143)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff3" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 1.345
-
-[node name="Fluff4" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(866, 449)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff4" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = -1.87
-
-[node name="Fluff5" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(16, 286)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff5" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 0.375
-
-[node name="Fluff6" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(957, 127)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff6" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 1.38
-
-[node name="Fluff7" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(1214, 363)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff7" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 1.985
-
-[node name="Fluff8" parent="Node2D" instance=ExtResource("2_wm0iw")]
-position = Vector2(524, 580)
-
-[node name="Appearance2DJuiceComp2" parent="Node2D/Fluff8" index="0"]
-color_from = Color(0.15294118, 0.4627451, 0.6313726, 0)
-color_to = Color(0.15294118, 0.4627451, 0.6313726, 0.5411765)
-start_delay = 4.15
-
 [node name="Full logo" type="Node2D" parent="."]
+visible = false
 position = Vector2(576, 324)
 
 [node name="Progress2DJuiceComp" type="Node" parent="Full logo"]
@@ -149,8 +118,11 @@ metadata/_custom_type_script = "uid://btetvglttqxnm"
 
 [node name="Appearance2DJuiceComp" type="Node" parent="Full logo"]
 script = ExtResource("3_8smnx")
-color_to = Color(1, 1, 1, 0)
-animate_alpha = true
+color_from = Color(1, 1, 1, 1)
+color_to = Color(1, 0, 0, 1)
+animate_alpha = false
+affect_children = true
+use_flicker = false
 start_delay = 2.5
 trigger_on = 8
 duration_in = 1.0
@@ -362,11 +334,261 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://cquadl5sa07sy"
 
-[editable path="Node2D/Fluff"]
-[editable path="Node2D/Fluff2"]
-[editable path="Node2D/Fluff3"]
-[editable path="Node2D/Fluff4"]
-[editable path="Node2D/Fluff5"]
-[editable path="Node2D/Fluff6"]
-[editable path="Node2D/Fluff7"]
-[editable path="Node2D/Fluff8"]
+[node name="JuiceLogoSeparated2" type="Sprite2D" parent="."]
+modulate = Color(0.7773676, 0.09148217, 0.7297744, 1)
+position = Vector2(135, 72)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp" type="Node" parent="JuiceLogoSeparated2"]
+script = ExtResource("3_8smnx")
+color_from = Color(0.7773676, 0.09148217, 0.7297744, 1)
+color_to = Color(1, 0, 0, 0)
+animate_alpha = true
+affect_children = true
+use_flicker = false
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated3" type="Sprite2D" parent="."]
+modulate = Color(1, 0.31889278, 0, 1)
+position = Vector2(135, 162)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp2" type="Node" parent="JuiceLogoSeparated3"]
+script = ExtResource("3_8smnx")
+appearance_effect = 1
+overbright_intensity = 2.0
+overbright_color = Color(1, 0.5647059, 0, 1)
+use_flicker = false
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated4" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_7frtj")
+position = Vector2(613.7498, 290.375)
+scale = Vector2(0.21555723, 0.2155573)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp3" type="Node" parent="JuiceLogoSeparated4"]
+script = ExtResource("3_8smnx")
+appearance_effect = 2
+outline_color = Color(0, 0.48745775, 0.3118408, 1)
+outline_width = 12.5
+use_flicker = false
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated5" type="Sprite2D" parent="."]
+modulate = Color(1, 1, 1, 0)
+material = SubResource("CanvasItemMaterial_y27hi")
+position = Vector2(135, 328)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp4" type="Node" parent="JuiceLogoSeparated5"]
+script = ExtResource("3_8smnx")
+appearance_effect = 3
+target_blend_mode = 0
+use_flicker = false
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated6" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_o2e6s")
+position = Vector2(135, 409)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp5" type="Node" parent="JuiceLogoSeparated6"]
+script = ExtResource("3_8smnx")
+appearance_effect = 4
+fade_target_alpha = 0.0
+use_flicker = true
+flicker_mode = 0
+hard_flicker = false
+flicker_rate = 10.0
+flicker_min = 0.0
+flicker_max = 1.0
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated7" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_7fq1n")
+position = Vector2(135, 497.99997)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp6" type="Node" parent="JuiceLogoSeparated7"]
+script = ExtResource("3_8smnx")
+appearance_effect = 5
+grayscale_strength = 1.0
+use_flicker = true
+flicker_mode = 0
+hard_flicker = false
+flicker_rate = 10.0
+flicker_min = 0.0
+flicker_max = 1.0
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="JuiceLogoSeparated8" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_y27hi")
+position = Vector2(135, 591)
+scale = Vector2(0.07817335, 0.07817337)
+texture = ExtResource("1_6a25c")
+
+[node name="Appearance2DJuiceComp7" type="Node" parent="JuiceLogoSeparated8"]
+script = ExtResource("3_8smnx")
+appearance_effect = 6
+dissolve_texture = SubResource("NoiseTexture2D_g1way")
+dissolve_edge_color = Color(1, 0.5, 0, 1)
+dissolve_edge_width = 0.05
+use_flicker = false
+loop_count = -1
+ping_pong = true
+trigger_on = 8
+duration_in = 2.5
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="VBoxContainer3" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Button" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button2" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button3" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button4" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button5" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button6" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"
+
+[node name="Button7" type="Button" parent="HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+text = "test"

@@ -23,10 +23,14 @@
 ## - TINT: Lerp modulate from color_from to color_to.
 ## - OVERBRIGHT: Modulate > 1.0 for HDR bloom/glow.
 ## - OUTLINE: Shader-based edge detection (uses outline_2d.gdshader).
-## - BLEND_MODE: Apply CanvasItemMaterial blend mode, fade via alpha.
 ## - FADE: Animate modulate.a from base to target alpha.
 ## - GRAYSCALE: Shader-based desaturation (uses grayscale_2d.gdshader).
 ## - DISSOLVE: Shader-based noise dissolve (uses dissolve_2d.gdshader).
+## - COLOR_OVERLAY: Shader-based flat color mix (uses overlay_2d.gdshader).
+##
+## LAYERS (optional modifiers on any effect):
+## - Flicker: Temporal modulation (random or curve-driven).
+## - Blending Mode: CanvasItemMaterial compositing mode during animation.
 ## ============================================================================
 
 @tool
@@ -41,16 +45,16 @@ extends JuiceCompBase
 
 ## Which appearance effect to apply
 enum AppearanceEffect {
-	TINT,        ## Animate modulate color (lerp from/to)
-	OVERBRIGHT,  ## Modulate > 1.0 for HDR bloom/glow
-	OUTLINE,     ## Shader-based edge detection outline
-	BLEND_MODE,  ## CanvasItemMaterial compositing blend mode
-	FADE,        ## Animate modulate alpha
-	GRAYSCALE,   ## Shader-based desaturation
-	DISSOLVE,    ## Shader-based noise dissolve
+	TINT,          ## Animate modulate color (lerp from/to)
+	OVERBRIGHT,    ## Modulate > 1.0 for HDR bloom/glow
+	OUTLINE,       ## Shader-based edge detection outline
+	FADE,          ## Animate modulate alpha
+	GRAYSCALE,     ## Shader-based desaturation
+	DISSOLVE,      ## Shader-based noise dissolve
+	COLOR_OVERLAY, ## Shader-based flat color mix (Normal blend)
 }
 
-## Compositing blend mode targets for BLEND_MODE effect
+## Compositing blend mode for the optional Blending Mode layer
 enum TargetBlendMode {
 	ADD,           ## CanvasItemMaterial.BLEND_MODE_ADD
 	SUB,           ## CanvasItemMaterial.BLEND_MODE_SUB
@@ -96,9 +100,6 @@ var overbright_color: Color = Color.WHITE
 var outline_color: Color = Color.YELLOW
 var outline_width: float = 3.0
 
-# --- BLEND_MODE ---
-var target_blend_mode: int = TargetBlendMode.ADD
-
 # --- FADE ---
 var fade_target_alpha: float = 0.0
 
@@ -109,6 +110,16 @@ var grayscale_strength: float = 1.0
 var dissolve_texture: NoiseTexture2D = null
 var dissolve_edge_color: Color = Color(1.0, 0.5, 0.0, 1.0)
 var dissolve_edge_width: float = 0.05
+
+# --- COLOR_OVERLAY ---
+var overlay_color: Color = Color.RED
+
+# --- BLENDING MODE (optional compositing layer) ---
+var use_blend_mode: bool = false:
+	set(value):
+		use_blend_mode = value
+		notify_property_list_changed()
+var target_blend_mode: int = TargetBlendMode.ADD
 
 # --- FLICKER (temporal modulation layer) ---
 var use_flicker: bool = false:
@@ -159,11 +170,6 @@ func _get_property_list() -> Array[Dictionary]:
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,20.0,0.5",
 				"usage": PROPERTY_USAGE_DEFAULT})
 
-		AppearanceEffect.BLEND_MODE:
-			props.append({"name": "target_blend_mode", "type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM, "hint_string": "Add,Sub,Mul,Premult Alpha",
-				"usage": PROPERTY_USAGE_DEFAULT})
-
 		AppearanceEffect.FADE:
 			props.append({"name": "fade_target_alpha", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
@@ -183,6 +189,21 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "dissolve_edge_width", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,0.5,0.01",
 				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.COLOR_OVERLAY:
+			props.append({"name": "overlay_color", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+	# --- Blending Mode group (optional compositing layer) ---
+	props.append({"name": "Blending Mode", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "use_blend_mode", "type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	if use_blend_mode:
+		props.append({"name": "target_blend_mode", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Add,Sub,Mul,Premult Alpha",
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Flicker group ---
 	props.append({"name": "Flicker", "type": TYPE_NIL,
@@ -228,8 +249,6 @@ func _set(prop: StringName, value: Variant) -> bool:
 		# OUTLINE
 		&"outline_color": outline_color = value; return true
 		&"outline_width": outline_width = value; return true
-		# BLEND_MODE
-		&"target_blend_mode": target_blend_mode = value; return true
 		# FADE
 		&"fade_target_alpha": fade_target_alpha = value; return true
 		# GRAYSCALE
@@ -238,6 +257,11 @@ func _set(prop: StringName, value: Variant) -> bool:
 		&"dissolve_texture": dissolve_texture = value; return true
 		&"dissolve_edge_color": dissolve_edge_color = value; return true
 		&"dissolve_edge_width": dissolve_edge_width = value; return true
+		# COLOR_OVERLAY
+		&"overlay_color": overlay_color = value; return true
+		# BLENDING MODE LAYER
+		&"use_blend_mode": use_blend_mode = value; return true
+		&"target_blend_mode": target_blend_mode = value; return true
 		# FLICKER
 		&"use_flicker": use_flicker = value; return true
 		&"flicker_mode": flicker_mode = value; return true
@@ -262,8 +286,6 @@ func _get(prop: StringName) -> Variant:
 		# OUTLINE
 		&"outline_color": return outline_color
 		&"outline_width": return outline_width
-		# BLEND_MODE
-		&"target_blend_mode": return target_blend_mode
 		# FADE
 		&"fade_target_alpha": return fade_target_alpha
 		# GRAYSCALE
@@ -272,6 +294,11 @@ func _get(prop: StringName) -> Variant:
 		&"dissolve_texture": return dissolve_texture
 		&"dissolve_edge_color": return dissolve_edge_color
 		&"dissolve_edge_width": return dissolve_edge_width
+		# COLOR_OVERLAY
+		&"overlay_color": return overlay_color
+		# BLENDING MODE LAYER
+		&"use_blend_mode": return use_blend_mode
+		&"target_blend_mode": return target_blend_mode
 		# FLICKER
 		&"use_flicker": return use_flicker
 		&"flicker_mode": return flicker_mode
@@ -292,21 +319,21 @@ var _base_color: Color = Color.WHITE
 var _base_alpha: float = 1.0
 var _has_base_captured: bool = false
 
-# Shader effects (OUTLINE, GRAYSCALE, DISSOLVE)
+# Shader effects (OUTLINE, GRAYSCALE, DISSOLVE, COLOR_OVERLAY)
 var _shader_material: ShaderMaterial = null
 var _original_material: Material = null
 var _owns_shader_material: bool = false
 
-# Outline shader reference (preloaded once)
+# Shader references (preloaded once)
 static var _outline_shader: Shader = null
 static var _grayscale_shader: Shader = null
 static var _dissolve_shader: Shader = null
+static var _overlay_shader: Shader = null
 
-# BLEND_MODE
+# Blending Mode layer
 var _canvas_item_material: CanvasItemMaterial = null
 var _original_canvas_material: Material = null
-var _original_blend_mode: int = -1
-var _blend_mode_base_alpha: float = 1.0
+var _blend_mode_is_setup: bool = false
 
 # Flicker
 var _flicker_time: float = 0.0
@@ -338,6 +365,7 @@ func _invalidate_base_cache() -> void:
 	_shader_material = null
 	_canvas_item_material = null
 	_owns_shader_material = false
+	_blend_mode_is_setup = false
 
 
 func _on_animate_start() -> void:
@@ -348,12 +376,16 @@ func _on_animate_start() -> void:
 	match appearance_effect:
 		AppearanceEffect.OUTLINE:
 			_setup_outline_shader()
-		AppearanceEffect.BLEND_MODE:
-			_setup_blend_mode()
 		AppearanceEffect.GRAYSCALE:
 			_setup_grayscale_shader()
 		AppearanceEffect.DISSOLVE:
 			_setup_dissolve_shader()
+		AppearanceEffect.COLOR_OVERLAY:
+			_setup_overlay_shader()
+
+	# Set up optional blending mode layer
+	if use_blend_mode:
+		_setup_blend_mode_layer()
 
 	# Reset flicker time for fresh start
 	_flicker_time = 0.0
@@ -374,14 +406,14 @@ func _apply_effect(progress: float) -> void:
 			_apply_overbright(effective)
 		AppearanceEffect.OUTLINE:
 			_apply_outline(effective)
-		AppearanceEffect.BLEND_MODE:
-			_apply_blend_mode_effect(effective)
 		AppearanceEffect.FADE:
 			_apply_fade(effective)
 		AppearanceEffect.GRAYSCALE:
 			_apply_grayscale(effective)
 		AppearanceEffect.DISSOLVE:
 			_apply_dissolve(effective)
+		AppearanceEffect.COLOR_OVERLAY:
+			_apply_color_overlay(effective)
 
 
 func _on_animate_out_complete() -> void:
@@ -392,12 +424,16 @@ func _on_animate_out_complete() -> void:
 	match appearance_effect:
 		AppearanceEffect.OUTLINE:
 			_teardown_shader()
-		AppearanceEffect.BLEND_MODE:
-			_teardown_blend_mode()
 		AppearanceEffect.GRAYSCALE:
 			_teardown_shader()
 		AppearanceEffect.DISSOLVE:
 			_teardown_shader()
+		AppearanceEffect.COLOR_OVERLAY:
+			_teardown_shader()
+
+	# Clean up optional blending mode layer
+	if _blend_mode_is_setup:
+		_teardown_blend_mode_layer()
 
 	if debug_enabled:
 		print("[%s] Appearance2D complete, restored to base state" % name)
@@ -479,23 +515,6 @@ func _apply_outline(progress: float) -> void:
 	_shader_material.set_shader_parameter("outline_color", outline_color)
 
 
-# --- BLEND_MODE ---
-
-func _apply_blend_mode_effect(progress: float) -> void:
-	# Blend modes are discrete — we fade the effect via alpha
-	if not _target_node is CanvasItem:
-		return
-	var canvas := _target_node as CanvasItem
-	canvas.modulate.a = lerpf(_blend_mode_base_alpha, _blend_mode_base_alpha, 1.0) * progress
-	# At progress=0, alpha=0 makes the blend invisible. At progress=1, full effect.
-	# Actually: we want the node visible, just blend-mode-faded.
-	# The approach: alpha at base when progress=0, alpha at base when progress=1,
-	# but the blend mode itself is the effect.
-	# Simpler: just keep alpha at base. The visual change IS the blend mode being active.
-	# Fade the blend mode influence by lerping alpha from 0 → base_alpha.
-	canvas.modulate.a = _blend_mode_base_alpha * progress
-
-
 # --- FADE ---
 
 func _apply_fade(progress: float) -> void:
@@ -525,6 +544,16 @@ func _apply_dissolve(progress: float) -> void:
 	# Update edge parameters live for inspector tweaking
 	_shader_material.set_shader_parameter("edge_color", dissolve_edge_color)
 	_shader_material.set_shader_parameter("edge_width", dissolve_edge_width)
+
+
+# --- COLOR_OVERLAY ---
+
+func _apply_color_overlay(progress: float) -> void:
+	if not _shader_material:
+		return
+	_shader_material.set_shader_parameter("amount", progress)
+	# Update overlay color live for inspector tweaking
+	_shader_material.set_shader_parameter("overlay_color", overlay_color)
 
 
 # =============================================================================
@@ -588,6 +617,12 @@ func _get_dissolve_shader() -> Shader:
 	if _dissolve_shader == null:
 		_dissolve_shader = load("res://addons/juice/Shaders/dissolve_2d.gdshader")
 	return _dissolve_shader
+
+
+func _get_overlay_shader() -> Shader:
+	if _overlay_shader == null:
+		_overlay_shader = load("res://addons/juice/Shaders/overlay_2d.gdshader")
+	return _overlay_shader
 
 
 func _setup_outline_shader() -> void:
@@ -660,6 +695,26 @@ func _setup_dissolve_shader() -> void:
 		print("[%s] Dissolve shader applied to '%s'" % [name, canvas.name])
 
 
+func _setup_overlay_shader() -> void:
+	if _shader_material:
+		return
+	if not _target_node is CanvasItem:
+		return
+
+	var canvas := _target_node as CanvasItem
+	_original_material = canvas.material
+
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = _get_overlay_shader()
+	_shader_material.set_shader_parameter("amount", 0.0)
+	_shader_material.set_shader_parameter("overlay_color", overlay_color)
+	canvas.material = _shader_material
+	_owns_shader_material = true
+
+	if debug_enabled:
+		print("[%s] Color overlay shader applied to '%s'" % [name, canvas.name])
+
+
 func _teardown_shader() -> void:
 	if not _target_node is CanvasItem:
 		return
@@ -679,15 +734,19 @@ func _teardown_shader() -> void:
 
 
 # =============================================================================
-# BLEND MODE SETUP / TEARDOWN
+# BLENDING MODE LAYER SETUP / TEARDOWN
 # =============================================================================
 
-func _setup_blend_mode() -> void:
+## Apply a CanvasItemMaterial with the selected compositing blend mode.
+## This is a LAYER — it modifies how the node composites with the scene,
+## independent of which appearance effect is active.
+func _setup_blend_mode_layer() -> void:
+	if _blend_mode_is_setup:
+		return
 	if not _target_node is CanvasItem:
 		return
 
 	var canvas := _target_node as CanvasItem
-	_blend_mode_base_alpha = canvas.modulate.a
 
 	# Save original material for restoration
 	_original_canvas_material = canvas.material
@@ -705,15 +764,14 @@ func _setup_blend_mode() -> void:
 			_canvas_item_material.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
 
 	canvas.material = _canvas_item_material
-	# Start with alpha=0 so the blend effect fades in
-	canvas.modulate.a = 0.0
+	_blend_mode_is_setup = true
 
 	if debug_enabled:
-		print("[%s] Blend mode %s applied to '%s'" % [
+		print("[%s] Blending mode layer %s applied to '%s'" % [
 			name, TargetBlendMode.keys()[target_blend_mode], canvas.name])
 
 
-func _teardown_blend_mode() -> void:
+func _teardown_blend_mode_layer() -> void:
 	if not _target_node is CanvasItem:
 		return
 
@@ -723,14 +781,10 @@ func _teardown_blend_mode() -> void:
 	canvas.material = _original_canvas_material
 	_original_canvas_material = null
 	_canvas_item_material = null
-
-	# Restore original alpha
-	var mod := canvas.modulate
-	mod.a = _blend_mode_base_alpha
-	canvas.modulate = mod
+	_blend_mode_is_setup = false
 
 	if debug_enabled:
-		print("[%s] Blend mode removed, original restored" % name)
+		print("[%s] Blending mode layer removed, original restored" % name)
 
 
 # =============================================================================
@@ -745,7 +799,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Target must be a CanvasItem (Node2D, Sprite2D, etc.). Use Appearance3DJuiceComp for 3D nodes.")
 
 	# Warn about shader effects on non-simple nodes
-	if appearance_effect in [AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE]:
+	if appearance_effect in [AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE, AppearanceEffect.COLOR_OVERLAY]:
 		if parent and parent is CanvasItem and parent.material != null:
 			warnings.append("Target already has a material. %s will temporarily replace it during animation." % AppearanceEffect.keys()[appearance_effect])
 
