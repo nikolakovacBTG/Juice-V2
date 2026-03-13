@@ -1,39 +1,41 @@
 ## Appearance3DJuiceComp.gd
 ## ============================================================================
-## WHAT: Animates built-in material properties (albedo, emission, roughness, grow)
-##       on 3D geometry. Part of the unified Appearance family.
-## WHY:  Quick material effects without needing custom shaders. Provides the 3D
-##       equivalent of AppearanceControlJuiceComp / Appearance2DJuiceComp but
-##       targeting StandardMaterial3D properties instead of CanvasItem modulate.
-## SYSTEM: Juicing System (addons/juice/) - Appearance Family
-## DOES NOT: Custom shader uniforms — use ShaderPropertyJuiceComp for that.
-## DOES NOT: CanvasItem modulate — use AppearanceControlJuiceComp / Appearance2DJuiceComp.
+## WHAT: Unified appearance effect for 3D nodes. One enum selects from tint,
+##       overbright, outline, blend mode, fade, grayscale, dissolve, and
+##       3D-exclusive material properties (emission, roughness, metallic, grow,
+##       rim, clearcoat, refraction).
+## WHY:  Artists think "change how this looks." One component covers all
+##       per-node visual effects, hiding domain-specific rendering details
+##       (StandardMaterial3D, ShaderMaterial, next_pass) behind a dropdown.
+## SYSTEM: Juicing System (addons/juice/) — Appearance Family (3D Domain)
+## DOES NOT: CanvasItem effects — use Appearance2D / AppearanceControl.
+## DOES NOT: Custom shader uniforms — use ShaderPropertyJuiceComp.
+## DOES NOT: Screen-space overlays — use ScreenOverlayJuiceComp.
 ## ============================================================================
 ##
 ## ARCHITECTURE:
-## - Animates StandardMaterial3D properties by enum selection
-## - Supports common properties: albedo_color, emission, roughness, metallic, grow
-## - Color properties support blend modes (LERP, ADDITIVE, MULTIPLY)
-## - Numeric properties use delta-based offset addition
-## - Automatically duplicates shared materials to avoid cross-node conflicts
-## - Optional hold phase at peak before animate_out (flash effects on materials)
+## - Top-level enum (appearance_effect) selects the active effect.
+## - Effect-specific parameters shown/hidden via _get_property_list().
+## - Optional Flicker group provides temporal modulation on ANY effect.
+## - progress=0.0 → base state, progress=1.0 → effect fully applied.
 ##
-## COLOR BLEND MODES (visible only for ALBEDO_COLOR and EMISSION):
-## - LERP: Interpolate base → target (default, simple tween)
-## - ADDITIVE: Add target color scaled by progress (brightening/glow)
-## - MULTIPLY: Multiply base by target scaled by progress (tinting)
+## EFFECTS (shared with 2D/Control):
+## - TINT: Animate albedo_color from color_from to color_to.
+## - OVERBRIGHT: Emission energy for HDR bloom/glow.
+## - OUTLINE: Inverted Hull technique (next_pass material, cull front, grow).
+## - BLEND_MODE: BaseMaterial3D blend mode, fade via transparency.
+## - FADE: Animate material transparency.
+## - GRAYSCALE: Shader-based desaturation (next_pass grayscale_3d.gdshader).
+## - DISSOLVE: Shader-based noise dissolve (material_override dissolve_3d.gdshader).
 ##
-## USAGE:
-## - Add as child of MeshInstance3D or GeometryInstance3D
-## - Select material_property to animate
-## - Set offset/target value
-## - animate_in() applies effect, animate_out() removes it
-##
-## EXAMPLES:
-## - Glow: property=EMISSION_ENERGY, float_offset=2.0
-## - Damage red: property=ALBEDO_COLOR, color_target=Red, color_blend_mode=MULTIPLY
-## - Hit flash: property=ALBEDO_COLOR, color_target=White, color_blend_mode=ADDITIVE, hold_at_peak=0.1
-## - Outline grow: property=GROW, float_offset=0.05
+## 3D-EXCLUSIVE EFFECTS:
+## - EMISSION: Animate emission color.
+## - ROUGHNESS: Animate surface roughness.
+## - METALLIC: Animate metallic appearance.
+## - GROW: Animate vertex displacement along normals.
+## - RIM: Animate rim lighting intensity.
+## - CLEARCOAT: Animate clearcoat intensity.
+## - REFRACTION: Animate refraction scale.
 ## ============================================================================
 
 @tool
@@ -41,132 +43,331 @@
 class_name Appearance3DJuiceComp
 extends JuiceCompBase
 
+
 # =============================================================================
-# MATERIAL PROPERTY CONFIGURATION
+# ENUMS
+# =============================================================================
+
+## Which appearance effect to apply
+enum AppearanceEffect {
+	TINT,        ## Animate albedo_color (lerp from/to)
+	OVERBRIGHT,  ## Emission energy for HDR bloom/glow
+	OUTLINE,     ## Inverted Hull technique (next_pass grow + cull front)
+	BLEND_MODE,  ## BaseMaterial3D compositing blend mode
+	FADE,        ## Animate material transparency
+	GRAYSCALE,   ## Shader-based desaturation (next_pass)
+	DISSOLVE,    ## Shader-based noise dissolve (material_override)
+	EMISSION,    ## Animate emission color
+	ROUGHNESS,   ## Animate surface roughness
+	METALLIC,    ## Animate metallic appearance
+	GROW,        ## Animate vertex displacement along normals
+	RIM,         ## Animate rim lighting intensity
+	CLEARCOAT,   ## Animate clearcoat intensity
+	REFRACTION,  ## Animate refraction scale
+}
+
+## Compositing blend mode targets for BLEND_MODE effect
+enum TargetBlendMode {
+	ADD,  ## BaseMaterial3D.BLEND_MODE_ADD
+	SUB,  ## BaseMaterial3D.BLEND_MODE_SUB
+	MUL,  ## BaseMaterial3D.BLEND_MODE_MUL
+}
+
+## Flicker temporal modulation modes
+enum FlickerMode {
+	RANDOM, ## Random value between min/max each interval
+	CUSTOM, ## Sample a user-drawn Curve over time
+}
+
+
+# =============================================================================
+# ALWAYS-VISIBLE EXPORTS
 # =============================================================================
 
 @export_group("Effect")
 
-## Which material property to animate
-enum MaterialProperty {
-	ALBEDO_COLOR,      ## Main color/tint of the material
-	EMISSION,          ## Emission color (glow color)
-	EMISSION_ENERGY,   ## Emission intensity (scalar)
-	ROUGHNESS,         ## Surface roughness (0 = mirror, 1 = rough)
-	METALLIC,          ## Metallic appearance (0 = dielectric, 1 = metal)
-	GROW,              ## Vertex displacement along normals (for outlines)
-	RIM,               ## Rim lighting intensity
-	RIM_TINT,          ## How much rim is tinted by albedo
-	CLEARCOAT,         ## Clearcoat intensity
-	REFRACTION         ## Refraction scale (for transparent materials)
-}
-
-## Which property to animate
-@export var material_property: MaterialProperty = MaterialProperty.EMISSION_ENERGY:
+## Which appearance effect is active. Controls which parameters are shown.
+@export var appearance_effect: AppearanceEffect = AppearanceEffect.TINT:
 	set(value):
-		material_property = value
-		# Refresh inspector to show/hide conditional properties
-		# (color_blend_mode and allow_hdr only visible for color properties)
+		appearance_effect = value
 		notify_property_list_changed()
 
-## Offset for numeric properties (EMISSION_ENERGY, ROUGHNESS, METALLIC, GROW, RIM, etc.)
-## Added to base value scaled by progress
-@export var float_offset: float = 1.0
-
-## Target color for color properties (ALBEDO_COLOR, EMISSION)
-## Lerps from base color to this
-@export var color_target: Color = Color.WHITE
-
-## For Node3D: Which child GeometryInstance3D to affect (leave empty to search)
+## Which child GeometryInstance3D to affect (leave empty to auto-search)
 @export_node_path("GeometryInstance3D") var geometry_path: NodePath
 
+
 # =============================================================================
-# CONDITIONAL PROPERTIES (shown via _get_property_list for color properties only)
+# BACKING VARIABLES — shown/hidden by _get_property_list per effect
 # =============================================================================
 
-## How color properties are blended with the base material color.
-## Only applies to ALBEDO_COLOR and EMISSION — numeric properties always use offset.
-enum ColorBlendMode {
-	LERP,        ## Interpolate base → target (default, simple tween)
-	ADDITIVE,    ## Add target color scaled by progress (brightens)
-	MULTIPLY     ## Multiply base by target scaled by progress (tints)
-}
+# --- TINT (albedo_color) ---
+var color_from: Color = Color.WHITE
+var color_to: Color = Color.RED
 
-## Backing variable for conditional color_blend_mode export
-var color_blend_mode: int = ColorBlendMode.LERP
+# --- OVERBRIGHT ---
+var overbright_intensity: float = 2.0
+var overbright_color: Color = Color.WHITE
 
-## Backing variable for conditional allow_hdr export.
-## If true, color values above 1.0 are kept (useful for bloom/glow).
-## If false, values are clamped to 0.0–1.0.
-var allow_hdr: bool = true
+# --- OUTLINE (Inverted Hull) ---
+var outline_color: Color = Color.YELLOW
+var outline_width: float = 0.02
+var auto_create_outline: bool = true
+
+# --- BLEND_MODE ---
+var target_blend_mode: int = TargetBlendMode.ADD
+
+# --- FADE ---
+var fade_target_alpha: float = 0.0
+
+# --- GRAYSCALE ---
+var grayscale_strength: float = 1.0
+
+# --- DISSOLVE ---
+var dissolve_texture: NoiseTexture2D = null
+var dissolve_edge_color: Color = Color(1.0, 0.5, 0.0, 1.0)
+var dissolve_edge_width: float = 0.05
+
+# --- EMISSION (color) ---
+var emission_color_target: Color = Color.WHITE
+
+# --- Numeric material properties (ROUGHNESS, METALLIC, GROW, RIM, CLEARCOAT, REFRACTION) ---
+var float_offset: float = 1.0
+
+# --- FLICKER (temporal modulation layer) ---
+var use_flicker: bool = false:
+	set(value):
+		use_flicker = value
+		notify_property_list_changed()
+var flicker_mode: int = FlickerMode.RANDOM:
+	set(value):
+		flicker_mode = value
+		notify_property_list_changed()
+var hard_flicker: bool = false
+var flicker_rate: float = 10.0
+var flicker_min: float = 0.0
+var flicker_max: float = 1.0
+var flicker_curve: Curve = null
 
 
-## Conditional export visibility — color_blend_mode and allow_hdr only shown
-## when material_property is a color type (ALBEDO_COLOR or EMISSION).
+# =============================================================================
+# CONDITIONAL EXPORT SYSTEM
+# =============================================================================
+
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
-	if _is_color_property():
-		props.append({
-			"name": "color_blend_mode",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "LERP,ADDITIVE,MULTIPLY",
-			"usage": PROPERTY_USAGE_DEFAULT
-		})
-		props.append({
-			"name": "allow_hdr",
-			"type": TYPE_BOOL,
-			"usage": PROPERTY_USAGE_DEFAULT
-		})
+
+	# --- Effect-specific parameters ---
+	match appearance_effect:
+		AppearanceEffect.TINT:
+			props.append({"name": "color_from", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "color_to", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.OVERBRIGHT:
+			props.append({"name": "overbright_intensity", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,10.0,0.1,or_greater",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "overbright_color", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.OUTLINE:
+			props.append({"name": "outline_color", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "outline_width", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,0.1,0.001,or_greater",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "auto_create_outline", "type": TYPE_BOOL,
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.BLEND_MODE:
+			props.append({"name": "target_blend_mode", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Add,Sub,Mul",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.FADE:
+			props.append({"name": "fade_target_alpha", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.GRAYSCALE:
+			props.append({"name": "grayscale_strength", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.DISSOLVE:
+			props.append({"name": "dissolve_texture", "type": TYPE_OBJECT,
+				"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "NoiseTexture2D",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "dissolve_edge_color", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "dissolve_edge_width", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,0.5,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.EMISSION:
+			props.append({"name": "emission_color_target", "type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		AppearanceEffect.ROUGHNESS, AppearanceEffect.METALLIC, \
+		AppearanceEffect.GROW, AppearanceEffect.RIM, \
+		AppearanceEffect.CLEARCOAT, AppearanceEffect.REFRACTION:
+			props.append({"name": "float_offset", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "-2.0,2.0,0.01,or_greater,or_less",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+	# --- Flicker group ---
+	props.append({"name": "Flicker", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "use_flicker", "type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	if use_flicker:
+		props.append({"name": "flicker_mode", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Random,Custom",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "hard_flicker", "type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "flicker_rate", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,60.0,0.1,or_greater",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		match flicker_mode:
+			FlickerMode.RANDOM:
+				props.append({"name": "flicker_min", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+					"usage": PROPERTY_USAGE_DEFAULT})
+				props.append({"name": "flicker_max", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+					"usage": PROPERTY_USAGE_DEFAULT})
+			FlickerMode.CUSTOM:
+				props.append({"name": "flicker_curve", "type": TYPE_OBJECT,
+					"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve",
+					"usage": PROPERTY_USAGE_DEFAULT})
+
 	return props
 
 
-## Handle setting conditional properties for serialization
-func _set(property: StringName, value: Variant) -> bool:
-	match property:
-		&"color_blend_mode":
-			color_blend_mode = value
-			return true
-		&"allow_hdr":
-			allow_hdr = value
-			return true
+func _set(prop: StringName, value: Variant) -> bool:
+	match prop:
+		# TINT
+		&"color_from": color_from = value; return true
+		&"color_to": color_to = value; return true
+		# OVERBRIGHT
+		&"overbright_intensity": overbright_intensity = value; return true
+		&"overbright_color": overbright_color = value; return true
+		# OUTLINE
+		&"outline_color": outline_color = value; return true
+		&"outline_width": outline_width = value; return true
+		&"auto_create_outline": auto_create_outline = value; return true
+		# BLEND_MODE
+		&"target_blend_mode": target_blend_mode = value; return true
+		# FADE
+		&"fade_target_alpha": fade_target_alpha = value; return true
+		# GRAYSCALE
+		&"grayscale_strength": grayscale_strength = value; return true
+		# DISSOLVE
+		&"dissolve_texture": dissolve_texture = value; return true
+		&"dissolve_edge_color": dissolve_edge_color = value; return true
+		&"dissolve_edge_width": dissolve_edge_width = value; return true
+		# EMISSION
+		&"emission_color_target": emission_color_target = value; return true
+		# Numeric
+		&"float_offset": float_offset = value; return true
+		# FLICKER
+		&"use_flicker": use_flicker = value; return true
+		&"flicker_mode": flicker_mode = value; return true
+		&"hard_flicker": hard_flicker = value; return true
+		&"flicker_rate": flicker_rate = value; return true
+		&"flicker_min": flicker_min = value; return true
+		&"flicker_max": flicker_max = value; return true
+		&"flicker_curve": flicker_curve = value; return true
 	return false
 
 
-## Handle getting conditional properties for serialization
-func _get(property: StringName) -> Variant:
-	match property:
-		&"color_blend_mode":
-			return color_blend_mode
-		&"allow_hdr":
-			return allow_hdr
+func _get(prop: StringName) -> Variant:
+	match prop:
+		# TINT
+		&"color_from": return color_from
+		&"color_to": return color_to
+		# OVERBRIGHT
+		&"overbright_intensity": return overbright_intensity
+		&"overbright_color": return overbright_color
+		# OUTLINE
+		&"outline_color": return outline_color
+		&"outline_width": return outline_width
+		&"auto_create_outline": return auto_create_outline
+		# BLEND_MODE
+		&"target_blend_mode": return target_blend_mode
+		# FADE
+		&"fade_target_alpha": return fade_target_alpha
+		# GRAYSCALE
+		&"grayscale_strength": return grayscale_strength
+		# DISSOLVE
+		&"dissolve_texture": return dissolve_texture
+		&"dissolve_edge_color": return dissolve_edge_color
+		&"dissolve_edge_width": return dissolve_edge_width
+		# EMISSION
+		&"emission_color_target": return emission_color_target
+		# Numeric
+		&"float_offset": return float_offset
+		# FLICKER
+		&"use_flicker": return use_flicker
+		&"flicker_mode": return flicker_mode
+		&"hard_flicker": return hard_flicker
+		&"flicker_rate": return flicker_rate
+		&"flicker_min": return flicker_min
+		&"flicker_max": return flicker_max
+		&"flicker_curve": return flicker_curve
 	return null
 
 
-## Helper: is the current material_property a color type?
-func _is_color_property() -> bool:
-	return (material_property == MaterialProperty.ALBEDO_COLOR
-		or material_property == MaterialProperty.EMISSION)
-
-
 # =============================================================================
-# INTERNAL STATE
+# INTERNAL STATE (transient — never serialized)
 # =============================================================================
 
-## Reference to the material we're animating
-var _target_material: StandardMaterial3D
-
-## Reference to geometry instance
-var _geometry_instance: GeometryInstance3D
-
-## Base value of the property (captured on start)
-var _base_value: Variant
-
-## Whether we've captured the base value
-var _has_base_value: bool = false
-
-## Whether we duplicated the material
+# Material references
+var _target_material: StandardMaterial3D = null
+var _geometry_instance: GeometryInstance3D = null
+var _has_base_captured: bool = false
 var _is_material_duplicated: bool = false
+
+# Base values for various effects
+var _base_albedo: Color = Color.WHITE
+var _base_emission: Color = Color.BLACK
+var _base_emission_energy: float = 1.0
+var _base_float_value: float = 0.0
+var _base_alpha: float = 1.0
+
+# OUTLINE (Inverted Hull)
+var _outline_material: StandardMaterial3D = null
+var _main_material: Material = null
+var _created_outline_material: bool = false
+var _outline_is_setup: bool = false
+
+# GRAYSCALE (next_pass shader)
+var _grayscale_shader_material: ShaderMaterial = null
+var _original_next_pass: Material = null
+var _grayscale_is_setup: bool = false
+
+# DISSOLVE (material_override shader)
+var _dissolve_shader_material: ShaderMaterial = null
+var _original_material_override: Material = null
+var _dissolve_is_setup: bool = false
+
+# BLEND_MODE
+var _original_blend_mode: int = -1
+var _original_transparency: int = -1
+
+# Shader references (preloaded once)
+static var _grayscale_shader: Shader = null
+static var _dissolve_shader: Shader = null
+
+# Flicker
+var _flicker_time: float = 0.0
+var _flicker_multiplier: float = 1.0
+
+# Track last delta for flicker (updated in _process)
+var _last_delta: float = 0.0
 
 
 # =============================================================================
@@ -175,15 +376,10 @@ var _is_material_duplicated: bool = false
 
 func _ready() -> void:
 	super._ready()
-	if debug_enabled:
-		print("[%s] Appearance3D ready - parent: %s, target: %s" % [
-			name,
-			str(get_parent().name) if get_parent() else "null",
-			str(_target_node.name) if _target_node else "null"
-		])
 
 
 func _process(delta: float) -> void:
+	_last_delta = delta
 	super._process(delta)
 
 
@@ -192,185 +388,293 @@ func _process(delta: float) -> void:
 # =============================================================================
 
 func _invalidate_base_cache() -> void:
-	_has_base_value = false
+	_has_base_captured = false
 	_target_material = null
+	_geometry_instance = null
 	_is_material_duplicated = false
+	_outline_material = null
+	_main_material = null
+	_created_outline_material = false
+	_outline_is_setup = false
+	_grayscale_shader_material = null
+	_grayscale_is_setup = false
+	_dissolve_shader_material = null
+	_dissolve_is_setup = false
 
 
 func _on_animate_start() -> void:
-	# Find and prepare the material
-	if not _target_material:
+	# Find geometry and material for effects that need StandardMaterial3D
+	if _needs_standard_material() and not _target_material:
 		_find_and_prepare_material()
+		if not _target_material:
+			if debug_enabled:
+				push_warning("[%s] No StandardMaterial3D found on target '%s'" % [
+					name, str(_target_node.name) if _target_node else "null"])
+			return
 
-	if not _target_material:
-		if debug_enabled:
-			push_warning("[%s] No StandardMaterial3D found on target '%s'" % [name, str(_target_node.name) if _target_node else "null"])
-		return
+	# Capture base values
+	if not _has_base_captured:
+		_capture_base_state()
 
-	# Capture base value if not already done
-	if not _has_base_value:
-		_capture_base_value()
+	# Set up specialized resources per effect
+	match appearance_effect:
+		AppearanceEffect.OUTLINE:
+			_setup_outline()
+		AppearanceEffect.BLEND_MODE:
+			_setup_blend_mode()
+		AppearanceEffect.FADE:
+			_setup_fade()
+		AppearanceEffect.GRAYSCALE:
+			_setup_grayscale()
+		AppearanceEffect.DISSOLVE:
+			_setup_dissolve()
+
+	# Reset flicker time
+	_flicker_time = 0.0
+	_flicker_multiplier = 1.0
 
 	if debug_enabled:
-		var extra := ""
-		if _is_color_property():
-			extra = ", blend=%s, hdr=%s" % [ColorBlendMode.keys()[color_blend_mode], allow_hdr]
-		print("[%s] Appearance3D start: %s, base=%s%s" % [
-			name, MaterialProperty.keys()[material_property], _base_value, extra
-		])
+		print("[%s] Appearance3D start: effect=%s, flicker=%s" % [
+			name, AppearanceEffect.keys()[appearance_effect], use_flicker])
 
 
 func _apply_effect(progress: float) -> void:
-	if not _target_material:
-		return
+	var effective := _get_effective_progress(progress)
 
-	# Calculate and apply new value
-	var new_value: Variant = _calculate_value(progress)
-	_set_material_property(new_value)
+	match appearance_effect:
+		AppearanceEffect.TINT:
+			_apply_tint(effective)
+		AppearanceEffect.OVERBRIGHT:
+			_apply_overbright(effective)
+		AppearanceEffect.OUTLINE:
+			_apply_outline(effective)
+		AppearanceEffect.BLEND_MODE:
+			_apply_blend_mode_effect(effective)
+		AppearanceEffect.FADE:
+			_apply_fade(effective)
+		AppearanceEffect.GRAYSCALE:
+			_apply_grayscale(effective)
+		AppearanceEffect.DISSOLVE:
+			_apply_dissolve(effective)
+		AppearanceEffect.EMISSION:
+			_apply_emission(effective)
+		AppearanceEffect.ROUGHNESS:
+			_apply_float_property("roughness", effective, true)
+		AppearanceEffect.METALLIC:
+			_apply_float_property("metallic", effective, true)
+		AppearanceEffect.GROW:
+			_apply_grow(effective)
+		AppearanceEffect.RIM:
+			_apply_float_property("rim", effective, true)
+		AppearanceEffect.CLEARCOAT:
+			_apply_float_property("clearcoat", effective, true)
+		AppearanceEffect.REFRACTION:
+			_apply_float_property("refraction_scale", effective, false)
 
 
 func _on_animate_out_complete() -> void:
+	# Snap to base state
+	_apply_effect(0.0)
+
+	# Clean up resources
+	match appearance_effect:
+		AppearanceEffect.OUTLINE:
+			_teardown_outline()
+		AppearanceEffect.BLEND_MODE:
+			_teardown_blend_mode()
+		AppearanceEffect.FADE:
+			_teardown_fade()
+		AppearanceEffect.GRAYSCALE:
+			_teardown_grayscale()
+		AppearanceEffect.DISSOLVE:
+			_teardown_dissolve()
+
+	if debug_enabled:
+		print("[%s] Appearance3D complete, restored to base state" % name)
+
+
+# =============================================================================
+# FLICKER — TEMPORAL MODULATION
+# =============================================================================
+
+## Compute effective progress by applying flicker modulation.
+func _get_effective_progress(progress: float) -> float:
+	if not use_flicker:
+		return progress
+
+	_flicker_time += _last_delta
+
+	var multiplier: float = 1.0
+	match flicker_mode:
+		FlickerMode.RANDOM:
+			var interval := 1.0 / maxf(flicker_rate, 0.01)
+			if _flicker_time >= interval:
+				_flicker_time = fmod(_flicker_time, interval)
+				_flicker_multiplier = randf_range(flicker_min, flicker_max)
+			multiplier = _flicker_multiplier
+
+		FlickerMode.CUSTOM:
+			if flicker_curve:
+				var t := fmod(_flicker_time * flicker_rate, 1.0)
+				multiplier = flicker_curve.sample(t)
+			else:
+				multiplier = 1.0
+
+	if hard_flicker:
+		multiplier = 1.0 if multiplier >= 0.5 else 0.0
+
+	return progress * multiplier
+
+
+# =============================================================================
+# EFFECT IMPLEMENTATIONS
+# =============================================================================
+
+# --- TINT (albedo_color) ---
+
+func _apply_tint(progress: float) -> void:
 	if not _target_material:
 		return
+	_target_material.albedo_color = color_from.lerp(color_to, progress)
 
-	# Restore exact base value
-	_set_material_property(_base_value)
 
-	if debug_enabled:
-		print("[%s] Appearance3D complete, restored %s to %s" % [
-			name, MaterialProperty.keys()[material_property], _base_value
-		])
+# --- OVERBRIGHT (emission energy) ---
+
+func _apply_overbright(progress: float) -> void:
+	if not _target_material:
+		return
+	if not _target_material.emission_enabled:
+		_target_material.emission_enabled = true
+	_target_material.emission = overbright_color
+	_target_material.emission_energy_multiplier = lerpf(0.0, overbright_intensity, progress)
+
+
+# --- OUTLINE (Inverted Hull) ---
+
+func _apply_outline(progress: float) -> void:
+	if not _outline_material:
+		return
+	_outline_material.grow_amount = outline_width * progress
+	_outline_material.albedo_color = outline_color
+
+
+# --- BLEND_MODE ---
+
+func _apply_blend_mode_effect(progress: float) -> void:
+	if not _target_material:
+		return
+	# Fade via albedo alpha (material must be in ALPHA transparency mode)
+	_target_material.albedo_color.a = lerpf(_base_alpha, 0.0, 1.0 - progress)
+
+
+# --- FADE ---
+
+func _apply_fade(progress: float) -> void:
+	if not _target_material:
+		return
+	var new_alpha := lerpf(_base_alpha, fade_target_alpha, progress)
+	_target_material.albedo_color.a = new_alpha
+
+
+# --- GRAYSCALE (next_pass shader) ---
+
+func _apply_grayscale(progress: float) -> void:
+	if not _grayscale_shader_material:
+		return
+	_grayscale_shader_material.set_shader_parameter("amount", grayscale_strength * progress)
+
+
+# --- DISSOLVE (material_override shader) ---
+
+func _apply_dissolve(progress: float) -> void:
+	if not _dissolve_shader_material:
+		return
+	_dissolve_shader_material.set_shader_parameter("threshold", progress)
+	_dissolve_shader_material.set_shader_parameter("edge_color", dissolve_edge_color)
+	_dissolve_shader_material.set_shader_parameter("edge_width", dissolve_edge_width)
+
+
+# --- EMISSION (color) ---
+
+func _apply_emission(progress: float) -> void:
+	if not _target_material:
+		return
+	if not _target_material.emission_enabled:
+		_target_material.emission_enabled = true
+	_target_material.emission = _base_emission.lerp(emission_color_target, progress)
+
+
+# --- FLOAT PROPERTIES (ROUGHNESS, METALLIC, RIM, CLEARCOAT, REFRACTION) ---
+
+func _apply_float_property(prop_name: String, progress: float, clamped: bool) -> void:
+	if not _target_material:
+		return
+	var new_val: float = _base_float_value + (float_offset * progress)
+	if clamped:
+		new_val = clampf(new_val, 0.0, 1.0)
+	_target_material.set(prop_name, new_val)
+
+
+# --- GROW ---
+
+func _apply_grow(progress: float) -> void:
+	if not _target_material:
+		return
+	if not _target_material.grow:
+		_target_material.grow = true
+	_target_material.grow_amount = _base_float_value + (float_offset * progress)
 
 
 # =============================================================================
-# VALUE CALCULATION
+# HELPERS
 # =============================================================================
 
-## Calculate the animated value based on property type, blend mode, and progress
-func _calculate_value(progress: float) -> Variant:
-	# Color properties support blend modes
-	if _is_color_property():
-		var base_color: Color = _base_value if _base_value != null else Color.WHITE
-		return _calculate_color_value(base_color, progress)
-
-	# Numeric properties always use offset addition
-	var base_float: float = _base_value if _base_value != null else 0.0
-	return base_float + (float_offset * progress)
-
-
-## Calculate blended color value using the selected color blend mode
-func _calculate_color_value(base_color: Color, progress: float) -> Color:
-	match color_blend_mode:
-		ColorBlendMode.LERP:
-			# Simple interpolation from base to target
-			return base_color.lerp(color_target, progress)
-
-		ColorBlendMode.ADDITIVE:
-			# Add target color scaled by progress onto base
-			var r := base_color.r + color_target.r * progress
-			var g := base_color.g + color_target.g * progress
-			var b := base_color.b + color_target.b * progress
-			if not allow_hdr:
-				r = clampf(r, 0.0, 1.0)
-				g = clampf(g, 0.0, 1.0)
-				b = clampf(b, 0.0, 1.0)
-			return Color(r, g, b, base_color.a)
-
-		ColorBlendMode.MULTIPLY:
-			# Multiply base by a factor that goes from White (1,1,1) to color_target
-			# At progress=0: multiply by 1 (no change). At progress=1: multiply by color_target.
-			return Color(
-				base_color.r * lerpf(1.0, color_target.r, progress),
-				base_color.g * lerpf(1.0, color_target.g, progress),
-				base_color.b * lerpf(1.0, color_target.b, progress),
-				base_color.a
-			)
-
-	return base_color
+## Whether this effect needs a StandardMaterial3D on the geometry
+func _needs_standard_material() -> bool:
+	return appearance_effect in [
+		AppearanceEffect.TINT, AppearanceEffect.OVERBRIGHT,
+		AppearanceEffect.BLEND_MODE, AppearanceEffect.FADE,
+		AppearanceEffect.EMISSION, AppearanceEffect.ROUGHNESS,
+		AppearanceEffect.METALLIC, AppearanceEffect.GROW,
+		AppearanceEffect.RIM, AppearanceEffect.CLEARCOAT,
+		AppearanceEffect.REFRACTION,
+	]
 
 
 # =============================================================================
-# BASE VALUE CAPTURE
+# BASE STATE CAPTURE
 # =============================================================================
 
-## Capture the base value of the material property
-func _capture_base_value() -> void:
-	if _has_base_value or not _target_material:
+func _capture_base_state() -> void:
+	if _has_base_captured:
 		return
 
-	_base_value = _get_material_property()
-	_has_base_value = true
+	if _target_material:
+		_base_albedo = _target_material.albedo_color
+		_base_alpha = _target_material.albedo_color.a
+		_base_emission = _target_material.emission if _target_material.emission_enabled else Color.BLACK
+		_base_emission_energy = _target_material.emission_energy_multiplier
+
+		# Capture the numeric base value for the selected effect
+		match appearance_effect:
+			AppearanceEffect.ROUGHNESS:
+				_base_float_value = _target_material.roughness
+			AppearanceEffect.METALLIC:
+				_base_float_value = _target_material.metallic
+			AppearanceEffect.GROW:
+				_base_float_value = _target_material.grow_amount if _target_material.grow else 0.0
+			AppearanceEffect.RIM:
+				_base_float_value = _target_material.rim if _target_material.rim_enabled else 0.0
+			AppearanceEffect.CLEARCOAT:
+				_base_float_value = _target_material.clearcoat if _target_material.clearcoat_enabled else 0.0
+			AppearanceEffect.REFRACTION:
+				_base_float_value = _target_material.refraction_scale if _target_material.refraction_enabled else 0.0
+
+	_has_base_captured = true
 
 	if debug_enabled:
-		print("[%s] Captured base value for %s: %s" % [
-			name, MaterialProperty.keys()[material_property], _base_value
-		])
-
-
-## Get the current value of the material property
-func _get_material_property() -> Variant:
-	match material_property:
-		MaterialProperty.ALBEDO_COLOR:
-			return _target_material.albedo_color
-		MaterialProperty.EMISSION:
-			return _target_material.emission
-		MaterialProperty.EMISSION_ENERGY:
-			return _target_material.emission_energy_multiplier
-		MaterialProperty.ROUGHNESS:
-			return _target_material.roughness
-		MaterialProperty.METALLIC:
-			return _target_material.metallic
-		MaterialProperty.GROW:
-			return _target_material.grow_amount
-		MaterialProperty.RIM:
-			return _target_material.rim
-		MaterialProperty.RIM_TINT:
-			return _target_material.rim_tint
-		MaterialProperty.CLEARCOAT:
-			return _target_material.clearcoat
-		MaterialProperty.REFRACTION:
-			return _target_material.refraction_scale
-
-	return 0.0
-
-
-## Set the material property to a new value
-func _set_material_property(value: Variant) -> void:
-	match material_property:
-		MaterialProperty.ALBEDO_COLOR:
-			_target_material.albedo_color = value
-		MaterialProperty.EMISSION:
-			# Enable emission if not already
-			if not _target_material.emission_enabled:
-				_target_material.emission_enabled = true
-			_target_material.emission = value
-		MaterialProperty.EMISSION_ENERGY:
-			if not _target_material.emission_enabled:
-				_target_material.emission_enabled = true
-			_target_material.emission_energy_multiplier = value
-		MaterialProperty.ROUGHNESS:
-			_target_material.roughness = clampf(value, 0.0, 1.0)
-		MaterialProperty.METALLIC:
-			_target_material.metallic = clampf(value, 0.0, 1.0)
-		MaterialProperty.GROW:
-			# Enable grow if not already
-			if not _target_material.grow:
-				_target_material.grow = true
-			_target_material.grow_amount = value
-		MaterialProperty.RIM:
-			if not _target_material.rim_enabled:
-				_target_material.rim_enabled = true
-			_target_material.rim = clampf(value, 0.0, 1.0)
-		MaterialProperty.RIM_TINT:
-			_target_material.rim_tint = clampf(value, 0.0, 1.0)
-		MaterialProperty.CLEARCOAT:
-			if not _target_material.clearcoat_enabled:
-				_target_material.clearcoat_enabled = true
-			_target_material.clearcoat = clampf(value, 0.0, 1.0)
-		MaterialProperty.REFRACTION:
-			if not _target_material.refraction_enabled:
-				_target_material.refraction_enabled = true
-			_target_material.refraction_scale = value
+		print("[%s] Captured base: albedo=%s, alpha=%.2f, emission=%s" % [
+			name, _base_albedo, _base_alpha, _base_emission])
 
 
 # =============================================================================
@@ -380,13 +684,14 @@ func _set_material_property(value: Variant) -> void:
 ## Find and prepare the StandardMaterial3D on the target
 func _find_and_prepare_material() -> void:
 	_geometry_instance = _find_geometry_instance()
-
 	if not _geometry_instance:
 		return
 
 	# Check material_override first
 	if _geometry_instance.material_override is StandardMaterial3D:
-		_target_material = _ensure_material_unique(_geometry_instance.material_override as StandardMaterial3D)
+		_target_material = _ensure_material_unique(
+			_geometry_instance.material_override as StandardMaterial3D)
+		_geometry_instance.material_override = _target_material
 		return
 
 	# For MeshInstance3D, check surface materials
@@ -430,17 +735,15 @@ func _find_geometry_instance() -> GeometryInstance3D:
 			return child as GeometryInstance3D
 
 	if debug_enabled:
-		push_warning("[%s] No GeometryInstance3D found for material animation" % name)
+		push_warning("[%s] No GeometryInstance3D found for appearance effect" % name)
 	return null
 
 
 ## Ensure the material is unique to avoid affecting other nodes
 func _ensure_material_unique(mat: StandardMaterial3D) -> StandardMaterial3D:
-	# Check if material is already local to this node
 	if mat.resource_local_to_scene:
 		return mat
 
-	# Duplicate the material
 	var unique_mat := mat.duplicate() as StandardMaterial3D
 	unique_mat.resource_local_to_scene = true
 	_is_material_duplicated = true
@@ -450,6 +753,295 @@ func _ensure_material_unique(mat: StandardMaterial3D) -> StandardMaterial3D:
 
 	return unique_mat
 
+
+# =============================================================================
+# OUTLINE SETUP / TEARDOWN (Inverted Hull — 3D-specific)
+# =============================================================================
+
+func _setup_outline() -> void:
+	if _outline_is_setup:
+		return
+
+	_geometry_instance = _find_geometry_instance()
+	if not _geometry_instance:
+		if debug_enabled:
+			push_warning("[%s] No GeometryInstance3D found for outline" % name)
+		return
+
+	# Get the main material
+	_main_material = _get_main_material()
+	if not _main_material:
+		if debug_enabled:
+			push_warning("[%s] No main material found on '%s'" % [name, _geometry_instance.name])
+		return
+
+	# Check for existing Next Pass material
+	if _main_material.next_pass is StandardMaterial3D:
+		_outline_material = _main_material.next_pass as StandardMaterial3D
+	elif auto_create_outline:
+		_outline_material = _create_outline_material()
+		_main_material.next_pass = _outline_material
+		_created_outline_material = true
+	else:
+		if debug_enabled:
+			push_warning("[%s] No Next Pass material and auto_create_outline is false" % name)
+		return
+
+	# Start with grow at 0 (invisible outline)
+	_outline_material.grow_amount = 0.0
+	_outline_is_setup = true
+
+	if debug_enabled:
+		print("[%s] Outline (Inverted Hull) set up on '%s'" % [name, _geometry_instance.name])
+
+
+func _teardown_outline() -> void:
+	if _created_outline_material and _main_material:
+		_main_material.next_pass = null
+		_created_outline_material = false
+	_outline_material = null
+	_outline_is_setup = false
+
+	if debug_enabled:
+		print("[%s] Outline teardown complete" % name)
+
+
+## Get the main material from the geometry instance (duplicates if shared)
+func _get_main_material() -> Material:
+	if _geometry_instance.material_override:
+		if not _geometry_instance.material_override.resource_local_to_scene:
+			var unique := _geometry_instance.material_override.duplicate()
+			unique.resource_local_to_scene = true
+			_geometry_instance.material_override = unique
+		return _geometry_instance.material_override
+
+	if _geometry_instance is MeshInstance3D:
+		var mesh_inst := _geometry_instance as MeshInstance3D
+		if mesh_inst.mesh and mesh_inst.mesh.get_surface_count() > 0:
+			var surface_mat := mesh_inst.get_active_material(0)
+			if surface_mat:
+				var unique := surface_mat.duplicate()
+				unique.resource_local_to_scene = true
+				mesh_inst.material_override = unique
+				return unique
+
+	# Fallback: Create a basic material
+	var new_mat := StandardMaterial3D.new()
+	new_mat.resource_local_to_scene = true
+	_geometry_instance.material_override = new_mat
+	return new_mat
+
+
+## Create the outline material with proper settings for Inverted Hull technique
+func _create_outline_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.resource_local_to_scene = true
+	mat.albedo_color = outline_color
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	mat.grow = true
+	mat.grow_amount = 0.0
+	mat.no_depth_test = false
+	return mat
+
+
+# =============================================================================
+# BLEND MODE SETUP / TEARDOWN (3D)
+# =============================================================================
+
+func _setup_blend_mode() -> void:
+	if not _target_material:
+		return
+
+	_original_blend_mode = _target_material.blend_mode
+	_original_transparency = _target_material.transparency
+
+	# Set the blend mode
+	match target_blend_mode:
+		TargetBlendMode.ADD:
+			_target_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		TargetBlendMode.SUB:
+			_target_material.blend_mode = BaseMaterial3D.BLEND_MODE_SUB
+		TargetBlendMode.MUL:
+			_target_material.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+
+	# Enable alpha transparency for fade control
+	if _target_material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+		_target_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_target_material.albedo_color.a = 0.0
+
+	if debug_enabled:
+		print("[%s] Blend mode %s applied" % [name, TargetBlendMode.keys()[target_blend_mode]])
+
+
+func _teardown_blend_mode() -> void:
+	if not _target_material:
+		return
+
+	if _original_blend_mode >= 0:
+		_target_material.blend_mode = _original_blend_mode
+	if _original_transparency >= 0:
+		_target_material.transparency = _original_transparency
+	_target_material.albedo_color.a = _base_alpha
+	_original_blend_mode = -1
+	_original_transparency = -1
+
+	if debug_enabled:
+		print("[%s] Blend mode restored" % name)
+
+
+# =============================================================================
+# FADE SETUP / TEARDOWN (3D — needs transparency enabled)
+# =============================================================================
+
+func _setup_fade() -> void:
+	if not _target_material:
+		return
+
+	_original_transparency = _target_material.transparency
+	if _target_material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+		_target_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	if debug_enabled:
+		print("[%s] Fade: transparency enabled on material" % name)
+
+
+func _teardown_fade() -> void:
+	if not _target_material:
+		return
+
+	if _original_transparency >= 0:
+		_target_material.transparency = _original_transparency
+		_original_transparency = -1
+	_target_material.albedo_color.a = _base_alpha
+
+	if debug_enabled:
+		print("[%s] Fade: transparency restored" % name)
+
+
+# =============================================================================
+# GRAYSCALE SETUP / TEARDOWN (next_pass shader — 3D)
+# =============================================================================
+
+func _get_grayscale_shader() -> Shader:
+	if _grayscale_shader == null:
+		_grayscale_shader = load("res://addons/juice/Shaders/grayscale_3d.gdshader")
+	return _grayscale_shader
+
+
+func _setup_grayscale() -> void:
+	if _grayscale_is_setup:
+		return
+
+	_geometry_instance = _find_geometry_instance()
+	if not _geometry_instance:
+		return
+
+	# Get main material for next_pass
+	_main_material = _get_main_material()
+	if not _main_material:
+		return
+
+	# Save original next_pass
+	_original_next_pass = _main_material.next_pass
+
+	# Create grayscale shader as next_pass
+	_grayscale_shader_material = ShaderMaterial.new()
+	_grayscale_shader_material.shader = _get_grayscale_shader()
+	_grayscale_shader_material.set_shader_parameter("amount", 0.0)
+	_main_material.next_pass = _grayscale_shader_material
+	_grayscale_is_setup = true
+
+	if debug_enabled:
+		print("[%s] Grayscale next_pass shader applied to '%s'" % [name, _geometry_instance.name])
+
+
+func _teardown_grayscale() -> void:
+	if _main_material and _grayscale_is_setup:
+		_main_material.next_pass = _original_next_pass
+		_original_next_pass = null
+	_grayscale_shader_material = null
+	_grayscale_is_setup = false
+
+	if debug_enabled:
+		print("[%s] Grayscale next_pass removed" % name)
+
+
+# =============================================================================
+# DISSOLVE SETUP / TEARDOWN (material_override shader — 3D)
+# =============================================================================
+
+func _get_dissolve_shader() -> Shader:
+	if _dissolve_shader == null:
+		_dissolve_shader = load("res://addons/juice/Shaders/dissolve_3d.gdshader")
+	return _dissolve_shader
+
+
+func _setup_dissolve() -> void:
+	if _dissolve_is_setup:
+		return
+
+	_geometry_instance = _find_geometry_instance()
+	if not _geometry_instance:
+		return
+
+	# Save original material_override
+	_original_material_override = _geometry_instance.material_override
+
+	# Capture albedo info from existing material for the dissolve shader
+	var albedo_color := Color.WHITE
+	var albedo_texture: Texture2D = null
+	if _original_material_override is StandardMaterial3D:
+		var std := _original_material_override as StandardMaterial3D
+		albedo_color = std.albedo_color
+		albedo_texture = std.albedo_texture
+	elif _geometry_instance is MeshInstance3D:
+		var mesh_inst := _geometry_instance as MeshInstance3D
+		if mesh_inst.mesh and mesh_inst.mesh.get_surface_count() > 0:
+			var surface_mat := mesh_inst.get_active_material(0)
+			if surface_mat is StandardMaterial3D:
+				var std := surface_mat as StandardMaterial3D
+				albedo_color = std.albedo_color
+				albedo_texture = std.albedo_texture
+
+	# Auto-create noise texture if user didn't provide one
+	var noise_tex := dissolve_texture
+	if noise_tex == null:
+		noise_tex = NoiseTexture2D.new()
+		var noise := FastNoiseLite.new()
+		noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+		noise.frequency = 0.05
+		noise_tex.noise = noise
+
+	_dissolve_shader_material = ShaderMaterial.new()
+	_dissolve_shader_material.shader = _get_dissolve_shader()
+	_dissolve_shader_material.set_shader_parameter("threshold", 0.0)
+	_dissolve_shader_material.set_shader_parameter("dissolve_noise", noise_tex)
+	_dissolve_shader_material.set_shader_parameter("edge_color", dissolve_edge_color)
+	_dissolve_shader_material.set_shader_parameter("edge_width", dissolve_edge_width)
+	_dissolve_shader_material.set_shader_parameter("albedo_color", albedo_color)
+	if albedo_texture:
+		_dissolve_shader_material.set_shader_parameter("albedo_texture", albedo_texture)
+
+	_geometry_instance.material_override = _dissolve_shader_material
+	_dissolve_is_setup = true
+
+	if debug_enabled:
+		print("[%s] Dissolve shader applied as material_override on '%s'" % [
+			name, _geometry_instance.name])
+
+
+func _teardown_dissolve() -> void:
+	if _geometry_instance and _dissolve_is_setup:
+		_geometry_instance.material_override = _original_material_override
+		_original_material_override = null
+	_dissolve_shader_material = null
+	_dissolve_is_setup = false
+
+	if debug_enabled:
+		print("[%s] Dissolve shader removed, original material restored" % name)
+
+
 # =============================================================================
 # CONFIGURATION WARNINGS
 # =============================================================================
@@ -457,6 +1049,15 @@ func _ensure_material_unique(mat: StandardMaterial3D) -> StandardMaterial3D:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	var parent := get_parent()
+
 	if parent and not parent is Node3D:
-		warnings.append("Parent must be a Node3D node. Use AppearanceControl/Appearance2D for other domains. (ignore if comp is a child of a sequencer)")
+		warnings.append("Target must be a Node3D with a GeometryInstance3D. Use Appearance2D/Control for 2D/UI nodes.")
+
+	if appearance_effect == AppearanceEffect.TINT:
+		if color_from == color_to:
+			warnings.append("color_from and color_to are identical — animation will have no visible effect.")
+
+	if appearance_effect == AppearanceEffect.DISSOLVE:
+		warnings.append("DISSOLVE replaces material_override during animation. Any existing material_override will be temporarily removed.")
+
 	return warnings

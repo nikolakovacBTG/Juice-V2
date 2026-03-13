@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=3 uid="uid://pwrkiujy8etm"]
+
+[ext_resource type="Texture2D" uid="uid://biid6tmycb4mg" path="res://Textures/Sprites/fluff.png" id="1_ogf4e"]
+[ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="2_cm7qp"]
+[ext_resource type="Script" uid="uid://ycb0ph5piuur" path="res://addons/juice/2D/Noise2DJuiceComp.gd" id="3_bys06"]
+
+[node name="Fluff" type="Sprite2D"]
+modulate = Color(0.6862745, 0.27058825, 0.35686275, 0)
+texture = ExtResource("1_ogf4e")
+
+[node name="Appearance2DJuiceComp2" type="Node" parent="."]
+script = ExtResource("2_cm7qp")
+color_from = Color(0.6862745, 0.27058825, 0.35686275, 0)
+color_to = Color(0.6856915, 0.2708442, 0.35664394, 0.5411765)
+animate_alpha = true
+blend_mode = 0
+allow_hdr = true
+loop_count = -1
+ping_pong = true
+loop_delay = 3.0
+trigger_on = 8
+duration_in = 5.0
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
+
+[node name="Noise2DJuiceComp" type="Node" parent="."]
+script = ExtResource("3_bys06")
+position_amplitude = Vector2(30, 30)
+noise_speed = 0.2
+trigger_on = 8
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://ycb0ph5piuur"
