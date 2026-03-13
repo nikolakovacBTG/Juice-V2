@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=38 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
@@ -24,6 +24,8 @@
 [ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="16_jlm4u"]
 [ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="17_tusjn"]
 [ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/juice/Shaders/grayscale_2d.gdshader" id="23_7frtj"]
+[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="25_2nye2"]
+[ext_resource type="Script" uid="uid://xi0dbseivd84" path="res://addons/juice/Control/AppearanceControlJuiceComp.gd" id="26_o2e6s"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -122,6 +124,7 @@ color_from = Color(1, 1, 1, 1)
 color_to = Color(1, 0, 0, 1)
 animate_alpha = false
 affect_children = true
+use_blend_mode = null
 use_flicker = false
 start_delay = 2.5
 trigger_on = 8
@@ -346,6 +349,7 @@ color_from = Color(0.7773676, 0.09148217, 0.7297744, 1)
 color_to = Color(1, 0, 0, 0)
 animate_alpha = true
 affect_children = true
+use_blend_mode = null
 use_flicker = false
 loop_count = -1
 ping_pong = true
@@ -371,6 +375,7 @@ script = ExtResource("3_8smnx")
 appearance_effect = 1
 overbright_intensity = 2.0
 overbright_color = Color(1, 0.5647059, 0, 1)
+use_blend_mode = null
 use_flicker = false
 loop_count = -1
 ping_pong = true
@@ -396,6 +401,7 @@ script = ExtResource("3_8smnx")
 appearance_effect = 2
 outline_color = Color(0, 0.48745775, 0.3118408, 1)
 outline_width = 12.5
+use_blend_mode = null
 use_flicker = false
 loop_count = -1
 ping_pong = true
@@ -420,7 +426,8 @@ texture = ExtResource("1_6a25c")
 [node name="Appearance2DJuiceComp4" type="Node" parent="JuiceLogoSeparated5"]
 script = ExtResource("3_8smnx")
 appearance_effect = 3
-target_blend_mode = 0
+fade_target_alpha = 0.0
+use_blend_mode = null
 use_flicker = false
 loop_count = -1
 ping_pong = true
@@ -444,7 +451,8 @@ texture = ExtResource("1_6a25c")
 [node name="Appearance2DJuiceComp5" type="Node" parent="JuiceLogoSeparated6"]
 script = ExtResource("3_8smnx")
 appearance_effect = 4
-fade_target_alpha = 0.0
+grayscale_strength = 1.0
+use_blend_mode = null
 use_flicker = true
 flicker_mode = 0
 hard_flicker = false
@@ -473,7 +481,10 @@ texture = ExtResource("1_6a25c")
 [node name="Appearance2DJuiceComp6" type="Node" parent="JuiceLogoSeparated7"]
 script = ExtResource("3_8smnx")
 appearance_effect = 5
-grayscale_strength = 1.0
+dissolve_texture = null
+dissolve_edge_color = Color(1, 0.5, 0, 1)
+dissolve_edge_width = 0.05
+use_blend_mode = null
 use_flicker = true
 flicker_mode = 0
 hard_flicker = false
@@ -502,9 +513,8 @@ texture = ExtResource("1_6a25c")
 [node name="Appearance2DJuiceComp7" type="Node" parent="JuiceLogoSeparated8"]
 script = ExtResource("3_8smnx")
 appearance_effect = 6
-dissolve_texture = SubResource("NoiseTexture2D_g1way")
-dissolve_edge_color = Color(1, 0.5, 0, 1)
-dissolve_edge_width = 0.05
+overlay_color = null
+use_blend_mode = null
 use_flicker = false
 loop_count = -1
 ping_pong = true
@@ -519,76 +529,97 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
+theme = ExtResource("25_2nye2")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme = ExtResource("25_2nye2")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="VBoxContainer3" type="VBoxContainer" parent="HBoxContainer"]
+[node name="VBoxContainer3" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Button" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button2" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 1
+overbright_intensity = 2.0
+overbright_color = Color(1, 1, 1, 1)
+use_blend_mode = false
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+_btn_mirror_in_to_out = Callable()
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="Button2" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button3" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button3" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button4" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button4" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button5" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button5" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button6" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button6" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button7" type="Button" parent="HBoxContainer/VBoxContainer3"]
+[node name="Button7" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_font_sizes/font_size = 14
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
