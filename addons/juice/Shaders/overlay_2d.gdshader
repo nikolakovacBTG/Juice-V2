@@ -16,7 +16,7 @@ uniform vec4 overlay_color : source_color = vec4(1.0, 0.0, 0.0, 1.0);
 uniform float amount : hint_range(0.0, 1.0) = 0.0;
 
 void fragment() {
-	vec4 tex = texture(TEXTURE, UV);
+	vec4 original = texture(TEXTURE, UV) * COLOR;
 	// Mix original RGB toward overlay color; preserve original alpha
-	COLOR = vec4(mix(tex.rgb, overlay_color.rgb, amount), tex.a);
+	COLOR = vec4(mix(original.rgb, overlay_color.rgb, amount), original.a);
 }

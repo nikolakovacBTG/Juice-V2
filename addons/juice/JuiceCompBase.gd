@@ -245,8 +245,11 @@ var back_overshoot_out: float = 1.70158
 
 ## Callable backing var for the Mirror In->Out tool button.
 ## The button is only shown when both In and Out directions are active.
+## Uses a getter to always return a fresh Callable (avoids stale references
+## after tool script reload or scene deserialization).
 @warning_ignore("UNUSED_PRIVATE_CLASS_VARIABLE")
-var _btn_mirror_in_to_out: Callable = _mirror_in_to_out
+var _btn_mirror_in_to_out: Callable:
+	get: return _mirror_in_to_out
 
 # --- CHAINING ---
 
@@ -333,7 +336,7 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "_btn_mirror_in_to_out", "type": TYPE_CALLABLE,
 				"hint": PROPERTY_HINT_TOOL_BUTTON,
 				"hint_string": "Mirror In -> Out",
-				"usage": PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_EDITOR})
+				"usage": PROPERTY_USAGE_EDITOR})
 		props.append({"name": "duration_out", "type": TYPE_FLOAT,
 			"usage": PROPERTY_USAGE_DEFAULT})
 		if custom_curve_out == null:
