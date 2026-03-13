@@ -24,7 +24,7 @@ extends JuiceCompBase
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Trail Appearance")
+@export_group("Effect")
 
 ## Maximum number of points in the trail
 @export var trail_length: int = 20

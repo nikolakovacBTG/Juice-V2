@@ -53,7 +53,7 @@ enum CullStrategy {
 # VFX CONFIGURATION
 # =============================================================================
 
-@export_group("VFX")
+@export_group("Effect")
 
 ## Offset from target position when spawning (3D). For 2D, only X and Y are used.
 @export var spawn_offset: Vector3 = Vector3.ZERO

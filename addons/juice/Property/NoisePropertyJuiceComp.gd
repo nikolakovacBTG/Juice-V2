@@ -73,10 +73,10 @@ enum NoiseDirection {
 }
 
 # =============================================================================
-# PROPERTY TARGET CONFIGURATION
+# EFFECT CONFIGURATION
 # =============================================================================
 
-@export_group("Property Target")
+@export_group("Effect")
 
 ## Path to node containing the property.
 ## Leave empty to use parent node.
@@ -93,26 +93,16 @@ enum NoiseDirection {
 		property_type = value
 		notify_property_list_changed()
 
-# =============================================================================
-# EFFECT CONFIGURATION
-# =============================================================================
-
-@export_group("Effect")
-
 ## Maximum noise offset for float properties.
-## Hidden when property_type != FLOAT.
 @export var float_amplitude: float = 0.5
 
 ## Maximum noise offset per axis for Vector2 properties.
-## Hidden when property_type != VECTOR2.
 @export var vector2_amplitude: Vector2 = Vector2(0.1, 0.1)
 
 ## Maximum noise offset per axis for Vector3 properties.
-## Hidden when property_type != VECTOR3.
 @export var vector3_amplitude: Vector3 = Vector3(0.1, 0.1, 0.1)
 
 ## Maximum noise offset per channel for Color properties (RGBA).
-## Hidden when property_type != COLOR.
 @export var color_amplitude: Color = Color(0.1, 0.1, 0.1, 0.0)
 
 ## How fast the noise evolves — higher = faster motion.
@@ -153,15 +143,12 @@ enum NoiseDirection {
 		notify_property_list_changed()
 
 ## Number of fractal layers of detail. More = richer but costlier.
-## Hidden when fractal_type == NONE.
 @export_range(1, 6) var fractal_octaves: int = 1
 
 ## How much the frequency increases per octave. Higher = more fine detail per layer.
-## Hidden when fractal_type == NONE.
 @export var lacunarity: float = 2.0
 
 ## How much each octave contributes to the result. Lower = subtler higher octaves.
-## Hidden when fractal_type == NONE.
 @export var fractal_gain: float = 0.5
 
 @export_subgroup("Domain Warp")
@@ -173,11 +160,9 @@ enum NoiseDirection {
 		notify_property_list_changed()
 
 ## Strength of domain warp displacement.
-## Hidden when domain_warp_enabled == false.
 @export var domain_warp_amplitude: float = 30.0
 
 ## Frequency of the domain warp noise.
-## Hidden when domain_warp_enabled == false.
 @export var domain_warp_frequency: float = 0.5
 
 # =============================================================================

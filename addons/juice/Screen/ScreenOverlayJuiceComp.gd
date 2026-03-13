@@ -31,7 +31,7 @@ extends JuiceCompBase
 # OVERLAY CONFIGURATION
 # =============================================================================
 
-@export_group("Overlay")
+@export_group("Effect")
 
 ## Color of the overlay. Alpha is controlled by this component.
 @export var overlay_color: Color = Color.BLACK

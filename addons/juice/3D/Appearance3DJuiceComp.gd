@@ -45,7 +45,7 @@ extends JuiceCompBase
 # MATERIAL PROPERTY CONFIGURATION
 # =============================================================================
 
-@export_group("Material Property")
+@export_group("Effect")
 
 ## Which material property to animate
 enum MaterialProperty {

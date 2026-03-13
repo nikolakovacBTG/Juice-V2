@@ -52,6 +52,8 @@ enum TransformTarget {
 	SCALE      ## Spring Control.scale
 }
 
+@export_group("Effect")
+
 @export var transform_target: TransformTarget = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
@@ -60,8 +62,6 @@ enum TransformTarget {
 # =============================================================================
 # SPRING PHYSICS CONFIGURATION (always visible)
 # =============================================================================
-
-@export_group("Spring Physics")
 
 ## Spring stiffness - higher = faster oscillation, snappier response
 ## Low (100-200): Slow, lazy spring

@@ -43,7 +43,7 @@ enum RandomMode {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Random Selection")
+@export_group("Effect")
 
 ## How to select children to trigger
 @export var random_mode: RandomMode = RandomMode.PICK_ONE:

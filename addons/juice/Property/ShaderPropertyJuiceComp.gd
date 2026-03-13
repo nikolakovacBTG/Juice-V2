@@ -37,7 +37,7 @@ extends JuiceCompBase
 # SHADER PROPERTY CONFIGURATION
 # =============================================================================
 
-@export_group("Shader Property")
+@export_group("Effect")
 
 ## Type of the shader uniform to animate
 enum ShaderPropertyType {

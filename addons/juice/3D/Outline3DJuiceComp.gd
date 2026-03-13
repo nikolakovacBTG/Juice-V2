@@ -38,7 +38,7 @@ extends JuiceCompBase
 # OUTLINE CONFIGURATION
 # =============================================================================
 
-@export_group("Outline Effect")
+@export_group("Effect")
 
 ## Color of the outline
 @export var outline_color: Color = Color.YELLOW

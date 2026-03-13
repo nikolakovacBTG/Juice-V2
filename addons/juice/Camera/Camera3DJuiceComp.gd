@@ -44,6 +44,8 @@ enum CameraTarget {
 	ZOOM       ## Offset camera FOV (zoom punch, hold, breathe)
 }
 
+@export_group("Effect")
+
 @export var camera_target: CameraTarget = CameraTarget.POSITION:
 	set(value):
 		camera_target = value

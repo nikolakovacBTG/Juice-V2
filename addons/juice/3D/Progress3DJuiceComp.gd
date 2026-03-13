@@ -54,6 +54,8 @@ enum TransformTarget {
 	SCALE      ## Accumulate Node3D.scale
 }
 
+@export_group("Effect")
+
 @export var transform_target: TransformTarget = TransformTarget.ROTATION:
 	set(value):
 		transform_target = value
@@ -62,8 +64,6 @@ enum TransformTarget {
 # =============================================================================
 # ALWAYS-VISIBLE CONFIGURATION
 # =============================================================================
-
-@export_group("Progress")
 
 ## Start accumulating immediately when the scene starts (no animate_in needed).
 ## Sets speed multiplier to 1.0 instantly. Use trigger_on = ON_READY for eased start.

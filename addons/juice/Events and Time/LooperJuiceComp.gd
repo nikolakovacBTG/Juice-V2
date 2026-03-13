@@ -36,7 +36,7 @@ extends JuiceCompBase
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Loop Settings")
+@export_group("Effect")
 
 ## Component to loop. If empty, uses first JuiceCompBase child.
 @export_node_path("Node") var loop_target: NodePath

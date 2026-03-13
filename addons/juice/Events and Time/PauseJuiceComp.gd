@@ -38,7 +38,7 @@ extends JuiceCompBase
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Pause Settings")
+@export_group("Effect")
 
 ## Duration of the pause in seconds.
 @export var pause_duration: float = 0.5

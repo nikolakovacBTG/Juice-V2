@@ -51,7 +51,7 @@ extends JuiceCompBase
 # PROPERTY TARGET CONFIGURATION
 # =============================================================================
 
-@export_group("Property Target")
+@export_group("Effect")
 
 ## Path to node containing the property.
 ## Leave empty to use parent node.

@@ -49,7 +49,7 @@ enum SquashAxis3D {
 # SQUASH STRETCH CONFIGURATION
 # =============================================================================
 
-@export_group("Squash Stretch")
+@export_group("Effect")
 
 ## How much to compress at peak (0.0 = no squash, 0.99 = maximum)
 ## Values are clamped to prevent scale inversion

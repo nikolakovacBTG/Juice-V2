@@ -41,7 +41,7 @@ extends JuiceCompBase
 # APPEARANCE CONFIGURATION
 # =============================================================================
 
-@export_group("Appearance")
+@export_group("Effect")
 
 ## How the color is blended with the target's base color
 enum BlendMode {

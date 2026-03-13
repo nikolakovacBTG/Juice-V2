@@ -53,6 +53,8 @@ enum TransformTarget {
 	SCALE      ## Spring Node2D.scale
 }
 
+@export_group("Effect")
+
 @export var transform_target: TransformTarget = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
@@ -61,8 +63,6 @@ enum TransformTarget {
 # =============================================================================
 # SPRING PHYSICS CONFIGURATION (always visible)
 # =============================================================================
-
-@export_group("Spring Physics")
 
 ## Spring stiffness - higher = faster oscillation, snappier response
 @export_range(1.0, 1000.0) var stiffness: float = 300.0

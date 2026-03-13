@@ -76,7 +76,7 @@ enum TimeMode {
 	BULLET_TIME  ## Slow world, exempt specified nodes
 }
 
-@export_group("Time Effect")
+@export_group("Effect")
 
 ## Which time manipulation mode to use
 @export var time_mode: TimeMode = TimeMode.SLOW_MO:

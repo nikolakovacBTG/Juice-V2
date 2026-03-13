@@ -63,7 +63,7 @@ enum FlickerPattern {
 # ALWAYS-VISIBLE CONFIGURATION
 # =============================================================================
 
-@export_group("Visibility Effect")
+@export_group("Effect")
 
 ## Which visibility mode to use
 var visibility_mode: VisibilityMode = VisibilityMode.FADE:

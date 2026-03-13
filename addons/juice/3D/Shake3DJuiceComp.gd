@@ -51,6 +51,8 @@ enum TransformTarget {
 	SCALE      ## Shake Node3D.scale (XYZ)
 }
 
+@export_group("Effect")
+
 @export var transform_target: TransformTarget = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
@@ -59,8 +61,6 @@ enum TransformTarget {
 # =============================================================================
 # SHARED SHAKE CONFIGURATION (always visible)
 # =============================================================================
-
-@export_group("Shake")
 
 ## Oscillations per second (Hz) — higher = more frantic
 @export var shake_frequency: float = 20.0

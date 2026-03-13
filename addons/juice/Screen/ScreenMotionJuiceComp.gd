@@ -43,6 +43,8 @@ enum ScreenTarget {
 	ZOOM       ## Screen zoom (punch zoom, breathe)
 }
 
+@export_group("Effect")
+
 @export var screen_target: ScreenTarget = ScreenTarget.OFFSET:
 	set(value):
 		screen_target = value

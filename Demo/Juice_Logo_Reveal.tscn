@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=27 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://ycb0ph5piuur" path="res://addons/juice/2D/Noise2DJuiceComp.gd" id="4_7frtj"]
 [ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="4_orfff"]
 [ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="5_r852d"]
+[ext_resource type="Script" uid="uid://c40dp6icq0brl" path="res://addons/juice/VFX/VFXJuiceComp.gd" id="5_y27hi"]
 [ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="6_8smnx"]
 [ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="7_wm0iw"]
 [ext_resource type="Texture2D" uid="uid://cmwpcwscfhv5i" path="res://Textures/Logo/slice17.png" id="8_7frtj"]
@@ -63,7 +64,6 @@ anchor_mode = 0
 [node name="Node2D" type="Node2D" parent="."]
 
 [node name="Sprite2D" type="Sprite2D" parent="Node2D"]
-modulate = Color(0.6862745, 0.27058825, 0.35686275, 0)
 position = Vector2(205, 191)
 texture = ExtResource("2_wm0iw")
 
@@ -88,9 +88,14 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="Noise2DJuiceComp" type="Node" parent="Node2D/Sprite2D"]
 script = ExtResource("4_7frtj")
-absolute_mode = true
 position_amplitude = Vector2(500, 500)
-position_speed_scale = Vector2(1, 1)
+fractal_octaves = null
+fractal_gain = null
+position_axis_speed = null
+scale_axis_speed = null
+clamp_min = null
+clamp_max = null
+trigger_on = 8
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -100,6 +105,18 @@ next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://ycb0ph5piuur"
+
+[node name="VFXJuiceComp" type="Node" parent="Node2D"]
+script = ExtResource("5_y27hi")
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://c40dp6icq0brl"
 
 [node name="Full logo" type="Node2D" parent="."]
 position = Vector2(576, 324)

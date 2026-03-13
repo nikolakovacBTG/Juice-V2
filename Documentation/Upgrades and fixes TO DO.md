@@ -7,28 +7,11 @@
 
 ## Standardize Top-Level Export Group to "Effect"
 
-**Status:** Planned — apply after Noise inspector refactor is complete.
+**Status:** ✅ Complete.
 
-**Finding:** Every Juice comp uses a different name for its first `@export_group`:
+All 40 Juice comp scripts now use `@export_group("Effect")` as their first group. Only `SequencerJuiceComp` has no @export vars (correct — it's a pure orchestrator). `JuiceCompBase` keeps `"Timing"` as its group (base class, not a comp).
 
-| Component Family | Current First Group |
-|---|---|
-| Noise (Control/2D/3D) | `"Noise Design"` |
-| Shake (Control/2D/3D) | `"Shake"` |
-| Transform (Control/2D/3D) | *(none — transform_target ungrouped)* |
-| Spring (Control/2D/3D) | `"Spring Physics"` |
-| SquashStretch (Control/2D/3D) | `"Squash Stretch"` |
-| Appearance (Control/2D/3D) | `"Appearance"` |
-| Progress (Control/2D/3D) | `"Progress"` |
-| Visibility | `"Visibility Effect"` |
-| VFX | `"VFX"` |
-| Screen Overlay | `"Overlay"` |
-| Trail | `"Trail Appearance"` |
-| Property comps | `"Property Target"` |
-
-**Convention:** Rename the top-level group to **"Effect"** in ALL Juice comps. This creates a recognizable pattern — the first foldable group always holds the component's primary settings.
-
-**Scope:** All comp scripts in `addons/juice/`. The Noise comps are being refactored first as the reference implementation.
+For comps using `_get_property_list` (Transform, Camera, ScreenMotion), `@export_group("Effect")` wraps the selector `@export var` and the backing vars appear after it in the inspector.
 
 ---
 

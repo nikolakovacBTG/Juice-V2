@@ -84,15 +84,12 @@ enum PivotMode {
 		notify_property_list_changed()
 
 ## Maximum displacement per axis in pixels.
-## Hidden when transform_target != POSITION.
 @export var position_amplitude: Vector2 = Vector2(5.0, 5.0)
 
 ## Maximum rotation amplitude in degrees.
-## Hidden when transform_target != ROTATION.
 @export var rotation_amplitude: float = 5.0
 
 ## Maximum scale deviation per axis (added to base scale).
-## Hidden when transform_target != SCALE.
 @export var scale_amplitude: Vector2 = Vector2(0.1, 0.1)
 
 ## How fast the noise evolves — higher = faster motion.
@@ -105,21 +102,18 @@ enum PivotMode {
 @export var noise_direction: NoiseDirection = NoiseDirection.BOTH
 
 ## Use the same noise value for all axes — preserves aspect ratio during scale noise.
-## Hidden when transform_target != SCALE.
 @export var scale_uniform: bool = true:
 	set(value):
 		scale_uniform = value
 		notify_property_list_changed()
 
 ## How the pivot point is determined for rotation/scale transforms.
-## Hidden when transform_target == POSITION (pivot is irrelevant for position noise).
 @export var pivot_mode: PivotMode = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
 		notify_property_list_changed()
 
 ## Custom pivot offset in local pixels.
-## Hidden when transform_target == POSITION or pivot_mode != CUSTOM.
 @export var custom_pivot_offset: Vector2 = Vector2.ZERO
 
 # =============================================================================
@@ -151,15 +145,12 @@ enum PivotMode {
 		notify_property_list_changed()
 
 ## Number of fractal layers of detail. More = richer but costlier.
-## Hidden when fractal_type == NONE.
 @export_range(1, 6) var fractal_octaves: int = 1
 
 ## How much the frequency increases per octave. Higher = more fine detail per layer.
-## Hidden when fractal_type == NONE.
 @export var lacunarity: float = 2.0
 
 ## How much each octave contributes to the result. Lower = subtler higher octaves.
-## Hidden when fractal_type == NONE.
 @export var fractal_gain: float = 0.5
 
 @export_subgroup("Domain Warp")
@@ -171,11 +162,9 @@ enum PivotMode {
 		notify_property_list_changed()
 
 ## Strength of domain warp displacement.
-## Hidden when domain_warp_enabled == false.
 @export var domain_warp_amplitude: float = 30.0
 
 ## Frequency of the domain warp noise.
-## Hidden when domain_warp_enabled == false.
 @export var domain_warp_frequency: float = 0.5
 
 # =============================================================================
@@ -186,11 +175,9 @@ enum PivotMode {
 
 ## Per-axis speed relative to Noise Speed for position noise.
 ## (1,1) = uniform speed. (2, 0.5) = X twice as fast, Y half as fast.
-## Hidden when transform_target != POSITION.
 @export var position_axis_speed: Vector2 = Vector2(1.0, 1.0)
 
 ## Per-axis speed relative to Noise Speed for scale noise.
-## Hidden when transform_target != SCALE or when scale_uniform == true.
 @export var scale_axis_speed: Vector2 = Vector2(1.0, 1.0)
 
 ## Minimum noise output value (applied after direction, before amplitude).

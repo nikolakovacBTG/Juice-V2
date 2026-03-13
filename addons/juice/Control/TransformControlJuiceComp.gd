@@ -54,6 +54,8 @@ enum TransformTarget {
 	SCALE      ## Animate Control.scale with offset
 }
 
+@export_group("Effect")
+
 @export var transform_target: TransformTarget = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
