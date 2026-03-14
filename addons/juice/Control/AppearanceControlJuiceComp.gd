@@ -21,7 +21,7 @@
 ## EFFECTS:
 ## - TINT: Lerp modulate from color_from to color_to.
 ## - OVERBRIGHT: Modulate > 1.0 for HDR bloom/glow.
-## - OUTLINE: Ghost-duplicate + outline shader (outline_2d.gdshader behind real Control).
+## - OUTLINE: Ghost Panel behind real Control (solid StyleBoxFlat, animated offsets).
 ## - FADE: Animate modulate.a from base to target alpha.
 ## - GRAYSCALE: Shader-based desaturation (uses grayscale_2d.gdshader).
 ## - DISSOLVE: Shader-based noise dissolve (uses dissolve_2d.gdshader).
@@ -32,10 +32,11 @@
 ## - Blending Mode: CanvasItemMaterial compositing mode during animation.
 ##
 ## CONTROL-SPECIFIC NOTES:
-## - OUTLINE uses a "ghost duplicate" rendered behind the real Control via
-##   show_behind_parent. The ghost carries the outline shader; the real
-##   Control renders on top, masking the ghost interior. Text/icon is stripped
-##   from the ghost to prevent per-glyph artifacts. Works on all Control types.
+## - OUTLINE uses a ghost Panel with a solid StyleBoxFlat rendered behind the
+##   real Control via show_behind_parent. The ghost's offsets are expanded to
+##   form the outline. No shader = no 9-slice or per-draw-call artifacts.
+##   Corner radii are copied from the target's theme StyleBox. Works on all
+##   Control types including Buttons with text/icons.
 ## - GRAYSCALE/DISSOLVE/COLOR_OVERLAY apply via CanvasItem shader directly.
 ##   They work well on simple Controls (Panel, ColorRect) but may look odd
 ##   on complex Controls (Button with icon + text). Configuration warnings
@@ -56,7 +57,7 @@ extends JuiceCompBase
 enum AppearanceEffect {
 	TINT,          ## Animate modulate color (lerp from/to)
 	OVERBRIGHT,    ## Modulate > 1.0 for HDR bloom/glow
-	OUTLINE,       ## Ghost-duplicate outline (shader behind real Control)
+	OUTLINE,       ## Ghost Panel outline (solid color behind real Control)
 	FADE,          ## Animate modulate alpha
 	GRAYSCALE,     ## Shader-based desaturation
 	DISSOLVE,      ## Shader-based noise dissolve
@@ -338,13 +339,13 @@ var _shader_material: ShaderMaterial = null
 var _original_material: Material = null
 var _owns_shader_material: bool = false
 
-# OUTLINE ghost — a visual duplicate rendered behind the real Control,
-# carrying the outline shader. The real Control renders on top, masking
-# the ghost's interior so only the outline extending beyond bounds is visible.
+# OUTLINE ghost — a Panel with a solid StyleBoxFlat rendered behind the real
+# Control via show_behind_parent. Outline is achieved by expanding the ghost's
+# offsets beyond the parent bounds. No shader needed = no 9-slice artifacts.
 var _outline_ghost: Control = null
+var _outline_ghost_style: StyleBoxFlat = null
 
 # Shader references (preloaded once)
-static var _outline_shader: Shader = null
 static var _grayscale_shader: Shader = null
 static var _dissolve_shader: Shader = null
 static var _overlay_shader: Shader = null
@@ -366,7 +367,7 @@ var _last_delta: float = 0.0
 ## Tear down any active effect resources (shader, outline, blend mode, modulate).
 ## Called when switching effects in the inspector or when animate_out completes.
 func _cleanup_current_effect() -> void:
-	# Tear down outline ghost first (clears _shader_material)
+	# Tear down outline ghost first (does NOT touch _shader_material)
 	if _outline_ghost:
 		_teardown_outline_ghost()
 	# Tear down shader on target (effect shader OR blend mode shader)
@@ -562,14 +563,22 @@ func _apply_overbright(progress: float) -> void:
 	_set_modulate(result)
 
 
-# --- OUTLINE (shader-based) ---
+# --- OUTLINE (ghost Panel behind real Control) ---
 
 func _apply_outline(progress: float) -> void:
-	if not _shader_material:
+	if not _outline_ghost:
 		return
-	_shader_material.set_shader_parameter("outline_width", outline_width * progress)
+
+	# Expand the ghost beyond the parent by the animated outline width
+	var expand := outline_width * progress
+	_outline_ghost.offset_left = -expand
+	_outline_ghost.offset_top = -expand
+	_outline_ghost.offset_right = expand
+	_outline_ghost.offset_bottom = expand
+
 	# Update color live so inspector changes take effect during animation
-	_shader_material.set_shader_parameter("outline_color", outline_color)
+	if _outline_ghost_style:
+		_outline_ghost_style.bg_color = outline_color
 
 
 # --- FADE ---
@@ -657,16 +666,9 @@ func _set_modulate(color: Color) -> void:
 # SHADER SETUP / TEARDOWN
 # =============================================================================
 
-func _get_outline_shader() -> Shader:
-	if _outline_shader == null:
-		_outline_shader = load("res://addons/juice/Shaders/outline_2d.gdshader")
-	return _outline_shader
-
-
-## Create a visual ghost duplicate behind the target Control.
-## The ghost carries the outline shader; the real Control renders on top,
-## masking the ghost interior. Only the outline extending beyond the
-## Control's bounds is visible — like inverted hull in 3D.
+## Create a Panel ghost behind the target Control with a solid StyleBoxFlat.
+## The ghost expands beyond the parent bounds to form the outline.
+## No shader = no 9-slice / per-draw-call artifacts.
 func _setup_outline_ghost() -> void:
 	if _outline_ghost:
 		return
@@ -675,55 +677,57 @@ func _setup_outline_ghost() -> void:
 
 	var control := _target_node as Control
 
-	# Duplicate without scripts/signals/groups (flags=0)
-	_outline_ghost = control.duplicate(0) as Control
+	# Create a simple Panel as the ghost
+	_outline_ghost = Panel.new()
 
-	# Remove all children from ghost (prevents duplicating juice comps, etc.)
-	for child in _outline_ghost.get_children():
-		_outline_ghost.remove_child(child)
-		child.queue_free()
+	# Build a solid-color StyleBoxFlat matching the target's corner radii
+	_outline_ghost_style = StyleBoxFlat.new()
+	_outline_ghost_style.bg_color = outline_color
 
-	# Strip text/icon content — we only want the background shape for outlining.
-	# Without this, each text glyph would get its own outline artifact.
-	if _outline_ghost is Button:
-		(_outline_ghost as Button).text = ""
-		(_outline_ghost as Button).icon = null
-	elif _outline_ghost is Label:
-		(_outline_ghost as Label).text = ""
+	# Match corner radii from the target's theme StyleBox (if StyleBoxFlat)
+	var target_style: StyleBox = null
+	if control is Button:
+		target_style = control.get_theme_stylebox("normal")
+	elif control.has_theme_stylebox("panel"):
+		target_style = control.get_theme_stylebox("panel")
+
+	if target_style is StyleBoxFlat:
+		var flat := target_style as StyleBoxFlat
+		_outline_ghost_style.corner_radius_top_left = flat.corner_radius_top_left
+		_outline_ghost_style.corner_radius_top_right = flat.corner_radius_top_right
+		_outline_ghost_style.corner_radius_bottom_left = flat.corner_radius_bottom_left
+		_outline_ghost_style.corner_radius_bottom_right = flat.corner_radius_bottom_right
+
+	(_outline_ghost as Panel).add_theme_stylebox_override("panel", _outline_ghost_style)
 
 	# Non-interactive, renders behind the real Control
 	_outline_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_outline_ghost.show_behind_parent = true
 
-	# Fill parent rect exactly (ghost is a child of the target)
+	# Fill parent rect exactly (offsets animated by _apply_outline)
 	_outline_ghost.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_outline_ghost.offset_left = 0
 	_outline_ghost.offset_top = 0
 	_outline_ghost.offset_right = 0
 	_outline_ghost.offset_bottom = 0
 
-	# Apply outline shader to the ghost (NOT to the real Control)
-	_shader_material = ShaderMaterial.new()
-	_shader_material.shader = _get_outline_shader()
-	_shader_material.set_shader_parameter("outline_width", 0.0)
-	_shader_material.set_shader_parameter("outline_color", outline_color)
-	_outline_ghost.material = _shader_material
-
 	# Add ghost as child of target — show_behind_parent renders it behind
 	control.add_child(_outline_ghost)
 
 	if debug_enabled:
-		print("[%s] Outline ghost created behind '%s'" % [name, control.name])
+		print("[%s] Outline ghost (Panel) created behind '%s'" % [name, control.name])
 
 
 func _teardown_outline_ghost() -> void:
 	if _outline_ghost and is_instance_valid(_outline_ghost):
 		_outline_ghost.queue_free()
 	_outline_ghost = null
-	_shader_material = null
+	_outline_ghost_style = null
+	# NOTE: _shader_material is NOT cleared here — it may be set for blend mode on the target
 
 	if debug_enabled:
 		print("[%s] Outline ghost removed" % name)
+
 
 func _get_grayscale_shader() -> Shader:
 	if _grayscale_shader == null:
