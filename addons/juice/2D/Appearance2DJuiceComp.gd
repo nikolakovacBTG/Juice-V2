@@ -119,6 +119,8 @@ var overlay_color: Color = Color.RED
 # --- BLENDING MODE (optional compositing layer) ---
 var use_blend_mode: bool = false:
 	set(value):
+		if not value and _blend_mode_is_setup:
+			_teardown_blend_mode_layer()
 		use_blend_mode = value
 		notify_property_list_changed()
 var target_blend_mode: int = TargetBlendMode.ADD
@@ -388,11 +390,13 @@ func _process(delta: float) -> void:
 # =============================================================================
 
 func _invalidate_base_cache() -> void:
+	# Restore target node to original state before clearing tracking flags.
+	# Without this, _exit_editor_preview would leave shader materials
+	# and blend mode materials orphaned on the target.
+	_cleanup_current_effect()
 	_has_base_captured = false
-	_shader_material = null
-	_canvas_item_material = null
-	_owns_shader_material = false
-	_blend_mode_is_setup = false
+	_original_material = null
+	_original_canvas_material = null
 
 
 func _on_animate_start() -> void:
