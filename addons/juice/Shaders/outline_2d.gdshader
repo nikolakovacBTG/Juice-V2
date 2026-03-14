@@ -8,10 +8,15 @@
 // 2. fragment() remaps UV back to original texture space, then samples 8
 //    neighboring texels to detect alpha edges.
 // 3. Outline is drawn where a neighbor is opaque but the current pixel is not.
+// 4. Optionally apply a compositing blend mode (Add/Subtract/Multiply/Screen).
 //
 // When outline_width = 0.0, vertex expansion is zero and fragment is passthrough.
 //
-// SYSTEM: Juice System (Outline2DJuiceComp / OutlineControlJuiceComp)
+// BLEND MODE (optional — uniforms ignored when blend_amount = 0.0):
+// Reads the screen behind the node and mixes toward a blended result.
+// blend_amount follows the same progress curve as the effect.
+//
+// SYSTEM: Juice System (Appearance2DJuiceComp)
 // =============================================================================
 
 shader_type canvas_item;
@@ -22,6 +27,11 @@ uniform float outline_width : hint_range(0.0, 20.0, 0.5) = 0.0;
 
 // Color of the outline (includes alpha).
 uniform vec4 outline_color : source_color = vec4(1.0, 1.0, 0.0, 1.0);
+
+// Blend mode (optional — animated by juice component when use_blend_mode is on)
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
+uniform float blend_amount : hint_range(0.0, 1.0) = 0.0;
+uniform int blend_type : hint_range(0, 3) = 0;
 
 // Sample texture alpha, returning 0.0 if UV is outside the original 0–1 range.
 // Prevents false outlines from edge-clamped sampling.
@@ -68,9 +78,44 @@ void fragment() {
 
 		// Outline where neighbors are opaque, original pixel on top
 		vec4 outline_pixel = vec4(outline_color.rgb, outline_color.a * a);
-		COLOR = mix(outline_pixel, tex, tex.a);
+		vec4 result = mix(outline_pixel, tex, tex.a);
+
+		// Apply blend mode if active
+		if (blend_amount > 0.0) {
+			vec3 bg = texture(screen_texture, SCREEN_UV).rgb;
+			vec3 blended;
+			if (blend_type == 0) { // ADD
+				blended = bg + result.rgb;
+			} else if (blend_type == 1) { // SUBTRACT
+				blended = max(bg - result.rgb, vec3(0.0));
+			} else if (blend_type == 2) { // MULTIPLY
+				blended = bg * result.rgb;
+			} else { // SCREEN
+				blended = 1.0 - (1.0 - bg) * (1.0 - result.rgb);
+			}
+			result.rgb = mix(result.rgb, blended, blend_amount);
+		}
+
+		COLOR = result;
 	} else {
 		// No outline — perfect passthrough
-		COLOR = tex;
+		vec4 result = tex;
+
+		if (blend_amount > 0.0) {
+			vec3 bg = texture(screen_texture, SCREEN_UV).rgb;
+			vec3 blended;
+			if (blend_type == 0) {
+				blended = bg + result.rgb;
+			} else if (blend_type == 1) {
+				blended = max(bg - result.rgb, vec3(0.0));
+			} else if (blend_type == 2) {
+				blended = bg * result.rgb;
+			} else {
+				blended = 1.0 - (1.0 - bg) * (1.0 - result.rgb);
+			}
+			result.rgb = mix(result.rgb, blended, blend_amount);
+		}
+
+		COLOR = result;
 	}
 }

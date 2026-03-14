@@ -54,12 +54,12 @@ enum AppearanceEffect {
 	COLOR_OVERLAY, ## Shader-based flat color mix (Normal blend)
 }
 
-## Compositing blend mode for the optional Blending Mode layer
+## Compositing blend mode applied via shader (reads screen behind node)
 enum TargetBlendMode {
-	ADD,           ## CanvasItemMaterial.BLEND_MODE_ADD
-	SUB,           ## CanvasItemMaterial.BLEND_MODE_SUB
-	MUL,           ## CanvasItemMaterial.BLEND_MODE_MUL
-	PREMULT_ALPHA, ## CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+	ADD,      ## Additive (lighten / glow)
+	SUBTRACT, ## Subtractive (darken)
+	MULTIPLY, ## Multiply (shadow / darken, preserves contrast)
+	SCREEN,   ## Screen (lighten without overblowing)
 }
 
 ## Flicker temporal modulation modes
@@ -119,8 +119,9 @@ var overlay_color: Color = Color.RED
 # --- BLENDING MODE (optional compositing layer) ---
 var use_blend_mode: bool = false:
 	set(value):
-		if not value and _blend_mode_is_setup:
-			_teardown_blend_mode_layer()
+		# If turned off mid-animation, zero out the blend amount immediately
+		if not value and _shader_material:
+			_shader_material.set_shader_parameter("blend_amount", 0.0)
 		use_blend_mode = value
 		notify_property_list_changed()
 var target_blend_mode: int = TargetBlendMode.ADD
@@ -206,7 +207,7 @@ func _get_property_list() -> Array[Dictionary]:
 
 	if use_blend_mode:
 		props.append({"name": "target_blend_mode", "type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM, "hint_string": "Add,Sub,Mul,Premult Alpha",
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Add,Subtract,Multiply,Screen",
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Flicker group ---
@@ -334,10 +335,8 @@ static var _grayscale_shader: Shader = null
 static var _dissolve_shader: Shader = null
 static var _overlay_shader: Shader = null
 
-# Blending Mode layer
-var _canvas_item_material: CanvasItemMaterial = null
-var _original_canvas_material: Material = null
-var _blend_mode_is_setup: bool = false
+# Shader references (preloaded once) — blend mode shader for non-shader effects
+static var _blend_mode_shader: Shader = null
 
 # Flicker
 var _flicker_time: float = 0.0
@@ -355,18 +354,7 @@ var _last_delta: float = 0.0
 ## Tear down any active effect resources (shader, blend mode, modulate).
 ## Called when switching effects in the inspector or when animate_out completes.
 func _cleanup_current_effect() -> void:
-	# LIFO order: blend mode was set up last, tear down first.
-	# This matters because blend mode saves the shader material as its "original".
-	# Tearing down shader first would leave a dead ShaderMaterial on the node.
-	if _blend_mode_is_setup:
-		if _target_node is CanvasItem:
-			_teardown_blend_mode_layer()
-		else:
-			# Target gone — just clear tracking flags
-			_blend_mode_is_setup = false
-			_canvas_item_material = null
-			_original_canvas_material = null
-	# Tear down shader (outline, grayscale, dissolve, color_overlay)
+	# Tear down shader (effect shader OR blend mode shader — both use _shader_material)
 	if _shader_material:
 		if _target_node is CanvasItem:
 			_teardown_shader()
@@ -405,11 +393,10 @@ func _process(delta: float) -> void:
 func _invalidate_base_cache() -> void:
 	# Restore target node to original state before clearing tracking flags.
 	# Without this, _exit_editor_preview would leave shader materials
-	# and blend mode materials orphaned on the target.
+	# orphaned on the target.
 	_cleanup_current_effect()
 	_has_base_captured = false
 	_original_material = null
-	_original_canvas_material = null
 
 
 func _on_animate_start() -> void:
@@ -429,9 +416,15 @@ func _on_animate_start() -> void:
 		AppearanceEffect.COLOR_OVERLAY:
 			_setup_overlay_shader()
 
-	# Set up optional blending mode layer
-	if use_blend_mode:
-		_setup_blend_mode_layer()
+	# For non-shader effects that need blend mode, set up the blend mode shader.
+	# Shader effects already have blend uniforms embedded in their shaders.
+	if use_blend_mode and not _shader_material:
+		_setup_blend_mode_shader()
+
+	# Initialize blend uniforms on whichever shader is active
+	if use_blend_mode and _shader_material:
+		_shader_material.set_shader_parameter("blend_type", target_blend_mode)
+		_shader_material.set_shader_parameter("blend_amount", 0.0)
 
 	# Reset flicker time for fresh start
 	_flicker_time = 0.0
@@ -460,6 +453,10 @@ func _apply_effect(progress: float) -> void:
 			_apply_dissolve(effective)
 		AppearanceEffect.COLOR_OVERLAY:
 			_apply_color_overlay(effective)
+
+	# Update blend mode amount — follows same progress curve as the effect
+	if use_blend_mode and _shader_material:
+		_shader_material.set_shader_parameter("blend_amount", effective)
 
 
 func _on_animate_in_complete() -> void:
@@ -779,57 +776,37 @@ func _teardown_shader() -> void:
 
 
 # =============================================================================
-# BLENDING MODE LAYER SETUP / TEARDOWN
+# BLEND MODE SHADER (for non-shader effects: Tint, Overbright, Fade)
 # =============================================================================
 
-## Apply a CanvasItemMaterial with the selected compositing blend mode.
-## This is a LAYER — it modifies how the node composites with the scene,
-## independent of which appearance effect is active.
-func _setup_blend_mode_layer() -> void:
-	if _blend_mode_is_setup:
+func _get_blend_mode_shader() -> Shader:
+	if _blend_mode_shader == null:
+		_blend_mode_shader = load("res://addons/juice/Shaders/blend_mode_2d.gdshader")
+	return _blend_mode_shader
+
+
+## Set up the standalone blend mode shader for effects that don't use their
+## own shader (Tint, Overbright, Fade). Shader-based effects
+## (Outline, Grayscale, Dissolve, Color Overlay) have blend uniforms embedded.
+func _setup_blend_mode_shader() -> void:
+	if _shader_material:
 		return
 	if not _target_node is CanvasItem:
 		return
 
 	var canvas := _target_node as CanvasItem
+	_original_material = canvas.material
 
-	# Save original material for restoration
-	_original_canvas_material = canvas.material
-
-	# Create CanvasItemMaterial with target blend mode
-	_canvas_item_material = CanvasItemMaterial.new()
-	match target_blend_mode:
-		TargetBlendMode.ADD:
-			_canvas_item_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		TargetBlendMode.SUB:
-			_canvas_item_material.blend_mode = CanvasItemMaterial.BLEND_MODE_SUB
-		TargetBlendMode.MUL:
-			_canvas_item_material.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
-		TargetBlendMode.PREMULT_ALPHA:
-			_canvas_item_material.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
-
-	canvas.material = _canvas_item_material
-	_blend_mode_is_setup = true
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = _get_blend_mode_shader()
+	_shader_material.set_shader_parameter("blend_amount", 0.0)
+	_shader_material.set_shader_parameter("blend_type", target_blend_mode)
+	canvas.material = _shader_material
+	_owns_shader_material = true
 
 	if debug_enabled:
-		print("[%s] Blending mode layer %s applied to '%s'" % [
+		print("[%s] Blend mode shader (%s) applied to '%s'" % [
 			name, TargetBlendMode.keys()[target_blend_mode], canvas.name])
-
-
-func _teardown_blend_mode_layer() -> void:
-	if not _target_node is CanvasItem:
-		return
-
-	var canvas := _target_node as CanvasItem
-
-	# Restore original material
-	canvas.material = _original_canvas_material
-	_original_canvas_material = null
-	_canvas_item_material = null
-	_blend_mode_is_setup = false
-
-	if debug_enabled:
-		print("[%s] Blending mode layer removed, original restored" % name)
 
 
 # =============================================================================
