@@ -435,8 +435,12 @@ func _on_animate_start() -> void:
 
 	# For non-shader effects that need blend mode, set up the blend mode shader.
 	# Shader effects already have blend uniforms embedded in their shaders.
+	# OUTLINE: blend mode applies to the ghost (only the outline is blended).
 	if use_blend_mode and not _shader_material:
-		_setup_blend_mode_shader()
+		if appearance_effect == AppearanceEffect.OUTLINE and _outline_ghost:
+			_setup_blend_mode_on_ghost()
+		else:
+			_setup_blend_mode_shader()
 
 	# Initialize blend uniforms on whichever shader is active
 	if use_blend_mode and _shader_material:
@@ -742,7 +746,8 @@ func _teardown_outline_ghost() -> void:
 	_outline_ghost = null
 	_outline_ghost_style = null
 	_outline_base_corners = Vector4i.ZERO
-	# NOTE: _shader_material is NOT cleared here — it may be set for blend mode on the target
+	# If blend mode shader was applied to the ghost, clear the reference
+	_shader_material = null
 
 	if debug_enabled:
 		print("[%s] Outline ghost removed" % name)
@@ -864,9 +869,28 @@ func _get_blend_mode_shader() -> Shader:
 	return _blend_mode_shader
 
 
+## Apply blend mode shader to the outline ghost Panel (not the target).
+## This ensures blend mode only affects the outline, not the whole button.
+func _setup_blend_mode_on_ghost() -> void:
+	if _shader_material:
+		return
+	if not _outline_ghost:
+		return
+
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = _get_blend_mode_shader()
+	_shader_material.set_shader_parameter("blend_amount", 0.0)
+	_shader_material.set_shader_parameter("blend_type", target_blend_mode)
+	_outline_ghost.material = _shader_material
+
+	if debug_enabled:
+		print("[%s] Blend mode shader (%s) applied to outline ghost" % [
+			name, TargetBlendMode.keys()[target_blend_mode]])
+
+
 ## Set up the standalone blend mode shader for effects that don't use their
-## own shader (Tint, Overbright, Fade). Shader-based effects (Outline,
-## Grayscale, Dissolve, Color Overlay) have blend uniforms embedded directly.
+## own shader (Tint, Overbright, Fade). Shader-based effects (Grayscale,
+## Dissolve, Color Overlay) have blend uniforms embedded directly.
 func _setup_blend_mode_shader() -> void:
 	if _shader_material:
 		return
