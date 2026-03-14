@@ -373,15 +373,32 @@ var _last_delta: float = 0.0
 ## Tear down any active effect resources (shader, outline, blend mode, modulate).
 ## Called when switching effects in the inspector or when animate_out completes.
 func _cleanup_current_effect() -> void:
-	# Tear down shader (grayscale, dissolve, color_overlay)
-	if _shader_material:
-		_teardown_shader()
+	# LIFO order: blend mode was set up last, tear down first.
+	# This matters because blend mode saves the shader material as its "original".
+	# Tearing down shader first would leave a dead ShaderMaterial on the node.
+	if _blend_mode_is_setup:
+		if _target_node is CanvasItem:
+			_teardown_blend_mode_layer()
+		else:
+			# Target gone — just clear tracking flags
+			_blend_mode_is_setup = false
+			_canvas_item_material = null
+			_original_canvas_material = null
 	# Tear down outline StyleBox overrides
 	if _outline_is_setup:
-		_teardown_outline()
-	# Tear down blend mode layer
-	if _blend_mode_is_setup:
-		_teardown_blend_mode_layer()
+		if _target_node is Control:
+			_teardown_outline()
+		else:
+			_outline_is_setup = false
+			_outline_styles.clear()
+	# Tear down shader (grayscale, dissolve, color_overlay)
+	if _shader_material:
+		if _target_node is CanvasItem:
+			_teardown_shader()
+		else:
+			_shader_material = null
+			_original_material = null
+			_owns_shader_material = false
 	# Restore modulate to base (for tint, overbright, fade)
 	if _has_base_captured and _target_node is CanvasItem:
 		var canvas := _target_node as CanvasItem

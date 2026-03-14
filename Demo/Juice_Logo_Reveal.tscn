@@ -1,4 +1,4 @@
-[gd_scene load_steps=58 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=47 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
@@ -98,151 +98,6 @@ shader_parameter/amount = 0.0
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yddma"]
 shader = ExtResource("23_7frtj")
 shader_parameter/amount = 0.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jlm4u"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.4745098, 0.24705882, 0.41568628, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tusjn"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0, 0, 0, 0.6)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yddma"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w7hnm"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.27575403, 0.14273188, 0.24065094, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wlxko"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
-
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_uaibf"]
-blend_mode = 1
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bmlab"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.4745098, 0.24705882, 0.41568628, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ettle"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0, 0, 0, 0.6)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_abaa0"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ywbtd"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.27575403, 0.14273188, 0.24065094, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_whw00"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 10.0
-bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
-border_color = Color(1, 1, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
-shadow_size = 8
-shadow_offset = Vector2(0, 5)
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_w7hnm"]
 blend_mode = 1
@@ -983,13 +838,6 @@ metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 [node name="Button5" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
-theme_override_styles/normal = SubResource("StyleBoxFlat_jlm4u")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_tusjn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_yddma")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_w7hnm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_wlxko")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
@@ -1054,16 +902,8 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button6" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
-material = SubResource("CanvasItemMaterial_uaibf")
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
-theme_override_styles/normal = SubResource("StyleBoxFlat_bmlab")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_ettle")
-theme_override_styles/hover = SubResource("StyleBoxFlat_abaa0")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_ywbtd")
-theme_override_styles/focus = SubResource("StyleBoxFlat_whw00")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
