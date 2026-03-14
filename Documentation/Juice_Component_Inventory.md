@@ -1,6 +1,6 @@
 # Juice Component Inventory
 
-> **Created:** 2026-02-21  |  **Updated:** 2026-03-14
+> **Created:** 2026-02-21  |  **Updated:** 2026-03-14 (Appearance Control + 2D finished)
 > **Purpose:** Master checklist for shipping readiness
 > **Source:** `addons/juice/`
 
@@ -31,7 +31,7 @@
 | 5 | `SpringControlJuiceComp` | | | | | |
 | 6 | `NoiseControlJuiceComp` | | | | | |
 | 7 | `ProgressControlJuiceComp` | | | | | |
-| 8 | `AppearanceControlJuiceComp` | | | | | Enum-driven effects + Flicker + Blending Mode layer |
+| 8 | `AppearanceControlJuiceComp` | ✅ | | | | Enum-driven effects + Flicker + Blending Mode layer. Outline = ghost Panel + StyleBoxFlat (no shader, no 9-slice). Dynamic corner radius. Blend mode on ghost. |
 | 9 | `OutlineControlJuiceComp` | | | | | Legacy — Appearance comp absorbs this |
 
 ## 2D Domain
@@ -44,7 +44,7 @@
 | 13 | `Spring2DJuiceComp` | | | | | |
 | 14 | `Noise2DJuiceComp` | | | | | |
 | 15 | `Progress2DJuiceComp` | | | | | |
-| 16 | `Appearance2DJuiceComp` | | | | | Enum-driven effects + Flicker + Blending Mode layer |
+| 16 | `Appearance2DJuiceComp` | ✅ | | | | Enum-driven effects + Flicker + Blending Mode layer. Outline = outline_2d.gdshader (alpha-edge + vertex expansion). |
 | 17 | `Outline2DJuiceComp` | | | | | Legacy — Appearance comp absorbs this |
 
 ## 3D Domain
@@ -141,10 +141,11 @@
 | 65 | `overlay_2d.gdshader` | | | | — | 2D/Control color overlay |
 | 66 | `overlay_3d.gdshader` | | | | — | 3D color overlay (next_pass) |
 | 67 | `trail_uv_pan.gdshader` | | | | — | Trail UV scrolling |
+| 68 | `blend_mode_2d.gdshader` | | | | — | Standalone blend mode for non-shader effects (Tint, Overbright, Fade) |
 
 ---
 
-**Total: 67 items** (56 scripts + 2 internal helpers + 9 shaders)
+**Total: 68 items** (56 scripts + 2 internal helpers + 10 shaders)
 
 ## Known Issues
 
