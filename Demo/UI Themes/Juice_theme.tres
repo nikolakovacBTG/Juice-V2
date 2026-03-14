@@ -154,7 +154,7 @@ corner_detail = 1
 
 [resource]
 default_font = ExtResource("1_8fybc")
-Button/colors/font_color = Color(0.9894127, 0.5590662, 0.39070305, 1)
+Button/colors/font_color = Color(1, 0.89843535, 0.74990755, 1)
 Button/colors/font_disabled_color = Color(0.875, 0.875, 0.875, 0.5)
 Button/colors/font_focus_color = Color(0.95, 0.95, 0.95, 1)
 Button/colors/font_hover_color = Color(0.95, 0.95, 0.95, 1)

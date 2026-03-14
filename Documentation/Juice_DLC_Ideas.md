@@ -44,6 +44,74 @@ High-value shader-based appearance effects that plug into the Appearance comp's 
 - Beat-synced triggering
 - Audio spectrum analyzer driving multiple comps
 
+### UI Juice Shader StyleBox
+
+Extending Godot's StyleBox system with procedural juice effects. Could be driven by a
+future Juice subclass or as new AppearanceControl effects (e.g., light streak — a linear
+gradient running over a UI element to make it look shiny).
+
+**Approach 1 — `StyleBoxTexture` + Shader:**
+- Use `StyleBoxTexture` in your theme
+- Drive its texture with a CanvasItem shader (gradient, animated color, scrolling effects)
+- Optionally render the shader via a small `Viewport` → `ViewportTexture` if needed
+- Assign the `StyleBoxTexture` to Button/Panel/etc states in your theme
+- Optional: combine with `StyleBoxFlat` for crisp borders or corners
+
+**Approach 2 — GDScript StyleBox Extensions:**
+- Extend `StyleBox` in GDScript and override `_draw(to_canvas_item: RID, rect: Rect2)`
+- Inside `_draw()`: draw gradients manually (`draw_rect`/`draw_line`/`draw_polygon`),
+  draw textures (including shader-generated), apply procedural effects (noise, stripes, pulses)
+- Can render a shader to a texture (via `ViewportTexture` or `TextureRect`) and draw it:
+  `draw_texture_rect(my_shader_texture, rect)`
+- Enables animated gradients, procedural patterns, time-based effects
+  (use `Engine.get_time()` or pass uniforms from GDScript)
+
+**Theme Compatibility:**
+- Any custom StyleBox (GDScript or C++) can be assigned to a Theme normally
+- `Button.normal`, `Panel.panel`, etc. → custom StyleBox
+- Margins/padding still respected
+- Controls remain fully scalable and dynamically laid out
+
+**Benefits:** scalable, theme-compatible, dynamic, reusable, preserves margins/padding.
+Allows fully animated, procedural, scalable UI while staying theme-friendly.
+
+### Faux-3D Perspective Tilt (Card Flip / Balatro Style)
+
+A fully 2D illusion that makes flat rectangular elements look like they rotate in 3D space.
+Inspired by Balatro's card hover effect — the card subtly orients toward the cursor, creating
+convincing depth from simple 2D manipulations. Domains: **Control, 2D**.
+
+**Core Mechanism:**
+- Dynamic `skew` + non-uniform scale tapering to fake perspective foreshortening
+- Godot's `Transform2D` supports skew natively (4.x+), so no shader required for basic mode
+- Optional shader-based quad distortion (4-corner pin) for pixel-perfect perspective at
+  extreme angles ("quality mode")
+
+**Input Modes:**
+- `CURSOR_RELATIVE` — Balatro style: tilt toward mouse position relative to element center
+- `SOFT_TRIGGER` — driven by `SoftTriggerJuiceComp` (normalized Vector2 → tilt angles)
+- `ANIMATION` — driven by Juice progress for canned tilt sequences (e.g., card deal, card flip)
+
+**Shadow Layer:**
+- Sells the "floating above surface" depth illusion
+- Modes: `NONE`, `FIXED_OFFSET`, `DYNAMIC` (shadow shifts opposite to tilt direction)
+- Implementation: offset duplicate with darkened modulate, or flat ColorRect/StyleBoxFlat behind
+
+**Backface Support:**
+- Configurable flip threshold angle (default 90°) where frontface hides and backface shows
+- Backface can be a Sprite, a Control node, or a packed scene (.tscn)
+- Toggle via `visible` or shader-based UV flip
+
+**Light Streak / Specular Highlight:**
+- Subtle gradient overlay that shifts with tilt angle to fake surface reflection
+- Massively sells the illusion (ties into the UI Juice Shader StyleBox DLC concept)
+
+**Why It's Valuable:**
+- Faux perspective distortion is broadly useful beyond card games — menus, item previews,
+  inventory slots, achievement popups, dialog boxes
+- Simple to configure (just add comp + optional shadow/backface), dramatic visual payoff
+- No actual 3D nodes needed — stays in the 2D/Control rendering pipeline
+
 ### Particle Presets Pack
 - Pre-configured GPUParticles2D/3D scenes for common effects
 - Explosion, sparkle, rain, fire, smoke, confetti

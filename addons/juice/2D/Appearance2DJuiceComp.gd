@@ -78,6 +78,8 @@ enum FlickerMode {
 ## Which appearance effect is active. Controls which parameters are shown.
 @export var appearance_effect: AppearanceEffect = AppearanceEffect.TINT:
 	set(value):
+		if appearance_effect != value:
+			_cleanup_current_effect()
 		appearance_effect = value
 		notify_property_list_changed()
 
@@ -338,9 +340,29 @@ var _blend_mode_is_setup: bool = false
 # Flicker
 var _flicker_time: float = 0.0
 var _flicker_multiplier: float = 1.0
+var _flicker_hold_active: bool = false
 
 # Track last delta for flicker (updated in _process)
 var _last_delta: float = 0.0
+
+
+# =============================================================================
+# EFFECT CLEANUP
+# =============================================================================
+
+## Tear down any active effect resources (shader, blend mode, modulate).
+## Called when switching effects in the inspector or when animate_out completes.
+func _cleanup_current_effect() -> void:
+	# Tear down shader (outline, grayscale, dissolve, color_overlay)
+	if _shader_material:
+		_teardown_shader()
+	# Tear down blend mode layer
+	if _blend_mode_is_setup:
+		_teardown_blend_mode_layer()
+	# Restore modulate to base (for tint, overbright, fade)
+	if _has_base_captured and _target_node is CanvasItem:
+		var canvas := _target_node as CanvasItem
+		canvas.modulate = _base_color
 
 
 # =============================================================================
@@ -353,6 +375,11 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_last_delta = delta
+	# Flicker hold: keep oscillating while effect is held at peak (progress=1.0)
+	if not _is_playing and _flicker_hold_active:
+		_flicker_time += delta
+		_apply_effect(1.0)
+		return
 	super._process(delta)
 
 
@@ -369,6 +396,8 @@ func _invalidate_base_cache() -> void:
 
 
 func _on_animate_start() -> void:
+	_flicker_hold_active = false
+
 	if not _has_base_captured:
 		_capture_base_state()
 
@@ -416,24 +445,21 @@ func _apply_effect(progress: float) -> void:
 			_apply_color_overlay(effective)
 
 
+func _on_animate_in_complete() -> void:
+	# Keep processing for flicker hold (oscillate at peak)
+	if use_flicker:
+		_flicker_hold_active = true
+		set_process(true)
+
+
 func _on_animate_out_complete() -> void:
+	_flicker_hold_active = false
+
 	# Snap to base state
 	_apply_effect(0.0)
 
-	# Clean up shader/material resources
-	match appearance_effect:
-		AppearanceEffect.OUTLINE:
-			_teardown_shader()
-		AppearanceEffect.GRAYSCALE:
-			_teardown_shader()
-		AppearanceEffect.DISSOLVE:
-			_teardown_shader()
-		AppearanceEffect.COLOR_OVERLAY:
-			_teardown_shader()
-
-	# Clean up optional blending mode layer
-	if _blend_mode_is_setup:
-		_teardown_blend_mode_layer()
+	# Clean up resources
+	_cleanup_current_effect()
 
 	if debug_enabled:
 		print("[%s] Appearance2D complete, restored to base state" % name)
@@ -494,12 +520,14 @@ func _apply_tint(progress: float) -> void:
 
 func _apply_overbright(progress: float) -> void:
 	# Lerp modulate from base toward overbright_color * intensity.
-	# At progress=0 → base_color. At progress=1 → overbright.
+	# At progress=0 → base_color (no change). At progress=1 → full overbright.
+	# Both color tint and intensity are lerped so progress=0 is truly neutral.
 	var intensity := lerpf(1.0, overbright_intensity, progress)
+	var tint := Color.WHITE.lerp(overbright_color, progress)
 	var result := Color(
-		_base_color.r * overbright_color.r * intensity,
-		_base_color.g * overbright_color.g * intensity,
-		_base_color.b * overbright_color.b * intensity,
+		_base_color.r * tint.r * intensity,
+		_base_color.g * tint.g * intensity,
+		_base_color.b * tint.b * intensity,
 		_base_color.a
 	)
 	_set_modulate(result)

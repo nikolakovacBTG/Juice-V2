@@ -21,8 +21,8 @@ shader_type canvas_item;
 uniform float amount : hint_range(0.0, 1.0) = 0.0;
 
 void fragment() {
-	vec4 tex = texture(TEXTURE, UV);
+	vec4 original = texture(TEXTURE, UV) * COLOR;
 	// ITU-R BT.601 luminance weights (perceptually accurate grayscale)
-	float gray = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
-	COLOR = vec4(mix(tex.rgb, vec3(gray), amount), tex.a);
+	float gray = dot(original.rgb, vec3(0.299, 0.587, 0.114));
+	COLOR = vec4(mix(original.rgb, vec3(gray), amount), original.a);
 }

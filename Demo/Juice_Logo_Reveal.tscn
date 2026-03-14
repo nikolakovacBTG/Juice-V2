@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=58 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
@@ -74,6 +74,179 @@ shader_parameter/overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
 shader_parameter/amount = 0.0
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_2nye2"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_g1way"]
+shader = ExtResource("26_7fq1n")
+shader_parameter/overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
+shader_parameter/amount = 0.0
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_hfiu5"]
+noise_type = 2
+fractal_type = 2
+fractal_lacunarity = 1.795
+fractal_gain = 1.0
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_jlm4u"]
+noise = SubResource("FastNoiseLite_hfiu5")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tusjn"]
+shader = ExtResource("5_2nye2")
+shader_parameter/threshold = 0.0
+shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_jlm4u")
+shader_parameter/edge_color = Color(1, 0.5, 0, 1)
+shader_parameter/edge_width = 0.05
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yddma"]
+shader = ExtResource("23_7frtj")
+shader_parameter/amount = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uaibf"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.4745098, 0.24705882, 0.41568628, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g1way"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0.6)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hfiu5"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jlm4u"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.27575403, 0.14273188, 0.24065094, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tusjn"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_uaibf"]
+blend_mode = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bmlab"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.4745098, 0.24705882, 0.41568628, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ettle"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0.6)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_abaa0"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ywbtd"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.27575403, 0.14273188, 0.24065094, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_whw00"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 10.0
+bg_color = Color(0.58181816, 0.317365, 0.51263434, 1)
+border_color = Color(1, 1, 0, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0.101960786, 0.60784316, 0.28235295)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_w7hnm"]
+blend_mode = 1
 
 [node name="JuiceLogoReveal" type="MarginContainer"]
 anchors_preset = 15
@@ -621,43 +794,397 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button2" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+material = SubResource("ShaderMaterial_g1way")
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
+
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 5
+dissolve_texture = SubResource("NoiseTexture2D_jlm4u")
+dissolve_edge_color = Color(1, 0.5, 0, 1)
+dissolve_edge_width = 0.05
+use_blend_mode = false
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button3" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+material = SubResource("ShaderMaterial_tusjn")
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 4
+grayscale_strength = 1.0
+use_blend_mode = false
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
 [node name="Button4" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+material = SubResource("ShaderMaterial_yddma")
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
+
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 3
+fade_target_alpha = 0.38
+use_blend_mode = false
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button5" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+theme_override_styles/normal = SubResource("StyleBoxFlat_uaibf")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_g1way")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hfiu5")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_jlm4u")
+theme_override_styles/focus = SubResource("StyleBoxFlat_tusjn")
 text = "test"
+
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 2
+outline_color = Color(1, 1, 0, 1)
+outline_width = 3.0
+corner_radius = -1
+use_blend_mode = false
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button6" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+material = SubResource("CanvasItemMaterial_uaibf")
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
+theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
+theme_override_styles/normal = SubResource("StyleBoxFlat_bmlab")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ettle")
+theme_override_styles/hover = SubResource("StyleBoxFlat_abaa0")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ywbtd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_whw00")
+text = "test"
+
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
+script = ExtResource("26_o2e6s")
+color_from = Color(1, 1, 1, 1)
+color_to = Color(1, 0, 0, 1)
+animate_alpha = false
+affect_children = true
+use_blend_mode = true
+target_blend_mode = 0
+use_flicker = true
+flicker_mode = 0
+hard_flicker = true
+flicker_rate = 36.5
+flicker_min = 0.0
+flicker_max = 1.0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="Button7" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+modulate = Color(0.89374226, 0.76580065, 0, 1)
+material = SubResource("CanvasItemMaterial_w7hnm")
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="Button7" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
-theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
-text = "test"
+[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
+script = ExtResource("26_o2e6s")
+appearance_effect = 1
+overbright_intensity = 2.0
+overbright_color = Color(0.89374226, 0.76580065, 0, 1)
+use_blend_mode = true
+target_blend_mode = 0
+use_flicker = false
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://xi0dbseivd84"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
+script = ExtResource("27_7fq1n")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.2, 1.2)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 6
+ease_out = 1
+elastic_amplitude_out = 1.0
+elastic_period_out = 0.3
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"

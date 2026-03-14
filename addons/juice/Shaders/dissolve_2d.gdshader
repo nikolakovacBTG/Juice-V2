@@ -32,7 +32,7 @@ uniform vec4 edge_color : source_color = vec4(1.0, 0.5, 0.0, 1.0);
 uniform float edge_width : hint_range(0.0, 0.5) = 0.05;
 
 void fragment() {
-	vec4 tex = texture(TEXTURE, UV);
+	vec4 original = texture(TEXTURE, UV) * COLOR;
 	float noise = texture(dissolve_noise, UV).r;
 
 	// Discard pixels below threshold
@@ -42,6 +42,6 @@ void fragment() {
 
 	// Edge band: blend edge_color where noise is near the threshold
 	float edge_factor = 1.0 - smoothstep(threshold, threshold + edge_width, noise);
-	vec3 final_rgb = mix(tex.rgb, edge_color.rgb, edge_factor * edge_color.a);
-	COLOR = vec4(final_rgb, tex.a);
+	vec3 final_rgb = mix(original.rgb, edge_color.rgb, edge_factor * edge_color.a);
+	COLOR = vec4(final_rgb, original.a);
 }
