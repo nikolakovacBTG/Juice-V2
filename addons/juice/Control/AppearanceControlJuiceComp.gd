@@ -344,6 +344,7 @@ var _owns_shader_material: bool = false
 # offsets beyond the parent bounds. No shader needed = no 9-slice artifacts.
 var _outline_ghost: Control = null
 var _outline_ghost_style: StyleBoxFlat = null
+var _outline_base_corners: Vector4i = Vector4i.ZERO  # TL, TR, BL, BR
 
 # Shader references (preloaded once)
 static var _grayscale_shader: Shader = null
@@ -576,9 +577,17 @@ func _apply_outline(progress: float) -> void:
 	_outline_ghost.offset_right = expand
 	_outline_ghost.offset_bottom = expand
 
-	# Update color live so inspector changes take effect during animation
 	if _outline_ghost_style:
+		# Update color live so inspector changes take effect during animation
 		_outline_ghost_style.bg_color = outline_color
+
+		# Scale corner radii: outer radius = inner radius + expansion distance.
+		# This maintains tangent continuity with the original Control's corners.
+		var e := int(round(expand))
+		_outline_ghost_style.corner_radius_top_left = _outline_base_corners.x + e
+		_outline_ghost_style.corner_radius_top_right = _outline_base_corners.y + e
+		_outline_ghost_style.corner_radius_bottom_left = _outline_base_corners.z + e
+		_outline_ghost_style.corner_radius_bottom_right = _outline_base_corners.w + e
 
 
 # --- FADE ---
@@ -693,10 +702,19 @@ func _setup_outline_ghost() -> void:
 
 	if target_style is StyleBoxFlat:
 		var flat := target_style as StyleBoxFlat
-		_outline_ghost_style.corner_radius_top_left = flat.corner_radius_top_left
-		_outline_ghost_style.corner_radius_top_right = flat.corner_radius_top_right
-		_outline_ghost_style.corner_radius_bottom_left = flat.corner_radius_bottom_left
-		_outline_ghost_style.corner_radius_bottom_right = flat.corner_radius_bottom_right
+		_outline_base_corners = Vector4i(
+			flat.corner_radius_top_left,
+			flat.corner_radius_top_right,
+			flat.corner_radius_bottom_left,
+			flat.corner_radius_bottom_right)
+	else:
+		_outline_base_corners = Vector4i.ZERO
+
+	# Set initial corner radii (will be scaled by _apply_outline)
+	_outline_ghost_style.corner_radius_top_left = _outline_base_corners.x
+	_outline_ghost_style.corner_radius_top_right = _outline_base_corners.y
+	_outline_ghost_style.corner_radius_bottom_left = _outline_base_corners.z
+	_outline_ghost_style.corner_radius_bottom_right = _outline_base_corners.w
 
 	(_outline_ghost as Panel).add_theme_stylebox_override("panel", _outline_ghost_style)
 
@@ -723,6 +741,7 @@ func _teardown_outline_ghost() -> void:
 		_outline_ghost.queue_free()
 	_outline_ghost = null
 	_outline_ghost_style = null
+	_outline_base_corners = Vector4i.ZERO
 	# NOTE: _shader_material is NOT cleared here — it may be set for blend mode on the target
 
 	if debug_enabled:
