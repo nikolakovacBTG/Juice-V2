@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=46 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
@@ -42,6 +42,8 @@ fill_from = Vector2(0.52136755, 0.48290598)
 shader = ExtResource("3_y27hi")
 shader_parameter/outline_width = 0.0
 shader_parameter/outline_color = Color(0, 0.48745775, 0.3118408, 1)
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_y27hi"]
 blend_mode = 1
@@ -52,6 +54,8 @@ blend_mode = 1
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7fq1n"]
 shader = ExtResource("23_7frtj")
 shader_parameter/amount = 0.0
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="Gradient" id="Gradient_y27hi"]
 
@@ -67,11 +71,15 @@ shader_parameter/threshold = 0.0
 shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_g1way")
 shader_parameter/edge_color = Color(1, 0.5, 0, 1)
 shader_parameter/edge_width = 0.05
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_uaibf"]
 shader = ExtResource("26_7fq1n")
 shader_parameter/overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
 shader_parameter/amount = 0.0
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_2nye2"]
 
@@ -90,17 +98,20 @@ shader_parameter/threshold = 0.0
 shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_jlm4u")
 shader_parameter/edge_color = Color(1, 0.5, 0, 1)
 shader_parameter/edge_width = 0.05
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hfiu5"]
 shader = ExtResource("23_7frtj")
 shader_parameter/amount = 0.0
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yddma"]
 shader = ExtResource("23_7frtj")
 shader_parameter/amount = 0.0
-
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_w7hnm"]
-blend_mode = 1
+shader_parameter/blend_amount = 0.0
+shader_parameter/blend_type = 0
 
 [node name="JuiceLogoReveal" type="MarginContainer"]
 anchors_preset = 15
@@ -914,12 +925,7 @@ animate_alpha = false
 affect_children = true
 use_blend_mode = true
 target_blend_mode = 2
-use_flicker = true
-flicker_mode = 0
-hard_flicker = true
-flicker_rate = 36.5
-flicker_min = 0.0
-flicker_max = 1.0
+use_flicker = false
 trigger_behaviour = 3
 trigger_on = 2
 duration_in = 0.3
@@ -970,7 +976,6 @@ metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button7" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 modulate = Color(0.89374226, 0.76580065, 0, 1)
-material = SubResource("CanvasItemMaterial_w7hnm")
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)

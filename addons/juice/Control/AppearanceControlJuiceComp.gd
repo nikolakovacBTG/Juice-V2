@@ -21,7 +21,7 @@
 ## EFFECTS:
 ## - TINT: Lerp modulate from color_from to color_to.
 ## - OVERBRIGHT: Modulate > 1.0 for HDR bloom/glow.
-## - OUTLINE: StyleBox border animation (Godot-native, no shaders).
+## - OUTLINE: Shader-based alpha-edge-detection outline (uses outline_2d.gdshader).
 ## - FADE: Animate modulate.a from base to target alpha.
 ## - GRAYSCALE: Shader-based desaturation (uses grayscale_2d.gdshader).
 ## - DISSOLVE: Shader-based noise dissolve (uses dissolve_2d.gdshader).
@@ -32,12 +32,10 @@
 ## - Blending Mode: CanvasItemMaterial compositing mode during animation.
 ##
 ## CONTROL-SPECIFIC NOTES:
-## - OUTLINE uses StyleBox borders instead of shaders because Controls draw
-##   multiple primitives (nine-patch, text, icons). A shader would distort
-##   each primitive individually, while StyleBox borders wrap the whole Control.
-## - GRAYSCALE/DISSOLVE apply via CanvasItem shader. They work well on simple
-##   Controls (Panel, ColorRect) but may look odd on complex Controls (Button
-##   with icon + text). Configuration warnings are shown for this.
+## - OUTLINE/GRAYSCALE/DISSOLVE/COLOR_OVERLAY apply via CanvasItem shader.
+##   They work well on simple Controls (Panel, ColorRect) but may look odd
+##   on complex Controls (Button with icon + text). Configuration warnings
+##   are shown for this.
 ## ============================================================================
 
 @tool
@@ -54,7 +52,7 @@ extends JuiceCompBase
 enum AppearanceEffect {
 	TINT,          ## Animate modulate color (lerp from/to)
 	OVERBRIGHT,    ## Modulate > 1.0 for HDR bloom/glow
-	OUTLINE,       ## StyleBox border animation (Godot-native)
+	OUTLINE,       ## Shader-based alpha-edge-detection outline
 	FADE,          ## Animate modulate alpha
 	GRAYSCALE,     ## Shader-based desaturation
 	DISSOLVE,      ## Shader-based noise dissolve
@@ -105,10 +103,9 @@ var affect_children: bool = true
 var overbright_intensity: float = 2.0
 var overbright_color: Color = Color.WHITE
 
-# --- OUTLINE (StyleBox) ---
+# --- OUTLINE ---
 var outline_color: Color = Color.YELLOW
 var outline_width: float = 3.0
-var corner_radius: int = -1
 
 # --- FADE ---
 var fade_target_alpha: float = 0.0
@@ -181,9 +178,6 @@ func _get_property_list() -> Array[Dictionary]:
 				"usage": PROPERTY_USAGE_DEFAULT})
 			props.append({"name": "outline_width", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,20.0,0.5",
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "corner_radius", "type": TYPE_INT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "-1,50,1",
 				"usage": PROPERTY_USAGE_DEFAULT})
 
 		AppearanceEffect.FADE:
@@ -265,7 +259,6 @@ func _set(prop: StringName, value: Variant) -> bool:
 		# OUTLINE
 		&"outline_color": outline_color = value; return true
 		&"outline_width": outline_width = value; return true
-		&"corner_radius": corner_radius = value; return true
 		# FADE
 		&"fade_target_alpha": fade_target_alpha = value; return true
 		# GRAYSCALE
@@ -303,7 +296,6 @@ func _get(prop: StringName) -> Variant:
 		# OUTLINE
 		&"outline_color": return outline_color
 		&"outline_width": return outline_width
-		&"corner_radius": return corner_radius
 		# FADE
 		&"fade_target_alpha": return fade_target_alpha
 		# GRAYSCALE
@@ -337,23 +329,16 @@ var _base_color: Color = Color.WHITE
 var _base_alpha: float = 1.0
 var _has_base_captured: bool = false
 
-# Shader effects (GRAYSCALE, DISSOLVE, COLOR_OVERLAY)
+# Shader effects (OUTLINE, GRAYSCALE, DISSOLVE, COLOR_OVERLAY)
 var _shader_material: ShaderMaterial = null
 var _original_material: Material = null
 var _owns_shader_material: bool = false
 
 # Shader references (preloaded once)
+static var _outline_shader: Shader = null
 static var _grayscale_shader: Shader = null
 static var _dissolve_shader: Shader = null
 static var _overlay_shader: Shader = null
-
-# OUTLINE (StyleBox)
-const _THEME_STATES := ["normal", "hover", "pressed", "disabled", "focus", "panel"]
-var _outline_styles: Dictionary = {}
-var _original_overrides: Dictionary = {}
-var _outline_is_setup: bool = false
-
-# Shader references (preloaded once) — blend mode shader for non-shader effects
 static var _blend_mode_shader: Shader = null
 
 # Flicker
@@ -372,13 +357,6 @@ var _last_delta: float = 0.0
 ## Tear down any active effect resources (shader, outline, blend mode, modulate).
 ## Called when switching effects in the inspector or when animate_out completes.
 func _cleanup_current_effect() -> void:
-	# Tear down outline StyleBox overrides
-	if _outline_is_setup:
-		if _target_node is Control:
-			_teardown_outline()
-		else:
-			_outline_is_setup = false
-			_outline_styles.clear()
 	# Tear down shader (effect shader OR blend mode shader — both use _shader_material)
 	if _shader_material:
 		if _target_node is CanvasItem:
@@ -418,11 +396,10 @@ func _process(delta: float) -> void:
 func _invalidate_base_cache() -> void:
 	# Restore target node to original state before clearing tracking flags.
 	# Without this, _exit_editor_preview would leave shader materials
-	# and StyleBox overrides orphaned on the target.
+	# orphaned on the target.
 	_cleanup_current_effect()
 	_has_base_captured = false
 	_original_material = null
-	_original_overrides.clear()
 
 
 func _on_animate_start() -> void:
@@ -431,10 +408,10 @@ func _on_animate_start() -> void:
 	if not _has_base_captured:
 		_capture_base_state()
 
-	# Set up shader/material/StyleBox if this effect needs one
+	# Set up shader if this effect needs one
 	match appearance_effect:
 		AppearanceEffect.OUTLINE:
-			_setup_outline()
+			_setup_outline_shader()
 		AppearanceEffect.GRAYSCALE:
 			_setup_grayscale_shader()
 		AppearanceEffect.DISSOLVE:
@@ -573,24 +550,14 @@ func _apply_overbright(progress: float) -> void:
 	_set_modulate(result)
 
 
-# --- OUTLINE (StyleBox borders) ---
+# --- OUTLINE (shader-based) ---
 
 func _apply_outline(progress: float) -> void:
-	var border_px := int(round(outline_width * progress))
-
-	for state: String in _outline_styles:
-		var style: StyleBoxFlat = _outline_styles[state]
-		# Animate border width
-		style.border_width_left = border_px
-		style.border_width_top = border_px
-		style.border_width_right = border_px
-		style.border_width_bottom = border_px
-		style.border_color = outline_color
-		# Expand margin so border renders OUTSIDE the control rect
-		style.expand_margin_left = border_px
-		style.expand_margin_top = border_px
-		style.expand_margin_right = border_px
-		style.expand_margin_bottom = border_px
+	if not _shader_material:
+		return
+	_shader_material.set_shader_parameter("outline_width", outline_width * progress)
+	# Update color live so inspector changes take effect during animation
+	_shader_material.set_shader_parameter("outline_color", outline_color)
 
 
 # --- FADE ---
@@ -675,100 +642,33 @@ func _set_modulate(color: Color) -> void:
 
 
 # =============================================================================
-# OUTLINE SETUP / TEARDOWN (StyleBox borders — Control-specific)
-# =============================================================================
-
-## For each theme state the Control actually uses, duplicate its StyleBox,
-## add a zero-width border (animated later), and apply as theme override.
-## This is the Godot-native way to outline Controls — no shaders needed.
-func _setup_outline() -> void:
-	if _outline_is_setup:
-		return
-	if not _target_node is Control:
-		if debug_enabled:
-			push_warning("[%s] Target '%s' is not a Control — outline won't work" % [
-				name, str(_target_node.name) if _target_node else "null"])
-		return
-
-	var control := _target_node as Control
-
-	for state in _THEME_STATES:
-		# Only override states the control actually has a StyleBox for
-		if not control.has_theme_stylebox(state):
-			continue
-
-		# Save original override (if any) for restoration
-		if control.has_theme_stylebox_override(state):
-			_original_overrides[state] = control.get_theme_stylebox(state)
-		else:
-			_original_overrides[state] = null
-
-		# Get effective StyleBox and create our bordered version
-		var base: StyleBox = control.get_theme_stylebox(state)
-		var outline_style: StyleBoxFlat
-
-		if base is StyleBoxFlat:
-			outline_style = base.duplicate() as StyleBoxFlat
-		else:
-			# Non-flat StyleBox (StyleBoxTexture, etc.) — create a flat one
-			# that preserves content margins
-			outline_style = StyleBoxFlat.new()
-			outline_style.bg_color = Color.TRANSPARENT
-			if base:
-				outline_style.content_margin_left = base.content_margin_left
-				outline_style.content_margin_top = base.content_margin_top
-				outline_style.content_margin_right = base.content_margin_right
-				outline_style.content_margin_bottom = base.content_margin_bottom
-
-		# Apply configured corner radius (or inherit from existing)
-		if corner_radius >= 0:
-			outline_style.corner_radius_top_left = corner_radius
-			outline_style.corner_radius_top_right = corner_radius
-			outline_style.corner_radius_bottom_left = corner_radius
-			outline_style.corner_radius_bottom_right = corner_radius
-
-		# Start with zero border (invisible — will be animated by _apply_outline)
-		outline_style.border_width_left = 0
-		outline_style.border_width_top = 0
-		outline_style.border_width_right = 0
-		outline_style.border_width_bottom = 0
-		outline_style.border_color = outline_color
-
-		_outline_styles[state] = outline_style
-		control.add_theme_stylebox_override(state, outline_style)
-
-	_outline_is_setup = true
-
-	if debug_enabled:
-		print("[%s] Created outline StyleBoxes for %d states on '%s'" % [
-			name, _outline_styles.size(), control.name])
-
-
-func _teardown_outline() -> void:
-	if not _target_node is Control:
-		return
-
-	var control := _target_node as Control
-
-	# Restore original theme overrides (or remove ours)
-	for state: String in _original_overrides:
-		var original: Variant = _original_overrides[state]
-		if original != null:
-			control.add_theme_stylebox_override(state, original as StyleBox)
-		else:
-			control.remove_theme_stylebox_override(state)
-
-	# Force re-setup on next trigger
-	_outline_is_setup = false
-	_outline_styles.clear()
-
-	if debug_enabled:
-		print("[%s] Outline complete, restored original styles" % name)
-
-
-# =============================================================================
 # SHADER SETUP / TEARDOWN
 # =============================================================================
+
+func _get_outline_shader() -> Shader:
+	if _outline_shader == null:
+		_outline_shader = load("res://addons/juice/Shaders/outline_2d.gdshader")
+	return _outline_shader
+
+
+func _setup_outline_shader() -> void:
+	if _shader_material:
+		return
+	if not _target_node is CanvasItem:
+		return
+
+	var canvas := _target_node as CanvasItem
+	_original_material = canvas.material
+
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = _get_outline_shader()
+	_shader_material.set_shader_parameter("outline_width", 0.0)
+	_shader_material.set_shader_parameter("outline_color", outline_color)
+	canvas.material = _shader_material
+	_owns_shader_material = true
+
+	if debug_enabled:
+		print("[%s] Outline shader applied to '%s'" % [name, canvas.name])
 
 func _get_grayscale_shader() -> Shader:
 	if _grayscale_shader == null:
@@ -877,7 +777,7 @@ func _teardown_shader() -> void:
 
 
 # =============================================================================
-# BLEND MODE SHADER (for non-shader effects: Tint, Overbright, Fade, Outline)
+# BLEND MODE SHADER (for non-shader effects: Tint, Overbright, Fade)
 # =============================================================================
 
 func _get_blend_mode_shader() -> Shader:
@@ -887,8 +787,8 @@ func _get_blend_mode_shader() -> Shader:
 
 
 ## Set up the standalone blend mode shader for effects that don't use their
-## own shader (Tint, Overbright, Fade, Outline). Shader-based effects
-## (Grayscale, Dissolve, Color Overlay) have blend uniforms embedded directly.
+## own shader (Tint, Overbright, Fade). Shader-based effects (Outline,
+## Grayscale, Dissolve, Color Overlay) have blend uniforms embedded directly.
 func _setup_blend_mode_shader() -> void:
 	if _shader_material:
 		return
@@ -922,7 +822,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Target must be a Control node. Use Appearance2DJuiceComp for Node2D or Appearance3DJuiceComp for 3D nodes.")
 
 	# Shader effects on Controls have per-draw-call caveats
-	if appearance_effect in [AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE, AppearanceEffect.COLOR_OVERLAY]:
+	if appearance_effect in [AppearanceEffect.OUTLINE, AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE, AppearanceEffect.COLOR_OVERLAY]:
 		warnings.append("%s applies via CanvasItem shader. Works well on simple Controls (Panel, ColorRect) but may look odd on complex Controls (Button with icon + text)." % AppearanceEffect.keys()[appearance_effect])
 		if parent and parent is CanvasItem and parent.material != null:
 			warnings.append("Target already has a material. %s will temporarily replace it during animation." % AppearanceEffect.keys()[appearance_effect])
