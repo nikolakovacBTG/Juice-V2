@@ -21,7 +21,7 @@
 ## EFFECTS:
 ## - TINT: Lerp modulate from color_from to color_to.
 ## - OVERBRIGHT: Modulate > 1.0 for HDR bloom/glow.
-## - OUTLINE: Shader-based alpha-edge-detection outline (uses outline_2d.gdshader).
+## - OUTLINE: Ghost-duplicate + outline shader (outline_2d.gdshader behind real Control).
 ## - FADE: Animate modulate.a from base to target alpha.
 ## - GRAYSCALE: Shader-based desaturation (uses grayscale_2d.gdshader).
 ## - DISSOLVE: Shader-based noise dissolve (uses dissolve_2d.gdshader).
@@ -32,7 +32,11 @@
 ## - Blending Mode: CanvasItemMaterial compositing mode during animation.
 ##
 ## CONTROL-SPECIFIC NOTES:
-## - OUTLINE/GRAYSCALE/DISSOLVE/COLOR_OVERLAY apply via CanvasItem shader.
+## - OUTLINE uses a "ghost duplicate" rendered behind the real Control via
+##   show_behind_parent. The ghost carries the outline shader; the real
+##   Control renders on top, masking the ghost interior. Text/icon is stripped
+##   from the ghost to prevent per-glyph artifacts. Works on all Control types.
+## - GRAYSCALE/DISSOLVE/COLOR_OVERLAY apply via CanvasItem shader directly.
 ##   They work well on simple Controls (Panel, ColorRect) but may look odd
 ##   on complex Controls (Button with icon + text). Configuration warnings
 ##   are shown for this.
@@ -52,7 +56,7 @@ extends JuiceCompBase
 enum AppearanceEffect {
 	TINT,          ## Animate modulate color (lerp from/to)
 	OVERBRIGHT,    ## Modulate > 1.0 for HDR bloom/glow
-	OUTLINE,       ## Shader-based alpha-edge-detection outline
+	OUTLINE,       ## Ghost-duplicate outline (shader behind real Control)
 	FADE,          ## Animate modulate alpha
 	GRAYSCALE,     ## Shader-based desaturation
 	DISSOLVE,      ## Shader-based noise dissolve
@@ -329,10 +333,15 @@ var _base_color: Color = Color.WHITE
 var _base_alpha: float = 1.0
 var _has_base_captured: bool = false
 
-# Shader effects (OUTLINE, GRAYSCALE, DISSOLVE, COLOR_OVERLAY)
+# Shader effects (GRAYSCALE, DISSOLVE, COLOR_OVERLAY, blend mode)
 var _shader_material: ShaderMaterial = null
 var _original_material: Material = null
 var _owns_shader_material: bool = false
+
+# OUTLINE ghost — a visual duplicate rendered behind the real Control,
+# carrying the outline shader. The real Control renders on top, masking
+# the ghost's interior so only the outline extending beyond bounds is visible.
+var _outline_ghost: Control = null
 
 # Shader references (preloaded once)
 static var _outline_shader: Shader = null
@@ -357,7 +366,10 @@ var _last_delta: float = 0.0
 ## Tear down any active effect resources (shader, outline, blend mode, modulate).
 ## Called when switching effects in the inspector or when animate_out completes.
 func _cleanup_current_effect() -> void:
-	# Tear down shader (effect shader OR blend mode shader — both use _shader_material)
+	# Tear down outline ghost first (clears _shader_material)
+	if _outline_ghost:
+		_teardown_outline_ghost()
+	# Tear down shader on target (effect shader OR blend mode shader)
 	if _shader_material:
 		if _target_node is CanvasItem:
 			_teardown_shader()
@@ -408,10 +420,10 @@ func _on_animate_start() -> void:
 	if not _has_base_captured:
 		_capture_base_state()
 
-	# Set up shader if this effect needs one
+	# Set up shader / ghost if this effect needs one
 	match appearance_effect:
 		AppearanceEffect.OUTLINE:
-			_setup_outline_shader()
+			_setup_outline_ghost()
 		AppearanceEffect.GRAYSCALE:
 			_setup_grayscale_shader()
 		AppearanceEffect.DISSOLVE:
@@ -651,24 +663,67 @@ func _get_outline_shader() -> Shader:
 	return _outline_shader
 
 
-func _setup_outline_shader() -> void:
-	if _shader_material:
+## Create a visual ghost duplicate behind the target Control.
+## The ghost carries the outline shader; the real Control renders on top,
+## masking the ghost interior. Only the outline extending beyond the
+## Control's bounds is visible — like inverted hull in 3D.
+func _setup_outline_ghost() -> void:
+	if _outline_ghost:
 		return
-	if not _target_node is CanvasItem:
+	if not _target_node is Control:
 		return
 
-	var canvas := _target_node as CanvasItem
-	_original_material = canvas.material
+	var control := _target_node as Control
 
+	# Duplicate without scripts/signals/groups (flags=0)
+	_outline_ghost = control.duplicate(0) as Control
+
+	# Remove all children from ghost (prevents duplicating juice comps, etc.)
+	for child in _outline_ghost.get_children():
+		_outline_ghost.remove_child(child)
+		child.queue_free()
+
+	# Strip text/icon content — we only want the background shape for outlining.
+	# Without this, each text glyph would get its own outline artifact.
+	if _outline_ghost is Button:
+		(_outline_ghost as Button).text = ""
+		(_outline_ghost as Button).icon = null
+	elif _outline_ghost is Label:
+		(_outline_ghost as Label).text = ""
+
+	# Non-interactive, renders behind the real Control
+	_outline_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_outline_ghost.show_behind_parent = true
+
+	# Fill parent rect exactly (ghost is a child of the target)
+	_outline_ghost.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_outline_ghost.offset_left = 0
+	_outline_ghost.offset_top = 0
+	_outline_ghost.offset_right = 0
+	_outline_ghost.offset_bottom = 0
+
+	# Apply outline shader to the ghost (NOT to the real Control)
 	_shader_material = ShaderMaterial.new()
 	_shader_material.shader = _get_outline_shader()
 	_shader_material.set_shader_parameter("outline_width", 0.0)
 	_shader_material.set_shader_parameter("outline_color", outline_color)
-	canvas.material = _shader_material
-	_owns_shader_material = true
+	_outline_ghost.material = _shader_material
+
+	# Add ghost as child of target — show_behind_parent renders it behind
+	control.add_child(_outline_ghost)
 
 	if debug_enabled:
-		print("[%s] Outline shader applied to '%s'" % [name, canvas.name])
+		print("[%s] Outline ghost created behind '%s'" % [name, control.name])
+
+
+func _teardown_outline_ghost() -> void:
+	if _outline_ghost and is_instance_valid(_outline_ghost):
+		_outline_ghost.queue_free()
+	_outline_ghost = null
+	_shader_material = null
+
+	if debug_enabled:
+		print("[%s] Outline ghost removed" % name)
 
 func _get_grayscale_shader() -> Shader:
 	if _grayscale_shader == null:
@@ -822,7 +877,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Target must be a Control node. Use Appearance2DJuiceComp for Node2D or Appearance3DJuiceComp for 3D nodes.")
 
 	# Shader effects on Controls have per-draw-call caveats
-	if appearance_effect in [AppearanceEffect.OUTLINE, AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE, AppearanceEffect.COLOR_OVERLAY]:
+	# (OUTLINE uses a ghost duplicate so it doesn't suffer from this)
+	if appearance_effect in [AppearanceEffect.GRAYSCALE, AppearanceEffect.DISSOLVE, AppearanceEffect.COLOR_OVERLAY]:
 		warnings.append("%s applies via CanvasItem shader. Works well on simple Controls (Panel, ColorRect) but may look odd on complex Controls (Button with icon + text)." % AppearanceEffect.keys()[appearance_effect])
 		if parent and parent is CanvasItem and parent.material != null:
 			warnings.append("Target already has a material. %s will temporarily replace it during animation." % AppearanceEffect.keys()[appearance_effect])
