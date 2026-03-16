@@ -198,6 +198,16 @@ var _my_position_contribution: Vector2 = Vector2.ZERO
 var _my_rotation_contribution: float = 0.0
 var _my_scale_contribution: Vector2 = Vector2.ZERO
 
+## Tracks the position we last wrote to the target. Used to detect external
+## repositioning (e.g. Container re-sort) between frames. When the target's
+## position no longer matches what we wrote, we know an external force moved
+## it — so we re-capture base and reset contribution to keep delta math valid.
+## NOTE: This detection assumes one position-targeting juice comp per node.
+## If multiple position comps target the same Control, one comp's write will
+## appear as an "external move" to the other. This is acceptable for the
+## Sequencer recipe pattern (one clone per target per transform type).
+var _last_written_position: Vector2 = Vector2.INF
+
 ## Resolved references for From/To target nodes (cached at animation start)
 ## Shared by Position, Rotation, and Scale From/To models
 var _from_ref: Control = null
@@ -607,6 +617,7 @@ func _invalidate_base_cache() -> void:
 	_my_position_contribution = Vector2.ZERO
 	_my_rotation_contribution = 0.0
 	_my_scale_contribution = Vector2.ZERO
+	_last_written_position = Vector2.INF
 
 
 func _get_interrupt_identity() -> Variant:
@@ -679,6 +690,14 @@ func _apply_effect(progress: float) -> void:
 ## Apply position using From/To lerp model.
 ## Both From and To are resolved to pixel positions, then interpolated.
 func _apply_position_effect(progress: float, target: Control) -> void:
+	# Detect external repositioning (e.g. Container re-sort after our write).
+	# If the target moved since we last wrote, our contribution was undone —
+	# re-capture base from the current position and reset contribution.
+	if _last_written_position != Vector2.INF:
+		if not target.position.is_equal_approx(_last_written_position):
+			_base_position = target.position
+			_my_position_contribution = Vector2.ZERO
+
 	var from_value := _resolve_from_position(target)
 	var to_value := _resolve_to_position(target)
 	var desired_absolute := from_value.lerp(to_value, progress)
@@ -688,6 +707,7 @@ func _apply_position_effect(progress: float, target: Control) -> void:
 	var delta := desired_offset - _my_position_contribution
 	target.position += delta
 	_my_position_contribution = desired_offset
+	_last_written_position = target.position
 
 
 ## Resolve the From position to an absolute Vector2 in local space

@@ -915,6 +915,13 @@ func _animate_to(target_progress: float, is_one_shot_return: bool = false) -> vo
 	# Enable processing
 	set_process(true)
 	
+	# Force-first-frame: apply the effect at start progress immediately so
+	# the target is positioned at its From state before the first render.
+	# Without this, there is a one-frame gap between set_process(true) and
+	# the first _process() call where the target is visible at its natural
+	# position — causing a frame-0 flash for any animation where From ≠ natural.
+	_apply_effect(_start_progress)
+	
 	# Only emit started if this is not the one_shot auto-return
 	if not is_one_shot_return:
 		started.emit()

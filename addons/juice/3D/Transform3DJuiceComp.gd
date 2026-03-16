@@ -220,6 +220,10 @@ var _my_position_contribution: Vector3 = Vector3.ZERO
 var _my_rotation_contribution: Vector3 = Vector3.ZERO
 var _my_scale_contribution: Vector3 = Vector3.ZERO
 
+## Tracks the position we last wrote to the target. Used to detect external
+## repositioning between frames. See TransformControlJuiceComp for full docs.
+var _last_written_position: Vector3 = Vector3.INF
+
 ## Tracks last logged progress decile to throttle per-frame debug output.
 ## Logs at ~10% intervals instead of every frame to avoid flooding the buffer.
 var _debug_last_logged_decile: int = -1
@@ -659,6 +663,7 @@ func _invalidate_base_cache() -> void:
 	_my_position_contribution = Vector3.ZERO
 	_my_rotation_contribution = Vector3.ZERO
 	_my_scale_contribution = Vector3.ZERO
+	_last_written_position = Vector3.INF
 
 
 func _get_interrupt_identity() -> Variant:
@@ -739,6 +744,12 @@ func _apply_effect(progress: float) -> void:
 ## Apply position using From/To lerp model.
 ## Both From and To are resolved to world units, then interpolated.
 func _apply_position_effect(progress: float, n3d: Node3D) -> void:
+	# Detect external repositioning between frames (see TransformControlJuiceComp).
+	if _last_written_position != Vector3.INF:
+		if not n3d.position.is_equal_approx(_last_written_position):
+			_base_position = n3d.position
+			_my_position_contribution = Vector3.ZERO
+
 	var from_value := _resolve_from_position(n3d)
 	var to_value := _resolve_to_position(n3d)
 	var desired_absolute := from_value.lerp(to_value, progress)
@@ -748,6 +759,7 @@ func _apply_position_effect(progress: float, n3d: Node3D) -> void:
 	var delta := desired_offset - _my_position_contribution
 	n3d.position += delta
 	_my_position_contribution = desired_offset
+	_last_written_position = n3d.position
 
 
 ## Resolve the From position to an absolute Vector3 in local space

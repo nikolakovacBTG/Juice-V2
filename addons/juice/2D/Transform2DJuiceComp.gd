@@ -204,6 +204,10 @@ var _my_position_contribution: Vector2 = Vector2.ZERO
 var _my_rotation_contribution: float = 0.0
 var _my_scale_contribution: Vector2 = Vector2.ZERO
 
+## Tracks the position we last wrote to the target. Used to detect external
+## repositioning between frames. See TransformControlJuiceComp for full docs.
+var _last_written_position: Vector2 = Vector2.INF
+
 ## Resolved references for From/To target nodes (cached at animation start)
 ## Shared by Position, Rotation, and Scale From/To models
 var _from_ref: Node2D = null
@@ -613,6 +617,7 @@ func _invalidate_base_cache() -> void:
 	_my_position_contribution = Vector2.ZERO
 	_my_rotation_contribution = 0.0
 	_my_scale_contribution = Vector2.ZERO
+	_last_written_position = Vector2.INF
 
 
 func _get_interrupt_identity() -> Variant:
@@ -693,6 +698,12 @@ func _apply_effect(progress: float) -> void:
 ## Apply position using From/To lerp model.
 ## Both From and To are resolved to world pixels, then interpolated.
 func _apply_position_effect(progress: float, target: Node2D) -> void:
+	# Detect external repositioning between frames (see TransformControlJuiceComp).
+	if _last_written_position != Vector2.INF:
+		if not target.position.is_equal_approx(_last_written_position):
+			_base_position = target.position
+			_my_position_contribution = Vector2.ZERO
+
 	var from_value := _resolve_from_position(target)
 	var to_value := _resolve_to_position(target)
 	var desired_absolute := from_value.lerp(to_value, progress)
@@ -702,6 +713,7 @@ func _apply_position_effect(progress: float, target: Node2D) -> void:
 	var delta := desired_offset - _my_position_contribution
 	target.position += delta
 	_my_position_contribution = desired_offset
+	_last_written_position = target.position
 
 
 ## Resolve the From position to an absolute Vector2 in local space

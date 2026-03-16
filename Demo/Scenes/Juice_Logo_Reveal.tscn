@@ -1,45 +1,36 @@
-[gd_scene load_steps=46 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=44 format=3 uid="uid://ged086sfs7k0"]
 
-[ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_6a25c"]
-[ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="2_kljto"]
-[ext_resource type="Script" uid="uid://btetvglttqxnm" path="res://addons/juice/2D/Progress2DJuiceComp.gd" id="2_r852d"]
-[ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="3_8smnx"]
-[ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="3_vfe5a"]
-[ext_resource type="Shader" uid="uid://krad382t6m3a" path="res://addons/juice/Shaders/outline_2d.gdshader" id="3_y27hi"]
-[ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="4_orfff"]
-[ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/juice/Shaders/dissolve_2d.gdshader" id="5_2nye2"]
-[ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="5_r852d"]
-[ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="6_8smnx"]
-[ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="7_wm0iw"]
-[ext_resource type="Texture2D" uid="uid://cmwpcwscfhv5i" path="res://Textures/Logo/slice17.png" id="8_7frtj"]
-[ext_resource type="Texture2D" uid="uid://qvbev42i0u4p" path="res://Textures/Logo/slice18.png" id="9_y27hi"]
-[ext_resource type="Texture2D" uid="uid://bif3av5rbnaec" path="res://Textures/Logo/slice3.png" id="10_2nye2"]
-[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="10_orfff"]
-[ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="11_o2e6s"]
-[ext_resource type="Script" uid="uid://cquadl5sa07sy" path="res://addons/juice/2D/Transform2DJuiceComp.gd" id="11_r852d"]
-[ext_resource type="Texture2D" uid="uid://bgv1hww8ounvj" path="res://Textures/Logo/slice5.png" id="12_7fq1n"]
-[ext_resource type="Texture2D" uid="uid://023fqnaaoqwl" path="res://Textures/Logo/slice6.png" id="13_uaibf"]
-[ext_resource type="Texture2D" uid="uid://jijmr37fhkid" path="res://Textures/Logo/slice7.png" id="14_g1way"]
-[ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="15_hfiu5"]
-[ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="16_jlm4u"]
-[ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="17_tusjn"]
-[ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/juice/Shaders/grayscale_2d.gdshader" id="23_7frtj"]
-[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="25_2nye2"]
-[ext_resource type="Shader" uid="uid://b5phtplqic1ua" path="res://addons/juice/Shaders/overlay_2d.gdshader" id="26_7fq1n"]
-[ext_resource type="Script" uid="uid://xi0dbseivd84" path="res://addons/juice/Control/AppearanceControlJuiceComp.gd" id="26_o2e6s"]
-[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="27_7fq1n"]
-
-[sub_resource type="Gradient" id="Gradient_8smnx"]
-interpolation_mode = 2
-colors = PackedColorArray(0.22556596, 0.30204913, 0.6691687, 1, 0.17467946, 0.2330068, 0.47322208, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_wm0iw"]
-gradient = SubResource("Gradient_8smnx")
-fill = 1
-fill_from = Vector2(0.52136755, 0.48290598)
+[ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_iyulo"]
+[ext_resource type="Script" uid="uid://btetvglttqxnm" path="res://addons/juice/2D/Progress2DJuiceComp.gd" id="2_hgmhv"]
+[ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="3_1d2vn"]
+[ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="4_db6iq"]
+[ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="5_3xlpj"]
+[ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="6_fpfmg"]
+[ext_resource type="Texture2D" uid="uid://3b7wplki2kkf" path="res://Textures/Logo/slice14.png" id="7_k6hfx"]
+[ext_resource type="Texture2D" uid="uid://bwbdyvh4ov61q" path="res://Textures/Logo/slice15.png" id="8_hgoqk"]
+[ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="9_fwe5f"]
+[ext_resource type="Texture2D" uid="uid://cmwpcwscfhv5i" path="res://Textures/Logo/slice17.png" id="10_psf4x"]
+[ext_resource type="Texture2D" uid="uid://qvbev42i0u4p" path="res://Textures/Logo/slice18.png" id="11_cyh67"]
+[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="12_hpo04"]
+[ext_resource type="Script" uid="uid://cquadl5sa07sy" path="res://addons/juice/2D/Transform2DJuiceComp.gd" id="13_e326j"]
+[ext_resource type="Texture2D" uid="uid://bif3av5rbnaec" path="res://Textures/Logo/slice3.png" id="14_oijp0"]
+[ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="15_l1gd8"]
+[ext_resource type="Texture2D" uid="uid://bgv1hww8ounvj" path="res://Textures/Logo/slice5.png" id="16_fn4bk"]
+[ext_resource type="Texture2D" uid="uid://023fqnaaoqwl" path="res://Textures/Logo/slice6.png" id="17_52l6i"]
+[ext_resource type="Texture2D" uid="uid://jijmr37fhkid" path="res://Textures/Logo/slice7.png" id="18_hhscl"]
+[ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="19_pxpi6"]
+[ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="20_p1l7c"]
+[ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="21_r86x8"]
+[ext_resource type="Shader" uid="uid://krad382t6m3a" path="res://addons/juice/Shaders/outline_2d.gdshader" id="22_unlfy"]
+[ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/juice/Shaders/grayscale_2d.gdshader" id="23_xo1bw"]
+[ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/juice/Shaders/dissolve_2d.gdshader" id="24_avmwf"]
+[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="25_7x4o0"]
+[ext_resource type="Shader" uid="uid://b5phtplqic1ua" path="res://addons/juice/Shaders/overlay_2d.gdshader" id="26_rsee4"]
+[ext_resource type="Script" uid="uid://xi0dbseivd84" path="res://addons/juice/Control/AppearanceControlJuiceComp.gd" id="27_ui13n"]
+[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="28_4v3y5"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7frtj"]
-shader = ExtResource("3_y27hi")
+shader = ExtResource("22_unlfy")
 shader_parameter/outline_width = 0.0
 shader_parameter/outline_color = Color(0, 0.48745775, 0.3118408, 1)
 shader_parameter/blend_amount = 0.0
@@ -52,7 +43,7 @@ blend_mode = 1
 blend_mode = 1
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7fq1n"]
-shader = ExtResource("23_7frtj")
+shader = ExtResource("23_xo1bw")
 shader_parameter/amount = 0.0
 shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
@@ -66,7 +57,7 @@ noise = SubResource("FastNoiseLite_2nye2")
 color_ramp = SubResource("Gradient_y27hi")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_y27hi"]
-shader = ExtResource("5_2nye2")
+shader = ExtResource("24_avmwf")
 shader_parameter/threshold = 0.0
 shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_g1way")
 shader_parameter/edge_color = Color(1, 0.5, 0, 1)
@@ -75,7 +66,7 @@ shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_uaibf"]
-shader = ExtResource("26_7fq1n")
+shader = ExtResource("26_rsee4")
 shader_parameter/overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
 shader_parameter/amount = 0.0
 shader_parameter/blend_amount = 0.0
@@ -93,7 +84,7 @@ fractal_gain = 1.0
 noise = SubResource("FastNoiseLite_hfiu5")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_g1way"]
-shader = ExtResource("5_2nye2")
+shader = ExtResource("24_avmwf")
 shader_parameter/threshold = 0.0
 shader_parameter/dissolve_noise = SubResource("NoiseTexture2D_jlm4u")
 shader_parameter/edge_color = Color(1, 0.5, 0, 1)
@@ -102,13 +93,13 @@ shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hfiu5"]
-shader = ExtResource("23_7frtj")
+shader = ExtResource("23_xo1bw")
 shader_parameter/amount = 0.0
 shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_yddma"]
-shader = ExtResource("23_7frtj")
+shader = ExtResource("23_xo1bw")
 shader_parameter/amount = 0.0
 shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
@@ -121,18 +112,11 @@ grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(576, 324)
 
-[node name="TextureRect" type="TextureRect" parent="."]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-texture = SubResource("GradientTexture2D_wm0iw")
-expand_mode = 2
-
 [node name="JuiceLogoSeparated" type="Sprite2D" parent="."]
 visible = false
 position = Vector2(0.75, -1)
 scale = Vector2(0.41744664, 0.41795665)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 metadata/_edit_lock_ = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
@@ -147,7 +131,7 @@ visible = false
 position = Vector2(576, 324)
 
 [node name="Progress2DJuiceComp" type="Node" parent="Full logo"]
-script = ExtResource("2_r852d")
+script = ExtResource("2_hgmhv")
 transform_target = 2
 auto_start = true
 scale_rate = Vector2(0.06, 0.06)
@@ -164,7 +148,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://btetvglttqxnm"
 
 [node name="Appearance2DJuiceComp" type="Node" parent="Full logo"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 color_from = Color(1, 1, 1, 1)
 color_to = Color(1, 0, 0, 1)
 animate_alpha = false
@@ -189,45 +173,45 @@ position = Vector2(0, -550)
 [node name="Slice11" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(-320, -64)
 scale = Vector2(0.4152831, 0.4152831)
-texture = ExtResource("2_kljto")
+texture = ExtResource("4_db6iq")
 
 [node name="Slice12" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(-205.00002, -1)
 scale = Vector2(0.4152831, 0.4168708)
-texture = ExtResource("3_vfe5a")
+texture = ExtResource("5_3xlpj")
 
 [node name="Slice13" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(-40, 15)
 scale = Vector2(0.4133329, 0.4186288)
-texture = ExtResource("4_orfff")
+texture = ExtResource("6_fpfmg")
 
 [node name="Slice14" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(82.00001, -90)
 scale = Vector2(0.41803548, 0.42369977)
-texture = ExtResource("5_r852d")
+texture = ExtResource("7_k6hfx")
 
 [node name="Slice15" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(57, 16)
 scale = Vector2(0.4152831, 0.4152831)
-texture = ExtResource("6_8smnx")
+texture = ExtResource("8_hgoqk")
 
 [node name="Slice16" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(147, 7)
 scale = Vector2(0.41179833, 0.41899928)
-texture = ExtResource("7_wm0iw")
+texture = ExtResource("9_fwe5f")
 
 [node name="Slice17" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(276, 8)
 scale = Vector2(0.4152831, 0.41877186)
-texture = ExtResource("8_7frtj")
+texture = ExtResource("10_psf4x")
 
 [node name="Slice18" type="Sprite2D" parent="Full logo/Logo Base"]
 position = Vector2(385.00003, 58.000004)
 scale = Vector2(0.4152831, 0.42053574)
-texture = ExtResource("9_y27hi")
+texture = ExtResource("11_cyh67")
 
 [node name="SequencerJuiceComp" type="Node" parent="Full logo/Logo Base"]
-script = ExtResource("10_orfff")
+script = ExtResource("12_hpo04")
 juice_source = 0
 target_scope = 0
 sequence_type = 0
@@ -250,7 +234,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://umlva67rt4ud"
 
 [node name="Transform2DJuiceComp" type="Node" parent="Full logo/Logo Base/SequencerJuiceComp"]
-script = ExtResource("11_r852d")
+script = ExtResource("13_e326j")
 from_reference = 0
 from_position_in = 3
 from_position = Vector2(0, -1)
@@ -276,45 +260,45 @@ metadata/_custom_type_script = "uid://cquadl5sa07sy"
 [node name="Slice3" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(-318, -69)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("10_2nye2")
+texture = ExtResource("14_oijp0")
 
 [node name="Slice4" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(-205, -9)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("11_o2e6s")
+texture = ExtResource("15_l1gd8")
 
 [node name="Slice5" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(-39, 8)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("12_7fq1n")
+texture = ExtResource("16_fn4bk")
 
 [node name="Slice6" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(82, -96)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("13_uaibf")
+texture = ExtResource("17_52l6i")
 
 [node name="Slice7" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(58, 7)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("14_g1way")
+texture = ExtResource("18_hhscl")
 
 [node name="Slice8" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(147, 0)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("15_hfiu5")
+texture = ExtResource("19_pxpi6")
 
 [node name="Slice9" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(277, 0)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("16_jlm4u")
+texture = ExtResource("20_p1l7c")
 
 [node name="Slice10" type="Sprite2D" parent="Full logo/Logo Letters"]
 position = Vector2(385, 50)
 scale = Vector2(1e-05, 1e-05)
-texture = ExtResource("17_tusjn")
+texture = ExtResource("21_r86x8")
 
 [node name="SequencerJuiceComp2" type="Node" parent="Full logo/Logo Letters"]
-script = ExtResource("10_orfff")
+script = ExtResource("12_hpo04")
 juice_source = 0
 target_scope = 0
 sequence_type = 0
@@ -337,7 +321,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://umlva67rt4ud"
 
 [node name="Transform2DJuiceComp" type="Node" parent="Full logo/Logo Letters/SequencerJuiceComp2"]
-script = ExtResource("11_r852d")
+script = ExtResource("13_e326j")
 transform_target = 2
 from_reference = 0
 from_scale = Vector2(0, 0)
@@ -360,7 +344,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://cquadl5sa07sy"
 
 [node name="Transform2DJuiceComp2" type="Node" parent="Full logo/Logo Letters/SequencerJuiceComp2"]
-script = ExtResource("11_r852d")
+script = ExtResource("13_e326j")
 transform_target = 1
 from_reference = 0
 from_rotation_degrees = -90.0
@@ -386,10 +370,10 @@ metadata/_custom_type_script = "uid://cquadl5sa07sy"
 modulate = Color(0.7773676, 0.09148217, 0.7297744, 1)
 position = Vector2(135, 72)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp" type="Node" parent="JuiceLogoSeparated2"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 color_from = Color(0.7773676, 0.09148217, 0.7297744, 1)
 color_to = Color(1, 0, 0, 0)
 animate_alpha = true
@@ -413,10 +397,10 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 modulate = Color(1, 0.31889278, 0, 1)
 position = Vector2(135, 162)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp2" type="Node" parent="JuiceLogoSeparated3"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 1
 overbright_intensity = 2.0
 overbright_color = Color(1, 0.5647059, 0, 1)
@@ -439,10 +423,10 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 material = SubResource("ShaderMaterial_7frtj")
 position = Vector2(613.7498, 290.375)
 scale = Vector2(0.21555723, 0.2155573)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp3" type="Node" parent="JuiceLogoSeparated4"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 2
 outline_color = Color(0, 0.48745775, 0.3118408, 1)
 outline_width = 12.5
@@ -466,10 +450,10 @@ modulate = Color(1, 1, 1, 0)
 material = SubResource("CanvasItemMaterial_y27hi")
 position = Vector2(135, 328)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp4" type="Node" parent="JuiceLogoSeparated5"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 3
 fade_target_alpha = 0.0
 use_blend_mode = false
@@ -491,10 +475,10 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 material = SubResource("CanvasItemMaterial_o2e6s")
 position = Vector2(135, 409)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp5" type="Node" parent="JuiceLogoSeparated6"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 4
 grayscale_strength = 1.0
 use_blend_mode = false
@@ -521,10 +505,10 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 material = SubResource("ShaderMaterial_7fq1n")
 position = Vector2(135, 497.99997)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp6" type="Node" parent="JuiceLogoSeparated7"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 5
 dissolve_texture = null
 dissolve_edge_color = Color(1, 0.5, 0, 1)
@@ -553,10 +537,10 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 material = SubResource("ShaderMaterial_y27hi")
 position = Vector2(135, 591)
 scale = Vector2(0.07817335, 0.07817337)
-texture = ExtResource("1_6a25c")
+texture = ExtResource("1_iyulo")
 
 [node name="Appearance2DJuiceComp7" type="Node" parent="JuiceLogoSeparated8"]
-script = ExtResource("3_8smnx")
+script = ExtResource("3_1d2vn")
 appearance_effect = 6
 overlay_color = Color(1, 0, 0, 1)
 use_blend_mode = false
@@ -576,11 +560,11 @@ metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
-theme = ExtResource("25_2nye2")
+theme = ExtResource("25_7x4o0")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme = ExtResource("25_2nye2")
+theme = ExtResource("25_7x4o0")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -595,6 +579,7 @@ alignment = 1
 [node name="VBoxContainer3" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.53
 alignment = 1
 
 [node name="Button" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
@@ -605,7 +590,7 @@ theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 6
 overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
 use_blend_mode = false
@@ -631,7 +616,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -667,7 +652,7 @@ theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 5
 dissolve_texture = SubResource("NoiseTexture2D_jlm4u")
 dissolve_edge_color = Color(1, 0.5, 0, 1)
@@ -695,7 +680,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -731,7 +716,7 @@ theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 4
 grayscale_strength = 1.0
 use_blend_mode = false
@@ -757,7 +742,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -793,7 +778,7 @@ theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 3
 fade_target_alpha = 0.38
 use_blend_mode = false
@@ -819,7 +804,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -852,7 +837,7 @@ size_flags_vertical = 3
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 2
 outline_color = Color(18.892157, 18.892157, 0, 1)
 outline_width = 5.5
@@ -879,7 +864,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -912,7 +897,7 @@ size_flags_vertical = 3
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 color_from = Color(1, 1, 1, 1)
 color_to = Color(1, 0, 0, 1)
 animate_alpha = false
@@ -941,7 +926,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -977,7 +962,7 @@ theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
 [node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
-script = ExtResource("26_o2e6s")
+script = ExtResource("27_ui13n")
 appearance_effect = 1
 overbright_intensity = 2.0
 overbright_color = Color(0.89374226, 0.76580065, 0, 1)
@@ -1005,7 +990,7 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://xi0dbseivd84"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
-script = ExtResource("27_7fq1n")
+script = ExtResource("28_4v3y5")
 transform_target = 2
 from_reference = 1
 capture_at = 0
@@ -1031,3 +1016,7 @@ next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="Button8" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
+layout_mode = 2
+text = "blank test"

@@ -1,0 +1,162 @@
+[gd_scene load_steps=7 format=3 uid="uid://wxj0yvr8y1o1"]
+
+[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_m8ohx"]
+[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_l1f61"]
+[ext_resource type="Script" uid="uid://baos8xhmoevi2" path="res://addons/juice/Utility/SceneActionJuiceUtility.gd" id="2_rsbi8"]
+[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_rsbi8"]
+
+[sub_resource type="Gradient" id="Gradient_8smnx"]
+interpolation_mode = 2
+colors = PackedColorArray(0.22556596, 0.30204913, 0.6691687, 1, 0.17467946, 0.2330068, 0.47322208, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fay60"]
+gradient = SubResource("Gradient_8smnx")
+fill = 1
+fill_from = Vector2(0.52136755, 0.48290598)
+
+[node name="MainDemoScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_m8ohx")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+texture = SubResource("GradientTexture2D_fay60")
+expand_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Menu" type="VBoxContainer" parent="MarginContainer/CenterContainer"]
+custom_minimum_size = Vector2(300, 500)
+layout_mode = 2
+alignment = 1
+
+[node name="Button" type="Button" parent="MarginContainer/CenterContainer/Menu"]
+layout_mode = 2
+text = "Control Demo"
+
+[node name="SceneActionJuiceUtility2" type="Node" parent="MarginContainer/CenterContainer/Menu/Button"]
+script = ExtResource("2_rsbi8")
+action = 3
+overlay_type = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://baos8xhmoevi2"
+
+[node name="Button2" type="Button" parent="MarginContainer/CenterContainer/Menu"]
+layout_mode = 2
+text = "2D Demo"
+
+[node name="Button3" type="Button" parent="MarginContainer/CenterContainer/Menu"]
+layout_mode = 2
+text = "3D Demo"
+
+[node name="Quit Button" type="Button" parent="MarginContainer/CenterContainer/Menu"]
+layout_mode = 2
+text = "Quit"
+
+[node name="SceneActionJuiceUtility" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit Button"]
+script = ExtResource("2_rsbi8")
+action = 3
+overlay_type = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://baos8xhmoevi2"
+
+[node name="SequencerJuiceComp" type="Node" parent="MarginContainer/CenterContainer/Menu"]
+script = ExtResource("2_l1f61")
+juice_source = 0
+target_scope = 0
+sequence_type = 0
+stagger_delay = 0.3
+mirror_stagger_on_exit = true
+skip_invisible = true
+skip_self = true
+skip_juice_components = true
+hide_parent_on_reverse_complete = false
+_editor_target_caches = {
+"../Button": {
+"position": Vector2(0, 130),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Button2": {
+"position": Vector2(0, 195),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Button3": {
+"position": Vector2(0, 260),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Quit Button": {
+"position": Vector2(0, 325),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+}
+}
+start_delay = 1.0
+trigger_on = 8
+duration_in = 0.0
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://umlva67rt4ud"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/CenterContainer/Menu/SequencerJuiceComp"]
+script = ExtResource("3_rsbi8")
+from_reference = 0
+from_position_in = 3
+from_position = Vector2(-1, 0)
+to_reference = 1
+capture_at = 2
+_editor_cached_position = Vector2(0, 0)
+_editor_cached_rotation = 0.0
+_editor_cached_scale = Vector2(1, 1)
+auto_connect_parent = false
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"

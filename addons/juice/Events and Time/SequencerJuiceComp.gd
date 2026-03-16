@@ -184,6 +184,14 @@ var _recipe_target_states: Dictionary = {}
 # pre-baked Self value, preventing the frame-0 flash.
 var _editor_target_caches: Dictionary = {}
 
+# Clones being "held" at a fixed progress (From/To state) every _process frame.
+# Needed for Control targets inside Containers: the Container layout re-sort
+# overrides one-shot position writes, so we must continuously enforce the
+# pre-positioned state until the target's real animation starts.
+# Each entry: {"target": Node, "clone": JuiceCompBase, "progress": float}
+var _held_entries: Array[Dictionary] = []
+
+
 # =============================================================================
 # INSPECTOR: CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
@@ -370,13 +378,44 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	# Call parent _ready() for standard juice setup
-	super._ready()
-	
-	# In SEQUENCERS_CHILDREN mode, cache our juice children as the "recipe"
+	# In SEQUENCERS_CHILDREN mode, cache recipe and queue warmup BEFORE
+	# super._ready(). super queues _handle_trigger as deferred — by queuing
+	# warmup first, the deferred call order becomes:
+	#   1. _warmup_recipe_targets  (creates clones + pre-positions at From)
+	#   2. _handle_trigger          (fires the sequence with start_delay/stagger)
+	# This ensures targets appear at their From state from the first frame,
+	# independent of trigger timing or start_delay.
 	if juice_source == JuiceSource.SEQUENCERS_CHILDREN:
 		_cache_recipe_juice()
 		call_deferred("_warmup_recipe_targets")
+	
+	# Call parent _ready() for standard juice setup (queues _handle_trigger)
+	super._ready()
+
+
+func _process(delta: float) -> void:
+	# Maintain held Control targets at their From/To state every frame.
+	# Container layout re-sorts override one-shot position writes, so we
+	# must continuously enforce the pre-positioned state until the target's
+	# real animation starts (animate_in/out via stagger).
+	for held in _held_entries:
+		var clone: JuiceCompBase = held.get("clone") as JuiceCompBase
+		if clone != null:
+			clone._apply_effect(held.get("progress", 0.0))
+
+	# No held entries left — disable processing to avoid wasted work.
+	# The base class _process is not needed (Sequencer's _apply_effect is a no-op).
+	if _held_entries.is_empty():
+		set_process(false)
+
+
+## Remove all held entries for a given target. Called when the target's
+## real animation starts (animate_in/out), so the hold loop stops enforcing
+## the From state and the animation takes over smoothly.
+func _release_held_entries_for_target(target: Node) -> void:
+	for i in range(_held_entries.size() - 1, -1, -1):
+		if _held_entries[i].get("target") == target:
+			_held_entries.remove_at(i)
 
 
 ## Cache juice component children to use as animation recipe (SEQUENCERS_CHILDREN mode)
@@ -433,6 +472,7 @@ func stop() -> void:
 	_pp_forward = true
 	_pp_current_cycle = 0
 	_seq_current_loop = 0
+	_held_entries.clear()
 	
 	if juice_source == JuiceSource.SEQUENCERS_CHILDREN:
 		# Stop all active clones across all targets.
@@ -791,6 +831,10 @@ func _animate_target_recipe(target: Node, is_reverse: bool) -> void:
 		if not tail.completed.is_connected(_on_recipe_tail_completed):
 			tail.completed.connect(_on_recipe_tail_completed)
 
+	# Release any held entries for this target — the real animation now takes over
+	# from the hold loop that was maintaining the From/To state every frame.
+	_release_held_entries_for_target(target)
+
 	for entry in entrypoints:
 		if is_reverse:
 			entry.animate_out()
@@ -881,8 +925,42 @@ func _warmup_recipe_targets() -> void:
 		return
 	var targets := _get_targets()
 	for target in targets:
-		if is_instance_valid(target):
-			_ensure_recipe_target_state(target)
+		if not is_instance_valid(target):
+			continue
+		var state := _ensure_recipe_target_state(target)
+
+		# Pre-position target at From state (progress 0.0) so it starts at the
+		# correct position from the very first rendered frame — independent of
+		# trigger timing, start_delay, or stagger. This only fires when naturals
+		# are already captured (editor cache path), which is the common case.
+		if not bool(state.get("naturals_captured", false)):
+			continue
+		var entrypoints: Array[JuiceCompBase] = state.get("entrypoints", []) as Array[JuiceCompBase]
+		for entry in entrypoints:
+			if entry._target_node != target:
+				entry._target_node = target
+				entry._invalidate_base_cache()
+			entry._on_animate_start()
+			entry._apply_effect(0.0)
+
+			# Control targets inside Containers need continuous hold: the Container
+			# layout system re-sorts children every frame, overriding one-shot
+			# position writes. We register held entries so _process re-applies
+			# the From state each frame until animate_in() takes over.
+			# 2D/3D targets have no Container management — one-shot is sufficient.
+			if target is Control:
+				_held_entries.append({
+					"target": target,
+					"clone": entry,
+					"progress": 0.0
+				})
+
+	# Enable _process to maintain held positions (beats Container re-sorts)
+	if not _held_entries.is_empty():
+		set_process(true)
+
+	if debug_enabled:
+		print("[%s] Warmup: %d targets, %d held entries (Control)" % [name, targets.size(), _held_entries.size()])
 
 
 func _ensure_recipe_target_state(target: Node) -> Dictionary:
@@ -932,11 +1010,8 @@ func _build_recipe_clones_for_target(target: Node, state: Dictionary) -> void:
 		clone.auto_connect_parent = false
 		clone.interrupt_siblings = false
 
-		add_child(clone)
-
-		# Inject per-target editor cache for IN_EDITOR capture mode.
-		# The clone inherited the template's (empty) cache; overwrite with
-		# the Sequencer's per-target cache so each clone gets the correct value.
+		# Inject per-target editor cache BEFORE add_child so clone._ready()
+		# has cached values available if needed.
 		if not _editor_target_caches.is_empty() and clone.has_method("_inject_editor_cache"):
 			var key := _editor_cache_key(target)
 			var cache: Dictionary = _editor_target_caches.get(key, {})
@@ -945,9 +1020,30 @@ func _build_recipe_clones_for_target(target: Node, state: Dictionary) -> void:
 				if debug_enabled:
 					print("[%s] Injected editor cache for target '%s' into clone '%s'" % [name, target.name, clone.name])
 
+		add_child(clone)
+
 		template_to_clone[template] = clone
 
 	state["template_to_clone"] = template_to_clone
+
+	# When editor caches exist, pre-populate naturals from the cache so
+	# _ensure_recipe_naturals_captured skips its 2-frame await. This is
+	# critical: the force-first-frame call in JuiceCompBase._animate_to()
+	# positions the target at From on the same deferred flush. If we waited
+	# 2 frames for natural capture, the target would be visible at its
+	# natural position during those frames — the exact frame-0 flash we
+	# want to prevent.
+	if not _editor_target_caches.is_empty():
+		var key := _editor_cache_key(target)
+		var cache: Dictionary = _editor_target_caches.get(key, {})
+		if not cache.is_empty():
+			var natural_by_template: Dictionary = state.get("natural_by_template") as Dictionary
+			for template in _recipe_juice:
+				natural_by_template[template] = cache
+			state["natural_by_template"] = natural_by_template
+			state["naturals_captured"] = true
+			if debug_enabled:
+				print("[%s] Pre-populated naturals from editor cache for target '%s'" % [name, target.name])
 
 
 func _capture_and_apply_recipe_natural(target: Node, state: Dictionary) -> void:
@@ -1109,6 +1205,19 @@ func _cache_target_transform(target: Node) -> Dictionary:
 	return cache
 
 
+## Returns true if any recipe child has a CUSTOM from_reference (value 0).
+## Used by configuration warnings to detect potential sibling conflicts.
+## Duck-typed: reads `from_reference` property if it exists on the child.
+func _has_custom_from_recipe() -> bool:
+	for child in get_children():
+		if child is JuiceCompBase:
+			var from_ref = child.get("from_reference")
+			# CUSTOM = 0 in all TransformReference enums (Control, 2D, 3D)
+			if from_ref != null and from_ref == 0:
+				return true
+	return false
+
+
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	
@@ -1127,5 +1236,26 @@ func _get_configuration_warnings() -> PackedStringArray:
 	
 	if juice_source == JuiceSource.TARGETS_STACK and stack_name.is_empty():
 		warnings.append("Target's Stack mode requires a Stack Name to identify the juice container on each target.")
+	
+	# Warn if a sibling Sequencer also targets overlapping nodes with CUSTOM From
+	# on the same transform property. Both would pre-position at _ready, and the
+	# last one to run "wins" — producing unpredictable initial state.
+	if juice_source == JuiceSource.SEQUENCERS_CHILDREN and _has_custom_from_recipe():
+		var parent := get_parent()
+		if parent != null:
+			for sibling in parent.get_children():
+				if sibling == self or not (sibling is SequencerJuiceComp):
+					continue
+				var sib_seq := sibling as SequencerJuiceComp
+				if sib_seq.juice_source != JuiceSource.SEQUENCERS_CHILDREN:
+					continue
+				if not sib_seq._has_custom_from_recipe():
+					continue
+				warnings.append(
+					"Sibling Sequencer '%s' also uses SEQUENCERS_CHILDREN with a CUSTOM From recipe. " % sibling.name +
+					"If both target overlapping nodes on the same transform property, only one can " +
+					"correctly pre-position targets at scene start."
+				)
+				break  # One warning is enough
 	
 	return warnings
