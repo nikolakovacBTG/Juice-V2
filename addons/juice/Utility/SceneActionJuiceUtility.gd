@@ -38,8 +38,8 @@
 #   SWITCH_SCENE (THIS_SCENE mode):
 #     Creates _JuiceTransitionHandler on tree root (survives scene destruction).
 #     Handler manages cover → action → reveal → self-destruct.
-#   SWITCH_SCENE (CHILD_NODE mode):
-#     Swaps a child node in the scene tree with a new PackedScene instance.
+#   SWITCH_SCENE (SCENE_IN_TREE mode):
+#     Swaps a scene node in the tree with a new PackedScene instance.
 #     Utility survives (main scene persists). Manages transition inline.
 #     Use case: persistent HUD with swappable content areas (2D/3D levels).
 #   OVERLAY_SCENE:
@@ -87,17 +87,17 @@ enum TransitionOverlay {
 	SCENE,           ## Custom animated transition scene (user-provided PackedScene)
 }
 
-## How SWITCH_SCENE resolves the "From" scene.
-enum SwitchMode {
-	THIS_SCENE,      ## Replace the entire current scene tree (change_scene_to_packed)
-	CHILD_NODE,      ## Swap a specific child node with a new scene instance
+## Where to switch from when action is SWITCH_SCENE.
+enum SwitchFrom {
+	THIS_SCENE,      ## Replaces the entire current scene tree (full scene change)
+	SCENE_IN_TREE,   ## Swaps a specific scene node in the tree with the To scene
 }
 
-## What to do with the old child node when swapping (CHILD_NODE mode only).
-enum OldNodeAction {
-	FREE,            ## queue_free() — destroy the old node permanently
-	HIDE,            ## Set visible=false + process_mode=DISABLED — stays in tree
-	REMOVE_FROM_TREE,## remove_child() — removed from tree, utility holds reference
+## What happens to the old scene after the switch (Scene In Tree mode only).
+enum OldScenePostSwitchAction {
+	FREE,            ## Permanently destroys the old scene. Cannot be recovered.
+	HIDE,            ## Keeps the old scene in the tree but invisible and paused. Useful for quick tab-switching.
+	REMOVE_FROM_TREE,## Detaches the old scene from the tree. The utility holds a reference; the scene can be re-added later.
 }
 
 
@@ -114,27 +114,27 @@ enum OldNodeAction {
 		notify_property_list_changed()
 		update_configuration_warnings()
 
-## The target scene to switch to or overlay. Drag a .tscn file here.
-## Only used for SWITCH_SCENE and OVERLAY_SCENE actions.
-var target_scene: PackedScene = null
+## The scene to switch to or overlay. Drag a .tscn file here.
+## Used by SWITCH_SCENE and OVERLAY_SCENE actions.
+var to: PackedScene = null
 
-## How to resolve the From scene (SWITCH_SCENE only).
-## THIS_SCENE = full tree replacement (current behavior).
-## CHILD_NODE = swap a specific child node with target_scene.
-var switch_mode: int = SwitchMode.THIS_SCENE:
+## Where to switch from (SWITCH_SCENE only).
+## "This Scene" replaces the entire scene tree.
+## "Scene In Tree" swaps a specific node, leaving the rest of the scene intact.
+var from: int = SwitchFrom.THIS_SCENE:
 	set(value):
-		switch_mode = value
+		from = value
 		notify_property_list_changed()
 		update_configuration_warnings()
 
-## Path to the child node to replace (CHILD_NODE mode only).
-## Drag a node from the Scene panel into this field.
-var from_node: NodePath = NodePath()
+## Path to the scene node to replace. Drag a node from the Scene panel.
+## Only used when From is set to "Scene In Tree".
+var switch_from: NodePath = NodePath()
 
-## What to do with the old child node after swapping (CHILD_NODE mode only).
-var old_node_action: int = OldNodeAction.FREE:
+## What happens to the old scene after the switch (Scene In Tree mode only).
+var old_scene_post_switch_action: int = OldScenePostSwitchAction.FREE:
 	set(value):
-		old_node_action = value
+		old_scene_post_switch_action = value
 		notify_property_list_changed()
 
 
@@ -247,7 +247,7 @@ var _transition_canvas: CanvasLayer = null
 ## Used to abort stale coroutines after awaits.
 var _generation: int = 0
 
-## Holds nodes removed via OldNodeAction.REMOVE_FROM_TREE, keyed by NodePath.
+## Holds scenes removed via OldScenePostSwitchAction.REMOVE_FROM_TREE, keyed by path.
 ## These become orphans if the utility is freed — _notification(PREDELETE)
 ## frees them as a safety net.
 var _removed_nodes: Dictionary = {}
@@ -335,7 +335,7 @@ func stop() -> void:
 	# Clean up any active overlay
 	_cleanup_overlay()
 
-	# Release references to removed nodes (CHILD_NODE mode).
+	# Release references to removed scenes (Scene In Tree mode).
 	# Note: this does NOT re-add or free them — they become truly orphaned.
 	# A full scene manager would handle re-insertion; this utility does not.
 	_removed_nodes.clear()
@@ -362,12 +362,12 @@ static func remove_active_overlay() -> void:
 # DESTRUCTIVE ACTIONS (SWITCH / RELOAD / QUIT)
 # =============================================================================
 
-## Routes to the correct execution path based on switch_mode.
-## CHILD_NODE: utility survives the swap, manages transition inline.
+## Routes to the correct execution path based on the From setting.
+## SCENE_IN_TREE: utility survives the swap, manages transition inline.
 ## THIS_SCENE (and RELOAD/QUIT): creates handler on root that survives scene death.
 func _execute_destructive_action() -> void:
-	# CHILD_NODE mode: utility survives, manage transition inline (no handler needed)
-	if action == SceneAction.SWITCH_SCENE and switch_mode == SwitchMode.CHILD_NODE:
+	# SCENE_IN_TREE mode: utility survives, manage transition inline (no handler needed)
+	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
 		await _execute_child_swap()
 		return
 
@@ -383,7 +383,7 @@ func _execute_destructive_action() -> void:
 	# Create handler on tree root
 	var handler := _TransitionHandler.new()
 	handler.scene_action = action
-	handler.target_scene = target_scene
+	handler.target_scene = to
 	handler.overlay_type = overlay_type
 	handler.overlay_color = overlay_color
 	handler.overlay_image = overlay_image
@@ -422,10 +422,10 @@ func _perform_direct_action() -> void:
 	# Direct scene action for NONE overlay type (no handler)
 	match action:
 		SceneAction.SWITCH_SCENE:
-			if target_scene == null:
-				push_error("[%s] Cannot switch — target_scene is null" % name)
+			if to == null:
+				push_error("[%s] Cannot switch — to scene is null" % name)
 				return
-			get_tree().change_scene_to_packed(target_scene)
+			get_tree().change_scene_to_packed(to)
 		SceneAction.RELOAD_SCENE:
 			get_tree().reload_current_scene()
 		SceneAction.QUIT_GAME:
@@ -444,34 +444,34 @@ func _on_handler_completed() -> void:
 
 
 # =============================================================================
-# CHILD NODE SWAP (SWITCH_SCENE + CHILD_NODE mode)
+# SCENE IN TREE SWAP (SWITCH_SCENE + SCENE_IN_TREE mode)
 # =============================================================================
 
-## Swap a child node with a new scene instance. The utility survives because
-## the main scene persists — no handler needed. Manages transition inline,
+## Swap a scene node in the tree with a new scene instance. The utility survives
+## because the main scene persists — no handler needed. Manages transition inline,
 ## reusing the same overlay cover/reveal helpers as OVERLAY_SCENE.
 func _execute_child_swap() -> void:
 	var my_gen := _generation
 
-	# Resolve from_node to an actual Node reference
-	var from := get_node_or_null(from_node)
-	if from == null:
-		push_error("[%s] Cannot swap — from_node '%s' not found" % [name, from_node])
+	# Resolve switch_from to an actual Node reference
+	var from_scene := get_node_or_null(switch_from)
+	if from_scene == null:
+		push_error("[%s] Cannot swap — switch_from '%s' not found" % [name, switch_from])
 		_is_transitioning = false
 		_is_playing = false
 		completed.emit()
 		return
 
 	# Safety: swapping an ancestor of this utility would destroy us
-	if from.is_ancestor_of(self):
-		push_error("[%s] Cannot swap — from_node '%s' is an ancestor of this utility" % [name, from_node])
+	if from_scene.is_ancestor_of(self):
+		push_error("[%s] Cannot swap — switch_from '%s' is an ancestor of this utility" % [name, switch_from])
 		_is_transitioning = false
 		_is_playing = false
 		completed.emit()
 		return
 
-	if target_scene == null:
-		push_error("[%s] Cannot swap — target_scene is null" % name)
+	if to == null:
+		push_error("[%s] Cannot swap — to scene is null" % name)
 		_is_transitioning = false
 		_is_playing = false
 		completed.emit()
@@ -483,30 +483,30 @@ func _execute_child_swap() -> void:
 		if _generation != my_gen:
 			return
 
-	# Phase 2: Capture position in parent before removing old node
-	var parent := from.get_parent()
-	var child_index := from.get_index()
+	# Phase 2: Capture position in parent before removing old scene
+	var parent := from_scene.get_parent()
+	var child_index := from_scene.get_index()
 
-	# Phase 3: Handle old node per old_node_action
-	match old_node_action:
-		OldNodeAction.FREE:
-			from.queue_free()
-		OldNodeAction.HIDE:
-			from.visible = false
-			from.process_mode = Node.PROCESS_MODE_DISABLED
-		OldNodeAction.REMOVE_FROM_TREE:
-			parent.remove_child(from)
-			_removed_nodes[from_node] = from
+	# Phase 3: Handle old scene per old_scene_post_switch_action
+	match old_scene_post_switch_action:
+		OldScenePostSwitchAction.FREE:
+			from_scene.queue_free()
+		OldScenePostSwitchAction.HIDE:
+			from_scene.visible = false
+			from_scene.process_mode = Node.PROCESS_MODE_DISABLED
+		OldScenePostSwitchAction.REMOVE_FROM_TREE:
+			parent.remove_child(from_scene)
+			_removed_nodes[switch_from] = from_scene
 
-	# Phase 4: Instance target scene and insert at the same position
-	var new_instance := target_scene.instantiate()
+	# Phase 4: Instance To scene and insert at the same position
+	var new_instance := to.instantiate()
 	parent.add_child(new_instance)
 	parent.move_child(new_instance, child_index)
 
 	if debug_enabled:
-		print("[%s] Child swap: '%s' → '%s' (old_action=%s)" % [
-			name, from.name, new_instance.name,
-			OldNodeAction.keys()[old_node_action]])
+		print("[%s] Scene swap: '%s' → '%s' (old_action=%s)" % [
+			name, from_scene.name, new_instance.name,
+			OldScenePostSwitchAction.keys()[old_scene_post_switch_action]])
 
 	action_executed.emit()
 
@@ -524,8 +524,8 @@ func _execute_child_swap() -> void:
 	_trigger_next_component()
 
 
-## Safety net: free any removed nodes when this utility is destroyed.
-## Without this, nodes stored via OldNodeAction.REMOVE_FROM_TREE would leak.
+## Safety net: free any removed scenes when this utility is destroyed.
+## Without this, scenes stored via OldScenePostSwitchAction.REMOVE_FROM_TREE would leak.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
 		for key in _removed_nodes.keys():
@@ -547,8 +547,8 @@ func _show_overlay() -> void:
 		await _play_overlay_cover()
 
 	# Phase 2: Instance target scene on CanvasLayer
-	if target_scene == null:
-		push_error("[%s] Cannot overlay — target_scene is null" % name)
+	if to == null:
+		push_error("[%s] Cannot overlay — to scene is null" % name)
 		_is_transitioning = false
 		_is_playing = false
 		return
@@ -559,7 +559,7 @@ func _show_overlay() -> void:
 	_active_canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().root.add_child(_active_canvas_layer)
 
-	_active_overlay_instance = target_scene.instantiate()
+	_active_overlay_instance = to.instantiate()
 	_active_overlay_instance.process_mode = Node.PROCESS_MODE_ALWAYS
 	_active_canvas_layer.add_child(_active_overlay_instance)
 
@@ -845,37 +845,40 @@ func _get_property_list() -> Array[Dictionary]:
 	# --- Scene Action group ---
 	# (action is @export, so it's shown automatically)
 
-	# SWITCH_SCENE: show switch_mode and conditional child-swap properties
+	# SWITCH_SCENE: show From enum and conditional Scene In Tree properties
 	if action == SceneAction.SWITCH_SCENE:
 		props.append({
-			"name": "switch_mode",
+			"name": "from",
 			"type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "This Scene,Child Node",
+			"hint_string": "This Scene,Scene In Tree",
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
 
-		if switch_mode == SwitchMode.CHILD_NODE:
+		if from == SwitchFrom.SCENE_IN_TREE:
 			props.append({
-				"name": "from_node",
+				"name": "switch_from",
 				"type": TYPE_NODE_PATH,
 				"usage": PROPERTY_USAGE_DEFAULT,
 			})
-			props.append({
-				"name": "old_node_action",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Free,Hide,Remove From Tree",
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
 
-	# target_scene: only for SWITCH_SCENE and OVERLAY_SCENE
+	# to: only for SWITCH_SCENE and OVERLAY_SCENE
 	if action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE:
 		props.append({
-			"name": "target_scene",
+			"name": "to",
 			"type": TYPE_OBJECT,
 			"hint": PROPERTY_HINT_RESOURCE_TYPE,
 			"hint_string": "PackedScene",
+			"usage": PROPERTY_USAGE_DEFAULT,
+		})
+
+	# old_scene_post_switch_action: at end of Scene Action group (Scene In Tree only)
+	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
+		props.append({
+			"name": "old_scene_post_switch_action",
+			"type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Free,Hide,Remove From Tree",
 			"usage": PROPERTY_USAGE_DEFAULT,
 		})
 
@@ -1034,16 +1037,16 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		# Scene Action
-		&"switch_mode": switch_mode = value; return true
-		&"from_node":
-			from_node = value
+		&"from": from = value; return true
+		&"switch_from":
+			switch_from = value
 			update_configuration_warnings()
 			return true
-		&"old_node_action": old_node_action = value; return true
-		&"target_scene":
-			target_scene = value
+		&"to":
+			to = value
 			update_configuration_warnings()
 			return true
+		&"old_scene_post_switch_action": old_scene_post_switch_action = value; return true
 		# Overlay Behavior
 		&"overlay_canvas_layer": overlay_canvas_layer = value; return true
 		&"use_time_effect": use_time_effect = value; return true
@@ -1074,10 +1077,10 @@ func _set(property: StringName, value: Variant) -> bool:
 func _get(property: StringName) -> Variant:
 	match property:
 		# Scene Action
-		&"switch_mode": return switch_mode
-		&"from_node": return from_node
-		&"old_node_action": return old_node_action
-		&"target_scene": return target_scene
+		&"from": return from
+		&"switch_from": return switch_from
+		&"to": return to
+		&"old_scene_post_switch_action": return old_scene_post_switch_action
 		# Overlay Behavior
 		&"overlay_canvas_layer": return overlay_canvas_layer
 		&"use_time_effect": return use_time_effect
@@ -1105,20 +1108,20 @@ func _get(property: StringName) -> Variant:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 
-	# Target scene required for SWITCH and OVERLAY actions
+	# To scene required for SWITCH and OVERLAY actions
 	if (action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE) \
-			and target_scene == null:
-		warnings.append("target_scene is not set. No scene will be loaded.")
+			and to == null:
+		warnings.append("To scene is not set. No scene will be loaded.")
 
-	# CHILD_NODE mode: from_node must be set
-	if action == SceneAction.SWITCH_SCENE and switch_mode == SwitchMode.CHILD_NODE:
-		if from_node.is_empty():
-			warnings.append("CHILD_NODE mode requires from_node to be set. Drag a node from the Scene panel.")
+	# SCENE_IN_TREE mode: switch_from must be set
+	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
+		if switch_from.is_empty():
+			warnings.append("Scene In Tree mode requires Switch From to be set. Drag a node from the Scene panel.")
 		else:
-			# Check if from_node is an ancestor of this utility (would destroy us)
-			var from := get_node_or_null(from_node)
-			if from != null and from.is_ancestor_of(self):
-				warnings.append("from_node '%s' is an ancestor of this utility. Swapping it would destroy this node." % from_node)
+			# Check if switch_from is an ancestor of this utility (would destroy us)
+			var from_scene := get_node_or_null(switch_from)
+			if from_scene != null and from_scene.is_ancestor_of(self):
+				warnings.append("Switch From '%s' is an ancestor of this utility. Swapping it would destroy this node." % switch_from)
 
 	# Transition scene required for SCENE overlay type
 	if overlay_type == TransitionOverlay.SCENE and transition_scene == null:
