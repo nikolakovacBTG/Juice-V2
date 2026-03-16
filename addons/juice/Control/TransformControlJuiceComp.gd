@@ -978,6 +978,27 @@ func _update_editor_cache() -> void:
 			name, _editor_cached_position, rad_to_deg(_editor_cached_rotation), _editor_cached_scale])
 
 
+## Returns true if this component uses IN_EDITOR capture with a SELF reference.
+## Used by SequencerJuiceComp to decide whether to cache per-target transforms.
+func _needs_editor_cache_injection() -> bool:
+	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
+	return uses_self and capture_at == CaptureAt.IN_EDITOR
+
+
+## Inject per-target editor-cached transform values from the Sequencer.
+## Called by SequencerJuiceComp when it clones this recipe onto a target.
+func _inject_editor_cache(cache: Dictionary) -> void:
+	if cache.has("position"):
+		_editor_cached_position = cache["position"]
+	if cache.has("rotation"):
+		_editor_cached_rotation = cache["rotation"]
+	if cache.has("scale"):
+		_editor_cached_scale = cache["scale"]
+	if debug_enabled:
+		print("[%s] Editor cache injected by Sequencer: pos=%s, rot=%.1f°, scale=%s" % [
+			name, _editor_cached_position, rad_to_deg(_editor_cached_rotation), _editor_cached_scale])
+
+
 # =============================================================================
 # BASE CAPTURE
 # =============================================================================
@@ -1109,9 +1130,13 @@ func _recipe_restore_natural(target: Node, natural: Variant) -> void:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	var parent := get_parent()
-	if parent and not parent is Control:
-		warnings.append("Parent must be a Control node. Use Transform2D/Transform3D for other domains. (ignore if comp is a child of a sequencer)")
+	if parent and not parent is Control and not parent is SequencerJuiceComp:
+		warnings.append("Parent must be a Control node (or a SequencerJuiceComp). Use Transform2D/Transform3D for other domains.")
 	# From/To: warn if both reference Self (no visible effect)
 	if from_reference == TransformReference.SELF and to_reference == TransformReference.SELF:
 		warnings.append("Both From and To reference Self — animation will have no visible effect.")
+	# IN_EDITOR cache warning: parent must be Control or Sequencer
+	if _needs_editor_cache_injection():
+		if parent and not parent is Control and not parent is SequencerJuiceComp:
+			warnings.append("IN_EDITOR capture: parent is not a Control or Sequencer. Editor cache will be empty — Self values will default to zero.")
 	return warnings

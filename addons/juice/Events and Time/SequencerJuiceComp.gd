@@ -178,6 +178,12 @@ var _seq_initial_reverse: bool = false
 ## - tails: Array[JuiceCompBase] (last internal clone in each root chain)
 var _recipe_target_states: Dictionary = {}
 
+# --- EDITOR CACHE for IN_EDITOR capture mode (SEQUENCERS_CHILDREN only) ---
+# Stores per-target transforms at editor time, keyed by relative node path.
+# The Sequencer injects these into recipe clones so each target gets its own
+# pre-baked Self value, preventing the frame-0 flash.
+var _editor_target_caches: Dictionary = {}
+
 # =============================================================================
 # INSPECTOR: CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
@@ -265,6 +271,11 @@ func _get_property_list() -> Array[Dictionary]:
 	
 	props.append({"name": "hide_parent_on_reverse_complete", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	
+	# Editor target caches — serialized (STORAGE only) when non-empty
+	if not _editor_target_caches.is_empty():
+		props.append({"name": "_editor_target_caches", "type": TYPE_DICTIONARY,
+			"usage": PROPERTY_USAGE_STORAGE})
+	
 	return props
 
 
@@ -308,6 +319,10 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"hide_parent_on_reverse_complete":
 			hide_parent_on_reverse_complete = bool(value) if value != null else false
 			return true
+		# Editor target caches (deserialization)
+		&"_editor_target_caches":
+			_editor_target_caches = value if value is Dictionary else {}
+			return true
 	return false
 
 
@@ -339,11 +354,20 @@ func _get(property: StringName) -> Variant:
 		# --- Completion Actions group ---
 		&"hide_parent_on_reverse_complete":
 			return hide_parent_on_reverse_complete
+		&"_editor_target_caches":
+			return _editor_target_caches
 	return null
 
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
+
+func _notification(what: int) -> void:
+	# Bake per-target transforms into editor cache right before the scene is saved.
+	# This ensures IN_EDITOR Self values are fresh for all Sequencer targets.
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		_update_editor_target_caches()
+
 
 func _ready() -> void:
 	# Call parent _ready() for standard juice setup
@@ -909,6 +933,18 @@ func _build_recipe_clones_for_target(target: Node, state: Dictionary) -> void:
 		clone.interrupt_siblings = false
 
 		add_child(clone)
+
+		# Inject per-target editor cache for IN_EDITOR capture mode.
+		# The clone inherited the template's (empty) cache; overwrite with
+		# the Sequencer's per-target cache so each clone gets the correct value.
+		if not _editor_target_caches.is_empty() and clone.has_method("_inject_editor_cache"):
+			var key := _editor_cache_key(target)
+			var cache: Dictionary = _editor_target_caches.get(key, {})
+			if not cache.is_empty():
+				clone._inject_editor_cache(cache)
+				if debug_enabled:
+					print("[%s] Injected editor cache for target '%s' into clone '%s'" % [name, target.name, clone.name])
+
 		template_to_clone[template] = clone
 
 	state["template_to_clone"] = template_to_clone
@@ -1011,6 +1047,66 @@ func _follow_recipe_chain_tail(start: JuiceCompBase, template_to_clone: Dictiona
 
 func _apply_effect(_progress: float) -> void:
 	pass  # Sequencer doesn't use _process-based animation
+
+
+# =============================================================================
+# EDITOR TARGET CACHE (IN_EDITOR capture support for SEQUENCERS_CHILDREN)
+# =============================================================================
+
+## Update the per-target editor cache. Called on NOTIFICATION_EDITOR_PRE_SAVE.
+## Only caches when juice_source == SEQUENCERS_CHILDREN and at least one
+## recipe child uses IN_EDITOR capture with a SELF reference.
+func _update_editor_target_caches() -> void:
+	if not Engine.is_editor_hint():
+		return
+	if juice_source != JuiceSource.SEQUENCERS_CHILDREN:
+		_editor_target_caches.clear()
+		return
+	if not _any_recipe_child_needs_editor_cache():
+		_editor_target_caches.clear()
+		return
+
+	var targets := _get_targets()
+	var new_caches: Dictionary = {}
+	for target in targets:
+		var key := _editor_cache_key(target)
+		var cache := _cache_target_transform(target)
+		if not cache.is_empty():
+			new_caches[key] = cache
+	_editor_target_caches = new_caches
+
+	if debug_enabled:
+		print("[%s] Editor target caches updated: %d targets" % [name, new_caches.size()])
+
+
+## Check if any recipe child (direct JuiceCompBase child) needs IN_EDITOR cache injection.
+func _any_recipe_child_needs_editor_cache() -> bool:
+	for child in get_children():
+		if child is JuiceCompBase and child.has_method("_needs_editor_cache_injection"):
+			if child._needs_editor_cache_injection():
+				return true
+	return false
+
+
+## Generate a stable key for a target node (relative path from this Sequencer).
+func _editor_cache_key(target: Node) -> String:
+	return str(get_path_to(target))
+
+
+## Read a target's transform properties into a Dictionary for caching.
+## Works for Control, Node2D, and Node3D targets.
+func _cache_target_transform(target: Node) -> Dictionary:
+	var pos = target.get("position")
+	var rot = target.get("rotation")
+	var scl = target.get("scale")
+	var cache := {}
+	if pos != null:
+		cache["position"] = pos
+	if rot != null:
+		cache["rotation"] = rot
+	if scl != null:
+		cache["scale"] = scl
+	return cache
 
 
 func _get_configuration_warnings() -> PackedStringArray:
