@@ -93,6 +93,7 @@ enum TransitionOverlay {
 	set(value):
 		action = value
 		notify_property_list_changed()
+		update_configuration_warnings()
 
 ## The target scene to switch to or overlay. Drag a .tscn file here.
 ## Only used for SWITCH_SCENE and OVERLAY_SCENE actions.
@@ -862,7 +863,10 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		# Scene Action
-		&"target_scene": target_scene = value; return true
+		&"target_scene":
+			target_scene = value
+			update_configuration_warnings()
+			return true
 		# Overlay Behavior
 		&"overlay_canvas_layer": overlay_canvas_layer = value; return true
 		&"use_time_effect": use_time_effect = value; return true
@@ -872,11 +876,18 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"time_freeze_frames": time_freeze_frames = value; return true
 		&"time_exempt_nodes": time_exempt_nodes = value; return true
 		# Transition
-		&"overlay_type": overlay_type = value; return true
+		&"overlay_type":
+			overlay_type = value
+			notify_property_list_changed()
+			update_configuration_warnings()
+			return true
 		&"overlay_color": overlay_color = value; return true
 		&"overlay_image": overlay_image = value; return true
 		&"overlay_blend_mode": overlay_blend_mode = value; return true
-		&"transition_scene": transition_scene = value; return true
+		&"transition_scene":
+			transition_scene = value
+			update_configuration_warnings()
+			return true
 		&"use_scene_timing": use_scene_timing = value; return true
 		&"fallback_cover_duration": fallback_cover_duration = value; return true
 		&"fallback_reveal_duration": fallback_reveal_duration = value; return true

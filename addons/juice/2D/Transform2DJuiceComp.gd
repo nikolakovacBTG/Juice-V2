@@ -102,8 +102,9 @@ enum PositionIn {
 
 ## When to capture Self's transform value
 enum CaptureAt {
-	TRIGGER,  ## Capture when animation starts (default)
-	READY     ## Capture when scene loads / _ready()
+	TRIGGER,    ## Capture when animation starts (default)
+	READY,      ## Capture when scene loads / _ready()
+	IN_EDITOR   ## WYSIWYG — bake editor-time value into the scene file
 }
 
 # =============================================================================
@@ -143,7 +144,18 @@ var from_target_node: NodePath
 ## Target node for To reference (shown when to_reference == TARGET_NODE)
 var to_target_node: NodePath
 ## When to capture Self's transform value (shown when reference == SELF)
-var capture_at: int = CaptureAt.TRIGGER
+var capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		capture_at = value
+		# Clear editor cache when leaving IN_EDITOR to keep .tscn clean
+		if value != CaptureAt.IN_EDITOR:
+			_editor_cached_position = Vector2.ZERO
+			_editor_cached_rotation = 0.0
+			_editor_cached_scale = Vector2.ONE
+		# Capture immediately when entering IN_EDITOR in the editor
+		elif Engine.is_editor_hint():
+			_update_editor_cache()
+		notify_property_list_changed()
 
 # --- SCALE (From/To model) ---
 ## Custom From scale value (shown when from_reference == CUSTOM)
@@ -158,6 +170,13 @@ var pivot_mode: int = PivotMode.AUTO_CENTER:
 		notify_property_list_changed()
 ## Custom pivot in local-space coordinates (pixels)
 var custom_pivot: Vector2 = Vector2.ZERO
+
+# --- EDITOR CACHE (serialized only when capture_at == IN_EDITOR) ---
+# These store the parent's transform at editor time so the runtime can use
+# pre-baked values without a frame-0 flash.
+var _editor_cached_position: Vector2 = Vector2.ZERO
+var _editor_cached_rotation: float = 0.0
+var _editor_cached_scale: Vector2 = Vector2.ONE
 
 # =============================================================================
 # INTERNAL STATE
@@ -219,6 +238,17 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append_array(_get_scale_from_to_properties())
 			props.append_array(_get_pivot_properties())
 
+	# Editor cache — serialized (STORAGE only) when IN_EDITOR is active so the
+	# baked value survives save/load. Hidden from inspector.
+	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
+	if uses_self and capture_at == CaptureAt.IN_EDITOR:
+		props.append({"name": "_editor_cached_position", "type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_STORAGE})
+		props.append({"name": "_editor_cached_rotation", "type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_STORAGE})
+		props.append({"name": "_editor_cached_scale", "type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_STORAGE})
+
 	return props
 
 
@@ -255,7 +285,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif from_reference == TransformReference.TARGET_NODE:
 		pos_props.append({
@@ -295,7 +325,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif to_reference == TransformReference.TARGET_NODE:
 		pos_props.append({
@@ -335,7 +365,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif from_reference == TransformReference.TARGET_NODE:
 		rot_props.append({
@@ -368,7 +398,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif to_reference == TransformReference.TARGET_NODE:
 		rot_props.append({
@@ -408,7 +438,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif from_reference == TransformReference.TARGET_NODE:
 		scale_props.append({
@@ -441,7 +471,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready",
+			"hint_string": "Trigger,Ready,In Editor",
 		})
 	elif to_reference == TransformReference.TARGET_NODE:
 		scale_props.append({
@@ -499,6 +529,10 @@ func _set(property: StringName, value: Variant) -> bool:
 		# Pivot
 		&"pivot_mode": pivot_mode = value; return true
 		&"custom_pivot": custom_pivot = value; return true
+		# Editor cache (always handle for deserialization even when not in property list)
+		&"_editor_cached_position": _editor_cached_position = value; return true
+		&"_editor_cached_rotation": _editor_cached_rotation = value; return true
+		&"_editor_cached_scale": _editor_cached_scale = value; return true
 	return false
 
 
@@ -524,6 +558,10 @@ func _get(property: StringName) -> Variant:
 		# Pivot
 		&"pivot_mode": return pivot_mode
 		&"custom_pivot": return custom_pivot
+		# Editor cache
+		&"_editor_cached_position": return _editor_cached_position
+		&"_editor_cached_rotation": return _editor_cached_rotation
+		&"_editor_cached_scale": return _editor_cached_scale
 	return null
 
 
@@ -531,13 +569,30 @@ func _get(property: StringName) -> Variant:
 # LIFECYCLE OVERRIDES
 # =============================================================================
 
+func _notification(what: int) -> void:
+	# Bake parent's transform into editor cache right before the scene is saved.
+	# This ensures IN_EDITOR Self values are always fresh when the .tscn is written.
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		_update_editor_cache()
+
+
 func _ready() -> void:
 	super._ready()
 	# All transform types now use From/To model — capture base early
 	call_deferred("_capture_base")
 	# If Self reference uses CaptureAt.READY, snapshot now (only if SELF is actually used)
 	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if uses_self and capture_at == CaptureAt.READY:
+	if not uses_self:
+		return
+
+	# IN_EDITOR: value is already baked in the scene file — nothing to capture at runtime.
+	# In editor: refresh cache so it's current if the user moves the parent.
+	if capture_at == CaptureAt.IN_EDITOR:
+		if Engine.is_editor_hint():
+			call_deferred("_update_editor_cache")
+		return
+
+	if capture_at == CaptureAt.READY:
 		match transform_target:
 			TransformTarget.POSITION:
 				call_deferred("_capture_self_position_snapshot")
@@ -591,9 +646,10 @@ func _on_animate_start() -> void:
 
 	# All transform types now use From/To model
 	_resolve_from_to_refs()
-	# Capture Self snapshot at trigger time (only if SELF is actually used)
+	# Capture Self snapshot (only if SELF is actually used)
+	# IN_EDITOR snapshots are pre-baked — _capture_self_*_snapshot reads the cache.
 	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if uses_self and capture_at == CaptureAt.TRIGGER:
+	if uses_self and (capture_at == CaptureAt.TRIGGER or capture_at == CaptureAt.IN_EDITOR):
 		match transform_target:
 			TransformTarget.POSITION:
 				_capture_self_position_snapshot()
@@ -852,48 +908,61 @@ func _resolve_from_to_refs() -> void:
 
 
 ## Capture Self's current rotation as a stable snapshot for use during animation.
-## Called at the moment chosen by capture_at (READY or TRIGGER).
+## Called at the moment chosen by capture_at (READY, TRIGGER, or IN_EDITOR).
 func _capture_self_rotation_snapshot() -> void:
 	if _has_self_rotation_snapshot:
 		return
-	var target := _get_target_node2d()
-	if target == null:
-		_self_rotation_snapshot = 0.0
+	if capture_at == CaptureAt.IN_EDITOR:
+		_self_rotation_snapshot = _editor_cached_rotation
 	else:
-		_self_rotation_snapshot = target.rotation
+		var target := _get_target_node2d()
+		if target == null:
+			_self_rotation_snapshot = 0.0
+		else:
+			_self_rotation_snapshot = target.rotation
 	_has_self_rotation_snapshot = true
 	if debug_enabled:
-		print("[%s] Captured self rotation snapshot: %s rad" % [name, _self_rotation_snapshot])
+		print("[%s] Captured self rotation snapshot: %s rad (mode=%s)" % [
+			name, _self_rotation_snapshot, CaptureAt.keys()[capture_at]])
 
 
 ## Capture Self's current position as a stable snapshot for use during animation.
-## Called at the moment chosen by capture_at (READY or TRIGGER).
+## Called at the moment chosen by capture_at (READY, TRIGGER, or IN_EDITOR).
+## IN_EDITOR uses the pre-baked editor cache instead of reading from the live node.
 func _capture_self_position_snapshot() -> void:
 	if _has_self_position_snapshot:
 		return
-	var target := _get_target_node2d()
-	if target == null:
-		_self_position_snapshot = Vector2.ZERO
+	if capture_at == CaptureAt.IN_EDITOR:
+		_self_position_snapshot = _editor_cached_position
 	else:
-		_self_position_snapshot = target.position
+		var target := _get_target_node2d()
+		if target == null:
+			_self_position_snapshot = Vector2.ZERO
+		else:
+			_self_position_snapshot = target.position
 	_has_self_position_snapshot = true
 	if debug_enabled:
-		print("[%s] Captured self position snapshot: %s" % [name, _self_position_snapshot])
+		print("[%s] Captured self position snapshot: %s (mode=%s)" % [
+			name, _self_position_snapshot, CaptureAt.keys()[capture_at]])
 
 
 ## Capture Self's current scale as a stable snapshot for use during animation.
-## Called at the moment chosen by capture_at (READY or TRIGGER).
+## Called at the moment chosen by capture_at (READY, TRIGGER, or IN_EDITOR).
 func _capture_self_scale_snapshot() -> void:
 	if _has_self_scale_snapshot:
 		return
-	var target := _get_target_node2d()
-	if target == null:
-		_self_scale_snapshot = Vector2.ONE
+	if capture_at == CaptureAt.IN_EDITOR:
+		_self_scale_snapshot = _editor_cached_scale
 	else:
-		_self_scale_snapshot = target.scale
+		var target := _get_target_node2d()
+		if target == null:
+			_self_scale_snapshot = Vector2.ONE
+		else:
+			_self_scale_snapshot = target.scale
 	_has_self_scale_snapshot = true
 	if debug_enabled:
-		print("[%s] Captured self scale snapshot: %s" % [name, _self_scale_snapshot])
+		print("[%s] Captured self scale snapshot: %s (mode=%s)" % [
+			name, _self_scale_snapshot, CaptureAt.keys()[capture_at]])
 
 
 ## Helper: resolve a NodePath to a Node2D, with debug warnings on failure.
@@ -913,6 +982,36 @@ func _resolve_node_path_to_node2d(path: NodePath, path_name: String) -> Node2D:
 	if debug_enabled:
 		print("[%s] Resolved %s: '%s'" % [name, path_name, resolved.name])
 	return resolved as Node2D
+
+
+# =============================================================================
+# EDITOR CACHE (IN_EDITOR capture mode)
+# =============================================================================
+
+## Refresh the editor cache from the parent's current transform.
+## Called on NOTIFICATION_EDITOR_PRE_SAVE and when capture_at switches to IN_EDITOR.
+## Only writes when IN_EDITOR is active and a SELF reference is used.
+func _update_editor_cache() -> void:
+	if not Engine.is_editor_hint():
+		return
+	if capture_at != CaptureAt.IN_EDITOR:
+		return
+	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
+	if not uses_self:
+		return
+
+	var parent := get_parent()
+	if not parent is Node2D:
+		return
+
+	var n2d := parent as Node2D
+	_editor_cached_position = n2d.position
+	_editor_cached_rotation = n2d.rotation
+	_editor_cached_scale = n2d.scale
+
+	if debug_enabled:
+		print("[%s] Editor cache updated: pos=%s, rot=%.1f°, scale=%s" % [
+			name, _editor_cached_position, rad_to_deg(_editor_cached_rotation), _editor_cached_scale])
 
 
 # =============================================================================
