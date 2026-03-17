@@ -57,7 +57,8 @@ text = "Control Demo"
 
 [node name="SceneActionJuiceUtility2" type="Node" parent="MarginContainer/CenterContainer/Menu/Button"]
 script = ExtResource("2_rsbi8")
-action = 3
+from = null
+to = null
 overlay_type = 0
 duration_in = 0.3
 transition_in = 4
@@ -108,22 +109,22 @@ skip_juice_components = true
 hide_parent_on_reverse_complete = false
 _editor_target_caches = {
 "../Button": {
-"position": Vector2(0, 130),
+"position": Vector2(-1123, 130),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Button2": {
-"position": Vector2(0, 195),
+"position": Vector2(-1123, 195),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Button3": {
-"position": Vector2(0, 260),
+"position": Vector2(-1123, 260),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Quit Button": {
-"position": Vector2(0, 325),
+"position": Vector2(-1123, 325),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 }

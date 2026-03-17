@@ -114,14 +114,10 @@ enum OldScenePostSwitchAction {
 		notify_property_list_changed()
 		update_configuration_warnings()
 
-## The scene to switch to or overlay. Drag a .tscn file here.
-## Used by SWITCH_SCENE and OVERLAY_SCENE actions.
-var to: PackedScene = null
-
 ## Where to switch from (SWITCH_SCENE only).
 ## "This Scene" replaces the entire scene tree.
 ## "Scene In Tree" swaps a specific node, leaving the rest of the scene intact.
-var from: int = SwitchFrom.THIS_SCENE:
+@export var from: SwitchFrom = SwitchFrom.THIS_SCENE:
 	set(value):
 		from = value
 		notify_property_list_changed()
@@ -129,86 +125,103 @@ var from: int = SwitchFrom.THIS_SCENE:
 
 ## Path to the scene node to replace. Drag a node from the Scene panel.
 ## Only used when From is set to "Scene In Tree".
-var switch_from: NodePath = NodePath()
+@export var switch_from: NodePath = NodePath():
+	set(value):
+		switch_from = value
+		update_configuration_warnings()
+
+## The scene to switch to or overlay. Drag a .tscn file here.
+## Used by SWITCH_SCENE and OVERLAY_SCENE actions.
+@export var to: PackedScene = null:
+	set(value):
+		to = value
+		update_configuration_warnings()
 
 ## What happens to the old scene after the switch (Scene In Tree mode only).
-var old_scene_post_switch_action: int = OldScenePostSwitchAction.FREE:
-	set(value):
-		old_scene_post_switch_action = value
-		notify_property_list_changed()
+@export var old_scene_post_switch_action: OldScenePostSwitchAction = OldScenePostSwitchAction.FREE
 
 
 # =============================================================================
 # CONFIGURATION — Overlay Behavior group (OVERLAY_SCENE only)
 # =============================================================================
 
+@export_group("Overlay Behavior")
+
 ## CanvasLayer number for the overlaid scene. Higher = renders on top.
 ## Default 100 matches JuiceScreenOverlayProvider's layer.
-var overlay_canvas_layer: int = 100
+@export var overlay_canvas_layer: int = 100
 
 ## Enable time manipulation on the base scene while overlay is active.
 ## When true, exposes TimeJuiceComp settings (pause, slow-mo, bullet-time).
-var use_time_effect: bool = false:
+@export var use_time_effect: bool = false:
 	set(value):
 		use_time_effect = value
 		notify_property_list_changed()
 
+@export_subgroup("Time Effect", "time_")
+
 ## Time manipulation mode (mirrors TimeJuiceComp.TimeMode).
-var time_mode: int = 0:  # TimeJuiceComp.TimeMode.FREEZE
+@export_enum("Freeze", "Slow Mo", "Bullet Time") var time_mode: int = 0:
 	set(value):
 		time_mode = value
 		notify_property_list_changed()
 
 ## Target time scale for SLOW_MO and BULLET_TIME (0.0 = frozen, 1.0 = normal).
-var time_target_scale: float = 0.3
+@export_range(0.0, 2.0, 0.01) var time_target_scale: float = 0.3
 
 ## Whether to smoothly transition to target time scale (SLOW_MO / BULLET_TIME).
-var time_smooth_transition: bool = true
+@export var time_smooth_transition: bool = true
 
 ## Number of frames to freeze (FREEZE mode). At 60fps, 3 frames = 0.05s.
-var time_freeze_frames: int = 3
+@export var time_freeze_frames: int = 3
 
 ## Nodes exempt from time slowdown (BULLET_TIME only).
-var time_exempt_nodes: Array[NodePath] = []
+@export var time_exempt_nodes: Array[NodePath] = []
 
 
 # =============================================================================
 # CONFIGURATION — Transition group
 # =============================================================================
 
+@export_group("Transition")
+
 ## Visual transition overlay type. NONE = instant cut, SOLID_COLOR/IMAGE use
 ## ScreenOverlayJuiceComp, SCENE loads a custom animated transition scene.
-var overlay_type: TransitionOverlay = TransitionOverlay.NONE:
+@export var overlay_type: TransitionOverlay = TransitionOverlay.NONE:
 	set(value):
 		overlay_type = value
 		notify_property_list_changed()
+		update_configuration_warnings()
 
-## Overlay color for SOLID_COLOR transitions.
-var overlay_color: Color = Color.BLACK
+## Overlay color for SOLID_COLOR and IMAGE transitions.
+@export var overlay_color: Color = Color.BLACK
 
 ## Overlay image/texture for IMAGE transitions.
-var overlay_image: Texture2D = null
+@export var overlay_image: Texture2D = null
 
 ## Blend mode for SOLID_COLOR and IMAGE overlays.
-var overlay_blend_mode: int = 0  # ScreenOverlayJuiceComp.OverlayBlendMode.MIX
+@export_enum("Mix", "Add", "Sub", "Mul", "Premult Alpha") var overlay_blend_mode: int = 0
 
 ## Custom animated transition scene for SCENE overlay type.
 ## The scene should emit "screen_covered" and "transition_finished" signals
 ## for precise timing control. Without them, fallback timers are used.
-var transition_scene: PackedScene = null
+@export var transition_scene: PackedScene = null:
+	set(value):
+		transition_scene = value
+		update_configuration_warnings()
 
 ## If true, trust the transition scene's signals for timing.
 ## If false (or if signals are missing), use fallback durations instead.
-var use_scene_timing: bool = true:
+@export var use_scene_timing: bool = true:
 	set(value):
 		use_scene_timing = value
 		notify_property_list_changed()
 
 ## Fallback cover duration when use_scene_timing is off or signals are missing.
-var fallback_cover_duration: float = 0.5
+@export_range(0.0, 10.0, 0.05, "or_greater") var fallback_cover_duration: float = 0.5
 
 ## Fallback reveal duration when use_scene_timing is off or signals are missing.
-var fallback_reveal_duration: float = 0.5
+@export_range(0.0, 10.0, 0.05, "or_greater") var fallback_reveal_duration: float = 0.5
 
 
 # =============================================================================
@@ -836,269 +849,72 @@ func _cleanup_transition_resources() -> void:
 
 
 # =============================================================================
-# CONDITIONAL EXPORT SYSTEM
+# CONDITIONAL VISIBILITY (hybrid: @export + _validate_property)
 # =============================================================================
 
-func _get_property_list() -> Array[Dictionary]:
-	var props: Array[Dictionary] = []
-
+func _validate_property(property: Dictionary) -> void:
 	# --- Scene Action group ---
-	# (action is @export, so it's shown automatically)
+	if property.name == &"from":
+		if action != SceneAction.SWITCH_SCENE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	# SWITCH_SCENE: show From enum and conditional Scene In Tree properties
-	if action == SceneAction.SWITCH_SCENE:
-		props.append({
-			"name": "from",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "This Scene,Scene In Tree",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
+	elif property.name == &"switch_from":
+		if action != SceneAction.SWITCH_SCENE or from != SwitchFrom.SCENE_IN_TREE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-		if from == SwitchFrom.SCENE_IN_TREE:
-			props.append({
-				"name": "switch_from",
-				"type": TYPE_NODE_PATH,
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
+	elif property.name == &"to":
+		if action != SceneAction.SWITCH_SCENE and action != SceneAction.OVERLAY_SCENE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	# to: only for SWITCH_SCENE and OVERLAY_SCENE
-	if action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE:
-		props.append({
-			"name": "to",
-			"type": TYPE_OBJECT,
-			"hint": PROPERTY_HINT_RESOURCE_TYPE,
-			"hint_string": "PackedScene",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-
-	# old_scene_post_switch_action: at end of Scene Action group (Scene In Tree only)
-	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
-		props.append({
-			"name": "old_scene_post_switch_action",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Free,Hide,Remove From Tree",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
+	elif property.name == &"old_scene_post_switch_action":
+		if action != SceneAction.SWITCH_SCENE or from != SwitchFrom.SCENE_IN_TREE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Overlay Behavior group (OVERLAY_SCENE only) ---
-	if action == SceneAction.OVERLAY_SCENE:
-		props.append({
-			"name": "Overlay Behavior",
-			"type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_GROUP,
-			"hint_string": "",
-		})
-		props.append({
-			"name": "overlay_canvas_layer",
-			"type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		props.append({
-			"name": "use_time_effect",
-			"type": TYPE_BOOL,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
+	elif property.name in [&"overlay_canvas_layer", &"use_time_effect"]:
+		if action != SceneAction.OVERLAY_SCENE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-		if use_time_effect:
-			props.append({
-				"name": "Time Effect",
-				"type": TYPE_NIL,
-				"usage": PROPERTY_USAGE_SUBGROUP,
-				"hint_string": "time_",
-			})
-			props.append({
-				"name": "time_mode",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Freeze,Slow Mo,Bullet Time",
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
+	elif property.name == &"time_mode":
+		if action != SceneAction.OVERLAY_SCENE or not use_time_effect:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-			# SLOW_MO and BULLET_TIME share target_scale and smooth_transition
-			if time_mode != 0:  # Not FREEZE
-				props.append({
-					"name": "time_target_scale",
-					"type": TYPE_FLOAT,
-					"hint": PROPERTY_HINT_RANGE,
-					"hint_string": "0.0,2.0,0.01",
-					"usage": PROPERTY_USAGE_DEFAULT,
-				})
-				props.append({
-					"name": "time_smooth_transition",
-					"type": TYPE_BOOL,
-					"usage": PROPERTY_USAGE_DEFAULT,
-				})
+	elif property.name in [&"time_target_scale", &"time_smooth_transition"]:
+		if action != SceneAction.OVERLAY_SCENE or not use_time_effect or time_mode == 0:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-			# FREEZE only
-			if time_mode == 0:
-				props.append({
-					"name": "time_freeze_frames",
-					"type": TYPE_INT,
-					"usage": PROPERTY_USAGE_DEFAULT,
-				})
+	elif property.name == &"time_freeze_frames":
+		if action != SceneAction.OVERLAY_SCENE or not use_time_effect or time_mode != 0:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-			# BULLET_TIME only
-			if time_mode == 2:
-				props.append({
-					"name": "time_exempt_nodes",
-					"type": TYPE_ARRAY,
-					"hint": PROPERTY_HINT_TYPE_STRING,
-					"hint_string": "%d:" % TYPE_NODE_PATH,
-					"usage": PROPERTY_USAGE_DEFAULT,
-				})
+	elif property.name == &"time_exempt_nodes":
+		if action != SceneAction.OVERLAY_SCENE or not use_time_effect or time_mode != 2:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Transition group ---
-	props.append({
-		"name": "Transition",
-		"type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP,
-		"hint_string": "",
-	})
-	props.append({
-		"name": "overlay_type",
-		"type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "None,Solid Color,Image,Scene",
-		"usage": PROPERTY_USAGE_DEFAULT,
-	})
+	elif property.name == &"overlay_color":
+		if overlay_type != TransitionOverlay.SOLID_COLOR and overlay_type != TransitionOverlay.IMAGE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	# SOLID_COLOR properties
-	if overlay_type == TransitionOverlay.SOLID_COLOR:
-		props.append({
-			"name": "overlay_color",
-			"type": TYPE_COLOR,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		props.append({
-			"name": "overlay_blend_mode",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Mix,Add,Sub,Mul,Premult Alpha",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
+	elif property.name == &"overlay_image":
+		if overlay_type != TransitionOverlay.IMAGE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	# IMAGE properties
-	if overlay_type == TransitionOverlay.IMAGE:
-		props.append({
-			"name": "overlay_color",
-			"type": TYPE_COLOR,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		props.append({
-			"name": "overlay_image",
-			"type": TYPE_OBJECT,
-			"hint": PROPERTY_HINT_RESOURCE_TYPE,
-			"hint_string": "Texture2D",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		props.append({
-			"name": "overlay_blend_mode",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Mix,Add,Sub,Mul,Premult Alpha",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
+	elif property.name == &"overlay_blend_mode":
+		if overlay_type != TransitionOverlay.SOLID_COLOR and overlay_type != TransitionOverlay.IMAGE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	# SCENE properties
-	if overlay_type == TransitionOverlay.SCENE:
-		props.append({
-			"name": "transition_scene",
-			"type": TYPE_OBJECT,
-			"hint": PROPERTY_HINT_RESOURCE_TYPE,
-			"hint_string": "PackedScene",
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		props.append({
-			"name": "use_scene_timing",
-			"type": TYPE_BOOL,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		if not use_scene_timing:
-			props.append({
-				"name": "fallback_cover_duration",
-				"type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE,
-				"hint_string": "0.0,10.0,0.05,or_greater",
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
-			props.append({
-				"name": "fallback_reveal_duration",
-				"type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE,
-				"hint_string": "0.0,10.0,0.05,or_greater",
-				"usage": PROPERTY_USAGE_DEFAULT,
-			})
+	elif property.name == &"transition_scene":
+		if overlay_type != TransitionOverlay.SCENE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-	return props
+	elif property.name == &"use_scene_timing":
+		if overlay_type != TransitionOverlay.SCENE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
-
-func _set(property: StringName, value: Variant) -> bool:
-	match property:
-		# Scene Action
-		&"from": from = value; return true
-		&"switch_from":
-			switch_from = value
-			update_configuration_warnings()
-			return true
-		&"to":
-			to = value
-			update_configuration_warnings()
-			return true
-		&"old_scene_post_switch_action": old_scene_post_switch_action = value; return true
-		# Overlay Behavior
-		&"overlay_canvas_layer": overlay_canvas_layer = value; return true
-		&"use_time_effect": use_time_effect = value; return true
-		&"time_mode": time_mode = value; return true
-		&"time_target_scale": time_target_scale = value; return true
-		&"time_smooth_transition": time_smooth_transition = value; return true
-		&"time_freeze_frames": time_freeze_frames = value; return true
-		&"time_exempt_nodes": time_exempt_nodes = value; return true
-		# Transition
-		&"overlay_type":
-			overlay_type = value
-			notify_property_list_changed()
-			update_configuration_warnings()
-			return true
-		&"overlay_color": overlay_color = value; return true
-		&"overlay_image": overlay_image = value; return true
-		&"overlay_blend_mode": overlay_blend_mode = value; return true
-		&"transition_scene":
-			transition_scene = value
-			update_configuration_warnings()
-			return true
-		&"use_scene_timing": use_scene_timing = value; return true
-		&"fallback_cover_duration": fallback_cover_duration = value; return true
-		&"fallback_reveal_duration": fallback_reveal_duration = value; return true
-	return false
-
-
-func _get(property: StringName) -> Variant:
-	match property:
-		# Scene Action
-		&"from": return from
-		&"switch_from": return switch_from
-		&"to": return to
-		&"old_scene_post_switch_action": return old_scene_post_switch_action
-		# Overlay Behavior
-		&"overlay_canvas_layer": return overlay_canvas_layer
-		&"use_time_effect": return use_time_effect
-		&"time_mode": return time_mode
-		&"time_target_scale": return time_target_scale
-		&"time_smooth_transition": return time_smooth_transition
-		&"time_freeze_frames": return time_freeze_frames
-		&"time_exempt_nodes": return time_exempt_nodes
-		# Transition
-		&"overlay_type": return overlay_type
-		&"overlay_color": return overlay_color
-		&"overlay_image": return overlay_image
-		&"overlay_blend_mode": return overlay_blend_mode
-		&"transition_scene": return transition_scene
-		&"use_scene_timing": return use_scene_timing
-		&"fallback_cover_duration": return fallback_cover_duration
-		&"fallback_reveal_duration": return fallback_reveal_duration
-	return null
+	elif property.name in [&"fallback_cover_duration", &"fallback_reveal_duration"]:
+		if overlay_type != TransitionOverlay.SCENE or use_scene_timing:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 
 # =============================================================================
