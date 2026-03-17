@@ -72,6 +72,28 @@ Every script must have:
 3. **Debug toggle** (`@export var debug_enabled: bool = false`)
 4. **Comments explaining WHY**, not just what
 
+## Script Section Ordering
+
+All Juice addon scripts follow a canonical top-down section order. Each section is delimited by a `# =====` banner comment. Skip sections that don't apply.
+
+| Order | Section | What goes here |
+|-------|---------|---------------|
+| 1 | **Header comment** | `##` class doc + `#` WHAT/WHY/SYSTEM/DOES NOT block |
+| 2 | **Signals** | `signal` declarations |
+| 3 | **Enums** | `enum` declarations |
+| 4 | **Configuration** | `@export` groups, backing `var`s, inspector-facing config |
+| 5 | **Conditional export system** | `_validate_property()` or `_get_property_list()`/`_set()`/`_get()` |
+| 6 | **Internal state** | Private `var`s, caches, flags (not inspector-exposed) |
+| 7 | **Lifecycle** | `_ready()`, `_process()`, `_notification()` |
+| 8 | **Public API** | `animate_in()`, `animate_out()`, `stop()`, static helpers |
+| 9 | **Core logic** | Domain-specific methods (effect application, scene switching, etc.) |
+| 10 | **Helpers** | Small utility functions, getters, converters |
+| 11 | **Recipe / Sequencer contract** | `_recipe_capture_natural()`, `_inject_editor_cache()`, etc. |
+| 12 | **Configuration warnings** | `_get_configuration_warnings()` |
+| 13 | **Virtual methods** | `_apply_effect()`, `_on_animate_start()` stubs |
+
+**Rationale:** Config at top (what designers care about), logic in middle (what devs care about), plumbing at bottom (rarely touched). Marketplace buyers browsing source find things predictably.
+
 ## Comment Convention
 
 | Syntax | Purpose | Visible In |
@@ -102,3 +124,11 @@ git subtree push --prefix=addons/juice juice-standalone main
 ## Godot Version
 
 This project uses **Godot 4.x**. Use GDScript typed syntax and modern patterns.
+
+---
+
+## Pre-Ship Checklist
+
+Tasks to complete before marketplace release:
+
+- [ ] **Script section ordering pass** — Audit all `addons/juice/` scripts and reorder sections to match the canonical Script Section Ordering above. Priority targets: `TransformControlJuiceComp`, `JuiceCompBase`, `SequencerJuiceComp` (largest scripts with most drift).

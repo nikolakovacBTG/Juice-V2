@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://cdlx8fqc3ne7y"]
+
+[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="1_5j5al"]
+
+[node name="Button" type="Button"]
+pivot_offset = Vector2(19.5, 15.5)
+text = "text"
+
+[node name="TransformControlJuiceComp" type="Node" parent="."]
+script = ExtResource("1_5j5al")
+transform_target = 2
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.4, 1.4)
+pivot_mode = 0
+trigger_behaviour = 3
+trigger_on = 2
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 9
+ease_out = 1
+custom_curve_out = null
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"

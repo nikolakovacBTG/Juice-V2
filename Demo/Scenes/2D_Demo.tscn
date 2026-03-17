@@ -1,3 +1,9 @@
-[gd_scene format=3 uid="uid://0jn7axm6pb17"]
+[gd_scene load_steps=2 format=3 uid="uid://0jn7axm6pb17"]
+
+[ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="1_va5jn"]
 
 [node name="2dDemo" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(575, 347)
+texture = ExtResource("1_va5jn")
