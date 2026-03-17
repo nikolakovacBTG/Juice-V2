@@ -39,9 +39,14 @@
 #     Creates _JuiceTransitionHandler on tree root (survives scene destruction).
 #     Handler manages cover → action → reveal → self-destruct.
 #   SWITCH_SCENE (SCENE_IN_TREE mode):
-#     Swaps a scene node in the tree with a new PackedScene instance.
+#     Swaps a specific scene node in the tree with a new PackedScene instance.
 #     Utility survives (main scene persists). Manages transition inline.
 #     Use case: persistent HUD with swappable content areas (2D/3D levels).
+#   SWITCH_SCENE (FIRST_SCENE_IN_CONTAINER mode):
+#     Swaps the first child of a parent container with a new PackedScene instance.
+#     Runtime-agnostic: you assign the container, not the child. The child is
+#     discovered at trigger time. Use case: persistent-parent architectures where
+#     one or more permanent parents hold dynamic scenes (GUI, 2D levels, 3D worlds).
 #   OVERLAY_SCENE:
 #     Utility survives (no scene change). Manages overlay lifecycle directly.
 #     animate_in() = show overlay, animate_out() = hide overlay (toggle-friendly).
@@ -89,11 +94,13 @@ enum TransitionOverlay {
 
 ## Where to switch from when action is SWITCH_SCENE.
 enum SwitchFrom {
-	THIS_SCENE,      ## Replaces the entire current scene tree (full scene change)
-	SCENE_IN_TREE,   ## Swaps a specific scene node in the tree with the To scene
+	THIS_SCENE,              ## Replaces the entire current scene tree (full scene change)
+	SCENE_IN_TREE,           ## Swaps a specific scene node in the tree with the To scene
+	FIRST_SCENE_IN_CONTAINER,## Swaps the first child of a parent container with the To scene
 }
 
-## What happens to the old scene after the switch (Scene In Tree mode only).
+## What happens to the old scene after the switch.
+## Applies to Scene In Tree and First Scene In Container modes.
 enum OldScenePostSwitchAction {
 	FREE,            ## Permanently destroys the old scene. Cannot be recovered.
 	HIDE,            ## Keeps the old scene in the tree but invisible and paused. Useful for quick tab-switching.
@@ -117,6 +124,7 @@ enum OldScenePostSwitchAction {
 ## Where to switch from (SWITCH_SCENE only).
 ## "This Scene" replaces the entire scene tree.
 ## "Scene In Tree" swaps a specific node, leaving the rest of the scene intact.
+## "First Scene In Container" swaps the first child of a parent container (runtime-agnostic).
 @export var from: SwitchFrom = SwitchFrom.THIS_SCENE:
 	set(value):
 		from = value
@@ -130,6 +138,14 @@ enum OldScenePostSwitchAction {
 		switch_from = value
 		update_configuration_warnings()
 
+## The parent node whose first child will be swapped for the To scene.
+## Drag a persistent container from the Scene panel.
+## Only used when From is set to "First Scene In Container".
+@export var container: NodePath = NodePath():
+	set(value):
+		container = value
+		update_configuration_warnings()
+
 ## The scene to switch to or overlay. Drag a .tscn file here.
 ## Used by SWITCH_SCENE and OVERLAY_SCENE actions.
 @export var to: PackedScene = null:
@@ -137,7 +153,11 @@ enum OldScenePostSwitchAction {
 		to = value
 		update_configuration_warnings()
 
-## What happens to the old scene after the switch (Scene In Tree mode only).
+## What happens to the old scene after the switch.
+## Applies to Scene In Tree and First Scene In Container modes.
+## FREE = permanently destroyed, cannot be recovered.
+## HIDE = stays in tree but invisible and paused — useful for quick tab-switching.
+## REMOVE FROM TREE = detached from tree, utility holds reference for re-insertion.
 @export var old_scene_post_switch_action: OldScenePostSwitchAction = OldScenePostSwitchAction.FREE
 
 
@@ -376,11 +396,12 @@ static func remove_active_overlay() -> void:
 # =============================================================================
 
 ## Routes to the correct execution path based on the From setting.
-## SCENE_IN_TREE: utility survives the swap, manages transition inline.
+## SCENE_IN_TREE / FIRST_SCENE_IN_CONTAINER: utility survives the swap, manages inline.
 ## THIS_SCENE (and RELOAD/QUIT): creates handler on root that survives scene death.
 func _execute_destructive_action() -> void:
-	# SCENE_IN_TREE mode: utility survives, manage transition inline (no handler needed)
-	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
+	# Inline swap modes: utility survives, manage transition inline (no handler needed)
+	if action == SceneAction.SWITCH_SCENE and (
+			from == SwitchFrom.SCENE_IN_TREE or from == SwitchFrom.FIRST_SCENE_IN_CONTAINER):
 		await _execute_child_swap()
 		return
 
@@ -457,27 +478,50 @@ func _on_handler_completed() -> void:
 
 
 # =============================================================================
-# SCENE IN TREE SWAP (SWITCH_SCENE + SCENE_IN_TREE mode)
+# INLINE SCENE SWAP (SCENE_IN_TREE / FIRST_SCENE_IN_CONTAINER)
 # =============================================================================
 
 ## Swap a scene node in the tree with a new scene instance. The utility survives
 ## because the main scene persists — no handler needed. Manages transition inline,
 ## reusing the same overlay cover/reveal helpers as OVERLAY_SCENE.
+##
+## Resolution varies by From mode:
+## - SCENE_IN_TREE: switch_from NodePath → exact node to swap
+## - FIRST_SCENE_IN_CONTAINER: container NodePath → first child of that parent
 func _execute_child_swap() -> void:
 	var my_gen := _generation
 
-	# Resolve switch_from to an actual Node reference
-	var from_scene := get_node_or_null(switch_from)
-	if from_scene == null:
-		push_error("[%s] Cannot swap — switch_from '%s' not found" % [name, switch_from])
-		_is_transitioning = false
-		_is_playing = false
-		completed.emit()
-		return
+	# Resolve from_scene based on the From mode
+	var from_scene: Node = null
+
+	if from == SwitchFrom.SCENE_IN_TREE:
+		from_scene = get_node_or_null(switch_from)
+		if from_scene == null:
+			push_error("[%s] Cannot swap — switch_from '%s' not found" % [name, switch_from])
+			_is_transitioning = false
+			_is_playing = false
+			completed.emit()
+			return
+
+	elif from == SwitchFrom.FIRST_SCENE_IN_CONTAINER:
+		var container_node := get_node_or_null(container)
+		if container_node == null:
+			push_error("[%s] Cannot swap — container '%s' not found" % [name, container])
+			_is_transitioning = false
+			_is_playing = false
+			completed.emit()
+			return
+		if container_node.get_child_count() == 0:
+			push_error("[%s] Cannot swap — container '%s' has no children" % [name, container_node.name])
+			_is_transitioning = false
+			_is_playing = false
+			completed.emit()
+			return
+		from_scene = container_node.get_child(0)
 
 	# Safety: swapping an ancestor of this utility would destroy us
 	if from_scene.is_ancestor_of(self):
-		push_error("[%s] Cannot swap — switch_from '%s' is an ancestor of this utility" % [name, switch_from])
+		push_error("[%s] Cannot swap — target '%s' is an ancestor of this utility" % [name, from_scene.name])
 		_is_transitioning = false
 		_is_playing = false
 		completed.emit()
@@ -509,7 +553,9 @@ func _execute_child_swap() -> void:
 			from_scene.process_mode = Node.PROCESS_MODE_DISABLED
 		OldScenePostSwitchAction.REMOVE_FROM_TREE:
 			parent.remove_child(from_scene)
-			_removed_nodes[switch_from] = from_scene
+			# Key by node name for container mode (child identity changes each swap)
+			var removal_key: NodePath = switch_from if from == SwitchFrom.SCENE_IN_TREE else NodePath(from_scene.name)
+			_removed_nodes[removal_key] = from_scene
 
 	# Phase 4: Instance To scene and insert at the same position
 	var new_instance := to.instantiate()
@@ -862,12 +908,16 @@ func _validate_property(property: Dictionary) -> void:
 		if action != SceneAction.SWITCH_SCENE or from != SwitchFrom.SCENE_IN_TREE:
 			property.usage = PROPERTY_USAGE_NO_EDITOR
 
+	elif property.name == &"container":
+		if action != SceneAction.SWITCH_SCENE or from != SwitchFrom.FIRST_SCENE_IN_CONTAINER:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
+
 	elif property.name == &"to":
 		if action != SceneAction.SWITCH_SCENE and action != SceneAction.OVERLAY_SCENE:
 			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	elif property.name == &"old_scene_post_switch_action":
-		if action != SceneAction.SWITCH_SCENE or from != SwitchFrom.SCENE_IN_TREE:
+		if action != SceneAction.SWITCH_SCENE or from == SwitchFrom.THIS_SCENE:
 			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Overlay Behavior group (OVERLAY_SCENE only) ---
@@ -938,6 +988,15 @@ func _get_configuration_warnings() -> PackedStringArray:
 			var from_scene := get_node_or_null(switch_from)
 			if from_scene != null and from_scene.is_ancestor_of(self):
 				warnings.append("Switch From '%s' is an ancestor of this utility. Swapping it would destroy this node." % switch_from)
+
+	# FIRST_SCENE_IN_CONTAINER mode: container must be set
+	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.FIRST_SCENE_IN_CONTAINER:
+		if container.is_empty():
+			warnings.append("First Scene In Container mode requires Container to be set. Drag a parent node from the Scene panel.")
+		else:
+			var container_node := get_node_or_null(container)
+			if container_node != null and container_node.is_ancestor_of(self):
+				warnings.append("Container '%s' is an ancestor of this utility. Swapping its child could destroy this node." % container)
 
 	# Transition scene required for SCENE overlay type
 	if overlay_type == TransitionOverlay.SCENE and transition_scene == null:
