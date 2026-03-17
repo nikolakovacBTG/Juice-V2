@@ -116,11 +116,11 @@ enum CaptureAt {
 ## Custom From position value (shown when from_reference == CUSTOM)
 var from_position: Vector2 = Vector2.ZERO
 ## How to interpret From position values
-var from_position_in: int = PositionIn.PIXELS
+var from_position_in: int = PositionIn.FRACTION_OWN
 ## Custom To position value (shown when to_reference == CUSTOM)
 var to_position: Vector2 = Vector2.ZERO
 ## How to interpret To position values
-var to_position_in: int = PositionIn.PIXELS
+var to_position_in: int = PositionIn.FRACTION_OWN
 
 # --- ROTATION (From/To model) ---
 ## Custom From rotation offset in degrees (shown when from_reference == CUSTOM)
@@ -130,12 +130,12 @@ var to_rotation_degrees: float = 15.0
 
 # --- SHARED FROM/TO (used by all transform types) ---
 ## Reference type for the From endpoint (CUSTOM, SELF, or TARGET_NODE)
-var from_reference: int = TransformReference.CUSTOM:
+var from_reference: int = TransformReference.SELF:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
 ## Reference type for the To endpoint (CUSTOM, SELF, or TARGET_NODE)
-var to_reference: int = TransformReference.SELF:
+var to_reference: int = TransformReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()

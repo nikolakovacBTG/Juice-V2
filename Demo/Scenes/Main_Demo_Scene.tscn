@@ -62,8 +62,9 @@ text = "Control Demo"
 
 [node name="SceneActionJuiceUtility3" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo"]
 script = ExtResource("2_rsbi8")
-from = 1
-switch_from = NodePath("../../../../../Dummy")
+from = 2
+switch_from = NodePath("../../../../../Scene Container/Dummy")
+container = NodePath("../../../../../Scene Container")
 to = ExtResource("4_lfgkc")
 duration_in = 0.3
 transition_in = 4
@@ -81,8 +82,9 @@ text = "2D demo"
 
 [node name="SceneActionJuiceUtility4" type="Node" parent="MarginContainer/CenterContainer/Menu/2D Demo"]
 script = ExtResource("2_rsbi8")
-from = 1
-switch_from = NodePath("../../../../../Dummy")
+from = 2
+switch_from = NodePath("../../../../../Scene Container/Dummy")
+container = NodePath("../../../../../Scene Container")
 to = ExtResource("3_fay60")
 duration_in = 0.3
 transition_in = 4
@@ -100,8 +102,9 @@ text = "3D demo"
 
 [node name="SceneActionJuiceUtility5" type="Node" parent="MarginContainer/CenterContainer/Menu/3D Demo"]
 script = ExtResource("2_rsbi8")
-from = 1
-switch_from = NodePath("../../../../../Dummy")
+from = 2
+switch_from = NodePath("../../../../../Scene Container/Dummy")
+container = NodePath("../../../../../Scene Container")
 to = ExtResource("6_bhrb6")
 duration_in = 0.3
 transition_in = 4
@@ -121,6 +124,7 @@ text = "Quit"
 script = ExtResource("2_rsbi8")
 action = 3
 from = 1
+container = null
 to = ExtResource("4_lfgkc")
 duration_in = 0.3
 transition_in = 4
@@ -200,5 +204,6 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
-[node name="Dummy" parent="." instance=ExtResource("9_008jw")]
-layout_mode = 1
+[node name="Scene Container" type="Node" parent="."]
+
+[node name="Dummy" parent="Scene Container" instance=ExtResource("9_008jw")]
