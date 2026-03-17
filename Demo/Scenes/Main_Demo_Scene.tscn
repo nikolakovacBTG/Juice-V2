@@ -108,6 +108,28 @@ skip_invisible = true
 skip_self = true
 skip_juice_components = true
 hide_parent_on_reverse_complete = false
+_editor_target_caches = {
+"../Button": {
+"position": Vector2(-977, 130),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Button2": {
+"position": Vector2(-977, 195),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Button3": {
+"position": Vector2(-977, 260),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+},
+"../Quit Button": {
+"position": Vector2(-977, 325),
+"rotation": 0.0,
+"scale": Vector2(1, 1)
+}
+}
 start_delay = 1.0
 trigger_on = 8
 duration_in = 0.0
