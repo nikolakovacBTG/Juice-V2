@@ -183,6 +183,7 @@ var _editor_cached_scale: Vector2 = Vector2.ONE
 var _base_position: Vector2 = Vector2.ZERO
 var _base_rotation_radians: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
+var _dbg_scale_calls: int = 0  # TEMP DEBUG
 
 ## Whether base has been captured
 var _has_base: bool = false
@@ -198,15 +199,18 @@ var _my_position_contribution: Vector2 = Vector2.ZERO
 var _my_rotation_contribution: float = 0.0
 var _my_scale_contribution: Vector2 = Vector2.ZERO
 
-## Tracks the position we last wrote to the target. Used to detect external
-## repositioning (e.g. Container re-sort) between frames. When the target's
-## position no longer matches what we wrote, we know an external force moved
-## it — so we re-capture base and reset contribution to keep delta math valid.
-## NOTE: This detection assumes one position-targeting juice comp per node.
-## If multiple position comps target the same Control, one comp's write will
-## appear as an "external move" to the other. This is acceptable for the
-## Sequencer recipe pattern (one clone per target per transform type).
+## Tracks the last value we wrote to the target for each transform property.
+## Used to detect external resets (e.g. Container _sort_children overriding
+## our writes) between frames. When the target's property no longer matches
+## what we wrote, we know an external force changed it — so we re-capture
+## base and reset contribution to keep delta math valid.
+## NOTE: This detection assumes one juice comp per transform type per node.
+## If multiple comps of the same type target the same Control, one comp's
+## write will appear as an "external move" to the other. This is acceptable
+## for the Sequencer recipe pattern (one clone per target per transform type).
 var _last_written_position: Vector2 = Vector2.INF
+var _last_written_rotation: float = INF
+var _last_written_scale: Vector2 = Vector2.INF
 
 ## Resolved references for From/To target nodes (cached at animation start)
 ## Shared by Position, Rotation, and Scale From/To models
@@ -618,6 +622,8 @@ func _invalidate_base_cache() -> void:
 	_my_rotation_contribution = 0.0
 	_my_scale_contribution = Vector2.ZERO
 	_last_written_position = Vector2.INF
+	_last_written_rotation = INF
+	_last_written_scale = Vector2.INF
 
 
 func _get_interrupt_identity() -> Variant:
@@ -639,9 +645,50 @@ func _exit_tree() -> void:
 	_my_position_contribution = Vector2.ZERO
 	_my_rotation_contribution = 0.0
 	_my_scale_contribution = Vector2.ZERO
+	_last_written_position = Vector2.INF
+	_last_written_rotation = INF
+	_last_written_scale = Vector2.INF
+
+
+func _temporarily_undo_visual() -> void:
+	var target := _get_target_control()
+	if target == null:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position -= _my_position_contribution
+			_last_written_position = target.position
+		TransformTarget.ROTATION:
+			target.rotation -= _my_rotation_contribution
+			_last_written_rotation = target.rotation
+		TransformTarget.SCALE:
+			target.scale -= _my_scale_contribution
+			_last_written_scale = target.scale
+
+
+func _temporarily_reapply_visual() -> void:
+	var target := _get_target_control()
+	if target == null:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position += _my_position_contribution
+			_last_written_position = target.position
+		TransformTarget.ROTATION:
+			target.rotation += _my_rotation_contribution
+			_last_written_rotation = target.rotation
+		TransformTarget.SCALE:
+			target.scale += _my_scale_contribution
+			_last_written_scale = target.scale
 
 
 func _on_animate_start() -> void:
+	if transform_target == TransformTarget.SCALE:  # TEMP DEBUG
+		var t := _get_target_control()
+		var ts = t.scale if t else "N/A"
+		_dbg_scale_calls = 0  # TEMP DEBUG — reset counter so animation frames are visible
+		print("[SCALE_DBG] _on_animate_start: _has_base=%s _base_scale=%s _my_contrib=%s target.scale=%s name=%s" % [
+			_has_base, _base_scale, _my_scale_contribution, ts, name])
 	if not _has_base:
 		_capture_base()
 
@@ -672,6 +719,11 @@ func _on_animate_start() -> void:
 func _apply_effect(progress: float) -> void:
 	var target := _get_target_control()
 	if target == null:
+		if _dbg_scale_calls < 5:  # TEMP DEBUG — catch null target
+			_dbg_scale_calls += 1
+			print("[SCALE_DBG] _apply_effect: target IS NULL! _target_node=%s valid=%s tt=%s name=%s" % [
+				_target_node, is_instance_valid(_target_node),
+				TransformTarget.keys()[transform_target] if transform_target <= 2 else "?", name])
 		return
 
 	match transform_target:
@@ -772,6 +824,12 @@ func _get_ref_local_position(ref: Control, animated: Control) -> Vector2:
 ## Apply rotation using From/To lerp model.
 ## Control has native pivot_offset, so no position compensation is needed.
 func _apply_rotation_effect(progress: float, target: Control) -> void:
+	# Detect external rotation reset (e.g. Container re-sort after our write).
+	if _last_written_rotation != INF:
+		if not is_equal_approx(target.rotation, _last_written_rotation):
+			_base_rotation_radians = target.rotation
+			_my_rotation_contribution = 0.0
+
 	var from_rad := _resolve_from_rotation(target)
 	var to_rad := _resolve_to_rotation(target)
 	var desired_absolute := lerp_angle(from_rad, to_rad, progress)
@@ -781,6 +839,7 @@ func _apply_rotation_effect(progress: float, target: Control) -> void:
 	var rot_delta := desired_offset - _my_rotation_contribution
 	target.rotation += rot_delta
 	_my_rotation_contribution = desired_offset
+	_last_written_rotation = target.rotation
 
 
 ## Resolve the From rotation to an absolute value in radians (local space)
@@ -827,6 +886,14 @@ func _get_ref_local_rotation(ref: Control, animated: Control) -> float:
 ## Apply scale using From/To lerp model.
 ## Control has native pivot_offset, so no position compensation is needed.
 func _apply_scale_effect(progress: float, target: Control) -> void:
+	# Detect external scale reset (e.g. Container re-sort after our write).
+	var ext_reset := false  # TEMP DEBUG
+	if _last_written_scale != Vector2.INF:
+		if not target.scale.is_equal_approx(_last_written_scale):
+			ext_reset = true  # TEMP DEBUG
+			_base_scale = target.scale
+			_my_scale_contribution = Vector2.ZERO
+
 	var from_value := _resolve_from_scale(target)
 	var to_value := _resolve_to_scale(target)
 	var desired_absolute := from_value.lerp(to_value, progress)
@@ -834,8 +901,18 @@ func _apply_scale_effect(progress: float, target: Control) -> void:
 	# Convert absolute scale to delta from base (for delta-first write pattern)
 	var desired_offset := desired_absolute - _base_scale
 	var scale_delta := desired_offset - _my_scale_contribution
+
+	# TEMP DEBUG — capped at 30
+	_dbg_scale_calls += 1
+	if _dbg_scale_calls <= 30:
+		print("[SCALE_DBG] #%d p=%.4f ext_reset=%s | from=%s to=%s desired=%s | base=%s contrib=%s | before=%s delta=%s after=%s | target='%s'" % [
+			_dbg_scale_calls, progress, ext_reset, from_value, to_value, desired_absolute,
+			_base_scale, _my_scale_contribution, target.scale, scale_delta,
+			target.scale + scale_delta, target.name])
+
 	target.scale += scale_delta
 	_my_scale_contribution = desired_offset
+	_last_written_scale = target.scale
 
 
 ## Resolve the From scale value to an absolute Vector2 based on from_reference
@@ -1025,6 +1102,8 @@ func _inject_editor_cache(cache: Dictionary) -> void:
 
 func _capture_base() -> void:
 	if _has_base:
+		if transform_target == TransformTarget.SCALE:  # TEMP DEBUG
+			print("[SCALE_DBG] _capture_base SKIPPED (_has_base=true) _base_scale=%s name=%s" % [_base_scale, name])
 		return
 
 	if not (_target_node is Control):
@@ -1038,6 +1117,10 @@ func _capture_base() -> void:
 	_base_rotation_radians = ctrl.rotation
 	_base_scale = ctrl.scale
 	_has_base = true
+
+	if transform_target == TransformTarget.SCALE:  # TEMP DEBUG
+		print("[SCALE_DBG] _capture_base: target.scale=%s → _base_scale=%s | target='%s' name=%s" % [
+			ctrl.scale, _base_scale, ctrl.name, name])
 
 	if debug_enabled:
 		print("[%s] Captured base: pos=%s, rot=%.1f°, scale=%s" % [

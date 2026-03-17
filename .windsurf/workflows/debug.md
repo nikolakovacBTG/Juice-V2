@@ -77,7 +77,23 @@ You may discuss proposed fixes, but you must follow these rules:
 
 ---
 
-### 5. Whack-a-Mole Prevention
+### 5. Re-Anchor Rule (Drift Prevention)
+
+When debugging, re-read the user's original bug report every 3 tool calls before forming the next hypothesis. This prevents:
+- Drifting into re-deriving root causes the user already identified
+- Forgetting user-stated symptoms, hints, or prior fix references
+- Wasting tokens on unnecessary deep-dives when the answer is in the report
+
+If the user has:
+- Identified the bug class (e.g., "same as the position fix")
+- Pointed to a prior fix or commit
+- Described symptoms matching a known pattern
+
+Then START from that knowledge. Do not re-derive from scratch. Validate the user's hypothesis first before exploring alternatives.
+
+---
+
+### 6. Whack-a-Mole Prevention
 
 - Handle one issue at a time.
 - If a new issue is discovered while analyzing the current issue:
@@ -88,7 +104,7 @@ You may discuss proposed fixes, but you must follow these rules:
 
 ---
 
-### 6. Output Expectations
+### 7. Output Expectations
 
 In /debug mode, your output must include:
 
@@ -104,7 +120,7 @@ Do NOT:
 
 ---
 
-### 7. Batch Analysis & Fix Policy
+### 8. Batch Analysis & Fix Policy
 
 When multiple issues are reported:
 - Analyze ALL issues together before proposing ANY fixes.

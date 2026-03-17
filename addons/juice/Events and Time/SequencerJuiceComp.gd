@@ -186,10 +186,11 @@ var _editor_target_caches: Dictionary = {}
 
 # Clones being "held" at a fixed progress (From/To state) every _process frame.
 # Needed for Control targets inside Containers: the Container layout re-sort
-# overrides one-shot position writes, so we must continuously enforce the
-# pre-positioned state until the target's real animation starts.
+# overrides one-shot transform writes (position, rotation, scale), so we must
+# continuously enforce the pre-set state until the target's real animation starts.
 # Each entry: {"target": Node, "clone": JuiceCompBase, "progress": float}
 var _held_entries: Array[Dictionary] = []
+var _dbg_hold_frames: int = 0  # TEMP DEBUG — frame counter for hold loop logging
 
 
 # =============================================================================
@@ -402,9 +403,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# Maintain held Control targets at their From/To state every frame.
-	# Container layout re-sorts override one-shot position writes, so we
-	# must continuously enforce the pre-positioned state until the target's
+	# Container layout re-sorts override one-shot transform writes, so we
+	# must continuously enforce the pre-set state until the target's
 	# real animation starts (animate_in/out via stagger).
+	_dbg_hold_frames += 1  # TEMP DEBUG
+	if _dbg_hold_frames <= 2 or _dbg_hold_frames % 60 == 0:  # TEMP DEBUG
+		print("[HOLD_DBG] _process frame=%d held=%d entries" % [_dbg_hold_frames, _held_entries.size()])  # TEMP DEBUG
 	for held in _held_entries:
 		var clone: JuiceCompBase = held.get("clone") as JuiceCompBase
 		if clone != null:
@@ -420,9 +424,12 @@ func _process(delta: float) -> void:
 ## real animation starts (animate_in/out), so the hold loop stops enforcing
 ## the From state and the animation takes over smoothly.
 func _release_held_entries_for_target(target: Node) -> void:
+	var removed_count := 0  # TEMP DEBUG
 	for i in range(_held_entries.size() - 1, -1, -1):
 		if _held_entries[i].get("target") == target:
+			removed_count += 1  # TEMP DEBUG
 			_held_entries.remove_at(i)
+	print("[HOLD_DBG] Released %d held entries for target=%s, remaining=%d" % [removed_count, target.name, _held_entries.size()])  # TEMP DEBUG
 
 
 ## Cache juice component children to use as animation recipe (SEQUENCERS_CHILDREN mode)
@@ -560,7 +567,9 @@ func _start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> void
 	
 	# Handle start delay (skip for one_shot return and internal loop/ping-pong restarts)
 	if start_delay > 0.0 and not is_one_shot_return and _seq_current_loop == 0 and _pp_current_cycle == 0:
+		print("[HOLD_DBG] Sequencer entering %.1fs start_delay (held=%d)" % [start_delay, _held_entries.size()])  # TEMP DEBUG
 		await get_tree().create_timer(start_delay).timeout
+		print("[HOLD_DBG] Sequencer start_delay complete (held=%d)" % [_held_entries.size()])  # TEMP DEBUG
 		if _seq_generation != my_gen:
 			return  # Aborted by retrigger
 	
@@ -936,12 +945,20 @@ func _warmup_recipe_targets() -> void:
 			continue
 		var state := _ensure_recipe_target_state(target)
 
+		# Capture naturals from the untouched target BEFORE pre-positioning.
+		# This must happen first because _apply_effect(0.0) below changes
+		# the target's transform, and _ensure_recipe_naturals_captured would
+		# later read the modified (From) state instead of the true natural.
+		# By capturing here and setting naturals_captured = true, the later
+		# await-based capture in _animate_target_recipe is safely skipped.
+		if not bool(state.get("naturals_captured", false)):
+			_capture_and_apply_recipe_natural(target, state)
+			state["naturals_captured"] = true
+
 		# Pre-position target at From state (progress 0.0) so it starts at the
 		# correct position from the very first rendered frame — independent of
-		# trigger timing, start_delay, or stagger. This only fires when naturals
-		# are already captured (editor cache path), which is the common case.
-		if not bool(state.get("naturals_captured", false)):
-			continue
+		# trigger timing, start_delay, or stagger. _on_animate_start() calls
+		# _capture_base() which reads the target's current transform directly.
 		var entrypoints: Array[JuiceCompBase] = state.get("entrypoints", []) as Array[JuiceCompBase]
 		for entry in entrypoints:
 			if entry._target_node != target:
@@ -952,7 +969,7 @@ func _warmup_recipe_targets() -> void:
 
 			# Control targets inside Containers need continuous hold: the Container
 			# layout system re-sorts children every frame, overriding one-shot
-			# position writes. We register held entries so _process re-applies
+			# transform writes. We register held entries so _process re-applies
 			# the From state each frame until animate_in() takes over.
 			# 2D/3D targets have no Container management — one-shot is sufficient.
 			if target is Control:
@@ -962,9 +979,16 @@ func _warmup_recipe_targets() -> void:
 					"progress": 0.0
 				})
 
-	# Enable _process to maintain held positions (beats Container re-sorts)
+	# Enable _process to maintain held transforms (beats Container re-sorts)
 	if not _held_entries.is_empty():
 		set_process(true)
+
+	# TEMP DEBUG — always log warmup results
+	print("[HOLD_DBG] Warmup: %d targets, %d held entries" % [targets.size(), _held_entries.size()])
+	for h in _held_entries:  # TEMP DEBUG
+		var c = h.get("clone") as JuiceCompBase
+		var t = h.get("target")
+		print("[HOLD_DBG]   held: clone=%s target=%s progress=%.1f" % [c.name if c else "null", t.name if t else "null", h.get("progress", -1.0)])  # TEMP DEBUG
 
 	if debug_enabled:
 		print("[%s] Warmup: %d targets, %d held entries (Control)" % [name, targets.size(), _held_entries.size()])

@@ -1,0 +1,147 @@
+[gd_scene load_steps=6 format=3 uid="uid://dwsbodnmjpti6"]
+
+[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_sf558"]
+[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_ctnp2"]
+[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_dxpb1"]
+
+[sub_resource type="Gradient" id="Gradient_8smnx"]
+interpolation_mode = 2
+colors = PackedColorArray(0.5568628, 0.9372549, 0.5921569, 1, 0.27, 0.6, 0.51750004, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_3etqj"]
+gradient = SubResource("Gradient_8smnx")
+fill = 1
+fill_from = Vector2(0.52136755, 0.48290598)
+
+[node name="ControlIntro" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_sf558")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+texture = SubResource("GradientTexture2D_3etqj")
+expand_mode = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control2" type="Label" parent="CenterContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
+theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
+theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
+theme_override_constants/shadow_offset_x = 13
+theme_override_constants/shadow_offset_y = 9
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 99
+text = "Control"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="TransformControlJuiceComp2" type="Node" parent="CenterContainer/Control2"]
+script = ExtResource("3_dxpb1")
+transform_target = 2
+from_reference = 0
+from_scale = Vector2(0, 0)
+to_reference = 0
+to_scale = Vector2(1, 1)
+pivot_mode = 0
+start_delay = 3.0
+trigger_on = 8
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Control" type="Label" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
+theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
+theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
+theme_override_constants/shadow_offset_x = 13
+theme_override_constants/shadow_offset_y = 9
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 99
+text = "Control"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="Demo" type="Label" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
+theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
+theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
+theme_override_constants/shadow_offset_x = 13
+theme_override_constants/shadow_offset_y = 9
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 99
+text = "Demo"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="SequencerJuiceComp" type="Node" parent="CenterContainer/VBoxContainer"]
+script = ExtResource("2_ctnp2")
+juice_source = 0
+target_scope = 0
+sequence_type = 0
+stagger_delay = 0.31
+mirror_stagger_on_exit = true
+skip_invisible = true
+skip_self = true
+skip_juice_components = true
+hide_parent_on_reverse_complete = false
+start_delay = 1.0
+trigger_on = 8
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://umlva67rt4ud"
+
+[node name="TransformControlJuiceComp" type="Node" parent="CenterContainer/VBoxContainer/SequencerJuiceComp"]
+script = ExtResource("3_dxpb1")
+transform_target = 2
+from_reference = 0
+from_scale = Vector2(0, 0)
+to_reference = 0
+to_scale = Vector2(1, 1)
+pivot_mode = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"

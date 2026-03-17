@@ -645,6 +645,46 @@ func _exit_tree() -> void:
 	_my_scale_contribution = Vector2.ZERO
 
 
+func _temporarily_undo_visual() -> void:
+	var target := _get_target_node2d()
+	if target == null:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position -= _my_position_contribution
+			_last_written_position = target.position
+		TransformTarget.ROTATION:
+			target.rotation -= _my_rotation_contribution
+			if _pivot_point != Vector2.ZERO:
+				target.position -= _my_position_contribution
+				_last_written_position = target.position
+		TransformTarget.SCALE:
+			target.scale -= _my_scale_contribution
+			if _pivot_point != Vector2.ZERO:
+				target.position -= _my_position_contribution
+				_last_written_position = target.position
+
+
+func _temporarily_reapply_visual() -> void:
+	var target := _get_target_node2d()
+	if target == null:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position += _my_position_contribution
+			_last_written_position = target.position
+		TransformTarget.ROTATION:
+			target.rotation += _my_rotation_contribution
+			if _pivot_point != Vector2.ZERO:
+				target.position += _my_position_contribution
+				_last_written_position = target.position
+		TransformTarget.SCALE:
+			target.scale += _my_scale_contribution
+			if _pivot_point != Vector2.ZERO:
+				target.position += _my_position_contribution
+				_last_written_position = target.position
+
+
 func _on_animate_start() -> void:
 	if not _has_base:
 		_capture_base()

@@ -522,6 +522,17 @@ var _externally_driven: bool = false
 ## Only true inside the editor — never set at runtime.
 var _editor_preview_active: bool = false
 
+## True while the comp is in its start_delay period, before the animation clock
+## starts ticking. During this phase, _process re-applies _apply_effect at the
+## From state every frame to hold the target against Container layout resets
+## (Godot's fit_child_in_rect resets position, rotation, and scale each sort).
+var _in_start_delay: bool = false
+
+## Generation counter for start_delay coroutine safety. Incremented on each new
+## _animate_to call and on stop(), causing stale await coroutines to detect they
+## were superseded and abort cleanly.
+var _animate_generation: int = 0
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -572,6 +583,15 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not _is_playing:
 		return
+	
+	# During start_delay, hold the target at its From state every frame.
+	# Container layout resets (fit_child_in_rect) override position/rotation/scale
+	# each frame, so we must continuously re-apply. This "self-hold" pattern ensures
+	# the comp manages its own pre-animation state independently of any external
+	# system (Sequencer hold pattern is no longer needed for this purpose).
+	if _in_start_delay:
+		_apply_effect(_start_progress)
+		return  # TEMP DEBUG: self-hold re-applies From state every frame during delay
 	
 	_elapsed += delta
 	
@@ -840,10 +860,6 @@ func _animate_to(target_progress: float, is_one_shot_return: bool = false) -> vo
 	if interrupt_siblings and not is_one_shot_return:
 		_stop_sibling_juice_components()
 	
-	# Handle start delay (skip for one_shot return - immediate transition)
-	if start_delay > 0.0 and not is_one_shot_return:
-		await get_tree().create_timer(start_delay).timeout
-	
 	# Initialize animation state
 	# Restart logic:
 	# Important: Some effects are intentionally "spammable" (e.g. camera shake, squash/stretch punch)
@@ -922,6 +938,23 @@ func _animate_to(target_progress: float, is_one_shot_return: bool = false) -> vo
 	# position — causing a frame-0 flash for any animation where From ≠ natural.
 	_apply_effect(_start_progress)
 	
+	# Handle start delay AFTER FFR (skip for one_shot return - immediate transition).
+	# The target is now visually at its From state. During the delay, _process
+	# re-applies _apply_effect(_start_progress) every frame ("self-hold") to beat
+	# Container layout resets (fit_child_in_rect resets position, rotation, scale).
+	# This moves the hold responsibility INTO the comp — works for standalone comps,
+	# Sequencer clones, and any trigger type. Generation tracking ensures stale
+	# coroutines (from retrigger or stop during delay) abort cleanly.
+	if start_delay > 0.0 and not is_one_shot_return:
+		_in_start_delay = true
+		_animate_generation += 1
+		var my_gen := _animate_generation
+		await get_tree().create_timer(start_delay).timeout
+		if _animate_generation != my_gen:
+			return  # Aborted by retrigger or stop during delay
+		_in_start_delay = false
+		_elapsed = 0.0  # Animation clock starts NOW, after the delay
+	
 	# Only emit started if this is not the one_shot auto-return
 	if not is_one_shot_return:
 		started.emit()
@@ -936,7 +969,9 @@ func _animate_to(target_progress: float, is_one_shot_return: bool = false) -> vo
 ## Stop the effect immediately and reset to natural state (progress = 0)
 func stop() -> void:
 	_is_playing = false
+	_in_start_delay = false
 	_in_hold_at_peak = false
+	_animate_generation += 1  # Abort any in-flight start_delay await
 	set_process(false)
 	_animation_progress = 0.0
 	_reset_ping_pong()
@@ -949,7 +984,9 @@ func stop() -> void:
 ## Stop effect but keep current state (don't reset)
 func stop_and_hold() -> void:
 	_is_playing = false
+	_in_start_delay = false
 	_in_hold_at_peak = false
+	_animate_generation += 1  # Abort any in-flight start_delay await
 	set_process(false)
 	_reset_ping_pong()
 	
@@ -2054,6 +2091,22 @@ func _on_animate_out_complete() -> void:
 ## (no known cases yet — camera/screen comps degrade gracefully if receiver is missing).
 func _supports_editor_preview() -> bool:
 	return true
+
+
+## Temporarily undo this comp's visual effect on the target.
+## Used by the save pipeline (JuicePreviewDirector.temporarily_restore_natural)
+## to prevent mid-animation or From-state values from being baked into scenes.
+## The default implementation is a no-op — subclasses that modify serializable
+## target properties (position, rotation, scale, modulate, etc.) MUST override.
+func _temporarily_undo_visual() -> void:
+	pass
+
+
+## Re-apply this comp's visual effect after a temporary undo.
+## Called via deferred after the save pipeline completes, restoring the preview
+## to its pre-save visual state without touching contribution tracking.
+func _temporarily_reapply_visual() -> void:
+	pass
 
 
 ## Apply the effect at the given progress (0.0 = natural state, 1.0 = fully applied)

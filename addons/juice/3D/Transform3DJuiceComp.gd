@@ -691,6 +691,46 @@ func _exit_tree() -> void:
 	_my_scale_contribution = Vector3.ZERO
 
 
+func _temporarily_undo_visual() -> void:
+	if not is_instance_valid(_target_node) or not (_target_node is Node3D):
+		return
+	var n3d := _target_node as Node3D
+	match transform_target:
+		TransformTarget.POSITION:
+			n3d.position -= _my_position_contribution
+			_last_written_position = n3d.position
+		TransformTarget.ROTATION:
+			n3d.rotation -= _my_rotation_contribution
+			if rotation_pivot_offset != Vector3.ZERO:
+				n3d.position -= _my_position_contribution
+				_last_written_position = n3d.position
+		TransformTarget.SCALE:
+			n3d.scale -= _my_scale_contribution
+			if _scale_pivot_point != Vector3.ZERO:
+				n3d.position -= _my_position_contribution
+				_last_written_position = n3d.position
+
+
+func _temporarily_reapply_visual() -> void:
+	if not is_instance_valid(_target_node) or not (_target_node is Node3D):
+		return
+	var n3d := _target_node as Node3D
+	match transform_target:
+		TransformTarget.POSITION:
+			n3d.position += _my_position_contribution
+			_last_written_position = n3d.position
+		TransformTarget.ROTATION:
+			n3d.rotation += _my_rotation_contribution
+			if rotation_pivot_offset != Vector3.ZERO:
+				n3d.position += _my_position_contribution
+				_last_written_position = n3d.position
+		TransformTarget.SCALE:
+			n3d.scale += _my_scale_contribution
+			if _scale_pivot_point != Vector3.ZERO:
+				n3d.position += _my_position_contribution
+				_last_written_position = n3d.position
+
+
 func _on_animate_start() -> void:
 	if not _has_base:
 		_capture_base()

@@ -409,32 +409,34 @@ func _on_comp_tree_exiting(comp: JuiceCompBase) -> void:
 		comp._invalidate_base_cache()
 
 
-## Temporarily snap all previewed comps to their natural state (progress 0.0).
+## Temporarily undo each comp's visual contribution on its target.
 ## Called by the plugin's _apply_changes() BEFORE Godot serializes the scene,
 ## so the saved .tscn contains clean values — not mid-animation positions.
+## Uses contribution-based subtraction (not _apply_effect(0.0) which would
+## apply the From state — wrong for Custom From references).
 ## Does NOT stop the animation — is_playing, set_process, and signals stay intact.
 func temporarily_restore_natural() -> void:
 	for comp in _preview_comps:
 		if is_instance_valid(comp):
-			comp._apply_effect(0.0)
+			comp._temporarily_undo_visual()
 	for comp in _chain_comps:
 		if is_instance_valid(comp):
-			comp._apply_effect(0.0)
+			comp._temporarily_undo_visual()
 	if debug_enabled:
 		print("[Transport] Temporarily restored natural state (for save)")
 
 
-## Re-apply each comp's current animation progress after the save pipeline finishes.
+## Re-apply each comp's visual contribution after the save pipeline finishes.
 ## Called via call_deferred from the plugin so the .tscn is already written to disk.
 func restore_preview_visual() -> void:
 	for comp in _preview_comps:
 		if is_instance_valid(comp):
-			comp._apply_effect(comp._animation_progress)
+			comp._temporarily_reapply_visual()
 	for comp in _chain_comps:
 		if is_instance_valid(comp):
-			comp._apply_effect(comp._animation_progress)
+			comp._temporarily_reapply_visual()
 	if debug_enabled:
-		print("[Transport] Restored preview visual (progress re-applied)")
+		print("[Transport] Restored preview visual (contribution re-applied)")
 
 
 ## Recursively discover all comps reachable from the given comp via
