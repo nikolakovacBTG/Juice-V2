@@ -378,6 +378,13 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
+	# Warmup must NOT run in the editor — it pre-positions targets at their From
+	# state, and if the scene is saved while those positions are applied, the
+	# wrong values get serialized into the .tscn (corrupting "In Editor" captures).
+	if Engine.is_editor_hint():
+		super._ready()
+		return
+	
 	# In SEQUENCERS_CHILDREN mode, cache recipe and queue warmup BEFORE
 	# super._ready(). super queues _handle_trigger as deferred — by queuing
 	# warmup first, the deferred call order becomes:
