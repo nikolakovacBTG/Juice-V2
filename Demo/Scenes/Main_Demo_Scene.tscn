@@ -1,9 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://wxj0yvr8y1o1"]
+[gd_scene load_steps=9 format=3 uid="uid://wxj0yvr8y1o1"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_m8ohx"]
 [ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_l1f61"]
 [ext_resource type="Script" uid="uid://baos8xhmoevi2" path="res://addons/juice/Utility/SceneActionJuiceUtility.gd" id="2_rsbi8"]
+[ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="3_fay60"]
 [ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_rsbi8"]
+[ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="6_bhrb6"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -57,9 +59,9 @@ text = "Control Demo"
 
 [node name="SceneActionJuiceUtility2" type="Node" parent="MarginContainer/CenterContainer/Menu/Button"]
 script = ExtResource("2_rsbi8")
-from = null
-to = null
-overlay_type = 0
+from = 1
+switch_from = NodePath("../../../../../3dDemo")
+to = ExtResource("3_fay60")
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -85,7 +87,6 @@ text = "Quit"
 [node name="SceneActionJuiceUtility" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit Button"]
 script = ExtResource("2_rsbi8")
 action = 3
-overlay_type = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -109,22 +110,22 @@ skip_juice_components = true
 hide_parent_on_reverse_complete = false
 _editor_target_caches = {
 "../Button": {
-"position": Vector2(-1123, 130),
+"position": Vector2(-810, 130),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Button2": {
-"position": Vector2(-1123, 195),
+"position": Vector2(-810, 195),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Button3": {
-"position": Vector2(-1123, 260),
+"position": Vector2(-810, 260),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "../Quit Button": {
-"position": Vector2(-1123, 325),
+"position": Vector2(-810, 325),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 }
@@ -161,3 +162,5 @@ next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="3dDemo" parent="." instance=ExtResource("6_bhrb6")]
