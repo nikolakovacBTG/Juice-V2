@@ -586,9 +586,10 @@ func _process(delta: float) -> void:
 	
 	# During start_delay, hold the target at its From state every frame.
 	# Container layout resets (fit_child_in_rect) override position/rotation/scale
-	# each frame, so we must continuously re-apply. This "self-hold" pattern ensures
-	# the comp manages its own pre-animation state independently of any external
-	# system (Sequencer hold pattern is no longer needed for this purpose).
+	# each frame, so we must continuously re-apply. This "self-hold" covers the
+	# comp's own start_delay. The Sequencer hold (_held_entries) covers a different
+	# window: Sequencer-level delay + stagger gaps BEFORE animate_in() is called.
+	# Both are needed — they cover adjacent, non-overlapping time windows.
 	if _in_start_delay:
 		_apply_effect(_start_progress)
 		return  # TEMP DEBUG: self-hold re-applies From state every frame during delay
