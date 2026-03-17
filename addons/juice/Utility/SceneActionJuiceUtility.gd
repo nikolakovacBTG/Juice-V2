@@ -138,6 +138,9 @@ enum OldScenePostSwitchAction {
 		update_configuration_warnings()
 
 ## What happens to the old scene after the switch (Scene In Tree mode only).
+## FREE = permanently destroyed, cannot be recovered.
+## HIDE = stays in tree but invisible and paused — useful for quick tab-switching.
+## REMOVE FROM TREE = detached from tree, utility holds reference for re-insertion.
 @export var old_scene_post_switch_action: OldScenePostSwitchAction = OldScenePostSwitchAction.FREE
 
 
