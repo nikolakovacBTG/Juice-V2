@@ -26,9 +26,10 @@
 ##
 ## KEY CONCEPT:
 ## Noise is CONTINUOUS. The base class animation loop provides a 0→1→0
-## amplitude envelope via _apply_effect(progress). This comp runs its own
-## _physics_process() to evolve the noise pattern independently — it reads
-## the envelope as intensity but never writes base class state variables.
+## amplitude envelope via _apply_effect(progress). After super._process()
+## updates the envelope, _evolve_and_apply_noise() applies the noise offset
+## at render framerate. During sustain (after animate_in completes),
+## _on_animate_in_complete() re-enables _process so noise keeps running.
 ## Animate_out smoothly fades the offset to zero by freezing the noise
 ## sample and scaling intensity down.
 ##
@@ -200,7 +201,7 @@ var _noise: FastNoiseLite
 var _noise_time: float = 0.0
 
 ## Current amplitude envelope value from the base class animation loop.
-## Stored by _apply_effect(), read by _physics_process() to scale noise output.
+## Stored by _apply_effect(), read by _evolve_and_apply_noise() to scale noise output.
 var _current_intensity: float = 0.0
 
 ## Delta-first contribution tracking.
@@ -240,9 +241,13 @@ func _validate_property(property: Dictionary) -> void:
 func _ready() -> void:
 	super._ready()
 	_validate_configuration()
-	# Noise evolution runs in _physics_process, independent of the base class
-	# animation loop. Disabled until an animation starts.
-	set_physics_process(false)
+
+
+func _process(delta: float) -> void:
+	# Let base class drive the animation envelope (progress → _current_intensity)
+	super._process(delta)
+	# Apply noise at render framerate — runs during envelope AND sustain
+	_evolve_and_apply_noise(delta)
 
 
 func _validate_configuration() -> void:
@@ -289,10 +294,6 @@ func _on_animate_start() -> void:
 		_noise_time = 0.0
 		_setup_noise()
 
-	# Enable independent noise processing — runs alongside the base class
-	# envelope animation during fade-in/out, and continues solo during sustain.
-	set_physics_process(true)
-
 	if debug_enabled:
 		print("[%s] PropertyNoise start. Path: %s, Type: %s, Base: %s, Speed: %.2f" % [
 			name, property_path, PropertyType.keys()[property_type],
@@ -301,43 +302,24 @@ func _on_animate_start() -> void:
 
 
 func _apply_effect(progress: float) -> void:
-	# Store the base class envelope value for _physics_process() to read.
-	# The actual noise application happens in _physics_process() — this keeps
-	# noise evolution independent from the base class animation loop.
+	# Store the base class envelope value for _evolve_and_apply_noise() to read.
 	_current_intensity = progress
 
 
-## Independent noise processing — runs at physics rate, decoupled from the
-## base class animation loop. Reads _current_intensity (set by _apply_effect)
-## as the amplitude envelope, and evolves noise time continuously.
-func _physics_process(delta: float) -> void:
-	if _current_intensity <= 0.0:
-		return
-
-	if not _is_valid or not is_instance_valid(_property_target_node):
-		return
-
-	# Don't advance noise time during fade-out — freeze the noise sample
-	# so intensity smoothly scales the current offset down to zero
-	if _target_progress > 0.0:
-		_noise_time += delta
-
-	match property_type:
-		PropertyType.FLOAT:
-			_apply_float_noise(_current_intensity)
-		PropertyType.VECTOR2:
-			_apply_vector2_noise(_current_intensity)
-		PropertyType.VECTOR3:
-			_apply_vector3_noise(_current_intensity)
-		PropertyType.COLOR:
-			_apply_color_noise(_current_intensity)
+func _on_animate_in_complete() -> void:
+	# Re-enable processing for sustain — _finish() disabled it, but noise
+	# must keep running at full intensity until animate_out starts.
+	set_process(true)
 
 
 func _on_animate_out_complete() -> void:
-	# Stop independent noise processing
 	_current_intensity = 0.0
-	set_physics_process(false)
 	# Safety cleanup: remove any remaining contribution
+	_remove_contribution()
+
+
+func _restore_to_natural() -> void:
+	_current_intensity = 0.0
 	_remove_contribution()
 
 
@@ -349,6 +331,7 @@ func _exit_tree() -> void:
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_my_contribution = null
+	_current_intensity = 0.0
 
 
 ## Subtract our current contribution from the property and reset tracking.
@@ -378,6 +361,31 @@ func _remove_contribution() -> void:
 				cur.r - prev.r, cur.g - prev.g, cur.b - prev.b, cur.a - prev.a
 			))
 	_my_contribution = null
+
+# =============================================================================
+# NOISE EVOLUTION (called from _process at render framerate)
+# =============================================================================
+
+func _evolve_and_apply_noise(delta: float) -> void:
+	if _current_intensity <= 0.0:
+		return
+
+	if not _is_valid or not is_instance_valid(_property_target_node):
+		return
+
+	# Don't advance noise time during fade-out — freeze the noise sample
+	if _target_progress > 0.0:
+		_noise_time += delta
+
+	match property_type:
+		PropertyType.FLOAT:
+			_apply_float_noise(_current_intensity)
+		PropertyType.VECTOR2:
+			_apply_vector2_noise(_current_intensity)
+		PropertyType.VECTOR3:
+			_apply_vector3_noise(_current_intensity)
+		PropertyType.COLOR:
+			_apply_color_noise(_current_intensity)
 
 # =============================================================================
 # PER-TYPE NOISE APPLICATION

@@ -325,6 +325,21 @@ func _on_animate_out_complete() -> void:
 		print("[%s] Shake complete, returned to base" % name)
 
 
+func _restore_to_natural() -> void:
+	if not is_instance_valid(_target_node) or not (_target_node is Control):
+		return
+	if not _has_base:
+		return
+	var ctrl := _target_node as Control
+	match transform_target:
+		TransformTarget.POSITION:
+			ctrl.position = _base_position
+		TransformTarget.ROTATION:
+			ctrl.rotation = _base_rotation
+		TransformTarget.SCALE:
+			ctrl.scale = _base_scale
+
+
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_resolved = false

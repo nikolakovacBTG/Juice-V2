@@ -310,6 +310,14 @@ func _on_animate_out_complete() -> void:
 		print("[%s] PropertySpring complete" % name)
 
 
+func _restore_to_natural() -> void:
+	if not _is_valid or not is_instance_valid(_property_target_node):
+		return
+	if not _has_base or _base_value == null:
+		return
+	_property_target_node.set_indexed(property_path, _base_value)
+
+
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	if debug_enabled:

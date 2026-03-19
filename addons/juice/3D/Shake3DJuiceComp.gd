@@ -291,6 +291,23 @@ func _on_animate_out_complete() -> void:
 		print("[%s] Shake complete, returned to base" % name)
 
 
+func _restore_to_natural() -> void:
+	if not is_instance_valid(_target_node) or not (_target_node is Node3D):
+		return
+	if not _has_base:
+		return
+	var n3d := _target_node as Node3D
+	match transform_target:
+		TransformTarget.POSITION:
+			n3d.position = _base_position
+		TransformTarget.ROTATION:
+			n3d.rotation = _base_rotation
+			n3d.position = _base_position
+		TransformTarget.SCALE:
+			n3d.scale = _base_scale
+			n3d.position = _base_position
+
+
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_resolved = false

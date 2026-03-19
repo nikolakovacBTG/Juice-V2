@@ -142,7 +142,7 @@ enum TriggerEvent {
 }
 
 ## Which event triggers this component (used by auto-connect)
-@export var trigger_on: TriggerEvent = TriggerEvent.ON_PRESS
+@export var trigger_on: TriggerEvent = TriggerEvent.ON_READY
 
 ## What happens if the trigger fires while the component is already playing.
 enum RetriggerPolicy {
@@ -976,7 +976,7 @@ func stop() -> void:
 	set_process(false)
 	_animation_progress = 0.0
 	_reset_ping_pong()
-	_apply_effect(0.0)
+	_restore_to_natural()
 	
 	if debug_enabled:
 		print("[%s] Stopped and reset" % name)
@@ -2108,6 +2108,14 @@ func _temporarily_undo_visual() -> void:
 ## to its pre-save visual state without touching contribution tracking.
 func _temporarily_reapply_visual() -> void:
 	pass
+
+
+## Restore the target to its natural (unmodified) state when stop() is called.
+## Default: calls _apply_effect(0.0) — correct for comps where progress 0 = no effect.
+## Override in comps where progress 0 ≠ natural state (e.g., From/To Transform model,
+## Shake/Noise/Spring that use absolute writes with a captured base).
+func _restore_to_natural() -> void:
+	_apply_effect(0.0)
 
 
 ## Apply the effect at the given progress (0.0 = natural state, 1.0 = fully applied)

@@ -311,6 +311,23 @@ func _on_animate_out_complete() -> void:
 		print("[%s] Spring complete" % name)
 
 
+func _restore_to_natural() -> void:
+	var target := _get_target_node2d()
+	if target == null:
+		return
+	if not _has_base:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position = _base_position
+		TransformTarget.ROTATION:
+			target.rotation = _base_rotation
+			target.position = _base_position
+		TransformTarget.SCALE:
+			target.scale = _base_scale
+			target.position = _base_position
+
+
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_resolved = false

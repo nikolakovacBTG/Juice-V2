@@ -282,6 +282,10 @@ func _on_animate_in_complete() -> void:
 		print("[%s] PropertyShake complete (in), contribution cleared" % name)
 
 
+func _restore_to_natural() -> void:
+	_remove_contribution()
+
+
 func _exit_tree() -> void:
 	# Clean up our delta contribution if freed mid-animation
 	_remove_contribution()

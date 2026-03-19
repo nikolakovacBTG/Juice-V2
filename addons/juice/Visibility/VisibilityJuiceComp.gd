@@ -350,6 +350,17 @@ func _on_animate_out_complete() -> void:
 				print("[%s] Fade complete, restored alpha to %.2f" % [name, _base_alpha])
 
 
+func _restore_to_natural() -> void:
+	if not is_instance_valid(_target_node):
+		return
+	match visibility_mode:
+		VisibilityMode.BLINK:
+			_target_node.visible = _base_visible
+		VisibilityMode.FLICKER, VisibilityMode.FADE:
+			if _has_base_alpha:
+				_set_target_alpha(_base_alpha)
+
+
 # =============================================================================
 # BLINK MODE
 # =============================================================================

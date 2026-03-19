@@ -682,6 +682,25 @@ func _temporarily_reapply_visual() -> void:
 			_last_written_scale = target.scale
 
 
+func _restore_to_natural() -> void:
+	var target := _get_target_control()
+	if target == null:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			target.position -= _my_position_contribution
+			_my_position_contribution = Vector2.ZERO
+			_last_written_position = target.position
+		TransformTarget.ROTATION:
+			target.rotation -= _my_rotation_contribution
+			_my_rotation_contribution = 0.0
+			_last_written_rotation = target.rotation
+		TransformTarget.SCALE:
+			target.scale -= _my_scale_contribution
+			_my_scale_contribution = Vector2.ZERO
+			_last_written_scale = target.scale
+
+
 func _on_animate_start() -> void:
 	if transform_target == TransformTarget.SCALE:  # TEMP DEBUG
 		var t := _get_target_control()

@@ -13,9 +13,10 @@
 ##
 ## KEY CONCEPT:
 ## Noise is CONTINUOUS. The base class animation loop provides a 0→1→0
-## amplitude envelope via _apply_effect(progress). This comp runs its own
-## _physics_process() to evolve the noise pattern independently — it reads
-## the envelope as intensity but never writes base class state variables.
+## amplitude envelope via _apply_effect(progress). After super._process()
+## updates the envelope, _evolve_and_apply_noise() applies the noise offset
+## at render framerate. During sustain (after animate_in completes),
+## _on_animate_in_complete() re-enables _process so noise keeps running.
 ## Animate_out smoothly fades the offset to zero by freezing the noise
 ## sample and scaling intensity down.
 ##
@@ -194,7 +195,7 @@ var _noise: FastNoiseLite
 var _noise_time: float = 0.0
 
 ## Current amplitude envelope value from the base class animation loop.
-## Stored by _apply_effect(), read by _physics_process() to scale noise output.
+## Stored by _apply_effect(), read by _evolve_and_apply_noise() to scale noise output.
 var _current_intensity: float = 0.0
 
 var _base_position: Vector2 = Vector2.ZERO
@@ -250,9 +251,13 @@ func _validate_property(property: Dictionary) -> void:
 
 func _ready() -> void:
 	super._ready()
-	# Noise evolution runs in _physics_process, independent of the base class
-	# animation loop. Disabled until an animation starts.
-	set_physics_process(false)
+
+
+func _process(delta: float) -> void:
+	# Let base class drive the animation envelope (progress → _current_intensity)
+	super._process(delta)
+	# Apply noise at render framerate — runs during envelope AND sustain
+	_evolve_and_apply_noise(delta)
 
 # =============================================================================
 # ANIMATION HOOKS
@@ -269,53 +274,26 @@ func _on_animate_start() -> void:
 	if transform_target != TransformTarget.POSITION:
 		_compute_pivot_offset()
 
-	# Enable independent noise processing — runs alongside the base class
-	# envelope animation during fade-in/out, and continues solo during sustain.
-	set_physics_process(true)
-
 	if debug_enabled:
 		var target_name: String = TransformTarget.keys()[transform_target]
 		print("[%s] Noise 2D start (%s). Speed: %.2f" % [name, target_name, noise_speed])
 
 
 func _apply_effect(progress: float) -> void:
-	# Store the base class envelope value for _physics_process() to read.
-	# The actual noise application happens in _physics_process() — this keeps
-	# noise evolution independent from the base class animation loop.
+	# Store the base class envelope value for _evolve_and_apply_noise() to read.
 	_current_intensity = progress
 
 
-## Independent noise processing — runs at physics rate, decoupled from the
-## base class animation loop. Reads _current_intensity (set by _apply_effect)
-## as the amplitude envelope, and evolves noise time continuously.
-func _physics_process(delta: float) -> void:
-	if _current_intensity <= 0.0:
-		return
-
-	if not is_instance_valid(_target_node) or not _target_node is Node2D:
-		return
-
-	# Don't advance noise time during fade-out — freeze the noise sample
-	# so intensity smoothly scales the current offset down to zero
-	if _target_progress > 0.0:
-		_noise_time += delta
-
-	match transform_target:
-		TransformTarget.POSITION:
-			_apply_position_noise(_current_intensity)
-		TransformTarget.ROTATION:
-			_apply_rotation_noise(_current_intensity)
-		TransformTarget.SCALE:
-			_apply_scale_noise(_current_intensity)
+func _on_animate_in_complete() -> void:
+	# Re-enable processing for sustain — _finish() disabled it, but noise
+	# must keep running at full intensity until animate_out starts.
+	set_process(true)
 
 
 func _on_animate_out_complete() -> void:
+	_current_intensity = 0.0
 	if not is_instance_valid(_target_node) or not _target_node is Node2D:
 		return
-
-	# Stop independent noise processing
-	_current_intensity = 0.0
-	set_physics_process(false)
 
 	var n2d := _target_node as Node2D
 	match transform_target:
@@ -331,8 +309,27 @@ func _on_animate_out_complete() -> void:
 	_has_base = false
 
 
+func _restore_to_natural() -> void:
+	_current_intensity = 0.0
+	if not is_instance_valid(_target_node) or not _target_node is Node2D:
+		return
+	if not _has_base:
+		return
+	var n2d := _target_node as Node2D
+	match transform_target:
+		TransformTarget.POSITION:
+			n2d.position = _base_position
+		TransformTarget.ROTATION:
+			n2d.rotation = _base_rotation
+			n2d.position = _base_position
+		TransformTarget.SCALE:
+			n2d.scale = _base_scale
+			n2d.position = _base_position
+
+
 func _invalidate_base_cache() -> void:
 	_has_base = false
+	_current_intensity = 0.0
 
 # =============================================================================
 # SEQUENCER RECIPE CONTRACT
@@ -372,6 +369,29 @@ func _recipe_apply_natural(target: Node, natural: Variant) -> void:
 
 func _recipe_restore_natural(target: Node, natural: Variant) -> void:
 	_recipe_apply_natural(target, natural)
+
+# =============================================================================
+# NOISE EVOLUTION (called from _process at render framerate)
+# =============================================================================
+
+func _evolve_and_apply_noise(delta: float) -> void:
+	if _current_intensity <= 0.0:
+		return
+
+	if not is_instance_valid(_target_node) or not _target_node is Node2D:
+		return
+
+	# Don't advance noise time during fade-out — freeze the noise sample
+	if _target_progress > 0.0:
+		_noise_time += delta
+
+	match transform_target:
+		TransformTarget.POSITION:
+			_apply_position_noise(_current_intensity)
+		TransformTarget.ROTATION:
+			_apply_rotation_noise(_current_intensity)
+		TransformTarget.SCALE:
+			_apply_scale_noise(_current_intensity)
 
 # =============================================================================
 # POSITION NOISE
