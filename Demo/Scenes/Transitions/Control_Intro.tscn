@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://dwsbodnmjpti6"]
+[gd_scene load_steps=9 format=3 uid="uid://dwsbodnmjpti6"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_sf558"]
 [ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_ctnp2"]
 [ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_dxpb1"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="4_ctnp2"]
 [ext_resource type="Script" uid="uid://81p8ahyldckl" path="res://addons/juice/Control/NoiseControlJuiceComp.gd" id="4_dxpb1"]
+[ext_resource type="Script" uid="uid://gr42guay12p1" path="res://addons/juice/Control/ProgressControlJuiceComp.gd" id="6_3etqj"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -70,9 +71,10 @@ layout_mode = 2
 [node name="JuiceLogoSeparated4" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control"]
 custom_minimum_size = Vector2(601.235, 300)
 layout_mode = 0
-offset_right = 601.715
+offset_right = 601.7151
 offset_bottom = 300.0
-pivot_offset = Vector2(300.8575, 150)
+scale = Vector2(1.00002, 1.00002)
+pivot_offset = Vector2(300.85754, 150)
 size_flags_vertical = 3
 size_flags_stretch_ratio = 3.13
 texture = ExtResource("4_ctnp2")
@@ -102,7 +104,8 @@ from_scale = Vector2(0, 0)
 to_reference = 0
 to_scale = Vector2(1, 1)
 pivot_mode = 0
-duration_in = 0.5
+start_delay = 2.0
+duration_in = 1.0
 transition_in = 6
 ease_in = 1
 elastic_amplitude_in = 1.0
@@ -114,9 +117,32 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
+[node name="TransformControlJuiceComp2" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+script = ExtResource("3_dxpb1")
+transform_target = 1
+from_reference = 0
+from_rotation_degrees = -90.0
+to_reference = 0
+to_rotation_degrees = 0.0
+pivot_mode = 0
+start_delay = 2.0
+duration_in = 1.0
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = true
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
 [node name="NoiseControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
 script = ExtResource("4_dxpb1")
+transform_target = 1
 position_amplitude = Vector2(20, 20)
+rotation_amplitude = 2.0
 noise_speed = 0.5
 noise_frequency = 0.2
 fractal_type = 3
@@ -207,3 +233,19 @@ next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="ProgressControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer"]
+script = ExtResource("6_3etqj")
+transform_target = 2
+scale_rate = Vector2(0.03, 0.03)
+pivot_mode = 0
+bound_enabled = false
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://gr42guay12p1"

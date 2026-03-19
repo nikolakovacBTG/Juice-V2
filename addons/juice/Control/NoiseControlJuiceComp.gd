@@ -207,6 +207,14 @@ var _has_base: bool = false
 ## Whether pivot has been applied for the current animation cycle
 var _pivot_applied: bool = false
 
+## Delta-first contribution tracking.
+## Each var tracks what THIS comp has written as an offset so we can compute deltas.
+## On each frame: delta = new_offset - contribution; node.prop += delta.
+## On cleanup: node.prop -= contribution.
+var _my_position_contribution: Vector2 = Vector2.ZERO
+var _my_rotation_contribution: float = 0.0
+var _my_scale_contribution: Vector2 = Vector2.ZERO
+
 # =============================================================================
 # CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
@@ -260,6 +268,11 @@ func _process(delta: float) -> void:
 	# Apply noise at render framerate — runs during envelope AND sustain
 	_evolve_and_apply_noise(delta)
 
+
+func _exit_tree() -> void:
+	# Clean up delta contribution if freed mid-animation
+	_remove_contribution()
+
 # =============================================================================
 # ANIMATION HOOKS
 # =============================================================================
@@ -296,42 +309,23 @@ func _on_animate_in_complete() -> void:
 
 func _on_animate_out_complete() -> void:
 	_current_intensity = 0.0
-	if not is_instance_valid(_target_node) or not _target_node is Control:
-		return
-
-	var ctrl := _target_node as Control
-	match transform_target:
-		TransformTarget.POSITION:
-			ctrl.position = _base_position
-		TransformTarget.ROTATION:
-			ctrl.rotation = _base_rotation
-		TransformTarget.SCALE:
-			ctrl.scale = _base_scale
-
+	_remove_contribution()
 	_has_base = false
 	_pivot_applied = false
 
 
 func _restore_to_natural() -> void:
 	_current_intensity = 0.0
-	if not is_instance_valid(_target_node) or not _target_node is Control:
-		return
-	if not _has_base:
-		return
-	var ctrl := _target_node as Control
-	match transform_target:
-		TransformTarget.POSITION:
-			ctrl.position = _base_position
-		TransformTarget.ROTATION:
-			ctrl.rotation = _base_rotation
-		TransformTarget.SCALE:
-			ctrl.scale = _base_scale
+	_remove_contribution()
 
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_applied = false
 	_current_intensity = 0.0
+	_my_position_contribution = Vector2.ZERO
+	_my_rotation_contribution = 0.0
+	_my_scale_contribution = Vector2.ZERO
 
 # =============================================================================
 # SEQUENCER RECIPE CONTRACT
@@ -369,6 +363,35 @@ func _recipe_apply_natural(target: Node, natural: Variant) -> void:
 
 func _recipe_restore_natural(target: Node, natural: Variant) -> void:
 	_recipe_apply_natural(target, natural)
+
+
+## Subtract this comp's visual contribution so the editor can save the natural state.
+## Called by JuicePreviewDirector before scene serialization.
+func _temporarily_undo_visual() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Control:
+		return
+	var ctrl := _target_node as Control
+	match transform_target:
+		TransformTarget.POSITION:
+			ctrl.position -= _my_position_contribution
+		TransformTarget.ROTATION:
+			ctrl.rotation -= _my_rotation_contribution
+		TransformTarget.SCALE:
+			ctrl.scale -= _my_scale_contribution
+
+
+## Re-add this comp's visual contribution after the editor save completes.
+func _temporarily_reapply_visual() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Control:
+		return
+	var ctrl := _target_node as Control
+	match transform_target:
+		TransformTarget.POSITION:
+			ctrl.position += _my_position_contribution
+		TransformTarget.ROTATION:
+			ctrl.rotation += _my_rotation_contribution
+		TransformTarget.SCALE:
+			ctrl.scale += _my_scale_contribution
 
 # =============================================================================
 # NOISE EVOLUTION (called from _process at render framerate)
@@ -412,7 +435,10 @@ func _apply_position_noise(intensity: float) -> void:
 		position_amplitude.y * sample_y * intensity
 	)
 
-	ctrl.position = _base_position + offset
+	# Delta-first: write only the change in contribution
+	var delta := offset - _my_position_contribution
+	ctrl.position += delta
+	_my_position_contribution = offset
 
 # =============================================================================
 # ROTATION NOISE (single Z-axis, uses native pivot_offset)
@@ -424,7 +450,10 @@ func _apply_rotation_noise(intensity: float) -> void:
 	var sample := _sample_noise(0.0, 1.0)
 	var rotation_offset := deg_to_rad(rotation_amplitude * sample * intensity)
 
-	ctrl.rotation = _base_rotation + rotation_offset
+	# Delta-first: write only the change in contribution
+	var delta := rotation_offset - _my_rotation_contribution
+	ctrl.rotation += delta
+	_my_rotation_contribution = rotation_offset
 
 # =============================================================================
 # SCALE NOISE (uses native pivot_offset)
@@ -449,7 +478,10 @@ func _apply_scale_noise(intensity: float) -> void:
 		scale_amplitude.y * sample_y * intensity
 	)
 
-	ctrl.scale = _base_scale + scale_offset
+	# Delta-first: write only the change in contribution
+	var delta := scale_offset - _my_scale_contribution
+	ctrl.scale += delta
+	_my_scale_contribution = scale_offset
 
 # =============================================================================
 # PIVOT HANDLING (Control domain uses native pivot_offset)
@@ -489,6 +521,27 @@ func _on_control_resized() -> void:
 # =============================================================================
 # NOISE HELPERS
 # =============================================================================
+
+## Subtract this comp's current contribution from the target and reset tracking.
+## Safe to call even if no contribution was made (all contributions start at zero).
+func _remove_contribution() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Control:
+		_my_position_contribution = Vector2.ZERO
+		_my_rotation_contribution = 0.0
+		_my_scale_contribution = Vector2.ZERO
+		return
+	var ctrl := _target_node as Control
+	match transform_target:
+		TransformTarget.POSITION:
+			ctrl.position -= _my_position_contribution
+			_my_position_contribution = Vector2.ZERO
+		TransformTarget.ROTATION:
+			ctrl.rotation -= _my_rotation_contribution
+			_my_rotation_contribution = 0.0
+		TransformTarget.SCALE:
+			ctrl.scale -= _my_scale_contribution
+			_my_scale_contribution = Vector2.ZERO
+
 
 func _setup_noise() -> void:
 	if _noise == null:

@@ -206,6 +206,15 @@ var _has_base: bool = false
 ## Resolved pivot point in local space
 var _pivot_offset: Vector2 = Vector2.ZERO
 
+## Delta-first contribution tracking.
+## Each var tracks what THIS comp has written as an offset so we can compute deltas.
+## On each frame: delta = new_offset - contribution; node.prop += delta.
+## On cleanup: node.prop -= contribution.
+## Position contribution is shared: used by direct position noise AND pivot compensation.
+var _my_position_contribution: Vector2 = Vector2.ZERO
+var _my_rotation_contribution: float = 0.0
+var _my_scale_contribution: Vector2 = Vector2.ZERO
+
 # =============================================================================
 # CONDITIONAL PROPERTY VISIBILITY
 # =============================================================================
@@ -259,6 +268,11 @@ func _process(delta: float) -> void:
 	# Apply noise at render framerate — runs during envelope AND sustain
 	_evolve_and_apply_noise(delta)
 
+
+func _exit_tree() -> void:
+	# Clean up delta contribution if freed mid-animation
+	_remove_contribution()
+
 # =============================================================================
 # ANIMATION HOOKS
 # =============================================================================
@@ -292,44 +306,21 @@ func _on_animate_in_complete() -> void:
 
 func _on_animate_out_complete() -> void:
 	_current_intensity = 0.0
-	if not is_instance_valid(_target_node) or not _target_node is Node2D:
-		return
-
-	var n2d := _target_node as Node2D
-	match transform_target:
-		TransformTarget.POSITION:
-			n2d.position = _base_position
-		TransformTarget.ROTATION:
-			n2d.rotation = _base_rotation
-			n2d.position = _base_position
-		TransformTarget.SCALE:
-			n2d.scale = _base_scale
-			n2d.position = _base_position
-
+	_remove_contribution()
 	_has_base = false
 
 
 func _restore_to_natural() -> void:
 	_current_intensity = 0.0
-	if not is_instance_valid(_target_node) or not _target_node is Node2D:
-		return
-	if not _has_base:
-		return
-	var n2d := _target_node as Node2D
-	match transform_target:
-		TransformTarget.POSITION:
-			n2d.position = _base_position
-		TransformTarget.ROTATION:
-			n2d.rotation = _base_rotation
-			n2d.position = _base_position
-		TransformTarget.SCALE:
-			n2d.scale = _base_scale
-			n2d.position = _base_position
+	_remove_contribution()
 
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_current_intensity = 0.0
+	_my_position_contribution = Vector2.ZERO
+	_my_rotation_contribution = 0.0
+	_my_scale_contribution = Vector2.ZERO
 
 # =============================================================================
 # SEQUENCER RECIPE CONTRACT
@@ -370,6 +361,38 @@ func _recipe_apply_natural(target: Node, natural: Variant) -> void:
 func _recipe_restore_natural(target: Node, natural: Variant) -> void:
 	_recipe_apply_natural(target, natural)
 
+
+## Subtract this comp's visual contribution so the editor can save the natural state.
+func _temporarily_undo_visual() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Node2D:
+		return
+	var n2d := _target_node as Node2D
+	match transform_target:
+		TransformTarget.POSITION:
+			n2d.position -= _my_position_contribution
+		TransformTarget.ROTATION:
+			n2d.rotation -= _my_rotation_contribution
+			n2d.position -= _my_position_contribution
+		TransformTarget.SCALE:
+			n2d.scale -= _my_scale_contribution
+			n2d.position -= _my_position_contribution
+
+
+## Re-add this comp's visual contribution after the editor save completes.
+func _temporarily_reapply_visual() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Node2D:
+		return
+	var n2d := _target_node as Node2D
+	match transform_target:
+		TransformTarget.POSITION:
+			n2d.position += _my_position_contribution
+		TransformTarget.ROTATION:
+			n2d.rotation += _my_rotation_contribution
+			n2d.position += _my_position_contribution
+		TransformTarget.SCALE:
+			n2d.scale += _my_scale_contribution
+			n2d.position += _my_position_contribution
+
 # =============================================================================
 # NOISE EVOLUTION (called from _process at render framerate)
 # =============================================================================
@@ -408,7 +431,10 @@ func _apply_position_noise(intensity: float) -> void:
 		position_amplitude.y * sample_y * intensity
 	)
 
-	n2d.position = _base_position + offset
+	# Delta-first: write only the change in contribution
+	var pos_delta := offset - _my_position_contribution
+	n2d.position += pos_delta
+	_my_position_contribution = offset
 
 # =============================================================================
 # ROTATION NOISE (single Z-axis with position compensation for pivot)
@@ -420,14 +446,20 @@ func _apply_rotation_noise(intensity: float) -> void:
 	var sample := _sample_noise(0.0, 1.0)
 	var angle_offset := deg_to_rad(rotation_amplitude * sample * intensity)
 
-	n2d.rotation = _base_rotation + angle_offset
+	# Delta-first: write only the change in contribution
+	var rot_delta := angle_offset - _my_rotation_contribution
+	n2d.rotation += rot_delta
+	_my_rotation_contribution = angle_offset
 
 	# Position compensation: rotate the pivot offset vector and adjust position
 	# so the node appears to rotate around the pivot point rather than its origin
 	if _pivot_offset != Vector2.ZERO:
 		var rotated_pivot := _pivot_offset.rotated(_base_rotation + angle_offset)
 		var original_pivot := _pivot_offset.rotated(_base_rotation)
-		n2d.position = _base_position + (original_pivot - rotated_pivot)
+		var pos_offset := original_pivot - rotated_pivot
+		var pos_delta := pos_offset - _my_position_contribution
+		n2d.position += pos_delta
+		_my_position_contribution = pos_offset
 
 # =============================================================================
 # SCALE NOISE (with position compensation for pivot)
@@ -452,15 +484,21 @@ func _apply_scale_noise(intensity: float) -> void:
 		scale_amplitude.y * sample_y * intensity
 	)
 
-	var new_scale := _base_scale + scale_offset
-	n2d.scale = new_scale
+	# Delta-first: write only the change in contribution
+	var scale_delta := scale_offset - _my_scale_contribution
+	n2d.scale += scale_delta
+	_my_scale_contribution = scale_offset
 
 	# Position compensation: when scaling around a pivot that isn't the origin,
 	# adjust position so the visual center stays in place
 	if _pivot_offset != Vector2.ZERO:
+		var new_scale := _base_scale + scale_offset
 		var scale_ratio := new_scale / _base_scale
 		var compensated_pivot := _pivot_offset * scale_ratio
-		n2d.position = _base_position + (_pivot_offset - compensated_pivot)
+		var pos_offset := _pivot_offset - compensated_pivot
+		var pos_delta := pos_offset - _my_position_contribution
+		n2d.position += pos_delta
+		_my_position_contribution = pos_offset
 
 # =============================================================================
 # PIVOT HELPERS
@@ -493,6 +531,30 @@ func _estimate_visual_center() -> Vector2:
 # =============================================================================
 # NOISE HELPERS
 # =============================================================================
+
+## Subtract this comp's current contribution from the target and reset tracking.
+func _remove_contribution() -> void:
+	if not is_instance_valid(_target_node) or not _target_node is Node2D:
+		_my_position_contribution = Vector2.ZERO
+		_my_rotation_contribution = 0.0
+		_my_scale_contribution = Vector2.ZERO
+		return
+	var n2d := _target_node as Node2D
+	match transform_target:
+		TransformTarget.POSITION:
+			n2d.position -= _my_position_contribution
+			_my_position_contribution = Vector2.ZERO
+		TransformTarget.ROTATION:
+			n2d.rotation -= _my_rotation_contribution
+			n2d.position -= _my_position_contribution
+			_my_rotation_contribution = 0.0
+			_my_position_contribution = Vector2.ZERO
+		TransformTarget.SCALE:
+			n2d.scale -= _my_scale_contribution
+			n2d.position -= _my_position_contribution
+			_my_scale_contribution = Vector2.ZERO
+			_my_position_contribution = Vector2.ZERO
+
 
 func _setup_noise() -> void:
 	if _noise == null:
