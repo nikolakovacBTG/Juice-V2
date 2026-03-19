@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://t7lvh3jlwchu"
-path="res://.godot/imported/Kavoon-Regular.ttf-8932e3183fafb5d7e73770f81527f35d.fontdata"
+uid="uid://bx1mf0f8nim1a"
+path="res://.godot/imported/PoetsenOne-Regular.ttf-aff9612e9e773a3a11f4b5343b4e8b75.fontdata"
 
 [deps]
 
-source_file="res://Demo/Fonts/Kavoon-Regular.ttf"
-dest_files=["res://.godot/imported/Kavoon-Regular.ttf-8932e3183fafb5d7e73770f81527f35d.fontdata"]
+source_file="res://Demo/Fonts/PoetsenOne-Regular.ttf"
+dest_files=["res://.godot/imported/PoetsenOne-Regular.ttf-aff9612e9e773a3a11f4b5343b4e8b75.fontdata"]
 
 [params]
 

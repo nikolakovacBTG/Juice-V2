@@ -1,8 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://dwsbodnmjpti6"]
+[gd_scene load_steps=8 format=3 uid="uid://dwsbodnmjpti6"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_sf558"]
 [ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_ctnp2"]
 [ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_dxpb1"]
+[ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="4_ctnp2"]
+[ext_resource type="Script" uid="uid://81p8ahyldckl" path="res://addons/juice/Control/NoiseControlJuiceComp.gd" id="4_dxpb1"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -22,7 +24,8 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_sf558")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="BG" type="TextureRect" parent="."]
+z_index = -2
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -34,28 +37,64 @@ size_flags_vertical = 3
 texture = SubResource("GradientTexture2D_3etqj")
 expand_mode = 2
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="Control" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 50.0
+offset_bottom = 50.0
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_top = 85
 
-[node name="Control2" type="Label" parent="CenterContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
-theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
-theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
-theme_override_constants/shadow_offset_x = 13
-theme_override_constants/shadow_offset_y = 9
-theme_override_constants/outline_size = 14
-theme_override_font_sizes/font_size = 99
-text = "Control"
-horizontal_alignment = 1
-uppercase = true
+size_flags_horizontal = 4
+size_flags_stretch_ratio = 1.94
 
-[node name="TransformControlJuiceComp2" type="Node" parent="CenterContainer/Control2"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 59
+theme_override_constants/margin_bottom = -37
+
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+
+[node name="JuiceLogoSeparated4" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control"]
+custom_minimum_size = Vector2(601.235, 300)
+layout_mode = 0
+offset_right = 601.715
+offset_bottom = 300.0
+pivot_offset = Vector2(300.8575, 150)
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.13
+texture = ExtResource("4_ctnp2")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="JuiceLogoSeparated3" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+modulate = Color(0, 0.12400003, 0.62, 0.20784314)
+show_behind_parent = true
+custom_minimum_size = Vector2(601.235, 300)
+layout_mode = 0
+offset_left = 9.110001
+offset_top = 9.364998
+offset_right = 610.345
+offset_bottom = 309.365
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.13
+texture = ExtResource("4_ctnp2")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
 script = ExtResource("3_dxpb1")
 transform_target = 2
 from_reference = 0
@@ -63,8 +102,26 @@ from_scale = Vector2(0, 0)
 to_reference = 0
 to_scale = Vector2(1, 1)
 pivot_mode = 0
-start_delay = 3.0
-trigger_on = 8
+duration_in = 0.5
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="NoiseControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+script = ExtResource("4_dxpb1")
+position_amplitude = Vector2(20, 20)
+noise_speed = 0.5
+noise_frequency = 0.2
+fractal_type = 3
+clamp_min = -4.0
+clamp_max = 6.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -73,13 +130,14 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+metadata/_custom_type_script = "uid://81p8ahyldckl"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+[node name="VBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 30
+alignment = 1
 
-[node name="Control" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="Control" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
 theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
@@ -90,9 +148,10 @@ theme_override_constants/outline_size = 14
 theme_override_font_sizes/font_size = 99
 text = "Control"
 horizontal_alignment = 1
+vertical_alignment = 1
 uppercase = true
 
-[node name="Demo" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="Demo" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
 theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
@@ -103,9 +162,10 @@ theme_override_constants/outline_size = 14
 theme_override_font_sizes/font_size = 99
 text = "Demo"
 horizontal_alignment = 1
+vertical_alignment = 1
 uppercase = true
 
-[node name="SequencerJuiceComp" type="Node" parent="CenterContainer/VBoxContainer"]
+[node name="SequencerJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer"]
 script = ExtResource("2_ctnp2")
 juice_source = 0
 target_scope = 0
@@ -117,7 +177,6 @@ skip_self = true
 skip_juice_components = true
 hide_parent_on_reverse_complete = false
 start_delay = 1.0
-trigger_on = 8
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -128,7 +187,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://umlva67rt4ud"
 
-[node name="TransformControlJuiceComp" type="Node" parent="CenterContainer/VBoxContainer/SequencerJuiceComp"]
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer/SequencerJuiceComp"]
 script = ExtResource("3_dxpb1")
 transform_target = 2
 from_reference = 0
@@ -136,9 +195,12 @@ from_scale = Vector2(0, 0)
 to_reference = 0
 to_scale = Vector2(1, 1)
 pivot_mode = 0
+trigger_on = 0
 duration_in = 0.3
-transition_in = 4
+transition_in = 6
 ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
 custom_curve_in = null
 hold_at_peak = 0.0
 next_component = NodePath("")
