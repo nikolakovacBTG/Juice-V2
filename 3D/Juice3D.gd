@@ -21,7 +21,6 @@ const _3D_TRIGGER_HINT := "On Press:0,On Release:1,On Hover Start:2,On Hover End
 func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
 	if property.name == "trigger_on":
-		property.hint = PROPERTY_HINT_ENUM
 		property.hint_string = _3D_TRIGGER_HINT
 
 # =============================================================================
