@@ -10,13 +10,6 @@
 
 [sub_resource type="Resource" id="Resource_gd0pe"]
 script = ExtResource("3_0iv50")
-duration_in = 2.0
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-interrupt_siblings = false
-crossfade_time = 0.0
-debug_enabled = false
 from_reference = 1
 capture_at = 0
 to_reference = 0
@@ -54,5 +47,6 @@ mesh = SubResource("CylinderMesh_v8ha8")
 
 [node name="Juice3D" type="Node" parent="MeshInstance3D"]
 script = ExtResource("1_7qp4h")
+trigger_behaviour = 3
 recipe = SubResource("Resource_uaa1d")
 metadata/_custom_type_script = "uid://b27b1xgkm8qyo"
