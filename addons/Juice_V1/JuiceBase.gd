@@ -78,6 +78,12 @@ enum RetriggerPolicy {
 	IGNORE,    ## Ignore re-trigger while playing
 }
 
+## Where trigger signals come from.
+enum TriggerSource {
+	PARENT,  ## Parent node is the signal source (default).
+	NODE,    ## A specific node referenced by trigger_source_path.
+}
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -92,31 +98,36 @@ enum RetriggerPolicy {
 
 @export_group("Trigger")
 
-## What event triggers the animation.
+## Where trigger signals come from: PARENT uses the parent node, NODE uses a
+## specific node referenced by trigger_source_path.
+@export var trigger_source: TriggerSource = TriggerSource.PARENT:
+	set(value):
+		trigger_source = value
+		notify_property_list_changed()
+
+## If true, automatically connect to parent's signals based on its type.
+@export var auto_connect_parent: bool = true
+
+## Path to the node that provides trigger signals.
+@export var trigger_source_path: NodePath
+
+## What event triggers the animation. Options are filtered per domain.
 @export var trigger_on: TriggerEvent = TriggerEvent.ON_READY:
 	set(value):
 		trigger_on = value
 		notify_property_list_changed()
 
+## Signal name to connect to on the source node (only for MANUAL trigger).
+@export var manual_trigger_signal: String
+
 ## How the trigger maps to animation direction (default for all effects in recipe).
 @export var trigger_behaviour: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 
-## If true, automatically connect to parent's signals based on its type.
-## When manual_trigger_signal is set, it REPLACES auto-connect.
-@export var auto_connect_parent: bool = true
+## Delay before the entire recipe starts after trigger (seconds).
+@export var start_delay: float = 0.0
 
 ## How to handle re-triggers while playing.
 @export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
-
-## Delay before animation starts after trigger (seconds).
-@export var start_delay: float = 0.0
-
-## Path to trigger source node (empty = parent).
-@export var trigger_source_path: NodePath
-
-## Manual signal name to connect to (e.g., "my_custom_signal").
-## When set, REPLACES auto-connect — the two are mutually exclusive.
-@export var manual_trigger_signal: String
 
 @export_group("Loop")
 
@@ -147,6 +158,17 @@ enum RetriggerPolicy {
 # =============================================================================
 
 func _validate_property(property: Dictionary) -> void:
+	# --- Trigger group: inline conditional display ---
+	# auto_connect_parent only relevant when source is PARENT
+	if property.name == "auto_connect_parent" and trigger_source != TriggerSource.PARENT:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	# trigger_source_path only relevant when source is NODE
+	if property.name == "trigger_source_path" and trigger_source != TriggerSource.NODE:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+	# manual_trigger_signal only relevant when trigger_on is MANUAL
+	if property.name == "manual_trigger_signal" and trigger_on != TriggerEvent.MANUAL:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+
 	# --- Loop group ---
 	# Hide loop_delay when not looping
 	if property.name == "loop_delay" and loop_count == 1:
@@ -166,8 +188,11 @@ var _runtime_effects: Array[JuiceEffectBase] = []
 ## Which effects are currently active (being ticked).
 var _active_effect_indices: Array[int] = []
 
-## Target node (resolved at _ready or start).
+## Target node — what effects animate (resolved at _ready).
 var _target_node: Node = null
+
+## Trigger source node — where signals come from (may differ from target).
+var _trigger_source_node: Node = null
 
 ## Current toggle state for TOGGLE behaviour.
 var _toggle_state: bool = false
@@ -194,22 +219,34 @@ func _ready() -> void:
 		set_process(false)
 		return
 
-	# Resolve target
+	# Resolve target (what effects animate)
 	_target_node = _resolve_target()
 	if _target_node == null:
 		if debug_enabled:
 			push_warning("[%s] No valid target node found" % name)
 		return
 
+	# Resolve trigger source (where signals come from)
+	match trigger_source:
+		TriggerSource.PARENT:
+			_trigger_source_node = get_parent()
+		TriggerSource.NODE:
+			_trigger_source_node = get_node_or_null(trigger_source_path)
+			if _trigger_source_node == null and debug_enabled:
+				push_warning("[%s] Trigger source node not found: %s" % [name, trigger_source_path])
+
 	# Clone recipe effects for independent state
 	_invalidate_runtime_effects()
 
-	# Auto-connect signals
-	if auto_connect_parent:
+	# Auto-connect signals based on trigger source and trigger event
+	if trigger_on == TriggerEvent.MANUAL:
+		# MANUAL: only connect if manual_trigger_signal is specified
 		if not manual_trigger_signal.is_empty():
 			_connect_manual_signal()
-		elif trigger_on != TriggerEvent.MANUAL:
-			_try_auto_connect()
+	elif trigger_source == TriggerSource.PARENT and auto_connect_parent:
+		_try_auto_connect()
+	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
+		_try_auto_connect()
 
 	# Handle ON_READY trigger
 	if trigger_on == TriggerEvent.ON_READY:
@@ -525,13 +562,12 @@ func _try_auto_connect() -> void:
 	if trigger_on == TriggerEvent.ON_READY:
 		return  # ON_READY handled in _ready()
 
-	if _target_node == null:
+	if _trigger_source_node == null:
 		return
 
-	# Visibility triggers (work on any CanvasItem)
+	# Visibility triggers (work on CanvasItem and Node3D — both have visibility_changed)
 	if trigger_on in [TriggerEvent.ON_SHOW, TriggerEvent.ON_HIDE]:
-		if _target_node is CanvasItem:
-			_connect_visibility_signals(_target_node as CanvasItem)
+		_connect_visibility_signals(_trigger_source_node)
 		return
 
 	# Subclasses handle domain-specific signal connection
@@ -543,20 +579,23 @@ func _auto_connect_domain_signals() -> void:
 	pass  # ControlJuice, Juice2D, Juice3D implement
 
 
-func _connect_visibility_signals(canvas_item: CanvasItem) -> void:
-	if not canvas_item.visibility_changed.is_connected(_on_visibility_changed):
-		canvas_item.visibility_changed.connect(_on_visibility_changed)
+## Connect visibility_changed signal. Works for both CanvasItem and Node3D.
+func _connect_visibility_signals(node: Node) -> void:
+	if node.has_signal("visibility_changed"):
+		if not node.is_connected("visibility_changed", _on_visibility_changed):
+			node.connect("visibility_changed", _on_visibility_changed)
 
 
 func _connect_manual_signal() -> void:
 	var source: Node
-	if trigger_source_path.is_empty():
-		source = get_parent()
-	else:
-		source = get_node_or_null(trigger_source_path)
+	match trigger_source:
+		TriggerSource.PARENT:
+			source = get_parent()
+		TriggerSource.NODE:
+			source = get_node_or_null(trigger_source_path)
 	if source == null:
 		if debug_enabled:
-			push_warning("[%s] Manual trigger source not found: %s" % [name, trigger_source_path])
+			push_warning("[%s] Manual trigger source not found" % name)
 		return
 	if source.has_signal(manual_trigger_signal):
 		if not source.is_connected(manual_trigger_signal, _on_trigger_momentary):
@@ -593,7 +632,11 @@ func _on_trigger_polarity(is_on: bool) -> void:
 
 
 func _on_visibility_changed() -> void:
-	var is_now_visible: bool = _target_node.is_visible() if _target_node else false
+	var is_now_visible := false
+	if _trigger_source_node is CanvasItem:
+		is_now_visible = (_trigger_source_node as CanvasItem).is_visible()
+	elif _trigger_source_node is Node3D:
+		is_now_visible = (_trigger_source_node as Node3D).is_visible()
 	match trigger_on:
 		TriggerEvent.ON_SHOW:
 			_on_trigger_polarity(is_now_visible)
@@ -661,6 +704,19 @@ func _on_control_gui_input_press(event: InputEvent) -> void:
 func _on_control_gui_input_release(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed:
 		_on_trigger_momentary()
+
+## Filtered mouse button callback for Control gui_input (left/right/middle click).
+func _on_control_gui_input_filtered(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+	var mb := event as InputEventMouseButton
+	match trigger_on:
+		TriggerEvent.ON_LEFT_CLICK:
+			if mb.button_index == MOUSE_BUTTON_LEFT: _on_trigger_momentary()
+		TriggerEvent.ON_RIGHT_CLICK:
+			if mb.button_index == MOUSE_BUTTON_RIGHT: _on_trigger_momentary()
+		TriggerEvent.ON_MIDDLE_CLICK:
+			if mb.button_index == MOUSE_BUTTON_MIDDLE: _on_trigger_momentary()
 
 func _on_animation_finished(_anim_name: StringName) -> void:
 	_on_trigger_momentary()
