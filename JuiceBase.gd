@@ -23,6 +23,7 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/Juice_V1/icons/JuiceBase.svg")
 class_name JuiceBase
 extends Node
 
@@ -91,18 +92,13 @@ enum RetriggerPolicy {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Recipe")
-
-## The recipe containing effects to play.
-@export var recipe: JuiceRecipe:
-	set(value):
-		recipe = value
-		_invalidate_runtime_effects()
-
 @export_group("Mode")
 
 ## Operating mode: STACK (effects on parent) or SEQUENCER (effects on targets).
-@export var mode: Mode = Mode.STACK
+@export var mode: Mode = Mode.STACK:
+	set(value):
+		mode = value
+		notify_property_list_changed()
 
 @export_group("Trigger")
 
@@ -130,13 +126,24 @@ enum RetriggerPolicy {
 ## Signal name for ON_SIGNAL trigger.
 @export var manual_trigger_signal: String
 
-@export_group("Looper")
+@export_group("Loop")
 
-## Number of times to repeat the full recipe (-1 = infinite).
-@export var loop_iterations: int = 1
+## Number of times to repeat the full recipe (-1 = infinite, 1 = no loop).
+@export var number_of_loops: int = 1:
+	set(value):
+		number_of_loops = value
+		notify_property_list_changed()
 
 ## Delay between recipe iterations.
 @export var iteration_delay: float = 0.0
+
+@export_group("Recipe")
+
+## The recipe containing effects to play.
+@export var recipe: JuiceRecipe:
+	set(value):
+		recipe = value
+		_invalidate_runtime_effects()
 
 @export_group("Debug")
 
@@ -148,18 +155,25 @@ enum RetriggerPolicy {
 # =============================================================================
 
 func _validate_property(property: Dictionary) -> void:
+	# --- Trigger group ---
 	# Hide manual_trigger_signal unless ON_SIGNAL
 	if property.name == "manual_trigger_signal" and trigger_on != TriggerEvent.ON_SIGNAL:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 	# Hide trigger_source_path unless ON_SIGNAL
 	if property.name == "trigger_source_path" and trigger_on != TriggerEvent.ON_SIGNAL:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
-	# Hide iteration_delay when not looping
-	if property.name == "iteration_delay" and loop_iterations == 1:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
 	# Hide crossfade_time when not RESTART
 	if property.name == "crossfade_time" and retrigger_policy != RetriggerPolicy.RESTART:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
+
+	# --- Loop group ---
+	# Hide iteration_delay when not looping
+	if property.name == "iteration_delay" and number_of_loops == 1:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+
+	# --- Mode-specific: SEQUENCER settings hidden in STACK mode ---
+	# (Sequencer-specific exports will be added in Phase 5.
+	#  For now this serves as the pattern for future settings.)
 
 # =============================================================================
 # INTERNAL STATE
@@ -451,9 +465,9 @@ func _on_all_effects_completed() -> void:
 
 	# Check recipe-level looping
 	var should_loop := false
-	if loop_iterations < 0:
+	if number_of_loops < 0:
 		should_loop = true
-	elif _current_iteration < loop_iterations:
+	elif _current_iteration < number_of_loops:
 		should_loop = true
 
 	if should_loop:

@@ -8,7 +8,7 @@
 ## ============================================================================
 
 @tool
-#@icon("res://addons/Juice_V1/Icons/JuiceBase.svg")
+@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
 class_name Juice2D
 extends JuiceBase
 

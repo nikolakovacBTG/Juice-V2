@@ -20,7 +20,7 @@ extends Resource
 # =============================================================================
 
 ## Controls which Animate In/Out groups show in inspector and play behavior.
-enum EffectDirection { IN_AND_OUT, IN_ONLY, OUT_ONLY }
+enum EffectBehaviour { IN_AND_OUT, IN_ONLY, OUT_ONLY }
 
 ## How to interpret offset/delta values for position and scale
 enum OffsetUnit { PIXELS, FRACTION_OWN, FRACTION_PARENT, FRACTION_VIEWPORT }
@@ -38,9 +38,9 @@ enum TickResult { PLAYING, COMPLETED }
 @export_group("Effect")
 
 ## Which animation directions this effect supports.
-@export var effect_direction: EffectDirection = EffectDirection.IN_ONLY:
+@export var effect_behaviour: EffectBehaviour = EffectBehaviour.IN_ONLY:
 	set(value):
-		effect_direction = value
+		effect_behaviour = value
 		notify_property_list_changed()
 
 @export_group("Timing")
@@ -130,8 +130,8 @@ func _validate_property(property: Dictionary) -> void:
 
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
-	var show_in := effect_direction != EffectDirection.OUT_ONLY
-	var show_out := effect_direction != EffectDirection.IN_ONLY
+	var show_in := effect_behaviour != EffectBehaviour.OUT_ONLY
+	var show_out := effect_behaviour != EffectBehaviour.IN_ONLY
 
 	if show_in:
 		props.append({"name": "Animate In", "type": TYPE_NIL,
@@ -301,10 +301,10 @@ var _pp_use_out_curve: bool = false
 ## Start animating this effect. play_in = true for animate_in, false for animate_out.
 ## start_delay_override: if >= 0, overrides any node-level start delay.
 func start(target: Node, play_in: bool, start_delay: float = 0.0) -> void:
-	# Determine direction based on play_in and effect_direction
+	# Determine direction based on play_in and effect_behaviour
 	if play_in:
 		_target_progress = 1.0
-		_will_auto_reverse = (effect_direction == EffectDirection.IN_AND_OUT)
+		_will_auto_reverse = (effect_behaviour == EffectBehaviour.IN_AND_OUT)
 	else:
 		_target_progress = 0.0
 		_will_auto_reverse = false
@@ -634,7 +634,7 @@ func _ease_back(t: float, ease_type: Tween.EaseType, overshoot: float) -> float:
 # =============================================================================
 
 func _get_ping_pong_phases_per_cycle() -> int:
-	if effect_direction == EffectDirection.IN_AND_OUT:
+	if effect_behaviour == EffectBehaviour.IN_AND_OUT:
 		return 4
 	return 2
 
@@ -709,7 +709,7 @@ func _reverse_curve_time(curve: Curve) -> Curve:
 # =============================================================================
 
 func get_progress_at_time(time: float, start_delay: float = 0.0) -> float:
-	var has_out := effect_direction == EffectDirection.IN_AND_OUT
+	var has_out := effect_behaviour == EffectBehaviour.IN_AND_OUT
 	if time < start_delay: return 0.0
 	var t := time - start_delay
 	if t < duration_in:
@@ -728,7 +728,7 @@ func get_progress_at_time(time: float, start_delay: float = 0.0) -> float:
 
 func get_total_preview_duration(start_delay: float = 0.0) -> float:
 	var total := start_delay + duration_in
-	if effect_direction == EffectDirection.IN_AND_OUT:
+	if effect_behaviour == EffectBehaviour.IN_AND_OUT:
 		total += hold_at_peak + duration_out
 	return total
 
