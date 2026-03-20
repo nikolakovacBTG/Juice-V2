@@ -252,7 +252,9 @@ func _ready() -> void:
 	if trigger_on == TriggerEvent.ON_READY:
 		_handle_trigger({"play_in": true})
 
-	set_process(false)
+	# Default to no processing — but don't kill a trigger that already started above
+	if not _is_playing:
+		set_process(false)
 
 
 func _process(delta: float) -> void:
