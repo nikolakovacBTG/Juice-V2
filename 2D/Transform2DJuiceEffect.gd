@@ -80,12 +80,13 @@ enum CaptureAt {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Transform")
-
-@export var transform_target: TransformTarget = TransformTarget.POSITION:
+var transform_target: int = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
 		notify_property_list_changed()
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
 
 
 # =============================================================================
@@ -148,6 +149,14 @@ var _editor_cached_scale: Vector2 = Vector2.ONE
 
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
+
+	# --- Effect group: subclass selector + base effect properties ---
+	props.append({"name": "Effect", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "transform_target", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append_array(_get_effect_base_properties())
 
 	match transform_target:
 		TransformTarget.POSITION:
@@ -380,6 +389,7 @@ func _get_pivot_properties() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
+		&"transform_target": transform_target = value; return true
 		&"from_position": from_position = value; return true
 		&"from_position_in": from_position_in = value; return true
 		&"to_position": to_position = value; return true
@@ -403,6 +413,7 @@ func _set(property: StringName, value: Variant) -> bool:
 
 func _get(property: StringName) -> Variant:
 	match property:
+		&"transform_target": return transform_target
 		&"from_position": return from_position
 		&"from_position_in": return from_position_in
 		&"to_position": return to_position

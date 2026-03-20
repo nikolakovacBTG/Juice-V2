@@ -43,31 +43,38 @@ enum TickResult { PLAYING, COMPLETED }
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Effect")
+# --- EFFECT GROUP PROPERTIES (emitted via _get_property_list) ---
+# These are NOT @export — subclasses inject them into the "Effect" group
+# via _get_effect_base_properties(). If no subclass overrides, the base
+# emits them in its own "Effect" group as fallback.
 
 ## What this effect does when triggered. Overrides the node's trigger_behaviour.
-@export var trigger_behaviour: TriggerBehaviour = TriggerBehaviour.PLAY_IN_ONLY:
+var trigger_behaviour: TriggerBehaviour = TriggerBehaviour.PLAY_IN_ONLY:
 	set(value):
 		trigger_behaviour = value
 		notify_property_list_changed()
 
 ## Delay before this effect starts (seconds). Used for layered stagger in stacks.
-@export var start_delay: float = 0.0
+var start_delay: float = 0.0
 
 ## Number of times to loop (-1 = infinite, 0 = don't play, 1+ = play N times).
-@export var loop_count: int = 1:
+var loop_count: int = 1:
 	set(value):
 		loop_count = value
 		notify_property_list_changed()
 
 ## Reverse direction each cycle (tape rewind).
-@export var ping_pong: bool = false
+var ping_pong: bool = false
 
 ## Delay between loop cycles (seconds).
-@export var loop_delay: float = 0.0
+var loop_delay: float = 0.0
 
 ## Starting phase offset for looping (0.0–1.0). Only affects first cycle.
-@export_range(0.0, 1.0) var loop_phase_offset: float = 0.0
+var loop_phase_offset: float = 0.0
+
+# Set to true by subclasses that emit the Effect group in their own
+# _get_property_list(). When false, the base emits it as a fallback.
+var _subclass_owns_effect_group: bool = false
 
 # =============================================================================
 # CONDITIONAL BACKING VARIABLES (shown/hidden via _get_property_list)
@@ -131,14 +138,41 @@ const _TRANSITION_HINT := "Linear,Sine,Quint,Quart,Quad,Expo,Elastic,Cubic,Circ,
 const _EASE_HINT := "In,Out,In-Out,Out-In"
 
 
-func _validate_property(property: Dictionary) -> void:
+## Returns property dicts for the base Effect group properties
+## (trigger_behaviour, start_delay, loop settings). Subclasses call this
+## in their _get_property_list() to inject them after their own selector.
+func _get_effect_base_properties() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+	props.append({"name": "trigger_behaviour", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Play In And Out,Play In Only,Play Out Only,Toggle,Set From Source",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "start_delay", "type": TYPE_FLOAT,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "loop_count", "type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT})
 	var is_looping := loop_count != 1
-	if property.name in ["ping_pong", "loop_delay", "loop_phase_offset"] and not is_looping:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
+	if is_looping:
+		props.append({"name": "ping_pong", "type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "loop_delay", "type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "loop_phase_offset", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+			"usage": PROPERTY_USAGE_DEFAULT})
+	return props
 
 
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
+
+	# If no subclass owns the Effect group, emit it here as fallback.
+	# This covers effects that don't override _get_property_list (e.g. SquashStretch).
+	if not _subclass_owns_effect_group:
+		props.append({"name": "Effect", "type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+		props.append_array(_get_effect_base_properties())
+
 	var show_in := trigger_behaviour != TriggerBehaviour.PLAY_OUT_ONLY
 	var show_out := trigger_behaviour != TriggerBehaviour.PLAY_IN_ONLY
 
@@ -244,6 +278,13 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"interrupt_siblings": interrupt_siblings = value; return true
 		&"crossfade_time": crossfade_time = value; return true
 		&"debug_enabled": debug_enabled = value; return true
+		# Effect group properties (now dynamic, not @export)
+		&"trigger_behaviour": trigger_behaviour = value; return true
+		&"start_delay": start_delay = value; return true
+		&"loop_count": loop_count = value; return true
+		&"ping_pong": ping_pong = value; return true
+		&"loop_delay": loop_delay = value; return true
+		&"loop_phase_offset": loop_phase_offset = value; return true
 	return false
 
 
@@ -269,6 +310,13 @@ func _get(property: StringName) -> Variant:
 		&"interrupt_siblings": return interrupt_siblings
 		&"crossfade_time": return crossfade_time
 		&"debug_enabled": return debug_enabled
+		# Effect group properties (now dynamic, not @export)
+		&"trigger_behaviour": return trigger_behaviour
+		&"start_delay": return start_delay
+		&"loop_count": return loop_count
+		&"ping_pong": return ping_pong
+		&"loop_delay": return loop_delay
+		&"loop_phase_offset": return loop_phase_offset
 	return null
 
 # =============================================================================
