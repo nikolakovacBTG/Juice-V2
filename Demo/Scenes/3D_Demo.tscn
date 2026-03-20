@@ -1,3 +1,58 @@
-[gd_scene format=3 uid="uid://bux4xeyti54rs"]
+[gd_scene load_steps=10 format=3 uid="uid://bux4xeyti54rs"]
+
+[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/3D/Juice3D.gd" id="1_7qp4h"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/JuiceEffectBase.gd" id="2_6f2mv"]
+[ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="3_0iv50"]
+[ext_resource type="Script" uid="uid://d0qrq7m3dhui7" path="res://addons/Juice_V1/3D/SquashStretch3DJuiceEffect.gd" id="4_j1d5r"]
+[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/3D/Juice3DRecipe.gd" id="5_nfb0a"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_v8ha8"]
+
+[sub_resource type="Resource" id="Resource_gd0pe"]
+script = ExtResource("3_0iv50")
+duration_in = 2.0
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_position_in = 1
+to_position = Vector3(0, 1, 0)
+duration_in = 2.0
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://88wafaejhpwm"
+
+[sub_resource type="Resource" id="Resource_8m8qx"]
+script = ExtResource("4_j1d5r")
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://d0qrq7m3dhui7"
+
+[sub_resource type="Resource" id="Resource_uaa1d"]
+script = ExtResource("5_nfb0a")
+effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx")])
+metadata/_custom_type_script = "uid://cnyhp6eiv4xb1"
 
 [node name="3dDemo" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_v8ha8")
+
+[node name="Juice3D" type="Node" parent="MeshInstance3D"]
+script = ExtResource("1_7qp4h")
+recipe = SubResource("Resource_uaa1d")
+metadata/_custom_type_script = "uid://b27b1xgkm8qyo"

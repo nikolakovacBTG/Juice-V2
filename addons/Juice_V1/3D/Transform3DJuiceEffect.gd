@@ -149,7 +149,7 @@ var _editor_cached_scale: Vector3 = Vector3.ONE
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
-	var props := super._get_property_list()
+	var props: Array[Dictionary] = []
 
 	match transform_target:
 		TransformTarget.POSITION:
@@ -400,8 +400,6 @@ func _get_scale_pivot_properties() -> Array[Dictionary]:
 
 
 func _set(property: StringName, value: Variant) -> bool:
-	if super._set(property, value):
-		return true
 	match property:
 		&"from_position": from_position = value; return true
 		&"from_position_in": from_position_in = value; return true
@@ -427,9 +425,6 @@ func _set(property: StringName, value: Variant) -> bool:
 
 
 func _get(property: StringName) -> Variant:
-	var base_val = super._get(property)
-	if base_val != null:
-		return base_val
 	match property:
 		&"from_position": return from_position
 		&"from_position_in": return from_position_in
