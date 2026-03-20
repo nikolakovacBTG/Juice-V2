@@ -129,7 +129,7 @@ enum RetriggerPolicy {
 @export_group("Loop")
 
 ## Number of times to repeat the full recipe (-1 = infinite, 1 = no loop).
-@export var loop_count: int = 1:
+@export_range(-1, 999) var loop_count: int = 1:
 	set(value):
 		loop_count = value
 		notify_property_list_changed()
@@ -161,9 +161,6 @@ func _validate_property(property: Dictionary) -> void:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 	# Hide trigger_source_path unless ON_SIGNAL
 	if property.name == "trigger_source_path" and trigger_on != TriggerEvent.ON_SIGNAL:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-	# Hide crossfade_time when not RESTART
-	if property.name == "crossfade_time" and retrigger_policy != RetriggerPolicy.RESTART:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Loop group ---
