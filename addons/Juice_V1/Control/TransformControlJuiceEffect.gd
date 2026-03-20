@@ -73,7 +73,7 @@ enum CaptureAt {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Effect")
+@export_group("Transform")
 
 @export var transform_target: TransformTarget = TransformTarget.POSITION:
 	set(value):
