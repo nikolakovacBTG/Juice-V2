@@ -80,7 +80,7 @@ func get_root_effect_indices() -> Array[int]:
 
 
 ## Get total preview duration (longest chain path).
-func get_total_preview_duration(start_delay: float = 0.0) -> float:
+func get_total_preview_duration() -> float:
 	if effects.is_empty():
 		return 0.0
 	# Simple approximation: max of all individual effect durations
@@ -88,5 +88,5 @@ func get_total_preview_duration(start_delay: float = 0.0) -> float:
 	var max_dur := 0.0
 	for effect in effects:
 		if effect != null:
-			max_dur = maxf(max_dur, effect.get_total_preview_duration(start_delay))
+			max_dur = maxf(max_dur, effect.get_total_preview_duration())
 	return max_dur

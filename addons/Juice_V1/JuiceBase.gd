@@ -50,35 +50,25 @@ enum Mode {
 	SEQUENCER   ## Effects target NodePath array. Stagger + target order. (Phase 5)
 }
 
-## How triggers map to animation direction.
-enum TriggerBehaviour {
-	PLAY_IN_AND_OUT,  ## Trigger → animate in, then auto-reverse to out
-	PLAY_IN_ONLY,     ## Trigger → animate in only (hold at peak)
-	PLAY_OUT_ONLY,    ## Trigger → animate out only (start from peak)
-	TOGGLE,           ## Trigger alternates between in and out
-	SET_FROM_SOURCE,  ## External progress source controls direction
-}
-
 ## What event triggers the animation.
 enum TriggerEvent {
-	MANUAL,           ## No auto-trigger — call animate_in()/animate_out() from code
-	ON_READY,         ## Trigger on _ready()
-	ON_PRESS,         ## Mouse press or body/area entered
-	ON_RELEASE,       ## Mouse release or body/area exited
-	ON_HOVER_START,   ## Mouse entered
-	ON_HOVER_END,     ## Mouse exited
-	ON_FOCUS,         ## Focus entered
-	ON_UNFOCUS,       ## Focus exited
-	ON_LEFT_CLICK,    ## Left mouse button
-	ON_RIGHT_CLICK,   ## Right mouse button
-	ON_MIDDLE_CLICK,  ## Middle mouse button
-	ON_BODY_ENTERED,  ## Area body entered
-	ON_BODY_EXITED,   ## Area body exited
-	ON_AREA_ENTERED,  ## Area area entered
-	ON_AREA_EXITED,   ## Area area exited
-	ON_SHOW,          ## Target became visible
-	ON_HIDE,          ## Target became hidden
-	ON_SIGNAL,        ## Custom signal name
+	ON_PRESS,          ## 0 - Button down, any collision click, Area body/area entered
+	ON_RELEASE,        ## 1 - Button up, any collision click release, Area body/area exited
+	ON_HOVER_START,    ## 2 - Mouse entered (any interactive node)
+	ON_HOVER_END,      ## 3 - Mouse exited (any interactive node)
+	ON_FOCUS,          ## 4 - Focus entered (Control/BaseButton)
+	ON_UNFOCUS,        ## 5 - Focus exited (Control/BaseButton)
+	ON_SHOW,           ## 6 - Node became visible (CanvasItem)
+	ON_HIDE,           ## 7 - Node became hidden (CanvasItem)
+	ON_READY,          ## 8 - Plays immediately when _ready() fires
+	MANUAL,            ## 9 - Only via play() call or signal - no auto-connect
+	ON_LEFT_CLICK,     ## 10 - Left mouse button press on CollisionObject
+	ON_RIGHT_CLICK,    ## 11 - Right mouse button press on CollisionObject
+	ON_MIDDLE_CLICK,   ## 12 - Middle mouse button press on CollisionObject
+	ON_BODY_ENTERED,   ## 13 - Physics body entered Area (momentary trigger)
+	ON_BODY_EXITED,    ## 14 - Physics body exited Area (momentary trigger)
+	ON_AREA_ENTERED,   ## 15 - Another Area entered this Area (momentary trigger)
+	ON_AREA_EXITED,    ## 16 - Another Area exited this Area (momentary trigger)
 }
 
 ## How to handle re-trigger while playing.
@@ -103,16 +93,17 @@ enum RetriggerPolicy {
 @export_group("Trigger")
 
 ## What event triggers the animation.
-@export var trigger_on: TriggerEvent = TriggerEvent.MANUAL:
+@export var trigger_on: TriggerEvent = TriggerEvent.ON_READY:
 	set(value):
 		trigger_on = value
 		notify_property_list_changed()
 
-## How the trigger maps to animation direction.
-@export var trigger_behaviour: TriggerBehaviour = TriggerBehaviour.PLAY_IN_AND_OUT
+## How the trigger maps to animation direction (default for all effects in recipe).
+@export var trigger_behaviour: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 
-## Auto-connect to parent's signals based on trigger_on.
-@export var auto_connect: bool = true
+## If true, automatically connect to parent's signals based on its type.
+## When manual_trigger_signal is set, it REPLACES auto-connect.
+@export var auto_connect_parent: bool = true
 
 ## How to handle re-triggers while playing.
 @export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
@@ -123,7 +114,8 @@ enum RetriggerPolicy {
 ## Path to trigger source node (empty = parent).
 @export var trigger_source_path: NodePath
 
-## Signal name for ON_SIGNAL trigger.
+## Manual signal name to connect to (e.g., "my_custom_signal").
+## When set, REPLACES auto-connect — the two are mutually exclusive.
 @export var manual_trigger_signal: String
 
 @export_group("Loop")
@@ -155,14 +147,6 @@ enum RetriggerPolicy {
 # =============================================================================
 
 func _validate_property(property: Dictionary) -> void:
-	# --- Trigger group ---
-	# Hide manual_trigger_signal unless ON_SIGNAL
-	if property.name == "manual_trigger_signal" and trigger_on != TriggerEvent.ON_SIGNAL:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-	# Hide trigger_source_path unless ON_SIGNAL
-	if property.name == "trigger_source_path" and trigger_on != TriggerEvent.ON_SIGNAL:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-
 	# --- Loop group ---
 	# Hide loop_delay when not looping
 	if property.name == "loop_delay" and loop_count == 1:
@@ -221,8 +205,11 @@ func _ready() -> void:
 	_invalidate_runtime_effects()
 
 	# Auto-connect signals
-	if auto_connect and trigger_on != TriggerEvent.MANUAL:
-		_try_auto_connect()
+	if auto_connect_parent:
+		if not manual_trigger_signal.is_empty():
+			_connect_manual_signal()
+		elif trigger_on != TriggerEvent.MANUAL:
+			_try_auto_connect()
 
 	# Handle ON_READY trigger
 	if trigger_on == TriggerEvent.ON_READY:
@@ -369,22 +356,22 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 				_stop_all_effects_silent()
 
 	match trigger_behaviour:
-		TriggerBehaviour.PLAY_IN_AND_OUT:
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT:
 			_start_effects(true)
-		TriggerBehaviour.PLAY_IN_ONLY:
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
 			_start_effects(true)
-		TriggerBehaviour.PLAY_OUT_ONLY:
+		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY:
 			_start_effects(false)
-		TriggerBehaviour.TOGGLE:
+		JuiceEffectBase.TriggerBehaviour.TOGGLE:
 			_toggle_state = not _toggle_state
 			_start_effects(_toggle_state)
-		TriggerBehaviour.SET_FROM_SOURCE:
+		JuiceEffectBase.TriggerBehaviour.SET_FROM_SOURCE:
 			# SET_FROM_SOURCE doesn't use start — it uses set_external_progress
 			pass
 
 	if debug_enabled:
 		print("[%s] Trigger handled: play_in=%s, behaviour=%s" % [
-			name, play_in, TriggerBehaviour.keys()[trigger_behaviour]])
+			name, play_in, JuiceEffectBase.TriggerBehaviour.keys()[trigger_behaviour]])
 
 # =============================================================================
 # CORE LOGIC
@@ -417,7 +404,7 @@ func _start_effects(play_in: bool) -> void:
 		var effect := _runtime_effects[idx]
 		if effect == null:
 			continue
-		effect.start(_target_node, play_in, start_delay)
+		effect.start(_target_node, play_in)
 		_active_effect_indices.append(idx)
 
 	set_process(true)
@@ -447,7 +434,7 @@ func _on_effect_completed(idx: int) -> void:
 				# Determine direction: chained effect inherits the direction
 				# For now, use the same direction as the trigger
 				var play_in := effect._animation_progress >= 0.5
-				chained.start(_target_node, play_in, 0.0)
+				chained.start(_target_node, play_in, false)
 				if chain_idx not in _active_effect_indices:
 					_active_effect_indices.append(chain_idx)
 				if debug_enabled:
@@ -535,10 +522,6 @@ func _get_root_effect_indices() -> Array[int]:
 
 ## Try to auto-connect trigger signals. Subclasses add domain-specific logic.
 func _try_auto_connect() -> void:
-	if trigger_on == TriggerEvent.ON_SIGNAL:
-		_connect_manual_signal()
-		return
-
 	if trigger_on == TriggerEvent.ON_READY:
 		return  # ON_READY handled in _ready()
 
@@ -597,13 +580,13 @@ func _on_trigger_polarity_off() -> void:
 
 func _on_trigger_polarity(is_on: bool) -> void:
 	match trigger_behaviour:
-		TriggerBehaviour.PLAY_IN_AND_OUT:
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT:
 			_handle_trigger({"play_in": is_on})
-		TriggerBehaviour.PLAY_IN_ONLY:
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
 			if is_on: _handle_trigger({"play_in": true})
-		TriggerBehaviour.PLAY_OUT_ONLY:
+		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY:
 			if not is_on: _handle_trigger({"play_in": false})
-		TriggerBehaviour.TOGGLE:
+		JuiceEffectBase.TriggerBehaviour.TOGGLE:
 			_handle_trigger({"play_in": is_on})
 		_:
 			_handle_trigger({"play_in": is_on})
