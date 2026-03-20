@@ -20,8 +20,9 @@
 ## ============================================================================
 
 @tool
+@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
 class_name SquashStretch2DJuiceEffect
-extends JuiceEffectBase
+extends Juice2DEffectBase
 
 
 # =============================================================================

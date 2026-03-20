@@ -23,6 +23,9 @@ func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
 	if property.name == "trigger_on":
 		property.hint_string = _2D_TRIGGER_HINT
+	# Narrow recipe type so inspector only offers Juice2DRecipe
+	if property.name == "recipe":
+		property.hint_string = "Juice2DRecipe"
 
 # =============================================================================
 # LIFECYCLE

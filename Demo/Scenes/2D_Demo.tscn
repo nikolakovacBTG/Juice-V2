@@ -1,9 +1,37 @@
-[gd_scene load_steps=2 format=3 uid="uid://0jn7axm6pb17"]
+[gd_scene load_steps=8 format=3 uid="uid://0jn7axm6pb17"]
 
 [ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="1_va5jn"]
+[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/2D/Juice2D.gd" id="2_w2ktn"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/JuiceEffectBase.gd" id="3_rrb6h"]
+[ext_resource type="Script" uid="uid://cartm730b1p5t" path="res://addons/Juice_V1/JuiceRecipe.gd" id="4_n8ykl"]
+[ext_resource type="Script" uid="uid://bwkruqi6chuyl" path="res://addons/Juice_V1/2D/SquashStretch2DJuiceEffect.gd" id="4_rrb6h"]
+
+[sub_resource type="Resource" id="Resource_n8ykl"]
+script = ExtResource("4_rrb6h")
+start_delay = 1.0
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://bwkruqi6chuyl"
+
+[sub_resource type="Resource" id="Resource_naj6s"]
+script = ExtResource("4_n8ykl")
+effects = Array[ExtResource("3_rrb6h")]([SubResource("Resource_n8ykl")])
+metadata/_custom_type_script = "uid://cartm730b1p5t"
 
 [node name="2dDemo" type="Node2D"]
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(575, 347)
 texture = ExtResource("1_va5jn")
+
+[node name="Juice2D" type="Node" parent="Sprite2D"]
+script = ExtResource("2_w2ktn")
+recipe = SubResource("Resource_naj6s")
+metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
