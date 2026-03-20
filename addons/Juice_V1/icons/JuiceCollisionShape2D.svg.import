@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpb4uax4rkxtu"
-path="res://.godot/imported/JuiceCollisionShape2D.svg-571100c5fcc3d27e59ae5b128b83fd12.ctex"
+path="res://.godot/imported/JuiceCollisionShape2D.svg-4c1e3636e8d02e2ce94ec8d36ff1d63e.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -12,7 +12,7 @@ metadata={
 [deps]
 
 source_file="res://addons/Juice_V1/icons/JuiceCollisionShape2D.svg"
-dest_files=["res://.godot/imported/JuiceCollisionShape2D.svg-571100c5fcc3d27e59ae5b128b83fd12.ctex"]
+dest_files=["res://.godot/imported/JuiceCollisionShape2D.svg-4c1e3636e8d02e2ce94ec8d36ff1d63e.ctex"]
 
 [params]
 

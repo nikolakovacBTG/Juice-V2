@@ -1,0 +1,251 @@
+[gd_scene load_steps=9 format=3 uid="uid://m41m3r0267kg"]
+
+[ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_32dbb"]
+[ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="2_i3blr"]
+[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/Juice_V1/Control/TransformControlJuiceComp.gd" id="3_04vrh"]
+[ext_resource type="Script" uid="uid://81p8ahyldckl" path="res://addons/Juice_V1/Control/NoiseControlJuiceComp.gd" id="4_r7ray"]
+[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/Juice_V1/Events and Time/SequencerJuiceComp.gd" id="5_tx2cu"]
+[ext_resource type="Script" uid="uid://gr42guay12p1" path="res://addons/Juice_V1/Control/ProgressControlJuiceComp.gd" id="6_lq48p"]
+
+[sub_resource type="Gradient" id="Gradient_8smnx"]
+interpolation_mode = 2
+colors = PackedColorArray(0.5568628, 0.9372549, 0.5921569, 1, 0.27, 0.6, 0.51750004, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_3etqj"]
+gradient = SubResource("Gradient_8smnx")
+fill = 1
+fill_from = Vector2(0.52136755, 0.48290598)
+
+[node name="ControlIntro" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_32dbb")
+
+[node name="BG" type="TextureRect" parent="."]
+z_index = -2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+texture = SubResource("GradientTexture2D_3etqj")
+expand_mode = 2
+
+[node name="Control" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 50.0
+offset_bottom = 50.0
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_top = 85
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_stretch_ratio = 1.94
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 59
+theme_override_constants/margin_bottom = -37
+
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+
+[node name="JuiceLogoSeparated4" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control"]
+custom_minimum_size = Vector2(601.235, 300)
+layout_mode = 0
+offset_right = 601.7151
+offset_bottom = 300.0
+scale = Vector2(1.00002, 1.00002)
+pivot_offset = Vector2(300.85754, 150)
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.13
+texture = ExtResource("2_i3blr")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="JuiceLogoSeparated3" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+modulate = Color(0, 0.12400003, 0.62, 0.20784314)
+show_behind_parent = true
+custom_minimum_size = Vector2(601.235, 300)
+layout_mode = 0
+offset_left = 9.110001
+offset_top = 9.364998
+offset_right = 610.345
+offset_bottom = 309.365
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.13
+texture = ExtResource("2_i3blr")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+script = ExtResource("3_04vrh")
+transform_target = 2
+from_reference = 0
+from_scale = Vector2(0, 0)
+to_reference = 0
+to_scale = Vector2(1, 1)
+pivot_mode = 0
+start_delay = 2.0
+duration_in = 1.0
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="TransformControlJuiceComp2" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+script = ExtResource("3_04vrh")
+transform_target = 1
+from_reference = 0
+from_rotation_degrees = -90.0
+to_reference = 0
+to_rotation_degrees = 0.0
+pivot_mode = 0
+start_delay = 2.0
+duration_in = 1.0
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = true
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="NoiseControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+script = ExtResource("4_r7ray")
+transform_target = 1
+position_amplitude = Vector2(20, 20)
+rotation_amplitude = 2.0
+noise_speed = 0.5
+noise_frequency = 0.2
+fractal_type = 3
+clamp_min = -4.0
+clamp_max = 6.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://81p8ahyldckl"
+
+[node name="VBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="Control" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
+theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
+theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
+theme_override_constants/shadow_offset_x = 13
+theme_override_constants/shadow_offset_y = 9
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 99
+text = "Control"
+horizontal_alignment = 1
+vertical_alignment = 1
+uppercase = true
+
+[node name="Demo" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
+theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
+theme_override_colors/font_outline_color = Color(0.10350309, 0.2759742, 0.23285644, 1)
+theme_override_constants/shadow_offset_x = 13
+theme_override_constants/shadow_offset_y = 9
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 99
+text = "Demo"
+horizontal_alignment = 1
+vertical_alignment = 1
+uppercase = true
+
+[node name="SequencerJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+script = ExtResource("5_tx2cu")
+juice_source = 0
+target_scope = 0
+sequence_type = 0
+stagger_delay = 0.31
+mirror_stagger_on_exit = true
+skip_invisible = true
+skip_self = true
+skip_juice_components = true
+hide_parent_on_reverse_complete = false
+start_delay = 1.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://umlva67rt4ud"
+
+[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer/SequencerJuiceComp"]
+script = ExtResource("3_04vrh")
+transform_target = 2
+from_reference = 0
+from_scale = Vector2(0, 0)
+to_reference = 0
+to_scale = Vector2(1, 1)
+pivot_mode = 0
+trigger_on = 0
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
+
+[node name="ProgressControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer"]
+script = ExtResource("6_lq48p")
+transform_target = 2
+scale_rate = Vector2(0.03, 0.03)
+pivot_mode = 0
+bound_enabled = false
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+custom_curve_in = null
+hold_at_peak = 0.0
+next_component = NodePath("")
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://gr42guay12p1"
