@@ -16,8 +16,12 @@ extends JuiceRecipe
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
-## Narrow the effects array element type from JuiceEffectBase to Juice2DEffectBase.
-## This makes the inspector "New" dropdown only show 2D-domain effects.
+## Whitelist of concrete 2D-domain effect class names.
+## Update this list when adding new 2D effects.
+const _CONCRETE_EFFECTS := "SquashStretch2DJuiceEffect"
+
+## Override the effects array element type to list only concrete classes.
+## This hides Juice2DEffectBase from the inspector dropdown.
 func _validate_property(property: Dictionary) -> void:
 	if property.name == "effects":
-		property.hint_string = str(TYPE_OBJECT) + "/" + str(PROPERTY_HINT_RESOURCE_TYPE) + ":Juice2DEffectBase"
+		property.hint_string = str(TYPE_OBJECT) + "/" + str(PROPERTY_HINT_RESOURCE_TYPE) + ":" + _CONCRETE_EFFECTS

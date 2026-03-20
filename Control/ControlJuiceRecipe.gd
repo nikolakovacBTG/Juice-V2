@@ -16,8 +16,12 @@ extends JuiceRecipe
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
-## Narrow the effects array element type from JuiceEffectBase to ControlJuiceEffectBase.
-## This makes the inspector "New" dropdown only show Control-domain effects.
+## Whitelist of concrete Control-domain effect class names.
+## Update this list when adding new Control effects.
+const _CONCRETE_EFFECTS := "SquashStretchControlJuiceEffect"
+
+## Override the effects array element type to list only concrete classes.
+## This hides ControlJuiceEffectBase from the inspector dropdown.
 func _validate_property(property: Dictionary) -> void:
 	if property.name == "effects":
-		property.hint_string = str(TYPE_OBJECT) + "/" + str(PROPERTY_HINT_RESOURCE_TYPE) + ":ControlJuiceEffectBase"
+		property.hint_string = str(TYPE_OBJECT) + "/" + str(PROPERTY_HINT_RESOURCE_TYPE) + ":" + _CONCRETE_EFFECTS
