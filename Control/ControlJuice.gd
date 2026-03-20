@@ -13,6 +13,19 @@ class_name ControlJuice
 extends JuiceBase
 
 # =============================================================================
+# CONDITIONAL EXPORT SYSTEM (Override)
+# =============================================================================
+
+## Hint string for ControlJuice: all triggers EXCEPT body/area (which are Area-only).
+const _CONTROL_TRIGGER_HINT := "On Press:0,On Release:1,On Hover Start:2,On Hover End:3,On Focus:4,On Unfocus:5,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12"
+
+func _validate_property(property: Dictionary) -> void:
+	super._validate_property(property)
+	if property.name == "trigger_on":
+		property.hint = PROPERTY_HINT_ENUM
+		property.hint_string = _CONTROL_TRIGGER_HINT
+
+# =============================================================================
 # LIFECYCLE
 # =============================================================================
 
@@ -43,18 +56,19 @@ func _resolve_target() -> Node:
 # =============================================================================
 
 ## Connect Control/Button-specific signals based on trigger_on.
+## Uses _trigger_source_node (may differ from _target_node when TriggerSource == NODE).
 func _auto_connect_domain_signals() -> void:
-	if _target_node == null:
+	if _trigger_source_node == null:
 		return
 
 	# Button is a subclass of Control with richer signal set
-	if _target_node is BaseButton:
-		_connect_button_signals(_target_node as BaseButton)
+	if _trigger_source_node is BaseButton:
+		_connect_button_signals(_trigger_source_node as BaseButton)
 		return
 
 	# Generic Control signals
-	if _target_node is Control:
-		_connect_control_signals(_target_node as Control)
+	if _trigger_source_node is Control:
+		_connect_control_signals(_trigger_source_node as Control)
 
 
 func _connect_button_signals(button: BaseButton) -> void:
@@ -118,6 +132,9 @@ func _connect_control_signals(control: Control) -> void:
 				control.focus_entered.connect(_on_trigger_polarity_on)
 			if not control.focus_exited.is_connected(_on_trigger_polarity_off):
 				control.focus_exited.connect(_on_trigger_polarity_off)
+		TriggerEvent.ON_LEFT_CLICK, TriggerEvent.ON_RIGHT_CLICK, TriggerEvent.ON_MIDDLE_CLICK:
+			if not control.gui_input.is_connected(_on_control_gui_input_filtered):
+				control.gui_input.connect(_on_control_gui_input_filtered)
 	if debug_enabled:
 		print("[%s] Auto-connected to Control '%s' on %s" % [
 			name, control.name, TriggerEvent.keys()[trigger_on]])

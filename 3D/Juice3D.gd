@@ -12,6 +12,19 @@ class_name Juice3D
 extends JuiceBase
 
 # =============================================================================
+# CONDITIONAL EXPORT SYSTEM (Override)
+# =============================================================================
+
+## Hint string for Juice3D: all triggers EXCEPT focus/unfocus (which are Control-only).
+const _3D_TRIGGER_HINT := "On Press:0,On Release:1,On Hover Start:2,On Hover End:3,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12,On Body Entered:13,On Body Exited:14,On Area Entered:15,On Area Exited:16"
+
+func _validate_property(property: Dictionary) -> void:
+	super._validate_property(property)
+	if property.name == "trigger_on":
+		property.hint = PROPERTY_HINT_ENUM
+		property.hint_string = _3D_TRIGGER_HINT
+
+# =============================================================================
 # LIFECYCLE
 # =============================================================================
 
@@ -42,17 +55,18 @@ func _resolve_target() -> Node:
 # =============================================================================
 
 ## Connect Area3D/CollisionObject3D signals based on trigger_on.
+## Uses _trigger_source_node (may differ from _target_node when TriggerSource == NODE).
 func _auto_connect_domain_signals() -> void:
-	if _target_node == null:
+	if _trigger_source_node == null:
 		return
 
 	# CollisionObject3D covers Area3D, StaticBody3D, RigidBody3D, etc.
-	if _target_node is CollisionObject3D:
-		_connect_collision_object_3d_signals(_target_node as CollisionObject3D)
+	if _trigger_source_node is CollisionObject3D:
+		_connect_collision_object_3d_signals(_trigger_source_node as CollisionObject3D)
 		return
 
 	# Check parent chain for CollisionObject3D (e.g., MeshInstance3D inside Area3D)
-	var parent := _target_node.get_parent()
+	var parent := _trigger_source_node.get_parent()
 	if parent is CollisionObject3D:
 		_connect_collision_object_3d_signals(parent as CollisionObject3D)
 
