@@ -129,13 +129,13 @@ enum RetriggerPolicy {
 @export_group("Loop")
 
 ## Number of times to repeat the full recipe (-1 = infinite, 1 = no loop).
-@export var number_of_loops: int = 1:
+@export var loop_count: int = 1:
 	set(value):
-		number_of_loops = value
+		loop_count = value
 		notify_property_list_changed()
 
 ## Delay between recipe iterations.
-@export var iteration_delay: float = 0.0
+@export var loop_delay: float = 0.0
 
 @export_group("Recipe")
 
@@ -167,8 +167,8 @@ func _validate_property(property: Dictionary) -> void:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Loop group ---
-	# Hide iteration_delay when not looping
-	if property.name == "iteration_delay" and number_of_loops == 1:
+	# Hide loop_delay when not looping
+	if property.name == "loop_delay" and loop_count == 1:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Mode-specific: SEQUENCER settings hidden in STACK mode ---
@@ -198,8 +198,8 @@ var _is_playing: bool = false
 var _current_iteration: int = 0
 
 ## Iteration delay tracking.
-var _in_iteration_delay: bool = false
-var _iteration_delay_elapsed: float = 0.0
+var _in_loop_delay: bool = false
+var _loop_delay_elapsed: float = 0.0
 
 ## Queued trigger for RetriggerPolicy.QUEUE
 var _queued_trigger: Dictionary = {}
@@ -239,11 +239,11 @@ func _process(delta: float) -> void:
 		return
 
 	# --- Iteration delay ---
-	if _in_iteration_delay:
-		_iteration_delay_elapsed += delta
-		if _iteration_delay_elapsed < iteration_delay:
+	if _in_loop_delay:
+		_loop_delay_elapsed += delta
+		if _loop_delay_elapsed < loop_delay:
 			return
-		_in_iteration_delay = false
+		_in_loop_delay = false
 		_start_effects(true)
 		return
 
@@ -283,7 +283,7 @@ func _process(delta: float) -> void:
 				any_playing = true
 				break
 
-	if not any_playing and not _in_iteration_delay:
+	if not any_playing and not _in_loop_delay:
 		_on_all_effects_completed()
 
 
@@ -317,7 +317,7 @@ func stop() -> void:
 			effect.stop(_target_node)
 	_active_effect_indices.clear()
 	_is_playing = false
-	_in_iteration_delay = false
+	_in_loop_delay = false
 	set_process(false)
 	if debug_enabled:
 		print("[%s] Stopped" % name)
@@ -330,7 +330,7 @@ func stop_and_hold() -> void:
 			effect.stop_and_hold()
 	_active_effect_indices.clear()
 	_is_playing = false
-	_in_iteration_delay = false
+	_in_loop_delay = false
 	set_process(false)
 
 
@@ -465,15 +465,15 @@ func _on_all_effects_completed() -> void:
 
 	# Check recipe-level looping
 	var should_loop := false
-	if number_of_loops < 0:
+	if loop_count < 0:
 		should_loop = true
-	elif _current_iteration < number_of_loops:
+	elif _current_iteration < loop_count:
 		should_loop = true
 
 	if should_loop:
-		if iteration_delay > 0.0:
-			_in_iteration_delay = true
-			_iteration_delay_elapsed = 0.0
+		if loop_delay > 0.0:
+			_in_loop_delay = true
+			_loop_delay_elapsed = 0.0
 			_is_playing = true
 			set_process(true)
 		else:
