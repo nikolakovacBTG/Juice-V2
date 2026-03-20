@@ -17,16 +17,11 @@ fill_from = Vector2(0.52136755, 0.48290598)
 
 [sub_resource type="Resource" id="Resource_vvv2e"]
 script = ExtResource("4_32dbb")
-trigger_behaviour = null
-start_delay = null
 loop_count = 2
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 4
-ease_out = 0
 interrupt_siblings = false
 crossfade_time = 0.0
 debug_enabled = false
@@ -119,11 +114,7 @@ stretch_mode = 5
 
 [node name="ControlJuice" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
 script = ExtResource("3_vvv2e")
-trigger_source = null
-auto_connect_parent = null
 trigger_on = 17
-loop_count = null
-loop_delay = null
 recipe = SubResource("Resource_04vrh")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
