@@ -303,13 +303,17 @@ var _ping_pong_phase: int = 0
 var _pp_reversed: bool = false
 var _pp_use_out_curve: bool = false
 
+# Host node reference — set at start(), used for NodePath resolution.
+# Not stored persistently; cleared on stop/finish.
+var _host_node: Node = null
+
 # =============================================================================
 # ANIMATION API (called by host node)
 # =============================================================================
 
 ## Start animating this effect. play_in = true for animate_in, false for animate_out.
 ## use_start_delay: if false, skip this effect's start_delay (e.g. chained effects).
-func start(target: Node, play_in: bool, use_start_delay: bool = true) -> void:
+func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node = null) -> void:
 	# Determine direction based on play_in and trigger_behaviour
 	if play_in:
 		_target_progress = 1.0
@@ -335,6 +339,10 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true) -> void:
 	if loop_phase_offset > 0.0:
 		var phase_duration := _get_current_duration()
 		_elapsed = phase_duration * loop_phase_offset
+
+	# Store host node reference for NodePath resolution in subclasses
+	if host != null:
+		_host_node = host
 
 	_on_animate_start(target)
 
@@ -801,6 +809,14 @@ func _temporarily_undo_visual(_target: Node) -> void:
 
 ## Re-apply visual effect after temporary undo.
 func _temporarily_reapply_visual(_target: Node) -> void:
+	pass
+
+## Called by host node during _ready(). Effects that need READY-time capture use this.
+func _on_host_ready(_target: Node, _host: Node) -> void:
+	pass
+
+## Called by host node on NOTIFICATION_EDITOR_PRE_SAVE. Effects with editor cache use this.
+func _on_editor_pre_save(_target: Node) -> void:
 	pass
 
 ## Whether this effect type supports editor preview.

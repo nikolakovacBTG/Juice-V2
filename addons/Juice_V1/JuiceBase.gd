@@ -214,6 +214,14 @@ var _queued_trigger: Dictionary = {}
 # LIFECYCLE
 # =============================================================================
 
+func _notification(what: int) -> void:
+	# Forward EDITOR_PRE_SAVE to effects so they can bake editor caches
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		for effect in _runtime_effects:
+			if effect != null and _target_node != null:
+				effect._on_editor_pre_save(_target_node)
+
+
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		set_process(false)
@@ -247,6 +255,11 @@ func _ready() -> void:
 		_try_auto_connect()
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
 		_try_auto_connect()
+
+	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.)
+	for effect in _runtime_effects:
+		if effect != null:
+			effect._on_host_ready(_target_node, self)
 
 	# Handle ON_READY trigger
 	if trigger_on == TriggerEvent.ON_READY:
@@ -443,7 +456,7 @@ func _start_effects(play_in: bool) -> void:
 		var effect := _runtime_effects[idx]
 		if effect == null:
 			continue
-		effect.start(_target_node, play_in)
+		effect.start(_target_node, play_in, true, self)
 		_active_effect_indices.append(idx)
 
 	set_process(true)
