@@ -121,7 +121,16 @@ enum TriggerSource {
 @export var manual_trigger_signal: String
 
 ## How the trigger maps to animation direction (default for all effects in recipe).
-@export var trigger_behaviour: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+## Changing this in the editor also updates all effects in the recipe to match.
+@export var trigger_behaviour: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
+	set(value):
+		trigger_behaviour = value
+		# In editor: squash all recipe effects to match the node's setting.
+		# Effects can still be individually tweaked afterwards.
+		if Engine.is_editor_hint() and recipe != null:
+			for effect in recipe.effects:
+				if effect != null:
+					effect.trigger_behaviour = value
 
 ## Delay before the entire recipe starts after trigger (seconds).
 @export var start_delay: float = 0.0
