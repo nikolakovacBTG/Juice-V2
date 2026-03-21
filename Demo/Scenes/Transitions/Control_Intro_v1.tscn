@@ -1,10 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://m41m3r0267kg"]
+[gd_scene load_steps=9 format=3 uid="uid://m41m3r0267kg"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_32dbb"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="2_i3blr"]
 [ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Control/ControlJuice.gd" id="3_vvv2e"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/JuiceEffectBase.gd" id="4_32dbb"]
-[ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_32dbb"]
 [ext_resource type="Script" uid="uid://cartm730b1p5t" path="res://addons/Juice_V1/JuiceRecipe.gd" id="5_i3blr"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
@@ -16,23 +15,9 @@ gradient = SubResource("Gradient_8smnx")
 fill = 1
 fill_from = Vector2(0.52136755, 0.48290598)
 
-[sub_resource type="Resource" id="Resource_i3blr"]
-script = ExtResource("5_32dbb")
-start_delay = 1.0
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-hold_at_peak = 0.0
-interrupt_siblings = false
-crossfade_time = 0.0
-debug_enabled = false
-metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
-
 [sub_resource type="Resource" id="Resource_04vrh"]
 script = ExtResource("5_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
+effects = Array[ExtResource("4_32dbb")]([null, null])
 metadata/_custom_type_script = "uid://cartm730b1p5t"
 
 [node name="ControlIntro" type="Control"]
@@ -117,7 +102,6 @@ stretch_mode = 5
 
 [node name="ControlJuice" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
 script = ExtResource("3_vvv2e")
-trigger_behaviour = 1
 recipe = SubResource("Resource_04vrh")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 

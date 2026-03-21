@@ -2,10 +2,10 @@
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_m8ohx"]
 [ext_resource type="PackedScene" uid="uid://cdlx8fqc3ne7y" path="res://Demo/Prefabs/juicy_button.tscn" id="2_bhrb6"]
-[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_l1f61"]
-[ext_resource type="Script" uid="uid://baos8xhmoevi2" path="res://addons/juice/Utility/SceneActionJuiceUtility.gd" id="2_rsbi8"]
+[ext_resource type="Script" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="2_l1f61"]
+[ext_resource type="Script" path="res://addons/juice/Utility/SceneActionJuiceUtility.gd" id="2_rsbi8"]
 [ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="3_fay60"]
-[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_rsbi8"]
+[ext_resource type="Script" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_rsbi8"]
 [ext_resource type="PackedScene" uid="uid://droed4gs2ot0i" path="res://Demo/Scenes/Control_Demo.tscn" id="4_lfgkc"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="6_bhrb6"]
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
@@ -74,7 +74,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://baos8xhmoevi2"
 
 [node name="2D Demo" parent="MarginContainer/CenterContainer/Menu" instance=ExtResource("2_bhrb6")]
 layout_mode = 2
@@ -94,7 +93,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://baos8xhmoevi2"
 
 [node name="3D Demo" parent="MarginContainer/CenterContainer/Menu" instance=ExtResource("2_bhrb6")]
 layout_mode = 2
@@ -114,7 +112,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://baos8xhmoevi2"
 
 [node name="Quit" parent="MarginContainer/CenterContainer/Menu" instance=ExtResource("2_bhrb6")]
 layout_mode = 2
@@ -133,7 +130,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://baos8xhmoevi2"
 
 [node name="SequencerJuiceComp" type="Node" parent="MarginContainer/CenterContainer/Menu"]
 script = ExtResource("2_l1f61")
@@ -178,7 +174,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://umlva67rt4ud"
 
 [node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/CenterContainer/Menu/SequencerJuiceComp"]
 script = ExtResource("3_rsbi8")
@@ -201,7 +196,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Control Demo2" parent="MarginContainer/CenterContainer" instance=ExtResource("2_bhrb6")]
 layout_mode = 2
@@ -228,7 +222,6 @@ hold_at_peak = 0.0
 next_component = NodePath("")
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Scene Container" type="Node" parent="."]
 
