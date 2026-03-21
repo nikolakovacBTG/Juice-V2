@@ -4,12 +4,12 @@
 
 ### Visual Mode (interactive, shows UI with results)
 ```
-"C:\Portable Software\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64.exe" --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+"C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64.exe" --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
 ```
 
 ### Headless Mode (automated, writes logs, exits with code)
 ```
-"C:\Portable Software\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+"C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
 ```
 
 ### Filter by suite

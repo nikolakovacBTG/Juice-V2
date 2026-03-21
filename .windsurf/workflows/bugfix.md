@@ -182,7 +182,7 @@ After implementing, do NOT test yourself. Proceed to Step 7 for automated verifi
 Run the full test suite:
 
 ```powershell
-& "C:\Portable Software\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
 ```
 
 **Success criteria:**

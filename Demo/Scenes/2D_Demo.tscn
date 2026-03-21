@@ -17,7 +17,7 @@ capture_at = 2
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 0)
-_editor_cached_position = Vector2(0, 0)
+_editor_cached_position = Vector2(584, 317)
 _editor_cached_rotation = 0.0
 _editor_cached_scale = Vector2(1, 1)
 duration_in = 3.0
@@ -40,7 +40,7 @@ from_position_in = 1
 from_position = Vector2(-1, 0)
 to_reference = 1
 capture_at = 2
-_editor_cached_position = Vector2(0, 0)
+_editor_cached_position = Vector2(584, 317)
 _editor_cached_rotation = 0.0
 _editor_cached_scale = Vector2(1, 1)
 duration_in = 3.0
@@ -60,7 +60,7 @@ metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 [node name="2dDemo" type="Node2D"]
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(575, 347)
+position = Vector2(584, 317)
 texture = ExtResource("1_va5jn")
 
 [node name="Juice2D" type="Node" parent="Sprite2D"]
