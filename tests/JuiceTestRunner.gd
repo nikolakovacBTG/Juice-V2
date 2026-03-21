@@ -62,6 +62,8 @@ func _ready() -> void:
 		get_tree().quit(exit_code)
 	else:
 		_build_visual_ui()
+		# Auto-run when played from editor (enables MCP-based test running)
+		_on_run_all_pressed()
 
 
 # =============================================================================
