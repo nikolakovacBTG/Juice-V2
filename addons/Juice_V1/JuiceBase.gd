@@ -251,7 +251,31 @@ func _ready() -> void:
 	# Resolve trigger source (where signals come from)
 	match trigger_source:
 		TriggerSource.PARENT:
-			_trigger_source_node = get_parent()
+			var parent_node := get_parent()
+			_trigger_source_node = parent_node
+			# M5: Sibling fallback — if parent isn't a recognized trigger source,
+			# scan siblings for exactly one recognized source.
+			if parent_node != null and auto_connect_parent \
+					and trigger_on != TriggerEvent.MANUAL and trigger_on != TriggerEvent.ON_READY \
+					and not _is_recognized_trigger_source(parent_node):
+				var sibling_sources: Array[Node] = []
+				for sibling in parent_node.get_children():
+					if sibling == self:
+						continue
+					if _is_recognized_trigger_source(sibling):
+						sibling_sources.append(sibling)
+				if sibling_sources.size() == 1:
+					_trigger_source_node = sibling_sources[0]
+					if debug_enabled:
+						print("[%s] Sibling auto-connect: using '%s' (%s)" % [
+							name, _trigger_source_node.name, _trigger_source_node.get_class()])
+				elif sibling_sources.size() > 1:
+					if debug_enabled:
+						var names := PackedStringArray()
+						for s in sibling_sources:
+							names.append(s.name)
+						push_warning("[%s] Multiple sibling trigger sources (%s). Set trigger_source_path." % [
+							name, ", ".join(names)])
 		TriggerSource.NODE:
 			_trigger_source_node = get_node_or_null(trigger_source_path)
 			if _trigger_source_node == null and debug_enabled:
@@ -704,6 +728,42 @@ func _temporarily_reapply_visual() -> void:
 	pass
 
 # =============================================================================
+# CONFIGURATION WARNINGS
+# =============================================================================
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings: PackedStringArray = []
+
+	if recipe == null:
+		warnings.append("No recipe assigned. Add a JuiceRecipe to get started.")
+	elif recipe.effects.is_empty():
+		warnings.append("Recipe has no effects. Add JuiceEffectBase resources to the recipe.")
+	if mode == Mode.STACK and get_parent() == null:
+		warnings.append("STACK mode requires a parent node as the target.")
+
+	# M6: Warn about ambiguous sibling trigger sources
+	if auto_connect_parent and trigger_source == TriggerSource.PARENT \
+			and trigger_on != TriggerEvent.MANUAL and trigger_on != TriggerEvent.ON_READY:
+		var parent_node := get_parent()
+		if parent_node and not _is_recognized_trigger_source(parent_node):
+			var sibling_sources: Array[Node] = []
+			for sibling in parent_node.get_children():
+				if sibling == self:
+					continue
+				if _is_recognized_trigger_source(sibling):
+					sibling_sources.append(sibling)
+			if sibling_sources.size() > 1:
+				var names := PackedStringArray()
+				for s in sibling_sources:
+					names.append("%s (%s)" % [s.name, s.get_class()])
+				warnings.append(
+					"Multiple sibling trigger sources found: %s. " % ", ".join(names)
+					+ "Auto-connect cannot determine which one to use. "
+					+ "Set trigger_source to NODE and specify trigger_source_path.")
+
+	return warnings
+
+# =============================================================================
 # HELPERS
 # =============================================================================
 
@@ -760,6 +820,15 @@ func _try_auto_connect() -> void:
 ## Override in subclasses to connect domain-specific signals (Button, Area3D, etc.)
 func _auto_connect_domain_signals() -> void:
 	pass  # JuiceControl, Juice2D, Juice3D implement
+
+
+## M5: Check if a node is a recognized trigger source for this domain.
+## Override in subclasses. Base returns false (unknown domain).
+func _is_recognized_trigger_source(node: Node) -> bool:
+	# Visibility triggers work on any CanvasItem or Node3D
+	if trigger_on in [TriggerEvent.ON_SHOW, TriggerEvent.ON_HIDE]:
+		return node is CanvasItem or node is Node3D
+	return false  # Subclasses override for domain-specific types
 
 
 ## Connect visibility_changed signal. Works for both CanvasItem and Node3D.
@@ -904,16 +973,3 @@ func _on_control_gui_input_filtered(event: InputEvent) -> void:
 func _on_animation_finished(_anim_name: StringName) -> void:
 	_on_trigger_momentary()
 
-# =============================================================================
-# CONFIGURATION WARNINGS
-# =============================================================================
-
-func _get_configuration_warnings() -> PackedStringArray:
-	var warnings: PackedStringArray = []
-	if recipe == null:
-		warnings.append("No recipe assigned. Add a JuiceRecipe to get started.")
-	elif recipe.effects.is_empty():
-		warnings.append("Recipe has no effects. Add JuiceEffectBase resources to the recipe.")
-	if mode == Mode.STACK and get_parent() == null:
-		warnings.append("STACK mode requires a parent node as the target.")
-	return warnings
