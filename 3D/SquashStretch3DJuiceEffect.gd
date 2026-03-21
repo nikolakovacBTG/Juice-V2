@@ -134,12 +134,17 @@ var _has_base: bool = false
 func _on_animate_start(target: Node) -> void:
 	_capture_base(target)
 
+	# Set contribution flags so the domain node knows to aggregate scale (and position for pivot)
+	_contributes_scale = true
+	if pivot_offset != Vector3.ZERO:
+		_contributes_position = true
 
-## Apply squash/stretch deformation at the given progress.
+
+## Compute squash/stretch scale delta at the given progress.
 ## Uses sin(progress * PI) for a symmetric curve that peaks at 0.5.
+## Stores result in _scale_delta (and _pos_delta for pivot) — node writes once per frame.
 func _apply_effect(progress: float, target: Node) -> void:
-	var n3d := target as Node3D
-	if n3d == null:
+	if target == null:
 		return
 
 	var squash_factor := sin(progress * PI)
@@ -170,38 +175,30 @@ func _apply_effect(progress: float, target: Node) -> void:
 				new_scale.x = _base_scale.x * perpendicular_multiplier
 				new_scale.y = _base_scale.y * perpendicular_multiplier
 
-	n3d.scale = new_scale
+	# Store scale delta from natural state — node aggregates and writes
+	_scale_delta = new_scale - _base_scale
 
-	# Pivot compensation: offset position so scaling appears anchored at pivot
+	# Pivot compensation: store position delta
 	if pivot_offset != Vector3.ZERO:
 		var scale_ratio := new_scale / _base_scale
-		var pivot_delta := pivot_offset * (Vector3.ONE - scale_ratio)
-		n3d.position = _base_position + pivot_delta
+		_pos_delta = pivot_offset * (Vector3.ONE - scale_ratio)
 
 
-## Snap back to exact base state to avoid floating point drift.
-func _on_animate_out_complete(target: Node) -> void:
-	var n3d := target as Node3D
-	if n3d == null:
-		return
-	n3d.scale = _base_scale
-	if pivot_offset != Vector3.ZERO:
-		n3d.position = _base_position
+## Snap back to zero delta to avoid floating point drift.
+func _on_animate_out_complete(_target: Node) -> void:
+	_scale_delta = Vector3.ZERO
+	_pos_delta = Vector3.ZERO
 
 
-## Restore target to natural (unmodified) state.
-func _restore_to_natural(target: Node) -> void:
-	var n3d := target as Node3D
-	if n3d == null:
-		return
-	n3d.scale = _base_scale
-	if pivot_offset != Vector3.ZERO:
-		n3d.position = _base_position
+## Clear deltas — the domain node will write natural state via _post_tick_write().
+func _restore_to_natural(_target: Node) -> void:
+	_clear_deltas()
 
 
 ## Reset cached base values when target changes.
 func _invalidate_base_cache() -> void:
 	_has_base = false
+	_clear_deltas()
 
 
 # =============================================================================

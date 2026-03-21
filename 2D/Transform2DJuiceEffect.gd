@@ -439,6 +439,8 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
+# Animation reference base — captured at animation start when target is at natural state.
+# Used purely for From/To computation. NOT for external-move detection (node handles that).
 var _base_position: Vector2 = Vector2.ZERO
 var _base_rotation_radians: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
@@ -450,14 +452,6 @@ var _pivot_resolved: bool = false
 
 # Fixed pivot position in parent space (pre-computed at animation start for rotation)
 var _fixed_pivot_parent: Vector2 = Vector2.ZERO
-
-# Delta-first contribution tracking
-var _my_position_contribution: Vector2 = Vector2.ZERO
-var _my_rotation_contribution: float = 0.0
-var _my_scale_contribution: Vector2 = Vector2.ZERO
-
-# External-move detection
-var _last_written_position: Vector2 = Vector2.INF
 
 # Resolved From/To target node references
 var _from_ref: Node2D = null
@@ -503,6 +497,14 @@ func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_capture_base(target)
 
+	# Set contribution flags so the domain node knows which channels to aggregate
+	_contributes_position = (transform_target == TransformTarget.POSITION)
+	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
+	_contributes_scale = (transform_target == TransformTarget.SCALE)
+	# Pivot compensation for rotation/scale also contributes position
+	if transform_target != TransformTarget.POSITION and _pivot_point != Vector2.ZERO:
+		_contributes_position = true
+
 	_resolve_from_to_refs()
 
 	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
@@ -542,69 +544,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 			_apply_scale_effect(progress, n2d)
 
 
-func _restore_to_natural(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-	match transform_target:
-		TransformTarget.POSITION:
-			n2d.position -= _my_position_contribution
-			_my_position_contribution = Vector2.ZERO
-			_last_written_position = n2d.position
-		TransformTarget.ROTATION:
-			n2d.rotation -= _my_rotation_contribution
-			_my_rotation_contribution = 0.0
-			if _pivot_point != Vector2.ZERO:
-				n2d.position -= _my_position_contribution
-				_my_position_contribution = Vector2.ZERO
-				_last_written_position = n2d.position
-		TransformTarget.SCALE:
-			n2d.scale -= _my_scale_contribution
-			_my_scale_contribution = Vector2.ZERO
-			if _pivot_point != Vector2.ZERO:
-				n2d.position -= _my_position_contribution
-				_my_position_contribution = Vector2.ZERO
-				_last_written_position = n2d.position
-
-
-func _temporarily_undo_visual(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-	match transform_target:
-		TransformTarget.POSITION:
-			n2d.position -= _my_position_contribution
-			_last_written_position = n2d.position
-		TransformTarget.ROTATION:
-			n2d.rotation -= _my_rotation_contribution
-			if _pivot_point != Vector2.ZERO:
-				n2d.position -= _my_position_contribution
-				_last_written_position = n2d.position
-		TransformTarget.SCALE:
-			n2d.scale -= _my_scale_contribution
-			if _pivot_point != Vector2.ZERO:
-				n2d.position -= _my_position_contribution
-				_last_written_position = n2d.position
-
-
-func _temporarily_reapply_visual(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-	match transform_target:
-		TransformTarget.POSITION:
-			n2d.position += _my_position_contribution
-			_last_written_position = n2d.position
-		TransformTarget.ROTATION:
-			n2d.rotation += _my_rotation_contribution
-			if _pivot_point != Vector2.ZERO:
-				n2d.position += _my_position_contribution
-				_last_written_position = n2d.position
-		TransformTarget.SCALE:
-			n2d.scale += _my_scale_contribution
-			if _pivot_point != Vector2.ZERO:
-				n2d.position += _my_position_contribution
-				_last_written_position = n2d.position
+func _restore_to_natural(_target: Node) -> void:
+	# Clear deltas — the domain node will write natural state via _post_tick_write()
+	_clear_deltas()
 
 
 func _invalidate_base_cache() -> void:
@@ -615,10 +557,7 @@ func _invalidate_base_cache() -> void:
 	_has_self_position_snapshot = false
 	_has_self_rotation_snapshot = false
 	_has_self_scale_snapshot = false
-	_my_position_contribution = Vector2.ZERO
-	_my_rotation_contribution = 0.0
-	_my_scale_contribution = Vector2.ZERO
-	_last_written_position = Vector2.INF
+	_clear_deltas()
 
 
 func _get_interrupt_identity() -> Variant:
@@ -629,21 +568,14 @@ func _get_interrupt_identity() -> Variant:
 # POSITION EFFECT
 # =============================================================================
 
+## Compute position delta. Stores result in _pos_delta — node writes once per frame.
 func _apply_position_effect(progress: float, target: Node2D) -> void:
-	if _last_written_position != Vector2.INF:
-		if not target.position.is_equal_approx(_last_written_position):
-			_base_position = target.position
-			_my_position_contribution = Vector2.ZERO
-
 	var from_value := _resolve_from_position(target)
 	var to_value := _resolve_to_position(target)
 	var desired_absolute := from_value.lerp(to_value, progress)
 
-	var desired_offset := desired_absolute - _base_position
-	var delta := desired_offset - _my_position_contribution
-	target.position += delta
-	_my_position_contribution = desired_offset
-	_last_written_position = target.position
+	# Store delta from natural state — node aggregates and writes
+	_pos_delta = desired_absolute - _base_position
 
 
 func _resolve_from_position(animated: Node2D) -> Vector2:
@@ -701,26 +633,21 @@ func _get_ref_local_position(ref: Node2D, animated: Node2D) -> Vector2:
 # ROTATION EFFECT
 # =============================================================================
 
-## Apply rotation with pivot compensation. Node2D lacks native pivot_offset:
-##   fixed_pivot = base_pos + pivot.rotated(base_rot)
-##   new_pos = fixed_pivot - pivot.rotated(new_rot)
+## Compute rotation delta with pivot compensation.
+## Node2D lacks native pivot_offset — position is compensated to simulate pivot.
+## Stores result in _rot_delta (and _pos_delta for pivot) — node writes once per frame.
 func _apply_rotation_effect(progress: float, target: Node2D) -> void:
 	var from_rad := _resolve_from_rotation(target)
 	var to_rad := _resolve_to_rotation(target)
 	var desired_absolute := lerp_angle(from_rad, to_rad, progress)
 
-	var desired_offset := desired_absolute - _base_rotation_radians
-	var rot_delta := desired_offset - _my_rotation_contribution
-	target.rotation += rot_delta
-	_my_rotation_contribution = desired_offset
+	# Store rotation delta
+	_rot_delta = desired_absolute - _base_rotation_radians
 
-	# Pivot compensation
+	# Pivot compensation: store position delta
 	if _pivot_point != Vector2.ZERO:
 		var desired_pos := _fixed_pivot_parent - _pivot_point.rotated(desired_absolute)
-		var desired_pos_offset := desired_pos - _base_position
-		var pos_delta := desired_pos_offset - _my_position_contribution
-		target.position += pos_delta
-		_my_position_contribution = desired_pos_offset
+		_pos_delta = desired_pos - _base_position
 
 
 func _resolve_from_rotation(animated: Node2D) -> float:
@@ -760,26 +687,20 @@ func _get_ref_local_rotation(ref: Node2D, animated: Node2D) -> float:
 # SCALE EFFECT
 # =============================================================================
 
-## Apply scale with pivot compensation:
-##   pos += pivot * (ONE - scale_ratio)
+## Compute scale delta with pivot compensation.
+## Stores result in _scale_delta (and _pos_delta for pivot) — node writes once per frame.
 func _apply_scale_effect(progress: float, target: Node2D) -> void:
 	var from_value := _resolve_from_scale(target)
 	var to_value := _resolve_to_scale(target)
 	var desired_absolute := from_value.lerp(to_value, progress)
 
-	var desired_offset := desired_absolute - _base_scale
-	var scale_delta := desired_offset - _my_scale_contribution
+	# Store scale delta
+	_scale_delta = desired_absolute - _base_scale
 
-	# Pivot compensation
+	# Pivot compensation: store position delta
 	if _pivot_point != Vector2.ZERO:
 		var scale_ratio := desired_absolute / _base_scale
-		var desired_pos_offset := _pivot_point * (Vector2.ONE - scale_ratio)
-		var pos_delta := desired_pos_offset - _my_position_contribution
-		target.position += pos_delta
-		_my_position_contribution = desired_pos_offset
-
-	target.scale += scale_delta
-	_my_scale_contribution = desired_offset
+		_pos_delta = _pivot_point * (Vector2.ONE - scale_ratio)
 
 
 func _resolve_from_scale(animated: Node2D) -> Vector2:
