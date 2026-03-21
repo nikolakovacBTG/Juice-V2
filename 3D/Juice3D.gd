@@ -79,6 +79,12 @@ func _resolve_target() -> Node:
 # AUTO-CONNECT (Override)
 # =============================================================================
 
+func _is_recognized_trigger_source(node: Node) -> bool:
+	if super._is_recognized_trigger_source(node):
+		return true
+	return node is CollisionObject3D or node is AnimationPlayer
+
+
 ## Connect Area3D/CollisionObject3D signals based on trigger_on.
 ## Uses _trigger_source_node (may differ from _target_node when TriggerSource == NODE).
 func _auto_connect_domain_signals() -> void:
