@@ -37,11 +37,20 @@ Do NOT propose fixes to production code. Do NOT make system changes outside test
 
 ---
 
-## Step 1: Run Full Automated Suite
+## Step 1: Run Full Automated Suite (MCP — preferred, no user approval needed)
 
+1. Open the test scene:
+   - `mcp0_open_scene` → `res://tests/run_tests.tscn`
+2. Play the scene:
+   - `mcp0_play_scene` → `current`
+3. Wait ~10 seconds for tests to complete (all suites take ~8s total)
+4. Read summary results via editor script:
+   - `mcp0_execute_editor_script` with code that reads `res://tests/results/summary.log`
+5. Stop the scene:
+   - `mcp0_stop_running_scene`
+
+**Fallback (shell command):** If MCP is unavailable or Godot editor isn't running:
 // turbo
-Run all tests headless:
-
 ```powershell
 & "C:\Portable Software\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
 ```
@@ -55,9 +64,18 @@ Run all tests headless:
 
 ## Step 2: Read Log Files
 
-// turbo
-Read ALL generated log files in `tests/results/`:
+For MCP runs, read per-suite logs via editor script:
+```gdscript
+func run():
+	var f = FileAccess.open("res://tests/results/summary.log", FileAccess.READ)
+	if f == null: return "No summary.log found"
+	var content = f.get_as_text()
+	f.close()
+	return content
+```
 
+For shell runs, read directly:
+// turbo
 ```powershell
 Get-Content "D:\Godot projekti\juice-demo\tests\results\summary.log"
 ```
