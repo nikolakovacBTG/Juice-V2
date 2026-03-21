@@ -18,7 +18,7 @@
 | V0 Signal | V0 Location | V1 Location | Status | Test |
 |-----------|-------------|-------------|--------|------|
 | `started` | JuiceCompBase:41 | `animate_in_started` + `animate_out_started` on JuiceBase:38-41 | 🔄 More granular in V1 | — |
-| `completed` | JuiceCompBase:44 | JuiceBase:35 | ⚠️ Broken when looping (Bug A) | `test_loop_count_two_replays` ❌ |
+| `completed` | JuiceCompBase:44 | JuiceBase:35 | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
 
 ---
 
@@ -44,7 +44,7 @@
 
 | V0 Value | V1 Value | Status |
 |----------|----------|--------|
-| `RESTART` | `RESTART` | ❌ Broken — no progress reset, no crossfade trigger |
+| `RESTART` | `RESTART` | ⚠️ Progress reset fixed (246aecd) — crossfade trigger still dead |
 | `IGNORE` | `IGNORE` | ✅ |
 | `QUEUE_ONE` | `QUEUE` | 🔄 Renamed |
 
@@ -72,9 +72,9 @@
 | Property | V0 Location | V1 Location | Status | Test |
 |----------|-------------|-------------|--------|------|
 | `start_delay` | @export on comp | @export on node + var on effect | ⚠️ Untested per-effect delay | `test_start_delay_offsets_animation` ✅ (node-level) |
-| `loop_count` | @export on comp | @export on node + var on effect | ❌ Node-level counter resets in `_start_effects()` | `test_loop_count_two_replays` ❌ |
+| `loop_count` | @export on comp | @export on node + var on effect | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
 | `ping_pong` | @export on comp | var on effect | ⚠️ Untested | — |
-| `loop_delay` | @export on comp | @export on node + var on effect | ❌ Broken by loop counter bug | `test_loop_delay_pauses_between_iterations` ❌ |
+| `loop_delay` | @export on comp | @export on node + var on effect | ✅ Fixed (commit 246aecd) | `test_loop_delay_pauses_between_iterations` ✅ |
 | `loop_phase_offset` | @export on comp | var on effect | ⚠️ Declared + wired in `start()`, untested | — |
 
 ### Trigger
@@ -86,7 +86,7 @@
 | `manual_trigger_signal` | @export on comp | @export on node | ⚠️ Untested | — |
 | `trigger_source_path` | @export on comp | @export on node | ⚠️ Untested | — |
 | `trigger_on` | @export on comp | @export on node | ⚠️ Untested (only ON_READY tested) | — |
-| `retrigger_policy` | @export on comp (per-effect) | @export on node (per-node only) | 🔄 Scope changed: all effects share one policy | `test_retrigger_restart` ❌ |
+| `retrigger_policy` | @export on comp (per-effect) | @export on node (per-node only) | 🔄 Scope changed: all effects share one policy | `test_retrigger_restart` ✅ |
 | `crossfade_time` | @export on comp | var on effect | ❌ **DEAD CODE** — tick logic exists but `_is_crossfading` never set to `true` | — |
 
 ### Animate In
@@ -146,10 +146,10 @@
 
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
-| Loop counter increment | `_on_cycle_complete:1834` | effect: `_handle_cycle_complete:548`; node: `_on_all_effects_completed:561` | ❌ **Node-level resets in `_start_effects():499`** | `test_loop_count_two_replays` ❌ |
+| Loop counter increment | `_on_cycle_complete:1834` | effect: `_handle_cycle_complete:548`; node: `_on_all_effects_completed:561` | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
 | Loop counter preserved during auto-OUT | `_animate_to:910` `if not is_one_shot_return` | effect: `_current_loop` reset in `start():376` | ⚠️ effect.start() always resets — need to verify IN+OUT counting | — |
 | Infinite loop (loop_count = -1) | `_on_cycle_complete:1838-1849` | effect: `_handle_cycle_complete:550-551`; node: `_on_all_effects_completed:565-566` | ⚠️ Untested | — |
-| Loop delay | `_on_cycle_complete:1872-1884` (await timer) | effect: tick-based `_in_loop_delay`; node: tick-based `_in_loop_delay` | ❌ Broken by counter bug | `test_loop_delay_pauses_between_iterations` ❌ |
+| Loop delay | `_on_cycle_complete:1872-1884` (await timer) | effect: tick-based `_in_loop_delay`; node: tick-based `_in_loop_delay` | ✅ Fixed (commit 246aecd) | `test_loop_delay_pauses_between_iterations` ✅ |
 | Loop phase offset | `_animate_to:925-927` | `effect.start():387-389` | ⚠️ Untested | — |
 | PLAY_IN_AND_OUT loop restart | `_on_cycle_complete:1865-1877` | `_handle_cycle_complete:560-564` | ⚠️ Untested | — |
 
@@ -157,7 +157,7 @@
 
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
-| RESTART: stop + restart | `_handle_trigger:782-793` + `_animate_to:870-901` | `_handle_trigger:446-448` + `_start_effects` | ❌ **No progress reset** | `test_retrigger_restart` ❌ |
+| RESTART: stop + restart | `_handle_trigger:782-793` + `_animate_to:870-901` | `_handle_trigger:446-451` + `_start_effects` | ✅ Fixed (commit 246aecd) | `test_retrigger_restart` ✅ |
 | RESTART: same-direction detection | `_animate_to:886-901` | **NOT IMPLEMENTED** | ❌ MISSING | — |
 | RESTART: already-at-target (spammable) | `_animate_to:875-885` | **NOT IMPLEMENTED** | ❌ MISSING | — |
 | RESTART: crossfade on direction switch | `_animate_to:853-857` → `_is_crossfading = true` | **NEVER TRIGGERED** | ❌ DEAD CODE | — |
@@ -260,8 +260,8 @@
 
 | # | Issue | Files | Severity |
 |---|-------|-------|----------|
-| B1 | Node-level loop counter resets in `_start_effects():499` | `JuiceBase.gd` | HIGH — looping completely broken |
-| B2 | RESTART doesn't reset effect progress | `JuiceBase.gd:592-597` | HIGH — restart visually broken |
+| ~~B1~~ | ~~Node-level loop counter resets~~ | `JuiceBase.gd` | ✅ Fixed (commit 246aecd) |
+| ~~B2~~ | ~~RESTART doesn't reset effect progress~~ | `JuiceBase.gd` | ✅ Fixed (commit 246aecd) |
 
 ### ❌ DEAD CODE (declared, never functional)
 
