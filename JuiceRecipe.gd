@@ -42,20 +42,22 @@ extends Resource
 ## This is critical when the same recipe .tres is shared across multiple nodes.
 func create_runtime_effects() -> Array[JuiceEffectBase]:
 	var clones: Array[JuiceEffectBase] = []
-	# First pass: clone all effects
+	# Save original chain_to refs BEFORE deep duplicate replaces them with copies
+	var original_chains: Array[JuiceEffectBase] = []
 	for effect in effects:
 		if effect == null:
 			clones.append(null)
+			original_chains.append(null)
 			continue
+		original_chains.append(effect.chain_to)
 		clones.append(effect.duplicate(true) as JuiceEffectBase)
 
-	# Second pass: remap chain_to references to cloned instances
+	# Remap chain_to references using the saved originals (not deep-copied refs)
 	for i in clones.size():
-		if clones[i] == null or clones[i].chain_to == null:
+		if clones[i] == null or original_chains[i] == null:
+			clones[i].chain_to = null if clones[i] == null else null
 			continue
-		var original_chain := clones[i].chain_to
-		# Find the index of the original chain_to in the source array
-		var chain_idx := effects.find(original_chain)
+		var chain_idx := effects.find(original_chains[i])
 		if chain_idx >= 0 and chain_idx < clones.size():
 			clones[i].chain_to = clones[chain_idx]
 		else:
