@@ -44,7 +44,7 @@
 
 | V0 Value | V1 Value | Status |
 |----------|----------|--------|
-| `RESTART` | `RESTART` | ⚠️ Progress reset fixed (246aecd) — crossfade trigger still dead |
+| `RESTART` | `RESTART` | ✅ Fixed (246aecd+61fd436) | `test_retrigger_restart` + `test_restart_crossfade_direction_switch` ✅ |
 | `IGNORE` | `IGNORE` | ✅ |
 | `QUEUE_ONE` | `QUEUE` | 🔄 Renamed |
 
@@ -73,19 +73,19 @@
 |----------|-------------|-------------|--------|------|
 | `start_delay` | @export on comp | @export on node + var on effect | ⚠️ Untested per-effect delay | `test_start_delay_offsets_animation` ✅ (node-level) |
 | `loop_count` | @export on comp | @export on node + var on effect | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
-| `ping_pong` | @export on comp | var on effect | ⚠️ Untested | — |
+| `ping_pong` | @export on comp | var on effect | ✅ Tested | `test_ping_pong_oscillates` + `test_4phase_ping_pong_in_and_out` ✅ |
 | `loop_delay` | @export on comp | @export on node + var on effect | ✅ Fixed (commit 246aecd) | `test_loop_delay_pauses_between_iterations` ✅ |
-| `loop_phase_offset` | @export on comp | var on effect | ⚠️ Declared + wired in `start()`, untested | — |
+| `loop_phase_offset` | @export on comp | var on effect | ✅ Tested | `test_loop_phase_offset_starts_mid_cycle` ✅ |
 
 ### Trigger
 
 | Property | V0 Location | V1 Location | Status | Test |
 |----------|-------------|-------------|--------|------|
 | `trigger_behaviour` | @export on comp | @export on node + var on effect | ✅ | Multiple tests |
-| `auto_connect_parent` | @export on comp | @export on node | ⚠️ Untested (integration) | — |
+| `auto_connect_parent` | @export on comp | @export on node | ✅ Tested | `test_autoconnect_button_pressed` + `test_autoconnect_visibility_on_show` ✅ |
 | `manual_trigger_signal` | @export on comp | @export on node | ⚠️ Untested | — |
 | `trigger_source_path` | @export on comp | @export on node | ⚠️ Untested | — |
-| `trigger_on` | @export on comp | @export on node | ⚠️ Untested (only ON_READY tested) | — |
+| `trigger_on` | @export on comp | @export on node | ✅ Tested (ON_PRESS, ON_SHOW) | `test_autoconnect_button_pressed` + `test_autoconnect_visibility_on_show` ✅ |
 | `retrigger_policy` | @export on comp (per-effect) | @export on node (per-node only) | 🔄 Scope changed: all effects share one policy | `test_retrigger_restart` ✅ |
 | `crossfade_time` | @export on comp | var on effect | ✅ Wired (commit 61fd436) — triggered on direction switch | `test_restart_crossfade_direction_switch` ✅ |
 
@@ -94,13 +94,13 @@
 | Property | V0 | V1 | Status | Test |
 |----------|-----|-----|--------|------|
 | `duration_in` | var on comp | var on effect | ✅ | Multiple tests |
-| `transition_in` | var on comp | var on effect | ⚠️ Untested (specific curve types) | — |
-| `ease_in` | var on comp | var on effect | ⚠️ Untested | — |
-| `custom_curve_in` | var on comp | var on effect | ⚠️ Untested | — |
-| `elastic_amplitude_in` | var on comp | var on effect | ⚠️ Untested | — |
-| `elastic_period_in` | var on comp | var on effect | ⚠️ Untested | — |
-| `back_overshoot_in` | var on comp | var on effect | ⚠️ Untested | — |
-| `hold_at_peak` | var on comp | var on effect | ⚠️ Untested | — |
+| `transition_in` | var on comp | var on effect | ✅ Tested (ELASTIC, BACK) | `test_elastic_easing_overshoots` + `test_back_easing_overshoots` ✅ |
+| `ease_in` | var on comp | var on effect | ✅ Tested (EASE_OUT) | `test_elastic_easing_overshoots` + `test_back_easing_overshoots` ✅ |
+| `custom_curve_in` | var on comp | var on effect | ✅ Tested | `test_custom_curve_in_overrides_easing` ✅ |
+| `elastic_amplitude_in` | var on comp | var on effect | ✅ Tested | `test_elastic_easing_overshoots` ✅ |
+| `elastic_period_in` | var on comp | var on effect | ✅ Tested | `test_elastic_easing_overshoots` ✅ |
+| `back_overshoot_in` | var on comp | var on effect | ✅ Tested | `test_back_easing_overshoots` ✅ |
+| `hold_at_peak` | var on comp | var on effect | ✅ Tested | `test_hold_at_peak_delays_auto_reverse` ✅ |
 
 ### Animate Out
 
@@ -118,8 +118,8 @@
 
 | Property | V0 | V1 | Status | Test |
 |----------|-----|-----|--------|------|
-| `next_component` (NodePath) | var on comp | `chain_to` (Resource ref) on effect | 🔄 Adapted for Resource model | ⚠️ Untested |
-| `interrupt_siblings` | var on comp | var on effect | ❌ **DEAD CODE** — declared, JuiceBase never reads it | — |
+| `next_component` (NodePath) | var on comp | `chain_to` (Resource ref) on effect | 🔄 Adapted for Resource model | `test_chain_to_sequential_effects` ✅ |
+| `interrupt_siblings` | var on comp | var on effect | ✅ Wired (commit 6c77164) | `test_interrupt_siblings_stops_matching` ✅ |
 
 ### Mirror & Debug
 
@@ -138,7 +138,7 @@
 |----------|-------------|-------------|--------|------|
 | Force-first-frame (FFR) | `_animate_to:940` | `effect.start():398` | ✅ | Implicit in position tests |
 | Start delay hold (self-hold) | `_process:593-595` | `tick():414-418` | ✅ | `test_start_delay_offsets_animation` |
-| Container hold (beat re-sorts) | `_process:587-595` | `_post_tick_write` during node delay | ⚠️ Untested | — |
+| Container hold (beat re-sorts) | `_process:587-595` | `_post_tick_write` during node delay | ✅ Tested (commit ecc9511) | `test_container_re_sort_handling` ✅ |
 | PLAY_IN_AND_OUT chain | `_finish():1966-1991` | `_handle_cycle_complete:534-545` | ✅ | `test_play_in_and_out_completes` |
 | `is_one_shot_return` concept | Param to `_animate_to` | Internal flag `_is_one_shot_return` on effect | 🔄 Refactored into effect-internal | — |
 
@@ -148,9 +148,9 @@
 |----------|-------------|-------------|--------|------|
 | Loop counter increment | `_on_cycle_complete:1834` | effect: `_handle_cycle_complete:548`; node: `_on_all_effects_completed:561` | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
 | Loop counter preserved during auto-OUT | `_animate_to:910` `if not is_one_shot_return` | effect: `_current_loop` reset in `start():376` | ⚠️ effect.start() always resets — need to verify IN+OUT counting | — |
-| Infinite loop (loop_count = -1) | `_on_cycle_complete:1838-1849` | effect: `_handle_cycle_complete:550-551`; node: `_on_all_effects_completed:565-566` | ⚠️ Untested | — |
+| Infinite loop (loop_count = -1) | `_on_cycle_complete:1838-1849` | effect: `_handle_cycle_complete:550-551`; node: `_on_all_effects_completed:565-566` | ✅ Tested | `test_infinite_loop_keeps_playing` ✅ |
 | Loop delay | `_on_cycle_complete:1872-1884` (await timer) | effect: tick-based `_in_loop_delay`; node: tick-based `_in_loop_delay` | ✅ Fixed (commit 246aecd) | `test_loop_delay_pauses_between_iterations` ✅ |
-| Loop phase offset | `_animate_to:925-927` | `effect.start():387-389` | ⚠️ Untested | — |
+| Loop phase offset | `_animate_to:925-927` | `effect.start():387-389` | ✅ Tested | `test_loop_phase_offset_starts_mid_cycle` ✅ |
 | PLAY_IN_AND_OUT loop restart | `_on_cycle_complete:1865-1877` | `_handle_cycle_complete:560-564` | ⚠️ Untested | — |
 
 ### Restart / Retrigger
@@ -162,7 +162,7 @@
 | RESTART: already-at-target (spammable) | `_animate_to:875-885` | `_handle_trigger:489-498` | ✅ Fixed (commit 61fd436) | `test_restart_spammable_at_target` ✅ |
 | RESTART: crossfade on direction switch | `_animate_to:853-857` → `_is_crossfading = true` | `_handle_trigger:466-473` | ✅ Fixed (commit 61fd436) | `test_restart_crossfade_direction_switch` ✅ |
 | IGNORE: return early | `_handle_trigger:786-787` | `_handle_trigger:437-440` | ✅ | — |
-| QUEUE: store + dequeue | `_handle_trigger:788-790` + `_finish:2019-2022` | `_handle_trigger:441-445` + `_on_all_effects_completed:586-589` | ⚠️ Untested | — |
+| QUEUE: store + dequeue | `_handle_trigger:788-790` + `_finish:2019-2022` | `_handle_trigger:441-445` + `_on_all_effects_completed:586-589` | ✅ Tested | `test_retrigger_queue_plays_after_first` ✅ |
 
 ### Crossfade
 
