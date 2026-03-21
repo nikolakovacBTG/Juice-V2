@@ -446,6 +446,9 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 			RetriggerPolicy.RESTART:
 				_in_node_start_delay = false
 				_stop_all_effects_silent()
+				for effect in _runtime_effects:
+					if effect != null:
+						effect._animation_progress = 0.0
 
 	# Resolve direction from trigger_behaviour
 	var resolved_play_in := true
@@ -462,6 +465,8 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 		JuiceEffectBase.TriggerBehaviour.SET_FROM_SOURCE:
 			# SET_FROM_SOURCE doesn't use start — it uses set_external_progress
 			return
+
+	_current_iteration = 0
 
 	# Node-level start_delay: delay entire recipe before starting effects
 	if start_delay > 0.0:
@@ -496,7 +501,6 @@ func _start_effects(play_in: bool) -> void:
 
 	_is_playing = true
 	_active_effect_indices.clear()
-	_current_iteration = 0
 
 	if play_in:
 		animate_in_started.emit()

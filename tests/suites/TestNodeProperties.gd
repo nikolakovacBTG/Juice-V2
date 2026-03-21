@@ -42,7 +42,9 @@ func get_test_methods() -> Array[String]:
 func _create_position_rig(
 	label: String,
 	to_pos: Vector2 = Vector2(100, 0),
-	duration: float = 0.3
+	duration: float = 0.3,
+	trigger_beh: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY,
+	dur_out: float = -1.0
 ) -> Array:
 	var btn := Button.new()
 	btn.text = label
@@ -56,18 +58,20 @@ func _create_position_rig(
 	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect.to_position = to_pos
 	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
-	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.trigger_behaviour = trigger_beh
 	effect.duration_in = duration
+	if dur_out >= 0.0:
+		effect.duration_out = dur_out
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
-	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	juice.trigger_behaviour = trigger_beh
 	var recipe := JuiceControlRecipe.new()
 	recipe.effects.append(effect)
 	juice.recipe = recipe
 	btn.add_child(juice)
 
-	# Wait for _ready to fire
+	# Wait for _ready to fire and clone effects
 	await wait_frames(2)
 
 	return [btn, juice, effect]
@@ -145,12 +149,10 @@ func test_start_delay_retrigger_restart_clears_delay() -> void:
 # =============================================================================
 
 func test_loop_count_two_replays() -> void:
-	var rig := await _create_position_rig("loop=2", Vector2(80, 0), 0.15)
+	var rig := await _create_position_rig("loop=2", Vector2(80, 0), 0.15,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT)
 	var btn: Button = rig[0]
 	var juice: JuiceControl = rig[1]
-	var effect: TransformControlJuiceEffect = rig[2]
-	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
-	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 	juice.loop_count = 2
 
 	var counter := [0]  # Array so lambda captures by reference
@@ -168,12 +170,10 @@ func test_loop_count_two_replays() -> void:
 
 
 func test_loop_delay_pauses_between_iterations() -> void:
-	var rig := await _create_position_rig("loop_delay", Vector2(80, 0), 0.1)
+	var rig := await _create_position_rig("loop_delay", Vector2(80, 0), 0.1,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.1)
 	var btn: Button = rig[0]
 	var juice: JuiceControl = rig[1]
-	var effect: TransformControlJuiceEffect = rig[2]
-	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
-	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 	juice.loop_count = 2
 	juice.loop_delay = 0.5
 
@@ -259,8 +259,6 @@ func test_trigger_behaviour_play_out_only() -> void:
 	var rig := await _create_position_rig("play_out_only", Vector2(100, 0), 0.2)
 	var btn: Button = rig[0]
 	var juice: JuiceControl = rig[1]
-	var effect: TransformControlJuiceEffect = rig[2]
-	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY
 
 	juice.animate_out()
@@ -278,8 +276,6 @@ func test_trigger_behaviour_toggle() -> void:
 	var rig := await _create_position_rig("toggle", Vector2(100, 0), 0.15)
 	var btn: Button = rig[0]
 	var juice: JuiceControl = rig[1]
-	var effect: TransformControlJuiceEffect = rig[2]
-	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
 
 	# First toggle: animate in
