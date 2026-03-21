@@ -87,7 +87,7 @@
 | `trigger_source_path` | @export on comp | @export on node | ⚠️ Untested | — |
 | `trigger_on` | @export on comp | @export on node | ⚠️ Untested (only ON_READY tested) | — |
 | `retrigger_policy` | @export on comp (per-effect) | @export on node (per-node only) | 🔄 Scope changed: all effects share one policy | `test_retrigger_restart` ✅ |
-| `crossfade_time` | @export on comp | var on effect | ❌ **DEAD CODE** — tick logic exists but `_is_crossfading` never set to `true` | — |
+| `crossfade_time` | @export on comp | var on effect | ✅ Wired (commit 61fd436) — triggered on direction switch | `test_restart_crossfade_direction_switch` ✅ |
 
 ### Animate In
 
@@ -158,9 +158,9 @@
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
 | RESTART: stop + restart | `_handle_trigger:782-793` + `_animate_to:870-901` | `_handle_trigger:446-451` + `_start_effects` | ✅ Fixed (commit 246aecd) | `test_retrigger_restart` ✅ |
-| RESTART: same-direction detection | `_animate_to:886-901` | **NOT IMPLEMENTED** | ❌ MISSING | — |
-| RESTART: already-at-target (spammable) | `_animate_to:875-885` | **NOT IMPLEMENTED** | ❌ MISSING | — |
-| RESTART: crossfade on direction switch | `_animate_to:853-857` → `_is_crossfading = true` | **NEVER TRIGGERED** | ❌ DEAD CODE | — |
+| RESTART: same-direction detection | `_animate_to:886-901` | `_handle_trigger:475-483` | ✅ Fixed (commit 61fd436) | `test_restart_same_direction_resets` ✅ |
+| RESTART: already-at-target (spammable) | `_animate_to:875-885` | `_handle_trigger:489-498` | ✅ Fixed (commit 61fd436) | `test_restart_spammable_at_target` ✅ |
+| RESTART: crossfade on direction switch | `_animate_to:853-857` → `_is_crossfading = true` | `_handle_trigger:466-473` | ✅ Fixed (commit 61fd436) | `test_restart_crossfade_direction_switch` ✅ |
 | IGNORE: return early | `_handle_trigger:786-787` | `_handle_trigger:437-440` | ✅ | — |
 | QUEUE: store + dequeue | `_handle_trigger:788-790` + `_finish:2019-2022` | `_handle_trigger:441-445` + `_on_all_effects_completed:586-589` | ⚠️ Untested | — |
 
@@ -169,17 +169,17 @@
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
 | `crossfade_time` property | `@export` line 165 | `var` on effect line 128 | ✅ Declared | — |
-| Crossfade trigger (set `_is_crossfading = true`) | `_animate_to:854-857` | **NEVER SET** | ❌ DEAD CODE | — |
-| Crossfade blend in tick | `_process:615-621` | `tick():451-457` | ✅ Code exists | — |
-| `crossfade_time` hidden when not RESTART | `_validate_property:289-290` | **NOT IMPLEMENTED** (always shown) | ❌ MISSING inspector behavior | — |
+| Crossfade trigger (set `_is_crossfading = true`) | `_animate_to:854-857` | `_handle_trigger:466-473` | ✅ Wired (commit 61fd436) | `test_restart_crossfade_direction_switch` ✅ |
+| Crossfade blend in tick | `_process:615-621` | `tick():451-457` | ✅ Code exists + tested | `test_restart_crossfade_direction_switch` ✅ |
+| `crossfade_time` hidden when not RESTART | `_validate_property:289-290` | Always shown | ➖ N/A — effect (Resource) can't see node's retrigger_policy at edit time | — |
 
 ### Interrupt Siblings
 
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
-| `interrupt_siblings` property | var on comp line 262 | var on effect line 124 | ✅ Declared | — |
-| `_stop_sibling_juice_components()` | `_animate_to:861-862` + method at line 1139 | **NOT IMPLEMENTED** | ❌ MISSING | — |
-| `_get_interrupt_identity()` | line 2073 | line 851 | ✅ Declared (never called) | — |
+| `interrupt_siblings` property | var on comp line 262 | var on effect line 124 | ✅ Wired (commit 6c77164) | `test_interrupt_siblings_stops_matching` ✅ |
+| `_stop_matching_siblings()` | `_animate_to:861-862` + method at line 1139 | `JuiceBase:634` | ✅ Wired (commit 6c77164) | `test_interrupt_siblings_stops_matching` ✅ |
+| `_get_interrupt_identity()` | line 2073 | line 851 | ✅ Called by `_stop_matching_siblings` | `test_interrupt_siblings_stops_matching` ✅ |
 
 ### Ping-Pong
 
@@ -267,18 +267,18 @@
 
 | # | Issue | Files | Severity |
 |---|-------|-------|----------|
-| D1 | `crossfade_time` — tick logic exists, `_is_crossfading` never set `true` | `JuiceEffectBase.gd` | HIGH — visible to user in inspector, does nothing |
-| D2 | `interrupt_siblings` — shown in inspector, JuiceBase never reads it | `JuiceEffectBase.gd` + `JuiceBase.gd` | MEDIUM — silent failure |
-| D3 | `_get_interrupt_identity()` — declared on effect, never called | `JuiceEffectBase.gd:851` | LOW — depends on D2 |
+| ~~D1~~ | ~~`crossfade_time` tick logic dead~~ | `JuiceEffectBase.gd` | ✅ Fixed (commit 61fd436) |
+| ~~D2~~ | ~~`interrupt_siblings` never read~~ | `JuiceBase.gd` | ✅ Fixed (commit 6c77164) |
+| ~~D3~~ | ~~`_get_interrupt_identity()` never called~~ | `JuiceEffectBase.gd` | ✅ Fixed (commit 6c77164) |
 
 ### ❌ MISSING (V0 has, V1 doesn't)
 
 | # | Issue | V0 Reference | Severity |
 |---|-------|-------------|----------|
-| M1 | RESTART same-direction detection | `_animate_to:886-901` | HIGH — spammable effects won't work |
-| M2 | RESTART already-at-target handling | `_animate_to:875-885` | HIGH — punch/shake effects dead on re-trigger |
-| M3 | Crossfade trigger on direction switch | `_animate_to:853-857` | MEDIUM — visible smoothness loss |
-| M4 | `crossfade_time` hidden when not RESTART | `_validate_property:289-290` | LOW — inspector UX |
+| ~~M1~~ | ~~RESTART same-direction detection~~ | `_animate_to:886-901` | ✅ Fixed (commit 61fd436) |
+| ~~M2~~ | ~~RESTART already-at-target handling~~ | `_animate_to:875-885` | ✅ Fixed (commit 61fd436) |
+| ~~M3~~ | ~~Crossfade trigger on direction switch~~ | `_animate_to:853-857` | ✅ Fixed (commit 61fd436) |
+| M4 | `crossfade_time` hidden when not RESTART | `_validate_property:289-290` | ➖ N/A in V1 architecture |
 | M5 | Sibling fallback scan in auto-connect | `_try_auto_connect:1215-1235` | MEDIUM — reduces usability |
 | M6 | Config warning: ambiguous sibling sources | `_get_configuration_warnings:1164-1189` | LOW — UX polish |
 | M7 | Editor preview entry/exit lifecycle | `_enter/_exit_editor_preview` | ❓ May live elsewhere |
