@@ -499,6 +499,9 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 
 	_current_iteration = 0
 
+	# D2: Interrupt sibling JuiceBase nodes with matching effect identity
+	_stop_matching_siblings()
+
 	# Node-level start_delay: delay entire recipe before starting effects
 	if start_delay > 0.0:
 		_in_node_start_delay = true
@@ -622,6 +625,42 @@ func _on_all_effects_completed() -> void:
 		var queued := _queued_trigger
 		_queued_trigger = {}
 		_handle_trigger(queued)
+
+
+## D2: Stop sibling JuiceBase nodes whose effects share an interrupt identity
+## with any effect in this node that has interrupt_siblings = true.
+## Only called on new triggers (not loop restarts), matching V0's
+## `interrupt_siblings and not is_one_shot_return` guard.
+func _stop_matching_siblings() -> void:
+	# Collect identities from our effects that want sibling interruption
+	var my_identities: Array[Variant] = []
+	for effect in _runtime_effects:
+		if effect != null and effect.interrupt_siblings:
+			my_identities.append(effect._get_interrupt_identity())
+	if my_identities.is_empty():
+		return
+
+	var parent := get_parent()
+	if parent == null:
+		return
+
+	for sibling in parent.get_children():
+		if sibling == self or not (sibling is JuiceBase):
+			continue
+		var juice_sibling := sibling as JuiceBase
+		if not juice_sibling._is_playing:
+			continue
+		# Check if any sibling effect has a matching identity
+		for sib_effect in juice_sibling._runtime_effects:
+			if sib_effect == null:
+				continue
+			var sib_identity: Variant = sib_effect._get_interrupt_identity()
+			for my_id in my_identities:
+				if typeof(sib_identity) == typeof(my_id) and sib_identity == my_id:
+					juice_sibling.stop_and_hold()
+					if debug_enabled:
+						print("[%s] Interrupted sibling '%s'" % [name, sibling.name])
+					break
 
 
 func _stop_all_effects_silent() -> void:
