@@ -70,9 +70,13 @@ func _ready() -> void:
 
 func _register_suites() -> void:
 	# --- Add new test suites here ---
-	_suites.append(preload("res://tests/suites/TestNodeProperties.gd").new())
-	_suites.append(preload("res://tests/suites/TestTransformControl.gd").new())
-	# Future: TestTransform2D, TestTransform3D, TestSquashControl, etc.
+	_suites.append(load("res://tests/suites/TestNodeProperties.gd").new())
+	_suites.append(load("res://tests/suites/TestTransformControl.gd").new())
+	_suites.append(load("res://tests/suites/TestTransform2D.gd").new())
+	_suites.append(load("res://tests/suites/TestTransform3D.gd").new())
+	_suites.append(load("res://tests/suites/TestSquashStretchControl.gd").new())
+	_suites.append(load("res://tests/suites/TestSquashStretch2D.gd").new())
+	_suites.append(load("res://tests/suites/TestSquashStretch3D.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

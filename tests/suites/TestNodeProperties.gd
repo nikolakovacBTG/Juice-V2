@@ -11,7 +11,7 @@
 ## are domain-agnostic (implemented in JuiceBase), so testing one domain
 ## verifies all three.
 ## ============================================================================
-extends JuiceTestSuite
+extends "res://tests/JuiceTestSuite.gd"
 
 
 func get_suite_name() -> String:
@@ -153,15 +153,15 @@ func test_loop_count_two_replays() -> void:
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 	juice.loop_count = 2
 
-	var completed_count := 0
-	juice.completed.connect(func(): completed_count += 1)
+	var counter := [0]  # Array so lambda captures by reference
+	juice.completed.connect(func(): counter[0] += 1)
 
 	juice.animate_in()
 
 	# Wait long enough for 2 full cycles (in+out = ~0.3s each, x2 = ~0.6s + margin)
 	await wait_seconds(1.5)
 
-	assert_equal(completed_count, 1,
+	assert_equal(counter[0], 1,
 		"completed signal should fire once after loop_count=2 finishes")
 
 	await cleanup(btn)

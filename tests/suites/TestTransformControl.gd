@@ -5,7 +5,7 @@
 ##      and external-move detection work correctly.
 ## SYSTEM: Tests (tests/suites/)
 ## ============================================================================
-extends JuiceTestSuite
+extends "res://tests/JuiceTestSuite.gd"
 
 
 func get_suite_name() -> String:
@@ -106,19 +106,22 @@ func test_position_own_size() -> void:
 	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
 	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
-	effect.to_position = Vector2(1.0, 0.0)  # 1x own width = 100px
+	effect.to_position = Vector2(1.0, 0.0)  # 1x own width
 	effect.to_position_in = TransformControlJuiceEffect.PositionIn.OWN_SIZE
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.2
 
 	var juice := await _add_juice_with_effect(btn, effect)
 
+	# Read actual size AFTER layout (Button theme adds padding)
+	var actual_width := btn.size.x
+
 	juice.animate_in()
 	await wait_seconds(0.4)
 
-	# 1.0 * own size (100, 40) = (100, 0) offset
-	assert_approx_vec2(btn.position, Vector2(100, 0),
-		"OWN_SIZE: 1.0x own width should move 100px", 5.0)
+	# 1.0 * actual own size.x = actual_width px offset
+	assert_approx_float(btn.position.x, actual_width,
+		"OWN_SIZE: 1.0x own width (%.0f) should move that many px" % actual_width, 5.0)
 
 	await cleanup(parent_ctrl)
 
@@ -305,7 +308,7 @@ func test_external_move_detection_position() -> void:
 	await wait_seconds(0.2)
 
 	# Externally move the button (simulating AnimationPlayer, Container, etc.)
-	var pos_before_move := btn.position
+	var _pos_before_move := btn.position
 	btn.position += Vector2(0, 50)  # External vertical move
 
 	await wait_seconds(0.3)
@@ -342,12 +345,12 @@ func test_from_self_to_custom() -> void:
 	juice.animate_in()
 	await wait_seconds(0.4)
 
-	# From SELF(20,10) to CUSTOM(80,0) — at progress=1, should be at (80,0) offset from base
-	# Actually: from = captured self position = (20,10), to = custom pixels (80,0)
-	# Delta at progress=1 = to - from = (80,0) - (20,10) = (60, -10)
-	# Final = base(20,10) + delta(60,-10) = (80, 0)
-	assert_approx_vec2(btn.position, Vector2(80, 0),
-		"SELF→CUSTOM: should animate from (20,10) to (80,0)", 5.0)
+	# CUSTOM position is base + offset. to_value = base(20,10) + (80,0) = (100, 10)
+	# from = SELF = base(20,10), to = (100, 10)
+	# At progress=1: desired = (100, 10), delta = (80, 0)
+	# Final = base(20,10) + delta(80,0) = (100, 10)
+	assert_approx_vec2(btn.position, Vector2(100, 10),
+		"SELF→CUSTOM: base(20,10) + offset(80,0) = (100, 10)", 5.0)
 
 	await cleanup(parent_ctrl)
 
