@@ -1,14 +1,14 @@
-## ControlJuiceRecipe.gd
+## JuiceControlRecipe.gd
 ## ============================================================================
 ## WHAT: Recipe for Control-domain juice effects.
 ## WHY: Narrows the effects array type hint so the inspector dropdown only
-##      shows ControlJuiceEffectBase subclasses (not 2D/3D effects).
+##      shows JuiceControlEffectBase subclasses (not 2D/3D effects).
 ## SYSTEM: Juicing System (addons/Juice_V1/)
 ## DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
 ## ============================================================================
 
 @tool
-class_name ControlJuiceRecipe
+class_name JuiceControlRecipe
 extends JuiceRecipe
 
 
@@ -21,7 +21,7 @@ extends JuiceRecipe
 const _CONCRETE_EFFECTS := "SquashStretchControlJuiceEffect,TransformControlJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
-## This hides ControlJuiceEffectBase from the inspector dropdown.
+## This hides JuiceControlEffectBase from the inspector dropdown.
 func _validate_property(property: Dictionary) -> void:
 	if property.name == "effects":
 		property.hint_string = str(TYPE_OBJECT) + "/" + str(PROPERTY_HINT_RESOURCE_TYPE) + ":" + _CONCRETE_EFFECTS

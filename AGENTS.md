@@ -127,6 +127,67 @@ This project uses **Godot 4.x**. Use GDScript typed syntax and modern patterns.
 
 ---
 
+## V1 Naming Conventions (`addons/Juice_V1/`)
+
+| Category | Convention | Example |
+|----------|------------|---------|
+| **Domain Nodes** | `Juice[Domain]` | `JuiceControl`, `Juice2D`, `Juice3D` |
+| **Domain EffectBase** | `Juice[Domain]EffectBase` | `JuiceControlEffectBase`, `Juice2DEffectBase` |
+| **Domain Recipe** | `Juice[Domain]Recipe` | `JuiceControlRecipe`, `Juice2DRecipe` |
+| **Concrete Effects** | `[EffectName][Domain]JuiceEffect` | `TransformControlJuiceEffect`, `Shake2DJuiceEffect` |
+| **Shared Base Classes** | Unchanged | `JuiceBase`, `JuiceEffectBase`, `JuiceRecipe` |
+| **File = class_name** | Always match | `JuiceControl.gd` → `class_name JuiceControl` |
+
+**Rule:** `Juice` always comes before the domain token. This avoids invalid identifiers (`2DJuice` starts with digit). Effects put domain in the middle because they have a leading effect name (`Transform2DJuiceEffect`).
+
+---
+
+## V1 Architectural Rules (Sprint-Specific)
+
+**Design doc:** `Documentation/JuiceStack_Design.md` is the authoritative reference. Every decision must trace back to it.
+
+### Effects Are Pure Delta Calculators
+
+1. Effects compute a **delta** (offset from natural state) at a given progress — nothing more
+2. Effects **NEVER write** to the target node — the domain node writes once per frame
+3. Effects **NEVER track** `_my_*_contribution`, `_last_written_*`, or `_base_*` — that's node work
+4. Effects **NEVER detect** external moves — the domain node does that once per frame, pre-tick
+5. Effects **NEVER implement** `_temporarily_undo_visual()` / `_temporarily_reapply_visual()` — the domain node does
+6. Effects **capture their own From/To references** at animation start (when the node has temporarily undone all visuals)
+7. For `TARGET` references (From/To pointing to another node): the **node resolves** the NodePath and provides the resolved Node to the effect. The effect reads it but never resolves paths.
+
+### Domain Nodes Own Write Coordination
+
+Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
+
+1. **Base value capture** — natural position/rotation/scale before any effects
+2. **External-move detection** — once per frame, pre-tick: did something else change the target?
+3. **Delta aggregation** — sum all active effects' deltas per channel (position, rotation, scale)
+4. **Write-once-per-frame** — `target.property = base + sum(deltas)`, applied after all effects tick
+5. **`_temporarily_undo/reapply_visual()`** — subtract/add total contribution for editor save pipeline
+6. **Container hold pattern** (Control only) — re-apply every frame to beat deferred `_sort_children()`
+
+### All Three Domains — Always
+
+- When implementing ANY node-level feature, implement it in **all 3 domain nodes** before moving on
+- If a feature exists in one domain, its absence in another domain is a **bug**
+- The only domain-specific differences are: property types (Vector2 vs Vector3), Container hold (Control only), pivot compensation math
+
+### Build Order
+
+1. `JuiceBase` infrastructure (hooks, virtual methods)
+2. All 3 domain nodes (JuiceControl, Juice2D, Juice3D) — simultaneously
+3. Strip effects to pure delta calculators — all 3 domains simultaneously
+4. Verify stacking + Container behavior
+
+### Anti-Drift
+
+- Before implementing, **re-read the relevant section** of `JuiceStack_Design.md`
+- If implementation differs from design doc, **STOP and ask** — don't rationalize the deviation
+- If a design gap is discovered, **document it and ask** — don't fill it silently
+
+---
+
 ## Pre-Ship Checklist
 
 Tasks to complete before marketplace release:

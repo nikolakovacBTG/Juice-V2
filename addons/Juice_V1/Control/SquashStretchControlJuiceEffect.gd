@@ -7,7 +7,7 @@
 ## ============================================================================
 ##
 ## ARCHITECTURE:
-## - Effects are Resources (not Nodes). The host ControlJuice node ticks them.
+## - Effects are Resources (not Nodes). The host JuiceControl node ticks them.
 ## - Uses sin(progress * PI) curve — peaks at progress=0.5.
 ## - At progress=0.0 and 1.0: natural scale (no deformation).
 ## - At progress=0.5: maximum squash.
@@ -21,7 +21,7 @@
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
 class_name SquashStretchControlJuiceEffect
-extends ControlJuiceEffectBase
+extends JuiceControlEffectBase
 
 
 # =============================================================================

@@ -15,13 +15,13 @@ Replace individual effect Nodes with Resource-based effects inside host Nodes. E
 | `JuiceEffectBase` | `Resource` | Config + `apply(progress, target)` virtual. Can hold state (spring velocity, noise time). No Node lifecycle. |
 | `JuiceRecipe` | `Resource` | `Array[JuiceEffectBase]`. Savable `.tres`, shareable, distributable as marketplace asset. `resource_local_to_scene` for runtime independence. |
 | `JuiceBase` | `Node` | Unified base for domain nodes. Has STACK/SEQUENCER `mode` enum. Owns trigger, timing loop, Quick Overrides, chaining execution, looper, random, editor preview. |
-| `ControlJuice` | `JuiceBase` | Control domain. Target = parent Control (Stack) or NodePath array (Sequencer). |
-| `2DJuice` | `JuiceBase` | Node2D domain. |
-| `3DJuice` | `JuiceBase` | Node3D domain. |
+| `JuiceControl` | `JuiceBase` | Control domain. Target = parent Control (Stack) or NodePath array (Sequencer). |
+| `Juice2D` | `JuiceBase` | Node2D domain. |
+| `Juice3D` | `JuiceBase` | Node3D domain. |
 
 ## Naming
 
-- **Nodes:** `ControlJuice`, `2DJuice`, `3DJuice` — domain prefix first, always
+- **Nodes:** `JuiceControl`, `Juice2D`, `Juice3D` — `Juice` prefix, then domain
 - **Effects:** `TransformControlEffect`, `Noise2DEffect`, `Shake3DEffect`, etc.
 - **Meta effects:** `PauseEffect`, `TimeEffect`, `TriggerStackEffect`, `TriggerSequencerEffect`
 - **Recipe:** `JuiceRecipe`
@@ -198,7 +198,7 @@ Current `JuiceCompBase` (2154 lines) splits into:
 - Configuration warnings
 - Signals
 
-### → Domain Nodes (ControlJuice, 2DJuice, 3DJuice)
+### → Domain Nodes (JuiceControl, Juice2D, Juice3D)
 - Target type validation
 - Domain-specific aggregation (write position/rotation/scale once per frame)
 - Domain-specific external-move detection
@@ -306,7 +306,7 @@ CallMethodJuiceUtility → `CallMethodEffect`
 
 **Phase 0:** `.gdignore` + copy to `Juice_V1/` + git commit
 
-**Phase 1:** Create JuiceEffectBase, JuiceRecipe, JuiceBase, ControlJuice/2DJuice/3DJuice. Test: empty node on Button, inspector works.
+**Phase 1:** Create JuiceEffectBase, JuiceRecipe, JuiceBase, JuiceControl/Juice2D/Juice3D. Test: empty node on Button, inspector works.
 
 **Phase 2:** Port ONE simple comp (SquashStretchControl). Prove end-to-end pipeline.
 
