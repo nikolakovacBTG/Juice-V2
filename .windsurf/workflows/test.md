@@ -4,6 +4,8 @@ description: Run the Juice V1 automated test suite and report results
 
 You are in TEST MODE.
 
+**Skills auto-invoked:** `@verify-claims` (all pass/fail claims must cite evidence)
+
 Your task is to execute tests, report results, and categorize failures.
 You do NOT debug or propose fixes. You do NOT design new tests during execution.
 Your outputs must be precise, structured, and clearly report all results.
@@ -53,9 +55,14 @@ Run all tests headless:
 
 ## Step 2: Read Log Files
 
+// turbo
 Read ALL generated log files in `tests/results/`:
 
-- `tests/results/summary.log`
+```powershell
+Get-Content "D:\Godot projekti\juice-demo\tests\results\summary.log"
+```
+
+Then read each suite log:
 - `tests/results/{suite_name}.log` for each suite
 
 Extract from each log:
@@ -179,5 +186,7 @@ A test session is complete when:
 - All suites have been executed
 - All failures are categorized (TEST BUG / REAL BUG / NEEDS DISCUSSION)
 - TEST BUGs are fixed and re-verified
-- REAL BUGs are documented for /debug handoff
+- REAL BUGs are documented for /bugfix handoff
 - Results are reported in the structured format above
+
+**Next step:** Hand REAL BUG failures to `/bugfix` (not `/debug`)

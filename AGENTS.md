@@ -188,6 +188,34 @@ Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
 
 ---
 
+## Verification Rule (MANDATORY)
+
+**Never claim a feature works without citing a test name and its result.**
+
+- If a test exists: cite `suite_name::test_method` and whether it PASSes
+- If no test exists: say "NO TEST EXISTS" and write one before claiming completion
+- Code review is not verification. Only test results can mark something ✅.
+
+## Skills & Workflows Integration
+
+The following skills and workflows form a composable system for quality control:
+
+| Tool | Type | Trigger | Purpose |
+|------|------|---------|---------|
+| `@juice-architecture` | Skill | Auto: touching `addons/Juice_V1/` | Architecture rules + code templates |
+| `@verify-claims` | Skill | Auto: about to say "done/fixed/working" | Demands test evidence |
+| `/test` | Workflow | Manual | Run test suite, categorize failures |
+| `/bugfix` | Workflow | Manual | Structured fix cycle after test failures |
+| `/port` | Workflow | Manual | Port V0 effect to V1 (batches all 3 domains) |
+| `/review` | Workflow | Manual | Code review against project standards |
+| `/refactor` | Workflow | Manual | Systematic refactoring with validation |
+
+**Composition chain:** `/port` → `@juice-architecture` + `@verify-claims` → `/test` → `/bugfix` if needed
+
+**When discussing V1 code changes and no skill/workflow has been invoked, remind the user which are available.**
+
+---
+
 ## Pre-Ship Checklist
 
 Tasks to complete before marketplace release:

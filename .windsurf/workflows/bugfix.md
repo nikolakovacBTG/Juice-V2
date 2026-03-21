@@ -4,6 +4,8 @@ description: Structured bugfix cycle after test failures — prevents AI drift, 
 
 You are in BUGFIX MODE.
 
+**Skills auto-invoked:** `@juice-architecture` (architecture rules), `@verify-claims` (no false "done")
+
 This workflow is triggered AFTER `/test` has been run and failures have been categorized.
 It defines a structured, repeatable cycle for investigating and fixing bugs found by the
 automated test suite. It is specifically designed to prevent common AI failure modes.
@@ -109,6 +111,8 @@ If the bug exists in one domain, check ALL domains. Incomplete coverage is itsel
 
 ## Step 4: Design Checkpoint (MANDATORY)
 
+Re-read the relevant section of `Documentation/JuiceStack_Design.md` (invoked via `@juice-architecture`).
+
 Before writing ANY fix, classify the root cause:
 
 | Classification | Meaning | Action |
@@ -168,11 +172,11 @@ Rules for implementation:
 4. **No new comments unless necessary** — don't add explanatory comments that restate the code.
 5. **One commit per root-cause group** — atomic, revertable.
 
-After implementing, do NOT test yourself. Hand back to /test.
+After implementing, do NOT test yourself. Proceed to Step 7 for automated verification.
 
 ---
 
-## Step 7: Verification (Hand Back to /test)
+## Step 7: Verification (`@verify-claims` enforced)
 
 // turbo
 Run the full test suite:
@@ -197,10 +201,15 @@ Run the full test suite:
 
 After all scoped failures pass with no regressions:
 
-1. Commit with descriptive message referencing the failures fixed
-2. Update TODO.md
-3. If "Discovered Issues" were logged in Step 1, present them to the user for the next cycle
-4. Report final results:
+// turbo
+Commit:
+```powershell
+cd "D:\Godot projekti\juice-demo"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
+```
+
+1. Update TODO.md and `Documentation/V0_V1_Feature_Parity_Matrix.md` if any matrix items changed status
+2. If "Discovered Issues" were logged in Step 1, present them to the user for the next cycle
+3. Report final results:
 
 ```
 ## Bugfix Cycle Complete — [date]
