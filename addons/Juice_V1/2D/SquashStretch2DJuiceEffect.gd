@@ -113,12 +113,15 @@ var _has_base: bool = false
 func _on_animate_start(target: Node) -> void:
 	_capture_base(target)
 
+	# Set contribution flag so the domain node knows to aggregate scale
+	_contributes_scale = true
 
-## Apply squash/stretch deformation at the given progress.
+
+## Compute squash/stretch scale delta at the given progress.
 ## Uses sin(progress * PI) for a symmetric curve that peaks at 0.5.
+## Stores result in _scale_delta — the domain node writes once per frame.
 func _apply_effect(progress: float, target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
+	if target == null:
 		return
 
 	var squash_factor := sin(progress * PI)
@@ -135,28 +138,24 @@ func _apply_effect(progress: float, target: Node) -> void:
 		if preserve_volume:
 			new_scale.y = _base_scale.y * (1.0 / x_multiplier)
 
-	n2d.scale = new_scale
+	# Store delta from natural scale — node aggregates and writes
+	_scale_delta = new_scale - _base_scale
 
 
-## Snap back to exact base scale to avoid floating point drift.
-func _on_animate_out_complete(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-	n2d.scale = _base_scale
+## Snap back to zero delta to avoid floating point drift.
+func _on_animate_out_complete(_target: Node) -> void:
+	_scale_delta = Vector2.ZERO
 
 
-## Restore target to natural (unmodified) state.
-func _restore_to_natural(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-	n2d.scale = _base_scale
+## Clear deltas — the domain node will write natural state via _post_tick_write().
+func _restore_to_natural(_target: Node) -> void:
+	_clear_deltas()
 
 
 ## Reset cached base values when target changes.
 func _invalidate_base_cache() -> void:
 	_has_base = false
+	_clear_deltas()
 
 
 # =============================================================================
