@@ -31,7 +31,7 @@ enum TriggerBehaviour {
 }
 
 ## How to interpret offset/delta values for position and scale
-enum OffsetUnit { PIXELS, FRACTION_OWN, FRACTION_PARENT, FRACTION_VIEWPORT }
+enum OffsetUnit { PIXELS, OWN_SIZE, PARENT_SIZE, VIEWPORT_SIZE }
 
 ## How to interpret rotation values
 enum RotationUnit { DEGREES, RADIANS }
