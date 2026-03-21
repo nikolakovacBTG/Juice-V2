@@ -61,11 +61,11 @@ enum TransformReference {
 	TARGET_NODE   ## Another object's value (tracked live every frame)
 }
 
-## How to interpret custom position values (3D — no viewport fraction)
+## How to interpret custom position values (3D — no viewport size)
 enum PositionIn3D {
 	WORLD_UNITS,      ## Position in world units
-	OWN_SIZE,     ## Position in fraction of object's own AABB
-	PARENT_SIZE   ## Position in fraction of parent's AABB
+	OWN_SIZE,     ## Position as multiple of object's own AABB
+	PARENT_SIZE   ## Position as multiple of parent's AABB
 }
 
 ## When to capture Self's transform value
@@ -196,7 +196,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"name": "from_position_in", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "World Units,Fraction Own,Fraction Parent",
+			"hint_string": "World Units,Own Size,Parent Size",
 		})
 		pos_props.append({
 			"name": "from_position", "type": TYPE_VECTOR3,
@@ -229,7 +229,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"name": "to_position_in", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "World Units,Fraction Own,Fraction Parent",
+			"hint_string": "World Units,Own Size,Parent Size",
 		})
 		pos_props.append({
 			"name": "to_position", "type": TYPE_VECTOR3,

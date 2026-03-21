@@ -56,9 +56,9 @@ enum TransformReference {
 ## How to interpret custom position values (Control)
 enum PositionIn {
 	PIXELS,           ## Position in absolute pixels
-	OWN_SIZE,     ## Position in fraction of Control's own size
-	PARENT_SIZE,  ## Position in fraction of parent's size
-	VIEWPORT_SIZE ## Position in fraction of viewport size
+	OWN_SIZE,     ## Position as multiple of Control's own size
+	PARENT_SIZE,  ## Position as multiple of parent's size
+	VIEWPORT_SIZE ## Position as multiple of viewport size
 }
 
 ## When to capture Self's transform value
@@ -192,7 +192,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"name": "from_position_in", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Pixels,Fraction Own,Fraction Parent,Fraction Viewport",
+			"hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
 		})
 		pos_props.append({
 			"name": "from_position", "type": TYPE_VECTOR2,
@@ -226,7 +226,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 			"name": "to_position_in", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Pixels,Fraction Own,Fraction Parent,Fraction Viewport",
+			"hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
 		})
 		pos_props.append({
 			"name": "to_position", "type": TYPE_VECTOR2,
