@@ -50,7 +50,9 @@ var _total_scale_contribution: Vector2 = Vector2.ZERO
 # Whether base values have been captured at least once
 var _base_captured: bool = false
 
-# Whether the target is inside a Container (needs hold pattern)
+# Whether the target is inside a Container. In V1's write-every-frame model,
+# _post_tick_write() inherently beats Container re-sorts each frame.
+# This flag is kept for potential future Container-specific edge cases.
 var _in_container: bool = false
 
 # =============================================================================

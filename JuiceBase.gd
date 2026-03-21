@@ -212,6 +212,11 @@ var _is_playing: bool = false
 ## Current recipe iteration count.
 var _current_iteration: int = 0
 
+## Node-level start_delay tracking (delays entire recipe after trigger).
+var _in_node_start_delay: bool = false
+var _node_delay_elapsed: float = 0.0
+var _pending_play_in: bool = true
+
 ## Iteration delay tracking.
 var _in_loop_delay: bool = false
 var _loop_delay_elapsed: float = 0.0
@@ -285,6 +290,17 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
+
+	# --- Node-level start_delay: hold before starting effects ---
+	if _in_node_start_delay:
+		_node_delay_elapsed += delta
+		if _node_delay_elapsed < start_delay:
+			# Write base state every frame to beat Container re-sorts
+			_post_tick_write()
+			return
+		_in_node_start_delay = false
+		_start_effects(_pending_play_in)
+		# Fall through to normal tick if effects started this frame
 
 	# --- Iteration delay ---
 	if _in_loop_delay:
@@ -372,6 +388,7 @@ func stop() -> void:
 			effect.stop(_target_node)
 	_active_effect_indices.clear()
 	_is_playing = false
+	_in_node_start_delay = false
 	_in_loop_delay = false
 	# Write natural state (all effect contributions now cleared)
 	_post_tick_write()
@@ -382,6 +399,7 @@ func stop() -> void:
 
 ## Stop all effects but keep current visual state.
 func stop_and_hold() -> void:
+	_in_node_start_delay = false
 	for effect in _runtime_effects:
 		if effect != null:
 			effect.stop_and_hold()
@@ -414,7 +432,7 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 	var play_in: bool = trigger_info.get("play_in", true)
 
 	# Retrigger policy
-	if _is_playing:
+	if _is_playing or _in_node_start_delay:
 		match retrigger_policy:
 			RetriggerPolicy.IGNORE:
 				if debug_enabled:
@@ -426,21 +444,36 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 					print("[%s] Trigger queued" % name)
 				return
 			RetriggerPolicy.RESTART:
+				_in_node_start_delay = false
 				_stop_all_effects_silent()
 
+	# Resolve direction from trigger_behaviour
+	var resolved_play_in := true
 	match trigger_behaviour:
 		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT:
-			_start_effects(true)
+			resolved_play_in = true
 		JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
-			_start_effects(true)
+			resolved_play_in = true
 		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY:
-			_start_effects(false)
+			resolved_play_in = false
 		JuiceEffectBase.TriggerBehaviour.TOGGLE:
 			_toggle_state = not _toggle_state
-			_start_effects(_toggle_state)
+			resolved_play_in = _toggle_state
 		JuiceEffectBase.TriggerBehaviour.SET_FROM_SOURCE:
 			# SET_FROM_SOURCE doesn't use start — it uses set_external_progress
-			pass
+			return
+
+	# Node-level start_delay: delay entire recipe before starting effects
+	if start_delay > 0.0:
+		_in_node_start_delay = true
+		_node_delay_elapsed = 0.0
+		_pending_play_in = resolved_play_in
+		_is_playing = true
+		set_process(true)
+		if debug_enabled:
+			print("[%s] Node start_delay=%.2f, deferring effects" % [name, start_delay])
+	else:
+		_start_effects(resolved_play_in)
 
 	if debug_enabled:
 		print("[%s] Trigger handled: play_in=%s, behaviour=%s" % [
