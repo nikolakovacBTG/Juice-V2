@@ -185,9 +185,9 @@
 
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
-| 2-phase (single direction) | `_on_cycle_complete:1787-1819` | `_handle_cycle_complete:519-532` | ⚠️ Untested | — |
-| 4-phase (IN_AND_OUT) | `_get_ping_pong_phases_per_cycle:1893` | `_get_ping_pong_phases_per_cycle:702` | ⚠️ Untested | — |
-| Hold at peak between phases | `_on_cycle_complete:1798-1806` (await) | `_handle_cycle_complete:525-528` (tick-based) | ⚠️ Untested | — |
+| 2-phase (single direction) | `_on_cycle_complete:1787-1819` | `_handle_cycle_complete:519-532` | ✅ Tested (commit 523544a) | `test_ping_pong_oscillates` ✅ |
+| 4-phase (IN_AND_OUT) | `_get_ping_pong_phases_per_cycle:1893` | `_get_ping_pong_phases_per_cycle:702` | ⚠️ Untested (IN_AND_OUT + ping-pong combo) | — |
+| Hold at peak between phases | `_on_cycle_complete:1798-1806` (await) | `_handle_cycle_complete:525-528` (tick-based) | ✅ Tested (commit 523544a) | `test_hold_at_peak_delays_auto_reverse` ✅ |
 | Phase configuration | `_configure_ping_pong_phase:1901-1939` | `_configure_ping_pong_phase:708-729` | ✅ Same logic | — |
 
 ---
@@ -202,8 +202,8 @@
 | CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ⚠️ Untested | — |
 | AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_on_animation_finished:830` | ⚠️ Untested | — |
 | Visibility (ON_SHOW/ON_HIDE) | `_connect_visibility_signals:1517` | JuiceBase `_connect_visibility_signals:692` | ⚠️ Untested | — |
-| **Sibling fallback scan** | `_try_auto_connect:1215-1235` | **NOT IMPLEMENTED** | ❌ MISSING | — |
-| **Config warning: ambiguous siblings** | `_get_configuration_warnings:1164-1189` | **NOT IMPLEMENTED** | ❌ MISSING | — |
+| **Sibling fallback scan** | `_try_auto_connect:1215-1235` | JuiceBase `_ready():256-278` | ✅ Fixed (commit bbf9754) | — (integration) |
+| **Config warning: ambiguous siblings** | `_get_configuration_warnings:1164-1189` | JuiceBase `_get_configuration_warnings:734` | ✅ Fixed (commit bbf9754) | — (visual) |
 
 ---
 
@@ -233,7 +233,7 @@
 | `_on_animate_in_complete()` | No params | `(target)` param | 🔄 |
 | `_on_animate_out_complete()` | No params | `(target)` param | 🔄 |
 | `_invalidate_base_cache()` | No params | No params | ✅ |
-| `_get_interrupt_identity()` | Returns Variant | Returns Variant | ✅ (but never called in V1) |
+| `_get_interrupt_identity()` | Returns Variant | Returns Variant | ✅ Called by `_stop_matching_siblings` |
 | `_restore_to_natural()` | No params | `(target)` param | 🔄 |
 | `_on_host_ready(target, host)` | N/A (V0 uses _ready) | V1-only: effect learns about host at ready time | 🔄 V1-only addition |
 | `_on_editor_pre_save(target)` | N/A | V1-only: editor cache baking | 🔄 V1-only addition |
@@ -279,15 +279,18 @@
 | ~~M2~~ | ~~RESTART already-at-target handling~~ | `_animate_to:875-885` | ✅ Fixed (commit 61fd436) |
 | ~~M3~~ | ~~Crossfade trigger on direction switch~~ | `_animate_to:853-857` | ✅ Fixed (commit 61fd436) |
 | M4 | `crossfade_time` hidden when not RESTART | `_validate_property:289-290` | ➖ N/A in V1 architecture |
-| M5 | Sibling fallback scan in auto-connect | `_try_auto_connect:1215-1235` | MEDIUM — reduces usability |
-| M6 | Config warning: ambiguous sibling sources | `_get_configuration_warnings:1164-1189` | LOW — UX polish |
+| ~~M5~~ | ~~Sibling fallback scan in auto-connect~~ | `_try_auto_connect:1215-1235` | ✅ Fixed (commit bbf9754) |
+| ~~M6~~ | ~~Config warning: ambiguous sibling sources~~ | `_get_configuration_warnings:1164-1189` | ✅ Fixed (commit bbf9754) |
 | M7 | Editor preview entry/exit lifecycle | `_enter/_exit_editor_preview` | ❓ May live elsewhere |
 
 ### ⚠️ UNTESTED (code exists, no automated verification)
 
-**Nearly everything in ping-pong, auto-connect, hold_at_peak, custom curves,
-elastic/back params, chaining, loop_phase_offset, QUEUE retrigger, infinite loops,
-Container hold.** These all need tests before they can be marked ✅.
+**Remaining untested:** 4-phase ping-pong (IN_AND_OUT combo), auto-connect integration,
+custom curves, elastic/back params.
+
+**Newly tested (commit 523544a+ecc9511):** hold_at_peak, 2-phase ping-pong, infinite loops,
+QUEUE retrigger, chaining, loop_phase_offset, cross-node stacking (all 3 domains),
+Container re-sort handling.
 
 ---
 
