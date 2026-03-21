@@ -27,6 +27,9 @@ func get_test_methods() -> Array[String]:
 		"test_loop_delay_pauses_between_iterations",
 		"test_retrigger_ignore",
 		"test_retrigger_restart",
+		"test_restart_spammable_at_target",
+		"test_restart_same_direction_resets",
+		"test_restart_crossfade_direction_switch",
 		"test_trigger_behaviour_play_in_only",
 		"test_trigger_behaviour_play_out_only",
 		"test_trigger_behaviour_toggle",
@@ -232,6 +235,84 @@ func test_retrigger_restart() -> void:
 	assert_true(btn.position.x < pos_mid.x,
 		"RESTART policy: position after retrigger (%.1f) should be less than mid-point (%.1f)" % [
 			btn.position.x, pos_mid.x])
+
+	await cleanup(btn)
+
+
+func test_restart_spammable_at_target() -> void:
+	var rig := await _create_position_rig("spammable", Vector2(100, 0), 0.1)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	juice.retrigger_policy = JuiceBase.RetriggerPolicy.RESTART
+
+	# First trigger: animate IN to completion (progress reaches 1.0)
+	juice.animate_in()
+	await wait_seconds(0.3)
+	assert_not_approx_vec2(btn.position, Vector2.ZERO,
+		"After first IN completes, should be at target", 5.0)
+
+	# Second trigger: same direction, effect is idle at target (1.0 → 1.0 would be no-op)
+	# M2 ensures progress resets to origin so re-trigger always produces motion
+	juice.animate_in()
+	await wait_seconds(0.05)
+	assert_true(btn.position.x < 90.0,
+		"Spammable: re-trigger at target should restart from origin (pos.x=%.1f should be < 90)" % btn.position.x)
+
+	await cleanup(btn)
+
+
+func test_restart_same_direction_resets() -> void:
+	var rig := await _create_position_rig("same_dir", Vector2(100, 0), 0.5)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	juice.retrigger_policy = JuiceBase.RetriggerPolicy.RESTART
+
+	juice.animate_in()
+	await wait_seconds(0.25)
+	var pos_mid := btn.position.x
+
+	# Same-direction retrigger (IN again while already going IN)
+	juice.animate_in()
+	await wait_seconds(0.05)
+
+	# M1: should have restarted from origin (near 0), not continued from mid
+	assert_true(btn.position.x < pos_mid,
+		"Same-direction RESTART: pos (%.1f) should be less than mid-point (%.1f)" % [btn.position.x, pos_mid])
+
+	await cleanup(btn)
+
+
+func test_restart_crossfade_direction_switch() -> void:
+	var rig := await _create_position_rig("crossfade", Vector2(100, 0), 0.5,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	juice.retrigger_policy = JuiceBase.RetriggerPolicy.RESTART
+	# Set crossfade_time on the runtime clone
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.crossfade_time = 0.3
+
+	# Animate IN
+	juice.animate_in()
+	await wait_seconds(0.25)
+	var _pos_before_switch := btn.position.x
+
+	# Direction switch: trigger OUT while going IN
+	# D1+M3: crossfade should capture current position and blend smoothly
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY
+	juice.animate_out()
+	await wait_frames(3)
+
+	# During crossfade, position should NOT have snapped to 0 — it should be
+	# near where it was (crossfade blends from old visual to new animation)
+	assert_true(btn.position.x > 10.0,
+		"Crossfade: position (%.1f) should not snap to 0 during blend" % btn.position.x)
+
+	# After crossfade completes, animation should have moved toward 0
+	await wait_seconds(0.5)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After crossfade + OUT completes, should be near base", 15.0)
 
 	await cleanup(btn)
 
