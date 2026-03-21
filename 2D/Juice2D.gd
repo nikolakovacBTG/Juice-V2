@@ -28,6 +28,29 @@ func _validate_property(property: Dictionary) -> void:
 		property.hint_string = "Juice2DRecipe"
 
 # =============================================================================
+# INTERNAL STATE (Write Coordination)
+# =============================================================================
+
+# Natural state — captured at _ready, updated on external-move detection
+var _base_position: Vector2 = Vector2.ZERO
+var _base_rotation: float = 0.0
+var _base_scale: Vector2 = Vector2.ONE
+
+# Last values written by this node — used for external-move detection.
+# INF sentinel means "no write yet" so the first frame doesn't false-detect.
+var _last_written_position: Vector2 = Vector2.INF
+var _last_written_rotation: float = INF
+var _last_written_scale: Vector2 = Vector2.INF
+
+# Sum of all effect deltas currently applied — used by undo/reapply
+var _total_pos_contribution: Vector2 = Vector2.ZERO
+var _total_rot_contribution: float = 0.0
+var _total_scale_contribution: Vector2 = Vector2.ZERO
+
+# Whether base values have been captured at least once
+var _base_captured: bool = false
+
+# =============================================================================
 # LIFECYCLE
 # =============================================================================
 
@@ -130,6 +153,114 @@ func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 	if debug_enabled:
 		print("[%s] Auto-connected to %s '%s' on %s" % [
 			name, col_obj.get_class(), col_obj.name, TriggerEvent.keys()[trigger_on]])
+
+# =============================================================================
+# DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
+# =============================================================================
+
+## Capture target's natural position/rotation/scale.
+func _capture_base_values() -> void:
+	if _target_node == null or not _target_node is Node2D:
+		return
+	var n2d := _target_node as Node2D
+	_base_position = n2d.position
+	_base_rotation = n2d.rotation
+	_base_scale = n2d.scale
+	_base_captured = true
+	# Reset tracking — no write has happened yet
+	_last_written_position = Vector2.INF
+	_last_written_rotation = INF
+	_last_written_scale = Vector2.INF
+	_total_pos_contribution = Vector2.ZERO
+	_total_rot_contribution = 0.0
+	_total_scale_contribution = Vector2.ZERO
+
+
+## Detect external moves: did something else change the target since our last write?
+func _pre_tick() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n2d := _target_node as Node2D
+
+	# Position
+	if _last_written_position != Vector2.INF:
+		if not n2d.position.is_equal_approx(_last_written_position):
+			var external_delta := n2d.position - _last_written_position
+			_base_position += external_delta
+			if debug_enabled:
+				print("[%s] External position move detected: %s" % [name, external_delta])
+
+	# Rotation
+	if _last_written_rotation != INF:
+		if not is_equal_approx(n2d.rotation, _last_written_rotation):
+			var external_delta := n2d.rotation - _last_written_rotation
+			_base_rotation += external_delta
+
+	# Scale
+	if _last_written_scale != Vector2.INF:
+		if not n2d.scale.is_equal_approx(_last_written_scale):
+			var external_delta := n2d.scale - _last_written_scale
+			_base_scale += external_delta
+
+
+## Aggregate all effect deltas and write to target ONCE per frame.
+func _post_tick_write() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n2d := _target_node as Node2D
+
+	# Sum deltas from all runtime effects
+	var total_pos := Vector2.ZERO
+	var total_rot := 0.0
+	var total_scale := Vector2.ZERO
+
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var eff_2d := effect as Juice2DEffectBase
+		if eff_2d == null:
+			continue
+		if eff_2d._contributes_position:
+			total_pos += eff_2d._pos_delta
+		if eff_2d._contributes_rotation:
+			total_rot += eff_2d._rot_delta
+		if eff_2d._contributes_scale:
+			total_scale += eff_2d._scale_delta
+
+	# Write once: base + sum(deltas)
+	n2d.position = _base_position + total_pos
+	n2d.rotation = _base_rotation + total_rot
+	n2d.scale = _base_scale + total_scale
+
+	# Track what we wrote (for external-move detection next frame)
+	_last_written_position = n2d.position
+	_last_written_rotation = n2d.rotation
+	_last_written_scale = n2d.scale
+
+	# Track total contribution (for undo/reapply)
+	_total_pos_contribution = total_pos
+	_total_rot_contribution = total_rot
+	_total_scale_contribution = total_scale
+
+
+## Subtract all contributions — target returns to natural state.
+func _temporarily_undo_visual() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n2d := _target_node as Node2D
+	n2d.position -= _total_pos_contribution
+	n2d.rotation -= _total_rot_contribution
+	n2d.scale -= _total_scale_contribution
+
+
+## Re-add contributions after temporary undo.
+func _temporarily_reapply_visual() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n2d := _target_node as Node2D
+	n2d.position += _total_pos_contribution
+	n2d.rotation += _total_rot_contribution
+	n2d.scale += _total_scale_contribution
 
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)

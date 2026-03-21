@@ -4,7 +4,7 @@
 ## WHY: Replaces per-effect Node architecture with a single node per target.
 ##      Manages triggers, animation lifecycle, chaining, and looping.
 ## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Know about domain specifics — subclasses (ControlJuice, Juice2D,
+## DOES NOT: Know about domain specifics — subclasses (JuiceControl, Juice2D,
 ##           Juice3D) handle target type validation and domain auto-connect.
 ## ============================================================================
 ##
@@ -265,6 +265,9 @@ func _ready() -> void:
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
 		_try_auto_connect()
 
+	# Capture natural state before any effects modify the target
+	_capture_base_values()
+
 	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.)
 	for effect in _runtime_effects:
 		if effect != null:
@@ -292,6 +295,9 @@ func _process(delta: float) -> void:
 		_start_effects(true)
 		return
 
+	# --- Pre-tick: domain-specific external-move detection ---
+	_pre_tick()
+
 	# --- Tick active effects ---
 	var all_done := true
 	var newly_completed: Array[int] = []
@@ -308,6 +314,9 @@ func _process(delta: float) -> void:
 
 		if result == JuiceEffectBase.TickResult.COMPLETED:
 			newly_completed.append(idx)
+
+	# --- Post-tick: domain-specific aggregation + write once ---
+	_post_tick_write()
 
 	# --- Handle completions (chaining) ---
 	for idx in newly_completed:
@@ -333,8 +342,9 @@ func _process(delta: float) -> void:
 
 
 func _exit_tree() -> void:
-	# Clean up: stop all effects and restore natural state
+	# Clean up: undo contributions and stop all effects
 	if _target_node != null:
+		_temporarily_undo_visual()
 		for effect in _runtime_effects:
 			if effect != null and effect.is_playing():
 				effect.stop(_target_node)
@@ -363,6 +373,8 @@ func stop() -> void:
 	_active_effect_indices.clear()
 	_is_playing = false
 	_in_loop_delay = false
+	# Write natural state (all effect contributions now cleared)
+	_post_tick_write()
 	set_process(false)
 	if debug_enabled:
 		print("[%s] Stopped" % name)
@@ -461,12 +473,19 @@ func _start_effects(play_in: bool) -> void:
 	# Find root effects (those not chained from another)
 	var root_indices := _get_root_effect_indices()
 
+	# Temporarily undo visuals so effects can capture natural state
+	# in their _on_animate_start() callbacks
+	_temporarily_undo_visual()
+
 	for idx in root_indices:
 		var effect := _runtime_effects[idx]
 		if effect == null:
 			continue
 		effect.start(_target_node, play_in, true, self)
 		_active_effect_indices.append(idx)
+
+	# Reapply visuals after effects have captured their From/To references
+	_temporarily_reapply_visual()
 
 	set_process(true)
 
@@ -545,6 +564,39 @@ func _stop_all_effects_silent() -> void:
 	_is_playing = false
 
 # =============================================================================
+# DOMAIN VIRTUAL HOOKS (Override in JuiceControl, Juice2D, Juice3D)
+# =============================================================================
+
+## Capture the target's natural position/rotation/scale before any effects.
+## Called once in _ready() after target is resolved.
+func _capture_base_values() -> void:
+	pass
+
+
+## Pre-tick hook: detect external moves (something else changed the target).
+## Called once per frame BEFORE effects are ticked.
+func _pre_tick() -> void:
+	pass
+
+
+## Post-tick hook: aggregate all effect deltas and write to target ONCE.
+## Called once per frame AFTER all effects have been ticked.
+## Also called by stop() to write natural state after contributions are cleared.
+func _post_tick_write() -> void:
+	pass
+
+
+## Subtract all current contributions from target, restoring natural state.
+## Used before effects capture From/To references and before editor save.
+func _temporarily_undo_visual() -> void:
+	pass
+
+
+## Re-add all current contributions to target after temporary undo.
+func _temporarily_reapply_visual() -> void:
+	pass
+
+# =============================================================================
 # HELPERS
 # =============================================================================
 
@@ -600,7 +652,7 @@ func _try_auto_connect() -> void:
 
 ## Override in subclasses to connect domain-specific signals (Button, Area3D, etc.)
 func _auto_connect_domain_signals() -> void:
-	pass  # ControlJuice, Juice2D, Juice3D implement
+	pass  # JuiceControl, Juice2D, Juice3D implement
 
 
 ## Connect visibility_changed signal. Works for both CanvasItem and Node3D.

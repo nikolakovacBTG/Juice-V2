@@ -4,7 +4,7 @@
 ## WHY: Recipes are the "preset" unit — drop a .tres onto a Juice node and get
 ##      a complete visual behavior. Marketplace-ready, copy-pasteable, reusable.
 ## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Execute effects — the host node (ControlJuice etc.) does that.
+## DOES NOT: Execute effects — the host node (JuiceControl etc.) does that.
 ## DOES NOT: Own animation state — effects hold their own state per-instance.
 ## ============================================================================
 ##
