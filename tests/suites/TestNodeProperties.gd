@@ -31,6 +31,12 @@ func get_test_methods() -> Array[String]:
 		"test_restart_same_direction_resets",
 		"test_restart_crossfade_direction_switch",
 		"test_interrupt_siblings_stops_matching",
+		"test_hold_at_peak_delays_auto_reverse",
+		"test_ping_pong_oscillates",
+		"test_infinite_loop_keeps_playing",
+		"test_retrigger_queue_plays_after_first",
+		"test_chain_to_sequential_effects",
+		"test_loop_phase_offset_starts_mid_cycle",
 		"test_trigger_behaviour_play_in_only",
 		"test_trigger_behaviour_play_out_only",
 		"test_trigger_behaviour_toggle",
@@ -375,6 +381,179 @@ func test_interrupt_siblings_stops_matching() -> void:
 		"juice_a should be stopped after juice_b (interrupt_siblings) triggers")
 	assert_true(juice_b._is_playing,
 		"juice_b should be playing after triggering")
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: hold_at_peak, ping_pong, infinite loop, QUEUE, chaining, loop_phase_offset
+# =============================================================================
+
+func test_hold_at_peak_delays_auto_reverse() -> void:
+	var rig := await _create_position_rig("hold_peak", Vector2(100, 0), 0.1,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.1)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	# Set hold_at_peak on the runtime clone
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.hold_at_peak = 0.5
+
+	juice.animate_in()
+	# IN takes 0.1s, then hold 0.5s, then OUT 0.1s
+	# At 0.3s we should be in hold (position near target, not returning)
+	await wait_seconds(0.3)
+	assert_true(btn.position.x > 80.0,
+		"During hold_at_peak, position (%.1f) should be near target (100)" % btn.position.x)
+
+	# After hold + OUT completes (~0.8s total), should be back near base
+	await wait_seconds(0.6)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After hold_at_peak + OUT completes, should be near base", 15.0)
+
+	await cleanup(btn)
+
+
+func test_ping_pong_oscillates() -> void:
+	var rig := await _create_position_rig("ping_pong", Vector2(100, 0), 0.15)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	# Enable ping_pong on the runtime clone
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.ping_pong = true
+			eff.loop_count = 1
+
+	juice.animate_in()
+	# Ping: 0→1.0 in 0.15s, Pong: 1.0→0 in 0.15s
+	# At 0.1s: should be partway through ping (position > 0)
+	await wait_seconds(0.1)
+	assert_true(btn.position.x > 20.0,
+		"Ping phase: position (%.1f) should be moving toward target" % btn.position.x)
+
+	# At 0.35s: pong should have returned near base
+	await wait_seconds(0.25)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After ping-pong completes, should be near base", 15.0)
+
+	await cleanup(btn)
+
+
+func test_infinite_loop_keeps_playing() -> void:
+	var rig := await _create_position_rig("inf_loop", Vector2(80, 0), 0.1,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.1)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	juice.loop_count = -1  # infinite
+
+	juice.animate_in()
+	# After several cycles, should still be playing
+	await wait_seconds(0.8)
+	assert_true(juice._is_playing,
+		"Infinite loop (loop_count=-1) should still be playing after 0.8s")
+
+	juice.stop()
+	await wait_frames(2)
+	assert_true(not juice._is_playing,
+		"After stop(), infinite loop should no longer be playing")
+
+	await cleanup(btn)
+
+
+func test_retrigger_queue_plays_after_first() -> void:
+	var rig := await _create_position_rig("queue", Vector2(100, 0), 0.2,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.2)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	juice.retrigger_policy = JuiceBase.RetriggerPolicy.QUEUE
+
+	var counter := [0]
+	juice.completed.connect(func(): counter[0] += 1)
+
+	# First trigger
+	juice.animate_in()
+	await wait_seconds(0.1)
+	# Queue a second trigger while first is playing
+	juice.animate_in()
+
+	# Wait for both to complete (first ~0.4s + second ~0.4s + margin)
+	await wait_seconds(1.2)
+	assert_equal(counter[0], 2,
+		"QUEUE: completed should fire twice (first + queued)")
+
+	await cleanup(btn)
+
+
+func test_chain_to_sequential_effects() -> void:
+	var btn := Button.new()
+	btn.text = "chain"
+	btn.custom_minimum_size = Vector2(120, 40)
+	btn.position = Vector2.ZERO
+	_runner.add_child(btn)
+
+	# Effect A: move right
+	var effect_a := TransformControlJuiceEffect.new()
+	effect_a.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_a.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_a.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_a.to_position = Vector2(50, 0)
+	effect_a.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_a.duration_in = 0.15
+
+	# Effect B: move down (chained from A)
+	var effect_b := TransformControlJuiceEffect.new()
+	effect_b.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_b.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_b.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_b.to_position = Vector2(0, 50)
+	effect_b.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_b.duration_in = 0.15
+
+	# Chain A -> B
+	effect_a.chain_to = effect_b
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect_a)
+	recipe.effects.append(effect_b)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	# After A completes (0.15s), B should start
+	await wait_seconds(0.1)
+	# During A: should have moved right, not down yet
+	assert_true(btn.position.x > 10.0,
+		"During chain A: position.x (%.1f) should be moving right" % btn.position.x)
+	assert_approx_vec2(Vector2(0, btn.position.y), Vector2.ZERO,
+		"During chain A: position.y should still be near 0", 5.0)
+
+	# After both complete
+	await wait_seconds(0.4)
+	assert_true(btn.position.y > 10.0,
+		"After chain B: position.y (%.1f) should have moved down" % btn.position.y)
+
+	await cleanup(btn)
+
+
+func test_loop_phase_offset_starts_mid_cycle() -> void:
+	var rig := await _create_position_rig("phase_offset", Vector2(100, 0), 0.3)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+	# Set loop_phase_offset = 0.5 (start at 50% through the cycle)
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.loop_phase_offset = 0.5
+
+	juice.animate_in()
+	await wait_frames(3)
+	# With offset 0.5, effect should start at ~50% progress (position ~50)
+	assert_true(btn.position.x > 30.0,
+		"loop_phase_offset=0.5: initial position (%.1f) should be near midpoint" % btn.position.x)
 
 	await cleanup(btn)
 
