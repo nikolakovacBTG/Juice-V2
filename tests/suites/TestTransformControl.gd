@@ -21,6 +21,8 @@ func get_test_methods() -> Array[String]:
 		"test_rotation_degrees",
 		"test_scale_uniform",
 		"test_stacking_two_position_effects",
+		"test_stacking_cross_node",
+		"test_container_re_sort_handling",
 		"test_external_move_detection_position",
 		"test_from_self_to_custom",
 		"test_from_custom_to_self",
@@ -282,6 +284,106 @@ func test_stacking_two_position_effects() -> void:
 		"Stacking: two position effects should sum to (50, 30)", 5.0)
 
 	await cleanup(parent_ctrl)
+
+
+func test_stacking_cross_node() -> void:
+	# Two separate JuiceControl nodes on the same Button — delta-first stacking
+	var rig := _create_sized_rig("cross_stack")
+	var parent_ctrl: Control = rig[0]
+	var btn: Button = rig[1]
+
+	# Node A: move right 40px
+	var effect_a := TransformControlJuiceEffect.new()
+	effect_a.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_a.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_a.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_a.to_position = Vector2(40, 0)
+	effect_a.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_a.duration_in = 0.15
+
+	var juice_a := JuiceControl.new()
+	juice_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_a := JuiceControlRecipe.new()
+	recipe_a.effects.append(effect_a)
+	juice_a.recipe = recipe_a
+	btn.add_child(juice_a)
+
+	# Node B: move down 25px
+	var effect_b := TransformControlJuiceEffect.new()
+	effect_b.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_b.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_b.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_b.to_position = Vector2(0, 25)
+	effect_b.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_b.duration_in = 0.15
+
+	var juice_b := JuiceControl.new()
+	juice_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_b := JuiceControlRecipe.new()
+	recipe_b.effects.append(effect_b)
+	juice_b.recipe = recipe_b
+	btn.add_child(juice_b)
+
+	await wait_frames(2)
+
+	# Trigger both simultaneously
+	juice_a.animate_in()
+	juice_b.animate_in()
+	await wait_seconds(0.3)
+
+	# Cross-node delta stacking: (40,0) + (0,25) = (40, 25)
+	assert_approx_vec2(btn.position, Vector2(40, 25),
+		"Cross-node stacking: two nodes should sum to (40, 25)", 5.0)
+
+	await cleanup(parent_ctrl)
+
+
+func test_container_re_sort_handling() -> void:
+	# Button inside VBoxContainer — Container re-sorts every frame
+	var vbox := VBoxContainer.new()
+	vbox.position = Vector2.ZERO
+	_runner.add_child(vbox)
+
+	var btn := Button.new()
+	btn.text = "container_test"
+	btn.custom_minimum_size = Vector2(120, 40)
+	vbox.add_child(btn)
+
+	# Get the Container-assigned position
+	await wait_frames(3)
+	var container_pos := btn.position
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.2
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	# After animation, position should be container_pos + delta (60, 0)
+	# NOT snapped back to container_pos by VBoxContainer re-sorts
+	assert_approx_vec2(btn.position, container_pos + Vector2(60, 0),
+		"Container re-sort: position should be container_pos + delta", 5.0)
+
+	await cleanup(vbox)
 
 
 # =============================================================================

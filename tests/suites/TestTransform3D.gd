@@ -18,6 +18,7 @@ func get_test_methods() -> Array[String]:
 		"test_rotation_degrees",
 		"test_scale_uniform",
 		"test_stacking_two_position_effects",
+		"test_stacking_cross_node",
 		"test_external_move_detection_position",
 	]
 
@@ -185,6 +186,58 @@ func test_stacking_two_position_effects() -> void:
 
 	assert_approx_vec3(target.position, Vector3(3, 2, 0),
 		"3D Stacking: two position effects should sum to (3, 2, 0)", 0.1)
+
+	await cleanup(target)
+
+
+func test_stacking_cross_node() -> void:
+	var target := Node3D.new()
+	target.position = Vector3.ZERO
+	_runner.add_child(target)
+
+	# Node A: move X+3
+	var eff_a := Transform3DJuiceEffect.new()
+	eff_a.transform_target = Transform3DJuiceEffect.TransformTarget.POSITION
+	eff_a.from_reference = Transform3DJuiceEffect.TransformReference.SELF
+	eff_a.to_reference = Transform3DJuiceEffect.TransformReference.CUSTOM
+	eff_a.to_position = Vector3(3, 0, 0)
+	eff_a.to_position_in = Transform3DJuiceEffect.PositionIn3D.WORLD_UNITS
+	eff_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	eff_a.duration_in = 0.15
+
+	var juice_a := Juice3D.new()
+	juice_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_a := Juice3DRecipe.new()
+	recipe_a.effects.append(eff_a)
+	juice_a.recipe = recipe_a
+	target.add_child(juice_a)
+
+	# Node B: move Y+2
+	var eff_b := Transform3DJuiceEffect.new()
+	eff_b.transform_target = Transform3DJuiceEffect.TransformTarget.POSITION
+	eff_b.from_reference = Transform3DJuiceEffect.TransformReference.SELF
+	eff_b.to_reference = Transform3DJuiceEffect.TransformReference.CUSTOM
+	eff_b.to_position = Vector3(0, 2, 0)
+	eff_b.to_position_in = Transform3DJuiceEffect.PositionIn3D.WORLD_UNITS
+	eff_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	eff_b.duration_in = 0.15
+
+	var juice_b := Juice3D.new()
+	juice_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_b := Juice3DRecipe.new()
+	recipe_b.effects.append(eff_b)
+	juice_b.recipe = recipe_b
+	target.add_child(juice_b)
+
+	await wait_frames(2)
+	juice_a.animate_in()
+	juice_b.animate_in()
+	await wait_seconds(0.4)
+
+	assert_approx_vec3(target.position, Vector3(3, 2, 0),
+		"3D Cross-node stacking: two nodes should sum to (3, 2, 0)", 0.5)
 
 	await cleanup(target)
 

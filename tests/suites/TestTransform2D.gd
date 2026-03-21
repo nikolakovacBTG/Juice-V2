@@ -19,6 +19,7 @@ func get_test_methods() -> Array[String]:
 		"test_rotation_degrees",
 		"test_scale_uniform",
 		"test_stacking_two_position_effects",
+		"test_stacking_cross_node",
 		"test_external_move_detection_position",
 	]
 
@@ -228,6 +229,58 @@ func test_stacking_two_position_effects() -> void:
 
 	assert_approx_vec2(target.position, Vector2(60, 40),
 		"2D Stacking: two position effects should sum to (60, 40)", 5.0)
+
+	await cleanup(target)
+
+
+func test_stacking_cross_node() -> void:
+	var target := Node2D.new()
+	target.position = Vector2.ZERO
+	_runner.add_child(target)
+
+	# Node A: move right 40
+	var eff_a := Transform2DJuiceEffect.new()
+	eff_a.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	eff_a.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	eff_a.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	eff_a.to_position = Vector2(40, 0)
+	eff_a.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	eff_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	eff_a.duration_in = 0.15
+
+	var juice_a := Juice2D.new()
+	juice_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_a := Juice2DRecipe.new()
+	recipe_a.effects.append(eff_a)
+	juice_a.recipe = recipe_a
+	target.add_child(juice_a)
+
+	# Node B: move up 25
+	var eff_b := Transform2DJuiceEffect.new()
+	eff_b.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	eff_b.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	eff_b.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	eff_b.to_position = Vector2(0, 25)
+	eff_b.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	eff_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	eff_b.duration_in = 0.15
+
+	var juice_b := Juice2D.new()
+	juice_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_b := Juice2DRecipe.new()
+	recipe_b.effects.append(eff_b)
+	juice_b.recipe = recipe_b
+	target.add_child(juice_b)
+
+	await wait_frames(2)
+	juice_a.animate_in()
+	juice_b.animate_in()
+	await wait_seconds(0.3)
+
+	assert_approx_vec2(target.position, Vector2(40, 25),
+		"2D Cross-node stacking: two nodes should sum to (40, 25)", 5.0)
 
 	await cleanup(target)
 
