@@ -431,26 +431,7 @@ func set_external_progress(value: float) -> void:
 func _handle_trigger(trigger_info: Dictionary) -> void:
 	var play_in: bool = trigger_info.get("play_in", true)
 
-	# Retrigger policy
-	if _is_playing or _in_node_start_delay:
-		match retrigger_policy:
-			RetriggerPolicy.IGNORE:
-				if debug_enabled:
-					print("[%s] Trigger ignored (playing)" % name)
-				return
-			RetriggerPolicy.QUEUE:
-				_queued_trigger = trigger_info
-				if debug_enabled:
-					print("[%s] Trigger queued" % name)
-				return
-			RetriggerPolicy.RESTART:
-				_in_node_start_delay = false
-				_stop_all_effects_silent()
-				for effect in _runtime_effects:
-					if effect != null:
-						effect._animation_progress = 0.0
-
-	# Resolve direction from trigger_behaviour
+	# Resolve direction from trigger_behaviour FIRST (needed by RESTART crossfade check)
 	var resolved_play_in := true
 	match trigger_behaviour:
 		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT:
@@ -465,6 +446,56 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 		JuiceEffectBase.TriggerBehaviour.SET_FROM_SOURCE:
 			# SET_FROM_SOURCE doesn't use start — it uses set_external_progress
 			return
+
+	var new_target := 1.0 if resolved_play_in else 0.0
+
+	# Retrigger policy
+	if _is_playing or _in_node_start_delay:
+		match retrigger_policy:
+			RetriggerPolicy.IGNORE:
+				if debug_enabled:
+					print("[%s] Trigger ignored (playing)" % name)
+				return
+			RetriggerPolicy.QUEUE:
+				_queued_trigger = trigger_info
+				if debug_enabled:
+					print("[%s] Trigger queued" % name)
+				return
+			RetriggerPolicy.RESTART:
+				_in_node_start_delay = false
+				# D1+M3: Crossfade on direction switch — capture BEFORE stopping
+				for effect in _runtime_effects:
+					if effect == null or not effect.is_playing():
+						continue
+					if effect.crossfade_time > 0.0 and new_target != effect._target_progress:
+						effect._is_crossfading = true
+						effect._crossfade_elapsed = 0.0
+						effect._crossfade_start_progress = effect._animation_progress
+				_stop_all_effects_silent()
+				# M1: Reset progress to direction origin (not always 0)
+				# Effects with active crossfade keep their progress for smooth blend
+				for effect in _runtime_effects:
+					if effect == null or effect._is_crossfading:
+						continue
+					if new_target > 0.5:
+						effect._animation_progress = 0.0
+					else:
+						effect._animation_progress = 1.0
+
+	# M2: Already-at-target — spammable effects (RESTART only, even when idle)
+	# When an effect sits at the target endpoint (e.g. progress=1.0 after PLAY_IN_ONLY),
+	# re-triggering would be a no-op (1.0 → 1.0). Reset to the opposite endpoint so
+	# punch/shake-style effects always produce motion on retrigger.
+	if retrigger_policy == RetriggerPolicy.RESTART:
+		var epsilon := 0.0001
+		for effect in _runtime_effects:
+			if effect == null or effect._is_crossfading:
+				continue
+			if absf(effect._animation_progress - new_target) <= epsilon:
+				if new_target > 0.5:
+					effect._animation_progress = 0.0
+				else:
+					effect._animation_progress = 1.0
 
 	_current_iteration = 0
 
