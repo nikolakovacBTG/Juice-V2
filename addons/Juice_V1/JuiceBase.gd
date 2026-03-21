@@ -526,17 +526,15 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 	# D2: Interrupt sibling JuiceBase nodes with matching effect identity
 	_stop_matching_siblings()
 
-	# Node-level start_delay: delay entire recipe before starting effects
+	# Always start effects immediately (FFR applies From delta)
+	_start_effects(resolved_play_in)
+
+	# Node-level start_delay: hold at From state before ticking effects
 	if start_delay > 0.0:
 		_in_node_start_delay = true
 		_node_delay_elapsed = 0.0
-		_pending_play_in = resolved_play_in
-		_is_playing = true
-		set_process(true)
 		if debug_enabled:
-			print("[%s] Node start_delay=%.2f, deferring effects" % [name, start_delay])
-	else:
-		_start_effects(resolved_play_in)
+			print("[%s] Node start_delay=%.2f, holding at From state" % [name, start_delay])
 
 	if debug_enabled:
 		print("[%s] Trigger handled: play_in=%s, behaviour=%s" % [

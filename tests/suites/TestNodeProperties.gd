@@ -22,6 +22,7 @@ func get_test_methods() -> Array[String]:
 	return [
 		"test_start_delay_zero_moves_immediately",
 		"test_start_delay_holds_then_starts",
+		"test_start_delay_prepositions_at_from",
 		"test_start_delay_retrigger_restart_clears_delay",
 		"test_loop_count_two_replays",
 		"test_loop_delay_pauses_between_iterations",
@@ -134,6 +135,49 @@ func test_start_delay_holds_then_starts() -> void:
 	await wait_seconds(0.5)
 	assert_not_approx_vec2(btn.position, base_pos,
 		"After node start_delay expires, target should be animating", 5.0)
+
+	await cleanup(btn)
+
+
+func test_start_delay_prepositions_at_from() -> void:
+	# Effect: From=CUSTOM(-80,0) pixels, To=SELF. With start_delay, target
+	# should sit at From position during delay, NOT at natural position.
+	var btn := Button.new()
+	btn.text = "delay_prepos"
+	btn.custom_minimum_size = Vector2(120, 40)
+	btn.position = Vector2.ZERO
+	_runner.add_child(btn)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.from_position = Vector2(-80, 0)
+	effect.from_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.3
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	juice.start_delay = 0.5
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_frames(3)
+
+	# During delay: target should be near From position (-80, 0), NOT at base (0, 0)
+	assert_true(btn.position.x < -50.0,
+		"During start_delay, target should be at From position (%.1f), not natural" % btn.position.x)
+
+	# After delay expires + animation completes: should be back at base (Self)
+	await wait_seconds(1.0)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After start_delay + animation, target should return to Self (base)", 5.0)
 
 	await cleanup(btn)
 
