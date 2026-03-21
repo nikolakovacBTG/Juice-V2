@@ -40,6 +40,12 @@ func get_test_methods() -> Array[String]:
 		"test_trigger_behaviour_play_in_only",
 		"test_trigger_behaviour_play_out_only",
 		"test_trigger_behaviour_toggle",
+		"test_4phase_ping_pong_in_and_out",
+		"test_custom_curve_in_overrides_easing",
+		"test_elastic_easing_overshoots",
+		"test_back_easing_overshoots",
+		"test_autoconnect_button_pressed",
+		"test_autoconnect_visibility_on_show",
 	]
 
 
@@ -611,5 +617,216 @@ func test_trigger_behaviour_toggle() -> void:
 	await wait_seconds(0.3)
 	assert_approx_vec2(btn.position, Vector2.ZERO,
 		"TOGGLE second trigger: should animate back to base", 10.0)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: 4-phase ping-pong (IN_AND_OUT + ping_pong)
+# =============================================================================
+
+func test_4phase_ping_pong_in_and_out() -> void:
+	# IN_AND_OUT + ping_pong = 4 phases per cycle:
+	# Phase 0: 0->1 (in, normal)
+	# Phase 1: 1->0 (out, normal)
+	# Phase 2: 1->0 (out, reversed)
+	# Phase 3: 0->1 (in, reversed)
+	var rig := await _create_position_rig("4phase_pp", Vector2(80, 0), 0.1,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.1)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	# Configure ping_pong on the runtime effect
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.ping_pong = true
+			eff.loop_count = 1
+
+	juice.animate_in()
+	# 4 phases x 0.1s each = 0.4s total. Wait for completion.
+	await wait_seconds(0.6)
+
+	# After 4 phases, target should be back near base (0,0)
+	# Phase 0: 0->1 (pos goes 0->80)
+	# Phase 1: 1->0 (pos goes 80->0)
+	# Phase 2: 1->0 reversed (pos goes 0->80, tape rewind)
+	# Phase 3: 0->1 reversed (pos goes 80->0, tape rewind)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"4-phase ping-pong: should end back at base after all 4 phases", 10.0)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: Custom curves
+# =============================================================================
+
+func test_custom_curve_in_overrides_easing() -> void:
+	# A custom curve that maps all t to 1.0 should snap instantly to target
+	var rig := await _create_position_rig("curve_in", Vector2(100, 0), 0.3)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	# Create a flat curve at y=1.0 (always returns 1.0)
+	var flat_curve := Curve.new()
+	flat_curve.add_point(Vector2(0.0, 1.0))
+	flat_curve.add_point(Vector2(1.0, 1.0))
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.custom_curve_in = flat_curve
+
+	juice.animate_in()
+	await wait_frames(3)
+
+	# With a flat curve at 1.0, even at early progress the eased value is 1.0
+	# so the position should be at or very near the target immediately
+	assert_true(btn.position.x > 80.0,
+		"Custom curve (flat@1.0): position (%.1f) should be near 100 almost immediately" % btn.position.x)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: Elastic and Back easing
+# =============================================================================
+
+func test_elastic_easing_overshoots() -> void:
+	# Elastic EASE_OUT overshoots past target then settles
+	var rig := await _create_position_rig("elastic", Vector2(100, 0), 0.5)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.transition_in = Tween.TRANS_ELASTIC
+			eff.ease_in = Tween.EASE_OUT
+			eff.elastic_amplitude_in = 1.0
+			eff.elastic_period_in = 0.3
+
+	var max_x := 0.0
+	juice.animate_in()
+	# Sample position over the animation to detect overshoot
+	for i in 20:
+		await wait_frames(2)
+		if btn.position.x > max_x:
+			max_x = btn.position.x
+
+	await wait_seconds(0.3)
+
+	# Elastic EASE_OUT should overshoot past 100 at some point
+	assert_true(max_x > 100.0,
+		"Elastic EASE_OUT: max position (%.1f) should overshoot past 100" % max_x)
+	# But settle near target
+	assert_approx_vec2(btn.position, Vector2(100, 0),
+		"Elastic EASE_OUT: should settle near target after animation", 5.0)
+
+	await cleanup(btn)
+
+
+func test_back_easing_overshoots() -> void:
+	# Back EASE_OUT overshoots past target then returns
+	var rig := await _create_position_rig("back", Vector2(100, 0), 0.3)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.transition_in = Tween.TRANS_BACK
+			eff.ease_in = Tween.EASE_OUT
+			eff.back_overshoot_in = 1.70158
+
+	var max_x := 0.0
+	juice.animate_in()
+	for i in 15:
+		await wait_frames(2)
+		if btn.position.x > max_x:
+			max_x = btn.position.x
+
+	await wait_seconds(0.3)
+
+	assert_true(max_x > 100.0,
+		"Back EASE_OUT: max position (%.1f) should overshoot past 100" % max_x)
+	assert_approx_vec2(btn.position, Vector2(100, 0),
+		"Back EASE_OUT: should settle near target after animation", 5.0)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: Auto-connect integration
+# =============================================================================
+
+func test_autoconnect_button_pressed() -> void:
+	# JuiceControl with auto_connect + trigger_on=ON_PRESS on a Button
+	var btn := Button.new()
+	btn.text = "autoconnect_press"
+	btn.custom_minimum_size = Vector2(120, 40)
+	btn.position = Vector2.ZERO
+	_runner.add_child(btn)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(50, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(3)
+
+	# ON_PRESS auto-connects to button_down (not "pressed")
+	btn.emit_signal("button_down")
+	await wait_seconds(0.3)
+
+	assert_true(btn.position.x > 30.0,
+		"Auto-connect ON_PRESS: button emission should trigger animation (pos.x=%.1f)" % btn.position.x)
+
+	await cleanup(btn)
+
+
+func test_autoconnect_visibility_on_show() -> void:
+	# JuiceControl with trigger_on=ON_SHOW — animation fires when target becomes visible
+	var btn := Button.new()
+	btn.text = "autoconnect_show"
+	btn.custom_minimum_size = Vector2(120, 40)
+	btn.position = Vector2.ZERO
+	btn.visible = false
+	_runner.add_child(btn)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_SHOW
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(3)
+
+	# Make visible — should trigger ON_SHOW
+	btn.visible = true
+	await wait_seconds(0.3)
+
+	assert_true(btn.position.x > 40.0,
+		"Auto-connect ON_SHOW: making visible should trigger animation (pos.x=%.1f)" % btn.position.x)
 
 	await cleanup(btn)
