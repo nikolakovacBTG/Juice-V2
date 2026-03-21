@@ -186,7 +186,7 @@
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
 | 2-phase (single direction) | `_on_cycle_complete:1787-1819` | `_handle_cycle_complete:519-532` | ✅ Tested (commit 523544a) | `test_ping_pong_oscillates` ✅ |
-| 4-phase (IN_AND_OUT) | `_get_ping_pong_phases_per_cycle:1893` | `_get_ping_pong_phases_per_cycle:702` | ⚠️ Untested (IN_AND_OUT + ping-pong combo) | — |
+| 4-phase (IN_AND_OUT) | `_get_ping_pong_phases_per_cycle:1893` | `_get_ping_pong_phases_per_cycle:702` | ✅ Tested (commit afbfaa6) | `test_4phase_ping_pong_in_and_out` ✅ |
 | Hold at peak between phases | `_on_cycle_complete:1798-1806` (await) | `_handle_cycle_complete:525-528` (tick-based) | ✅ Tested (commit 523544a) | `test_hold_at_peak_delays_auto_reverse` ✅ |
 | Phase configuration | `_configure_ping_pong_phase:1901-1939` | `_configure_ping_pong_phase:708-729` | ✅ Same logic | — |
 
@@ -196,12 +196,12 @@
 
 | Feature | V0 Reference | V1 Reference | Status | Test |
 |---------|-------------|-------------|--------|------|
-| BaseButton signals | `_connect_button_signals:1281` | JuiceControl `_auto_connect_domain_signals` | ⚠️ Untested (integration) | — |
+| BaseButton signals | `_connect_button_signals:1281` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (commit afbfaa6) | `test_autoconnect_button_pressed` ✅ |
 | Control signals | `_connect_control_signals:1327` | JuiceControl `_auto_connect_domain_signals` | ⚠️ Untested | — |
 | CollisionObject3D signals | `_connect_collision_object_3d_signals:1363` | JuiceBase callbacks (lines 769-795) | ⚠️ Untested | — |
 | CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ⚠️ Untested | — |
 | AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_on_animation_finished:830` | ⚠️ Untested | — |
-| Visibility (ON_SHOW/ON_HIDE) | `_connect_visibility_signals:1517` | JuiceBase `_connect_visibility_signals:692` | ⚠️ Untested | — |
+| Visibility (ON_SHOW/ON_HIDE) | `_connect_visibility_signals:1517` | JuiceBase `_connect_visibility_signals:692` | ✅ Tested (commit afbfaa6) | `test_autoconnect_visibility_on_show` ✅ |
 | **Sibling fallback scan** | `_try_auto_connect:1215-1235` | JuiceBase `_ready():256-278` | ✅ Fixed (commit bbf9754) | — (integration) |
 | **Config warning: ambiguous siblings** | `_get_configuration_warnings:1164-1189` | JuiceBase `_get_configuration_warnings:734` | ✅ Fixed (commit bbf9754) | — (visual) |
 
@@ -285,12 +285,12 @@
 
 ### ⚠️ UNTESTED (code exists, no automated verification)
 
-**Remaining untested:** 4-phase ping-pong (IN_AND_OUT combo), auto-connect integration,
-custom curves, elastic/back params.
+**Remaining untested:** Control signals (non-button), CollisionObject2D/3D signals,
+AnimationPlayer signals.
 
-**Newly tested (commit 523544a+ecc9511):** hold_at_peak, 2-phase ping-pong, infinite loops,
-QUEUE retrigger, chaining, loop_phase_offset, cross-node stacking (all 3 domains),
-Container re-sort handling.
+**Newly tested (commits 523544a–afbfaa6):** hold_at_peak, 2-phase ping-pong, 4-phase ping-pong,
+infinite loops, QUEUE retrigger, chaining, loop_phase_offset, cross-node stacking (all 3 domains),
+Container re-sort handling, custom curves, elastic/back easing, button auto-connect, visibility auto-connect.
 
 ---
 
