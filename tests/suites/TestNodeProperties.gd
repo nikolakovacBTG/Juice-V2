@@ -30,6 +30,7 @@ func get_test_methods() -> Array[String]:
 		"test_restart_spammable_at_target",
 		"test_restart_same_direction_resets",
 		"test_restart_crossfade_direction_switch",
+		"test_interrupt_siblings_stops_matching",
 		"test_trigger_behaviour_play_in_only",
 		"test_trigger_behaviour_play_out_only",
 		"test_trigger_behaviour_toggle",
@@ -313,6 +314,67 @@ func test_restart_crossfade_direction_switch() -> void:
 	await wait_seconds(0.5)
 	assert_approx_vec2(btn.position, Vector2.ZERO,
 		"After crossfade + OUT completes, should be near base", 15.0)
+
+	await cleanup(btn)
+
+
+func test_interrupt_siblings_stops_matching() -> void:
+	# Two JuiceControl nodes on the same parent with same-type effects
+	var btn := Button.new()
+	btn.text = "interrupt"
+	btn.position = Vector2.ZERO
+	_runner.add_child(btn)
+
+	# First juice node (will be interrupted)
+	var effect_a := TransformControlJuiceEffect.new()
+	effect_a.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_a.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_a.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_a.to_position = Vector2(100, 0)
+	effect_a.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_a.duration_in = 1.0
+
+	var juice_a := JuiceControl.new()
+	juice_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	var recipe_a := JuiceControlRecipe.new()
+	recipe_a.effects.append(effect_a)
+	juice_a.recipe = recipe_a
+	btn.add_child(juice_a)
+
+	# Second juice node (the interrupter) — same effect type, interrupt_siblings on
+	var effect_b := TransformControlJuiceEffect.new()
+	effect_b.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect_b.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect_b.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect_b.to_position = Vector2(-50, 0)
+	effect_b.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect_b.duration_in = 1.0
+	effect_b.interrupt_siblings = true
+
+	var juice_b := JuiceControl.new()
+	juice_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	var recipe_b := JuiceControlRecipe.new()
+	recipe_b.effects.append(effect_b)
+	juice_b.recipe = recipe_b
+	btn.add_child(juice_b)
+
+	await wait_frames(2)
+
+	# Start first, let it play
+	juice_a.animate_in()
+	await wait_seconds(0.2)
+	assert_true(juice_a._is_playing,
+		"juice_a should be playing before interrupt")
+
+	# Trigger second (with interrupt_siblings) — should stop first
+	juice_b.animate_in()
+	await wait_frames(2)
+	assert_true(not juice_a._is_playing,
+		"juice_a should be stopped after juice_b (interrupt_siblings) triggers")
+	assert_true(juice_b._is_playing,
+		"juice_b should be playing after triggering")
 
 	await cleanup(btn)
 
