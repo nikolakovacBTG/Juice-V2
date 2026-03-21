@@ -231,9 +231,16 @@ var _queued_trigger: Dictionary = {}
 func _notification(what: int) -> void:
 	# Forward EDITOR_PRE_SAVE to effects so they can bake editor caches
 	if what == NOTIFICATION_EDITOR_PRE_SAVE:
-		for effect in _runtime_effects:
-			if effect != null and _target_node != null:
-				effect._on_editor_pre_save(_target_node)
+		# In editor, _runtime_effects is empty (_ready returns early).
+		# Use recipe.effects directly for editor cache baking.
+		var target := _target_node
+		if target == null:
+			target = _resolve_target()
+		if target == null or recipe == null:
+			return
+		for effect in recipe.effects:
+			if effect != null:
+				effect._on_editor_pre_save(target)
 
 
 func _ready() -> void:
