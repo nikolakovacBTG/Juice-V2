@@ -1,8 +1,6 @@
-[gd_scene load_steps=44 format=3 uid="uid://ged086sfs7k0"]
+[gd_scene load_steps=38 format=3 uid="uid://ged086sfs7k0"]
 
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="1_iyulo"]
-[ext_resource type="Script" uid="uid://btetvglttqxnm" path="res://addons/juice/2D/Progress2DJuiceComp.gd" id="2_hgmhv"]
-[ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="3_1d2vn"]
 [ext_resource type="Texture2D" uid="uid://eoh3ykobaoc3" path="res://Textures/Logo/slice11.png" id="4_db6iq"]
 [ext_resource type="Texture2D" uid="uid://cakspmdg5rwnh" path="res://Textures/Logo/slice12.png" id="5_3xlpj"]
 [ext_resource type="Texture2D" uid="uid://b0srlb0348d8g" path="res://Textures/Logo/slice13.png" id="6_fpfmg"]
@@ -11,8 +9,6 @@
 [ext_resource type="Texture2D" uid="uid://cnv6ejhqg6fkm" path="res://Textures/Logo/slice16.png" id="9_fwe5f"]
 [ext_resource type="Texture2D" uid="uid://cmwpcwscfhv5i" path="res://Textures/Logo/slice17.png" id="10_psf4x"]
 [ext_resource type="Texture2D" uid="uid://qvbev42i0u4p" path="res://Textures/Logo/slice18.png" id="11_cyh67"]
-[ext_resource type="Script" uid="uid://umlva67rt4ud" path="res://addons/juice/Events and Time/SequencerJuiceComp.gd" id="12_hpo04"]
-[ext_resource type="Script" uid="uid://cquadl5sa07sy" path="res://addons/juice/2D/Transform2DJuiceComp.gd" id="13_e326j"]
 [ext_resource type="Texture2D" uid="uid://bif3av5rbnaec" path="res://Textures/Logo/slice3.png" id="14_oijp0"]
 [ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="15_l1gd8"]
 [ext_resource type="Texture2D" uid="uid://bgv1hww8ounvj" path="res://Textures/Logo/slice5.png" id="16_fn4bk"]
@@ -21,13 +17,11 @@
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="19_pxpi6"]
 [ext_resource type="Texture2D" uid="uid://27rnltohkbfo" path="res://Textures/Logo/slice9.png" id="20_p1l7c"]
 [ext_resource type="Texture2D" uid="uid://m1k7o5022vl3" path="res://Textures/Logo/slice10.png" id="21_r86x8"]
-[ext_resource type="Shader" uid="uid://krad382t6m3a" path="res://addons/juice/Shaders/outline_2d.gdshader" id="22_unlfy"]
-[ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/juice/Shaders/grayscale_2d.gdshader" id="23_xo1bw"]
-[ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/juice/Shaders/dissolve_2d.gdshader" id="24_avmwf"]
+[ext_resource type="Shader" uid="uid://krad382t6m3a" path="res://addons/Juice_V1/Shaders/outline_2d.gdshader" id="22_unlfy"]
+[ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/Juice_V1/Shaders/grayscale_2d.gdshader" id="23_xo1bw"]
+[ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/Juice_V1/Shaders/dissolve_2d.gdshader" id="24_avmwf"]
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="25_7x4o0"]
-[ext_resource type="Shader" uid="uid://b5phtplqic1ua" path="res://addons/juice/Shaders/overlay_2d.gdshader" id="26_rsee4"]
-[ext_resource type="Script" uid="uid://xi0dbseivd84" path="res://addons/juice/Control/AppearanceControlJuiceComp.gd" id="27_ui13n"]
-[ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="28_4v3y5"]
+[ext_resource type="Shader" uid="uid://b5phtplqic1ua" path="res://addons/Juice_V1/Shaders/overlay_2d.gdshader" id="26_rsee4"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7frtj"]
 shader = ExtResource("22_unlfy")
@@ -130,43 +124,6 @@ anchor_mode = 0
 visible = false
 position = Vector2(576, 324)
 
-[node name="Progress2DJuiceComp" type="Node" parent="Full logo"]
-script = ExtResource("2_hgmhv")
-transform_target = 2
-auto_start = true
-scale_rate = Vector2(0.06, 0.06)
-pivot_mode = 0
-bound_enabled = false
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://btetvglttqxnm"
-
-[node name="Appearance2DJuiceComp" type="Node" parent="Full logo"]
-script = ExtResource("3_1d2vn")
-color_from = Color(1, 1, 1, 1)
-color_to = Color(1, 0, 0, 1)
-animate_alpha = false
-affect_children = true
-use_blend_mode = false
-use_flicker = false
-start_delay = 2.5
-trigger_on = 8
-duration_in = 1.0
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
-
 [node name="Logo Base" type="Node2D" parent="Full logo"]
 position = Vector2(0, -550)
 
@@ -210,51 +167,6 @@ position = Vector2(385.00003, 58.000004)
 scale = Vector2(0.4152831, 0.42053574)
 texture = ExtResource("11_cyh67")
 
-[node name="SequencerJuiceComp" type="Node" parent="Full logo/Logo Base"]
-script = ExtResource("12_hpo04")
-juice_source = 0
-target_scope = 0
-sequence_type = 0
-stagger_delay = 0.15
-mirror_stagger_on_exit = true
-skip_invisible = true
-skip_self = true
-skip_juice_components = true
-hide_parent_on_reverse_complete = false
-trigger_on = 8
-retrigger_policy = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://umlva67rt4ud"
-
-[node name="Transform2DJuiceComp" type="Node" parent="Full logo/Logo Base/SequencerJuiceComp"]
-script = ExtResource("13_e326j")
-from_reference = 0
-from_position_in = 3
-from_position = Vector2(0, -1)
-to_reference = 0
-to_position_in = 0
-to_position = Vector2(0, 550)
-auto_connect_parent = false
-trigger_on = 8
-duration_in = 0.5
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.65
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cquadl5sa07sy"
-
 [node name="Logo Letters" type="Node2D" parent="Full logo"]
 
 [node name="Slice3" type="Sprite2D" parent="Full logo/Logo Letters"]
@@ -297,101 +209,11 @@ position = Vector2(385, 50)
 scale = Vector2(1e-05, 1e-05)
 texture = ExtResource("21_r86x8")
 
-[node name="SequencerJuiceComp2" type="Node" parent="Full logo/Logo Letters"]
-script = ExtResource("12_hpo04")
-juice_source = 0
-target_scope = 0
-sequence_type = 0
-stagger_delay = 0.15
-mirror_stagger_on_exit = true
-skip_invisible = true
-skip_self = true
-skip_juice_components = true
-hide_parent_on_reverse_complete = false
-start_delay = 0.3
-trigger_on = 8
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://umlva67rt4ud"
-
-[node name="Transform2DJuiceComp" type="Node" parent="Full logo/Logo Letters/SequencerJuiceComp2"]
-script = ExtResource("13_e326j")
-transform_target = 2
-from_reference = 0
-from_scale = Vector2(0, 0)
-to_reference = 0
-to_scale = Vector2(0.418, 0.418)
-pivot_mode = 0
-start_delay = 0.2
-auto_connect_parent = false
-trigger_on = 8
-duration_in = 0.5
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.5
-elastic_period_in = 0.65
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cquadl5sa07sy"
-
-[node name="Transform2DJuiceComp2" type="Node" parent="Full logo/Logo Letters/SequencerJuiceComp2"]
-script = ExtResource("13_e326j")
-transform_target = 1
-from_reference = 0
-from_rotation_degrees = -90.0
-to_reference = 0
-to_rotation_degrees = 0.0
-pivot_mode = 0
-start_delay = 0.2
-auto_connect_parent = false
-trigger_on = 8
-duration_in = 0.5
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.5
-elastic_period_in = 0.65
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cquadl5sa07sy"
-
 [node name="JuiceLogoSeparated2" type="Sprite2D" parent="."]
 modulate = Color(0.7773676, 0.09148217, 0.7297744, 1)
 position = Vector2(135, 72)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
-
-[node name="Appearance2DJuiceComp" type="Node" parent="JuiceLogoSeparated2"]
-script = ExtResource("3_1d2vn")
-color_from = Color(0.7773676, 0.09148217, 0.7297744, 1)
-color_to = Color(1, 0, 0, 0)
-animate_alpha = true
-affect_children = true
-use_blend_mode = false
-use_flicker = false
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="JuiceLogoSeparated3" type="Sprite2D" parent="."]
 modulate = Color(1, 0.31889278, 0, 1)
@@ -399,51 +221,11 @@ position = Vector2(135, 162)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
 
-[node name="Appearance2DJuiceComp2" type="Node" parent="JuiceLogoSeparated3"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 1
-overbright_intensity = 2.0
-overbright_color = Color(1, 0.5647059, 0, 1)
-use_blend_mode = false
-use_flicker = false
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
-
 [node name="JuiceLogoSeparated4" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_7frtj")
 position = Vector2(613.7498, 290.375)
 scale = Vector2(0.21555723, 0.2155573)
 texture = ExtResource("1_iyulo")
-
-[node name="Appearance2DJuiceComp3" type="Node" parent="JuiceLogoSeparated4"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 2
-outline_color = Color(0, 0.48745775, 0.3118408, 1)
-outline_width = 12.5
-use_blend_mode = false
-use_flicker = false
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="JuiceLogoSeparated5" type="Sprite2D" parent="."]
 modulate = Color(1, 1, 1, 0)
@@ -452,54 +234,11 @@ position = Vector2(135, 328)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
 
-[node name="Appearance2DJuiceComp4" type="Node" parent="JuiceLogoSeparated5"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 3
-fade_target_alpha = 0.0
-use_blend_mode = false
-use_flicker = false
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
-
 [node name="JuiceLogoSeparated6" type="Sprite2D" parent="."]
 material = SubResource("CanvasItemMaterial_o2e6s")
 position = Vector2(135, 409)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
-
-[node name="Appearance2DJuiceComp5" type="Node" parent="JuiceLogoSeparated6"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 4
-grayscale_strength = 1.0
-use_blend_mode = false
-use_flicker = true
-flicker_mode = 0
-hard_flicker = false
-flicker_rate = 10.0
-flicker_min = 0.0
-flicker_max = 1.0
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="JuiceLogoSeparated7" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_7fq1n")
@@ -507,56 +246,11 @@ position = Vector2(135, 497.99997)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
 
-[node name="Appearance2DJuiceComp6" type="Node" parent="JuiceLogoSeparated7"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 5
-dissolve_texture = null
-dissolve_edge_color = Color(1, 0.5, 0, 1)
-dissolve_edge_width = 0.05
-use_blend_mode = false
-use_flicker = true
-flicker_mode = 0
-hard_flicker = false
-flicker_rate = 10.0
-flicker_min = 0.0
-flicker_max = 1.0
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
-
 [node name="JuiceLogoSeparated8" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_y27hi")
 position = Vector2(135, 591)
 scale = Vector2(0.07817335, 0.07817337)
 texture = ExtResource("1_iyulo")
-
-[node name="Appearance2DJuiceComp7" type="Node" parent="JuiceLogoSeparated8"]
-script = ExtResource("3_1d2vn")
-appearance_effect = 6
-overlay_color = Color(1, 0, 0, 1)
-use_blend_mode = false
-use_flicker = false
-loop_count = -1
-ping_pong = true
-trigger_on = 8
-duration_in = 2.5
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
@@ -589,60 +283,6 @@ size_flags_vertical = 3
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button"]
-script = ExtResource("27_ui13n")
-appearance_effect = 6
-overlay_color = Color(0.4275496, 0.52012324, 0.8023345, 1)
-use_blend_mode = false
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
-
 [node name="Button2" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 material = SubResource("ShaderMaterial_g1way")
 layout_mode = 2
@@ -650,62 +290,6 @@ size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
-
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
-script = ExtResource("27_ui13n")
-appearance_effect = 5
-dissolve_texture = SubResource("NoiseTexture2D_jlm4u")
-dissolve_edge_color = Color(1, 0.5, 0, 1)
-dissolve_edge_width = 0.05
-use_blend_mode = false
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button2"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button3" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 material = SubResource("ShaderMaterial_hfiu5")
@@ -715,60 +299,6 @@ theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
-script = ExtResource("27_ui13n")
-appearance_effect = 4
-grayscale_strength = 1.0
-use_blend_mode = false
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button3"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
-
 [node name="Button4" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 material = SubResource("ShaderMaterial_yddma")
 layout_mode = 2
@@ -777,181 +307,15 @@ theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
 
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
-script = ExtResource("27_ui13n")
-appearance_effect = 3
-fade_target_alpha = 0.38
-use_blend_mode = false
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button4"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
-
 [node name="Button5" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 text = "test"
 
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
-script = ExtResource("27_ui13n")
-appearance_effect = 2
-outline_color = Color(18.892157, 18.892157, 0, 1)
-outline_width = 5.5
-use_blend_mode = false
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button5"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
-
 [node name="Button6" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2
 size_flags_vertical = 3
 text = "test"
-
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
-script = ExtResource("27_ui13n")
-color_from = Color(1, 1, 1, 1)
-color_to = Color(1, 0, 0, 1)
-animate_alpha = false
-affect_children = true
-use_blend_mode = true
-target_blend_mode = 2
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button6"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button7" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 modulate = Color(0.89374226, 0.76580065, 0, 1)
@@ -960,62 +324,6 @@ size_flags_vertical = 3
 theme_override_colors/icon_normal_color = Color(0.6039216, 0.6, 0.28627452, 1)
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
-
-[node name="AppearanceControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
-script = ExtResource("27_ui13n")
-appearance_effect = 1
-overbright_intensity = 2.0
-overbright_color = Color(0.89374226, 0.76580065, 0, 1)
-use_blend_mode = true
-target_blend_mode = 0
-use_flicker = false
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://xi0dbseivd84"
-
-[node name="TransformControlJuiceComp" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button7"]
-script = ExtResource("28_4v3y5")
-transform_target = 2
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_scale = Vector2(1.2, 1.2)
-pivot_mode = 0
-trigger_behaviour = 3
-trigger_on = 2
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-custom_curve_in = null
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 6
-ease_out = 1
-elastic_amplitude_out = 1.0
-elastic_period_out = 0.3
-custom_curve_out = null
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
 [node name="Button8" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3"]
 layout_mode = 2

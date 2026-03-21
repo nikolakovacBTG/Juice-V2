@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://m41m3r0267kg"]
+[gd_scene load_steps=11 format=3 uid="uid://m41m3r0267kg"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_32dbb"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="2_i3blr"]
@@ -37,29 +37,9 @@ crossfade_time = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_32dbb"]
-script = ExtResource("5_32dbb")
-transform_target = 0
-trigger_behaviour = 1
-start_delay = 0.0
-loop_count = 1
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_position_in = 1
-to_position = Vector2(0.1, 0)
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-interrupt_siblings = false
-crossfade_time = 0.0
-debug_enabled = false
-metadata/_custom_type_script = "uid://bf43e3idc17tt"
-
 [sub_resource type="Resource" id="Resource_tx2cu"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_32dbb")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [node name="ControlIntro" type="Control"]

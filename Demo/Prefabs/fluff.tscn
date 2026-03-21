@@ -1,8 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://pwrkiujy8etm"]
+[gd_scene load_steps=3 format=3 uid="uid://pwrkiujy8etm"]
 
 [ext_resource type="Texture2D" uid="uid://biid6tmycb4mg" path="res://Textures/Sprites/fluff.png" id="1_ogf4e"]
-[ext_resource type="Script" uid="uid://5uaq1cxtjkt2" path="res://addons/juice/2D/Appearance2DJuiceComp.gd" id="2_cm7qp"]
-[ext_resource type="Script" uid="uid://ycb0ph5piuur" path="res://addons/juice/2D/Noise2DJuiceComp.gd" id="3_bys06"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ogf4e"]
 blend_mode = 1
@@ -11,38 +9,3 @@ blend_mode = 1
 modulate = Color(0.6862745, 0.27058825, 0.35686275, 0)
 material = SubResource("CanvasItemMaterial_ogf4e")
 texture = ExtResource("1_ogf4e")
-
-[node name="Appearance2DJuiceComp2" type="Node" parent="."]
-script = ExtResource("2_cm7qp")
-appearance_effect = 1
-overbright_intensity = 2.0
-overbright_color = Color(1, 1, 1, 1)
-use_flicker = false
-loop_count = -1
-ping_pong = true
-loop_delay = 3.0
-trigger_on = 8
-duration_in = 5.0
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://5uaq1cxtjkt2"
-
-[node name="Noise2DJuiceComp" type="Node" parent="."]
-script = ExtResource("3_bys06")
-position_amplitude = Vector2(30, 30)
-noise_speed = 0.2
-trigger_on = 8
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-custom_curve_in = null
-hold_at_peak = 0.0
-next_component = NodePath("")
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://ycb0ph5piuur"
