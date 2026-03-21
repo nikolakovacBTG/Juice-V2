@@ -64,8 +64,8 @@ enum TransformReference {
 ## How to interpret custom position values (3D — no viewport fraction)
 enum PositionIn3D {
 	WORLD_UNITS,      ## Position in world units
-	FRACTION_OWN,     ## Position in fraction of object's own AABB
-	FRACTION_PARENT   ## Position in fraction of parent's AABB
+	OWN_SIZE,     ## Position in fraction of object's own AABB
+	PARENT_SIZE   ## Position in fraction of parent's AABB
 }
 
 ## When to capture Self's transform value
@@ -96,9 +96,9 @@ func _init() -> void:
 
 # --- POSITION (From/To model) ---
 var from_position: Vector3 = Vector3.ZERO
-var from_position_in: int = PositionIn3D.FRACTION_OWN
+var from_position_in: int = PositionIn3D.OWN_SIZE
 var to_position: Vector3 = Vector3.ZERO
-var to_position_in: int = PositionIn3D.FRACTION_OWN
+var to_position_in: int = PositionIn3D.OWN_SIZE
 
 # --- ROTATION (From/To model) ---
 var from_rotation: Vector3 = Vector3.ZERO
@@ -633,10 +633,10 @@ func _convert_to_world_units(pos: Vector3, position_in: int, target: Node3D) -> 
 	match position_in:
 		PositionIn3D.WORLD_UNITS:
 			return pos
-		PositionIn3D.FRACTION_OWN:
+		PositionIn3D.OWN_SIZE:
 			var size := _infer_node3d_size(target)
 			return Vector3(pos.x * size.x, pos.y * size.y, pos.z * size.z)
-		PositionIn3D.FRACTION_PARENT:
+		PositionIn3D.PARENT_SIZE:
 			var size := _infer_parent_size(target)
 			return Vector3(pos.x * size.x, pos.y * size.y, pos.z * size.z)
 	return pos

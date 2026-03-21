@@ -63,9 +63,9 @@ enum TransformReference {
 ## How to interpret custom position values (2D)
 enum PositionIn {
 	PIXELS,           ## Position in absolute pixels
-	FRACTION_OWN,     ## Position in fraction of object's own size
-	FRACTION_PARENT,  ## Position in fraction of parent's size
-	FRACTION_VIEWPORT ## Position in fraction of viewport size
+	OWN_SIZE,     ## Position in fraction of object's own size
+	PARENT_SIZE,  ## Position in fraction of parent's size
+	VIEWPORT_SIZE ## Position in fraction of viewport size
 }
 
 ## When to capture Self's transform value
@@ -96,9 +96,9 @@ func _init() -> void:
 
 # --- POSITION (From/To model) ---
 var from_position: Vector2 = Vector2.ZERO
-var from_position_in: int = PositionIn.FRACTION_OWN
+var from_position_in: int = PositionIn.OWN_SIZE
 var to_position: Vector2 = Vector2.ZERO
-var to_position_in: int = PositionIn.FRACTION_OWN
+var to_position_in: int = PositionIn.OWN_SIZE
 
 # --- ROTATION (From/To model) ---
 var from_rotation_degrees: float = 0.0
@@ -608,13 +608,13 @@ func _convert_to_world_pixels(position: Vector2, position_in: int, target: Node2
 	match position_in:
 		PositionIn.PIXELS:
 			return position
-		PositionIn.FRACTION_OWN:
+		PositionIn.OWN_SIZE:
 			var size := _infer_node2d_size(target)
 			return Vector2(position.x * size.x, position.y * size.y)
-		PositionIn.FRACTION_PARENT:
+		PositionIn.PARENT_SIZE:
 			var size := _infer_parent_size(target)
 			return Vector2(position.x * size.x, position.y * size.y)
-		PositionIn.FRACTION_VIEWPORT:
+		PositionIn.VIEWPORT_SIZE:
 			var size := _get_viewport_size(target)
 			return Vector2(position.x * size.x, position.y * size.y)
 	return position
