@@ -45,25 +45,71 @@ enum SquashAxis3D {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Squash Stretch")
-
 ## How much to compress at peak (0.0 = no squash, 0.99 = maximum).
 ## Values are clamped to prevent scale inversion.
-@export_range(0.0, 0.99) var squash_amount: float = 0.3
+var squash_amount: float = 0.3
 
 ## Primary axis of squash.
-@export var squash_axis: SquashAxis3D = SquashAxis3D.Y
+var squash_axis: int = SquashAxis3D.Y
 
 ## If true, expand perpendicular axes to preserve visual volume.
 ## Creates more organic, cartoon-like deformation.
-@export var preserve_volume: bool = true
-
-@export_group("Pivot")
+var preserve_volume: bool = true
 
 ## Pivot point for squash/stretch in local space.
 ## Squashing will appear to originate from this point.
 ## For characters, often set to feet position.
-@export var pivot_offset: Vector3 = Vector3.ZERO
+var pivot_offset: Vector3 = Vector3.ZERO
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
+
+
+# =============================================================================
+# CONDITIONAL EXPORT SYSTEM
+# =============================================================================
+
+func _get_property_list() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+
+	# --- Effect group: squash config + base effect properties ---
+	props.append({"name": "Effect", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "squash_amount", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,0.99,0.01",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "squash_axis", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "X,Y,Z",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "preserve_volume", "type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append_array(_get_effect_base_properties())
+
+	# --- Pivot group ---
+	props.append({"name": "Pivot", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "pivot_offset", "type": TYPE_VECTOR3,
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	return props
+
+
+func _set(property: StringName, value: Variant) -> bool:
+	match property:
+		&"squash_amount": squash_amount = value; return true
+		&"squash_axis": squash_axis = value; return true
+		&"preserve_volume": preserve_volume = value; return true
+		&"pivot_offset": pivot_offset = value; return true
+	return false
+
+
+func _get(property: StringName) -> Variant:
+	match property:
+		&"squash_amount": return squash_amount
+		&"squash_axis": return squash_axis
+		&"preserve_volume": return preserve_volume
+		&"pivot_offset": return pivot_offset
+	return null
 
 
 # =============================================================================

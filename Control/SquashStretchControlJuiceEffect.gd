@@ -47,25 +47,21 @@ enum PivotMode {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Squash Stretch")
-
 ## How much to compress at peak (0.0 = no squash, 0.99 = maximum).
 ## Values are clamped to prevent scale inversion.
-@export_range(0.0, 0.99) var squash_amount: float = 0.3
+var squash_amount: float = 0.3
 
 ## Primary axis of squash.
-@export var squash_axis: SquashAxis = SquashAxis.VERTICAL
+var squash_axis: int = SquashAxis.VERTICAL
 
 ## If true, expand perpendicular axis to preserve visual volume.
 ## Creates more organic, cartoon-like deformation.
-@export var preserve_volume: bool = true
-
-@export_group("Pivot")
+var preserve_volume: bool = true
 
 ## Controls scale origin point. AUTO_CENTER sets pivot to center of the Control.
 ## INHERIT keeps whatever pivot_offset the Control already has.
 ## CUSTOM uses normalized coordinates from custom_pivot.
-@export var pivot_mode: PivotMode = PivotMode.AUTO_CENTER:
+var pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
 		notify_property_list_changed()
@@ -73,18 +69,63 @@ enum PivotMode {
 ## Custom pivot in normalized coordinates (0–1).
 ## (0.5, 0.5) = center, (0.5, 1.0) = bottom center.
 ## Only visible when pivot_mode is CUSTOM.
-@export var custom_pivot: Vector2 = Vector2(0.5, 0.5)
+var custom_pivot: Vector2 = Vector2(0.5, 0.5)
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
 
 
 # =============================================================================
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
-func _validate_property(property: Dictionary) -> void:
-	super._validate_property(property)
-	# custom_pivot only shown when pivot_mode == CUSTOM
-	if property.name == "custom_pivot" and pivot_mode != PivotMode.CUSTOM:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
+func _get_property_list() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+
+	# --- Effect group: squash config + base effect properties ---
+	props.append({"name": "Effect", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "squash_amount", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,0.99,0.01",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "squash_axis", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Vertical,Horizontal",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "preserve_volume", "type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append_array(_get_effect_base_properties())
+
+	# --- Pivot group ---
+	props.append({"name": "Pivot", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "pivot_mode", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Auto Center,Inherit,Custom",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	if pivot_mode == PivotMode.CUSTOM:
+		props.append({"name": "custom_pivot", "type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_DEFAULT})
+
+	return props
+
+
+func _set(property: StringName, value: Variant) -> bool:
+	match property:
+		&"squash_amount": squash_amount = value; return true
+		&"squash_axis": squash_axis = value; return true
+		&"preserve_volume": preserve_volume = value; return true
+		&"pivot_mode": pivot_mode = value; return true
+		&"custom_pivot": custom_pivot = value; return true
+	return false
+
+
+func _get(property: StringName) -> Variant:
+	match property:
+		&"squash_amount": return squash_amount
+		&"squash_axis": return squash_axis
+		&"preserve_volume": return preserve_volume
+		&"pivot_mode": return pivot_mode
+		&"custom_pivot": return custom_pivot
+	return null
 
 
 # =============================================================================
