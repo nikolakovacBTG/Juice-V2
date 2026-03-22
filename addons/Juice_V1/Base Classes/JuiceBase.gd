@@ -314,6 +314,39 @@ var _loop_delay_elapsed: float = 0.0
 ## Queued trigger for RetriggerPolicy.QUEUE
 var _queued_trigger: Dictionary = {}
 
+# --- Sequencer-specific state (SEQUENCER mode only) ---
+
+## Coroutine generation counter. Incremented on stop() and new sequence starts.
+## Each coroutine captures its generation at birth; if the global counter has
+## advanced past it after an await, the coroutine aborts silently.
+var _seq_generation: int = 0
+
+## Number of active animations being tracked for completion in current sequence pass.
+var _seq_active_animations: int = 0
+
+## True when currently playing in reverse (exit animation).
+var _seq_playing_reverse: bool = false
+
+## The direction of the initial trigger. Used to restart loops from the correct direction.
+var _seq_initial_reverse: bool = false
+
+## Non-ping-pong loop counter for sequencer.
+var _seq_current_loop: int = 0
+
+## Ping-pong state for sequencer: true = forward leg, false = reverse leg.
+var _seq_pp_forward: bool = true
+
+## Counts completed full ping-pong cycles (forward + reverse = 1 cycle).
+var _seq_pp_current_cycle: int = 0
+
+## Per-target runtime effect clones for RECIPE mode.
+## Keys: target Node, Values: Array[JuiceEffectBase] (cloned effects for that target).
+var _seq_target_effects: Dictionary = {}
+
+## Per-target active effect indices (which clones are being ticked).
+## Keys: target Node, Values: Array[int] (indices into that target's effects array).
+var _seq_target_active_indices: Dictionary = {}
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -339,8 +372,9 @@ func _ready() -> void:
 		return
 
 	# Resolve target (what effects animate)
+	# STACK: single parent target. SEQUENCER: null here (targets resolved per-sequence).
 	_target_node = _resolve_target()
-	if _target_node == null:
+	if _target_node == null and mode == Mode.STACK:
 		if debug_enabled:
 			push_warning("[%s] No valid target node found" % name)
 		return
@@ -391,13 +425,15 @@ func _ready() -> void:
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
 		_try_auto_connect()
 
-	# Capture natural state before any effects modify the target
-	_capture_base_values()
+	# Capture natural state before any effects modify the target (STACK only)
+	if _target_node != null:
+		_capture_base_values()
 
-	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.)
-	for effect in _runtime_effects:
-		if effect != null:
-			effect._on_host_ready(_target_node, self)
+	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.) — STACK only
+	if _target_node != null:
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._on_host_ready(_target_node, self)
 
 	# Handle ON_READY trigger
 	if trigger_on == TriggerEvent.ON_READY:
@@ -411,6 +447,13 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
+
+	# --- SEQUENCER mode: tick per-target effects ---
+	if mode == Mode.SEQUENCER:
+		_seq_process_tick(delta)
+		return
+
+	# --- STACK mode below ---
 
 	# --- Node-level start_delay: hold before starting effects ---
 	if _in_node_start_delay:
@@ -504,6 +547,9 @@ func animate_out(is_one_shot_return: bool = false) -> void:
 
 ## Stop all effects and restore to natural state.
 func stop() -> void:
+	if mode == Mode.SEQUENCER:
+		_seq_stop()
+		return
 	for effect in _runtime_effects:
 		if effect != null:
 			effect.stop(_target_node)
@@ -569,6 +615,15 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 			return
 
 	var new_target := 1.0 if resolved_play_in else 0.0
+
+	# --- SEQUENCER mode: delegate to sequencer flow ---
+	if mode == Mode.SEQUENCER:
+		var is_reverse := not resolved_play_in
+		var is_one_shot_return: bool = trigger_info.get("is_one_shot_return", false)
+		_seq_request_sequence(is_reverse, is_one_shot_return)
+		return
+
+	# --- STACK mode below ---
 
 	# Retrigger policy
 	if _is_playing or _in_node_start_delay:
@@ -788,6 +843,300 @@ func _stop_all_effects_silent() -> void:
 			effect.stop_and_hold()
 	_active_effect_indices.clear()
 	_is_playing = false
+
+# =============================================================================
+# SEQUENCER LOGIC (mode == SEQUENCER only)
+# =============================================================================
+
+## Sequencer retrigger gate — mirrors STACK's retrigger logic but for sequences.
+func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> void:
+	if _is_playing:
+		match retrigger_policy:
+			RetriggerPolicy.IGNORE:
+				if debug_enabled:
+					print("[%s] Seq retrigger IGNORED" % name)
+				return
+			RetriggerPolicy.QUEUE:
+				_queued_trigger = {"play_in": not is_reverse, "is_one_shot_return": is_one_shot_return}
+				if debug_enabled:
+					print("[%s] Seq retrigger QUEUED" % name)
+				return
+			RetriggerPolicy.RESTART:
+				if debug_enabled:
+					print("[%s] Seq retrigger RESTART" % name)
+				_seq_stop()
+
+	# Initialize loop/ping-pong state on fresh triggers (not internal restarts)
+	if not is_one_shot_return and _seq_current_loop == 0 and _seq_pp_current_cycle == 0:
+		_seq_playing_reverse = is_reverse
+		_seq_initial_reverse = is_reverse
+		_seq_pp_forward = true
+
+	_seq_start_sequence(is_reverse, is_one_shot_return)
+
+
+## Stop all sequencer animations cleanly.
+func _seq_stop() -> void:
+	_seq_generation += 1  # Abort any in-flight coroutines
+	_is_playing = false
+	_queued_trigger = {}
+	_seq_active_animations = 0
+	_seq_pp_forward = true
+	_seq_pp_current_cycle = 0
+	_seq_current_loop = 0
+	_seq_target_active_indices.clear()
+
+	# Stop all per-target effect clones
+	for target_variant: Variant in _seq_target_effects.keys():
+		var target: Node = target_variant as Node
+		var effects: Array = _seq_target_effects.get(target_variant, []) as Array
+		for effect_variant: Variant in effects:
+			var effect: JuiceEffectBase = effect_variant as JuiceEffectBase
+			if effect != null and effect.is_playing() and target != null:
+				effect.stop(target)
+
+	set_process(false)
+
+	if debug_enabled:
+		print("[%s] Seq stopped" % name)
+
+
+## Core sequencing coroutine — staggers animation across targets.
+func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> void:
+	_is_playing = true
+	_seq_playing_reverse = is_reverse
+
+	# Capture generation for stale coroutine detection
+	_seq_generation += 1
+	var my_gen := _seq_generation
+
+	# Handle start delay (skip for one_shot return and internal loop/ping-pong restarts)
+	if start_delay > 0.0 and not is_one_shot_return \
+			and _seq_current_loop == 0 and _seq_pp_current_cycle == 0:
+		await get_tree().create_timer(start_delay).timeout
+		if _seq_generation != my_gen:
+			return  # Aborted by retrigger
+
+	# Get filtered and ordered targets
+	var targets := _get_seq_targets()
+
+	if targets.is_empty():
+		if debug_enabled:
+			print("[%s] Seq: no targets found" % name)
+		_is_playing = false
+		completed.emit()
+		return
+
+	targets = _apply_seq_stagger_order(targets, is_reverse)
+	_seq_active_animations = 0
+
+	# Emit started signal only on the very first pass
+	if not is_one_shot_return and _seq_current_loop == 0 \
+			and (not _seq_pp_forward or _seq_pp_current_cycle == 0):
+		if is_reverse:
+			animate_out_started.emit()
+		else:
+			animate_in_started.emit()
+
+	if debug_enabled:
+		print("[%s] Seq starting with %d targets, delay=%.2f, reverse=%s" % [
+			name, targets.size(), seq_stagger_delay, is_reverse])
+
+	# Animate each target with stagger delay
+	for i in range(targets.size()):
+		var target := targets[i]
+
+		# Stagger delay between targets (not for first, not for ALL_AT_ONCE)
+		if i > 0 and sequence_type != SequenceType.ALL_AT_ONCE and seq_stagger_delay > 0.0:
+			await get_tree().create_timer(seq_stagger_delay).timeout
+			if _seq_generation != my_gen:
+				return
+
+		# Animate this target
+		_seq_animate_target(target, is_reverse)
+		if _seq_generation != my_gen:
+			return
+
+	# Wait for all target animations to complete
+	while _seq_active_animations > 0:
+		await get_tree().process_frame
+		if _seq_generation != my_gen:
+			return
+
+	# --- Sequence pass complete: handle looping/ping-pong/completion ---
+	_seq_on_pass_complete(is_reverse, is_one_shot_return, my_gen)
+
+
+## Animate a single target based on juice_source mode.
+func _seq_animate_target(target: Node, is_reverse: bool) -> void:
+	match juice_source:
+		JuiceSource.RECIPE:
+			_seq_animate_target_recipe(target, is_reverse)
+		JuiceSource.TARGETS_STACK:
+			_seq_animate_target_stack(target, is_reverse)
+		JuiceSource.TARGETS_CHILDREN:
+			_seq_animate_target_children(target, is_reverse)
+
+
+## RECIPE mode: clone recipe effects per target and start them.
+## Effects are ticked by _seq_process_tick() in _process().
+func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
+	if recipe == null:
+		return
+
+	var effects := _seq_get_or_create_target_effects(target)
+	if effects.is_empty():
+		return
+
+	# Find root effect indices (not chained from another in this set)
+	var chained_set: Array[JuiceEffectBase] = []
+	for eff in effects:
+		if eff != null and eff.chain_to != null:
+			chained_set.append(eff.chain_to)
+	var root_indices: Array[int] = []
+	for i in effects.size():
+		if effects[i] != null and effects[i] not in chained_set:
+			root_indices.append(i)
+
+	# Start root effects and track active indices
+	var play_in := not is_reverse
+	var active_indices: Array[int] = []
+	for idx in root_indices:
+		effects[idx].start(target, play_in, true, self)
+		active_indices.append(idx)
+
+	_seq_target_active_indices[target] = active_indices
+	_seq_active_animations += 1  # One completion event per target
+	set_process(true)
+
+	if debug_enabled:
+		print("[%s] Seq RECIPE: started %d roots on '%s'" % [name, root_indices.size(), target.name])
+
+
+## TARGETS_STACK mode: find JuiceBase nodes in named container and trigger them.
+## (Placeholder — full implementation in Phase 5d)
+func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
+	pass
+
+
+## TARGETS_CHILDREN mode: find JuiceBase children on target and trigger them.
+## (Placeholder — full implementation in Phase 5d)
+func _seq_animate_target_children(target: Node, is_reverse: bool) -> void:
+	pass
+
+
+## Get or create per-target runtime effect clones for RECIPE mode.
+func _seq_get_or_create_target_effects(target: Node) -> Array[JuiceEffectBase]:
+	if _seq_target_effects.has(target):
+		return _seq_target_effects[target] as Array[JuiceEffectBase]
+
+	if recipe == null:
+		return []
+
+	var clones: Array[JuiceEffectBase] = recipe.create_runtime_effects()
+	_seq_target_effects[target] = clones
+
+	if debug_enabled:
+		print("[%s] Created %d effect clones for target '%s'" % [name, clones.size(), target.name])
+
+	return clones
+
+
+## Tick all per-target effects in SEQUENCER RECIPE mode.
+## Called from _process() when mode == SEQUENCER.
+## Handles chaining and per-target completion tracking.
+func _seq_process_tick(delta: float) -> void:
+	var targets_done: Array[Node] = []
+
+	for target_variant: Variant in _seq_target_active_indices.keys():
+		var target: Node = target_variant as Node
+		if target == null or not is_instance_valid(target):
+			targets_done.append(target)
+			continue
+
+		var active_indices: Array = _seq_target_active_indices.get(target_variant, []) as Array
+		var effects: Array = _seq_target_effects.get(target_variant, []) as Array
+		var newly_completed: Array[int] = []
+		var any_playing := false
+
+		for idx_variant: Variant in active_indices:
+			var idx: int = idx_variant as int
+			if idx < 0 or idx >= effects.size():
+				continue
+			var effect: JuiceEffectBase = effects[idx] as JuiceEffectBase
+			if effect == null or not effect.is_playing():
+				continue
+
+			any_playing = true
+			var result := effect.tick(delta, target)
+			if result == JuiceEffectBase.TickResult.COMPLETED:
+				newly_completed.append(idx)
+
+		# Handle chaining within this target's effects
+		for idx in newly_completed:
+			var effect: JuiceEffectBase = effects[idx] as JuiceEffectBase
+			if effect != null and effect.chain_to != null:
+				var chain_idx := effects.find(effect.chain_to)
+				if chain_idx >= 0:
+					var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
+					if chained != null:
+						var play_in := effect._animation_progress >= 0.5
+						chained.start(target, play_in, false)
+						if chain_idx not in active_indices:
+							active_indices.append(chain_idx)
+						any_playing = true
+
+		# Re-check: any still playing after chaining?
+		if not any_playing and newly_completed.is_empty():
+			targets_done.append(target)
+		elif not any_playing:
+			# All were done but chaining may have started new ones — recheck
+			var still_playing := false
+			for idx_variant2: Variant in active_indices:
+				var idx2: int = idx_variant2 as int
+				if idx2 >= 0 and idx2 < effects.size():
+					var eff: JuiceEffectBase = effects[idx2] as JuiceEffectBase
+					if eff != null and eff.is_playing():
+						still_playing = true
+						break
+			if not still_playing:
+				targets_done.append(target)
+
+	# Remove completed targets and decrement counter
+	for done_target in targets_done:
+		_seq_target_active_indices.erase(done_target)
+		_seq_active_animations = maxi(0, _seq_active_animations - 1)
+
+	# Stop processing when no active targets remain
+	if _seq_target_active_indices.is_empty():
+		set_process(false)
+
+
+## Called when a full sequence pass completes (all targets done).
+## Handles ping-pong, looping, auto-reverse, and final completion.
+## (Loop/ping-pong logic added in Phase 5e — for now just completes.)
+func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: int) -> void:
+	# --- Sequence fully complete ---
+	_is_playing = false
+
+	if debug_enabled:
+		print("[%s] Seq pass complete (reverse=%s)" % [name, is_reverse])
+
+	# Handle hide_parent_on_reverse_complete
+	if is_reverse and seq_hide_parent_on_reverse_complete:
+		var parent := get_parent()
+		if parent and parent is CanvasItem:
+			parent.hide()
+			if debug_enabled:
+				print("[%s] Hiding parent '%s' after reverse complete" % [name, parent.name])
+
+	completed.emit()
+
+	# Execute queued trigger
+	if not _queued_trigger.is_empty():
+		var queued := _queued_trigger
+		_queued_trigger = {}
+		_handle_trigger(queued)
 
 # =============================================================================
 # DOMAIN VIRTUAL HOOKS (Override in JuiceControl, Juice2D, Juice3D)
