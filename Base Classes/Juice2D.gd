@@ -269,60 +269,6 @@ func _temporarily_reapply_visual() -> void:
 	n2d.scale += _total_scale_contribution
 
 
-## Sequencer: undo warmup contribution, restoring target to natural state.
-func _seq_restore_target_natural(target: Node) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		super._seq_restore_target_natural(target)
-		return
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	n2d.position -= contrib.get("pos", Vector2.ZERO)
-	n2d.rotation -= contrib.get("rot", 0.0)
-	n2d.scale -= contrib.get("scale", Vector2.ZERO)
-	super._seq_restore_target_natural(target)
-
-
-## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
-## Uses contribution-tracking pattern — consistent with JuiceControl.
-func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
-	var n2d := target as Node2D
-	if n2d == null:
-		return
-
-	var total_pos := Vector2.ZERO
-	var total_rot := 0.0
-	var total_scale := Vector2.ZERO
-
-	for eff_variant: Variant in effects:
-		var eff_2d := eff_variant as Juice2DEffectBase
-		if eff_2d == null:
-			continue
-		if eff_2d._contributes_position:
-			total_pos += eff_2d._pos_delta
-		if eff_2d._contributes_rotation:
-			total_rot += eff_2d._rot_delta
-		if eff_2d._contributes_scale:
-			total_scale += eff_2d._scale_delta
-
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	var prev_pos: Vector2 = contrib.get("pos", Vector2.ZERO)
-	var prev_rot: float = contrib.get("rot", 0.0)
-	var prev_scale: Vector2 = contrib.get("scale", Vector2.ZERO)
-
-	var natural_pos := n2d.position - prev_pos
-	var natural_rot := n2d.rotation - prev_rot
-	var natural_scale := n2d.scale - prev_scale
-
-	n2d.position = natural_pos + total_pos
-	n2d.rotation = natural_rot + total_rot
-	n2d.scale = natural_scale + total_scale
-
-	_seq_target_contributions[target] = {
-		"pos": total_pos,
-		"rot": total_rot,
-		"scale": total_scale,
-	}
-
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
 # =============================================================================

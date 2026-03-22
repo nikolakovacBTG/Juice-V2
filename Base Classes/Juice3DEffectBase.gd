@@ -39,3 +39,17 @@ func _clear_deltas() -> void:
 	_pos_delta = Vector3.ZERO
 	_rot_delta = Vector3.ZERO
 	_scale_delta = Vector3.ZERO
+
+
+## Return current deltas as a Dictionary keyed by Godot property names.
+## Used by Sequencer contribution-tracking (generic, no hardcoded channels
+## in domain nodes). Future effects override this to add their own channels.
+func _get_seq_contribution() -> Dictionary:
+	var d := {}
+	if _contributes_position:
+		d["position"] = _pos_delta
+	if _contributes_rotation:
+		d["rotation"] = _rot_delta
+	if _contributes_scale:
+		d["scale"] = _scale_delta
+	return d

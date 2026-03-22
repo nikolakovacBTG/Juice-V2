@@ -1367,17 +1367,58 @@ func _temporarily_reapply_visual() -> void:
 ## Sequencer: undo warmup contribution on a target, restoring it to its natural
 ## (Container-managed / editor) state. Called before effects re-capture base for
 ## the real animation, preventing warmup contributions from polluting the base.
-## Override in domain nodes (JuiceControl, Juice2D, Juice3D).
+## Generic — works for any property channel effects report via _get_seq_contribution().
 func _seq_restore_target_natural(target: Node) -> void:
+	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	for prop_name: String in contrib:
+		target.set(prop_name, target.get(prop_name) - contrib[prop_name])
 	_seq_target_contributions.erase(target)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
-## Unlike _post_tick_write() which uses _target_node + _runtime_effects,
-## this takes an arbitrary target and its per-target effect clones.
-## Override in domain nodes (JuiceControl, Juice2D, Juice3D).
+## Generic — effects report their contributions via _get_seq_contribution()
+## keyed by Godot property names. Domain nodes do NOT need to override this.
+## Uses contribution-tracking pattern so Container re-sorts are automatically
+## absorbed — same principle as STACK mode's external-move detection.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
-	pass  # Domain nodes implement
+	# Aggregate all effect contributions keyed by property name
+	var total := {}
+	for eff: Variant in effects:
+		if eff == null:
+			continue
+		var contrib: Dictionary = eff._get_seq_contribution()
+		for key: String in contrib:
+			if key in total:
+				total[key] = total[key] + contrib[key]
+			else:
+				total[key] = contrib[key]
+
+	# Retrieve our last contribution for this target
+	var prev: Dictionary = _seq_target_contributions.get(target, {})
+
+	# For each property we're contributing to now: derive natural, then write
+	for key: String in total:
+		var prev_val: Variant = prev.get(key, _seq_zero_for(total[key]))
+		var natural: Variant = target.get(key) - prev_val
+		target.set(key, natural + total[key])
+
+	# Restore any properties we contributed to last frame but no longer do
+	for key: String in prev:
+		if key not in total:
+			target.set(key, target.get(key) - prev[key])
+
+	_seq_target_contributions[target] = total
+
+
+## Return the zero value for the same type as the given Variant.
+## Used by contribution-tracking when no previous contribution exists.
+static func _seq_zero_for(val: Variant) -> Variant:
+	match typeof(val):
+		TYPE_FLOAT: return 0.0
+		TYPE_VECTOR2: return Vector2.ZERO
+		TYPE_VECTOR3: return Vector3.ZERO
+		TYPE_COLOR: return Color(0, 0, 0, 0)
+	return val - val  # fallback for other numeric types
 
 # =============================================================================
 # CONFIGURATION WARNINGS

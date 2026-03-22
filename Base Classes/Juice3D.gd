@@ -268,60 +268,6 @@ func _temporarily_reapply_visual() -> void:
 	n3d.scale += _total_scale_contribution
 
 
-## Sequencer: undo warmup contribution, restoring target to natural state.
-func _seq_restore_target_natural(target: Node) -> void:
-	var n3d := target as Node3D
-	if n3d == null:
-		super._seq_restore_target_natural(target)
-		return
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	n3d.position -= contrib.get("pos", Vector3.ZERO)
-	n3d.rotation -= contrib.get("rot", Vector3.ZERO)
-	n3d.scale -= contrib.get("scale", Vector3.ZERO)
-	super._seq_restore_target_natural(target)
-
-
-## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
-## Uses contribution-tracking pattern — consistent with JuiceControl.
-func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
-	var n3d := target as Node3D
-	if n3d == null:
-		return
-
-	var total_pos := Vector3.ZERO
-	var total_rot := Vector3.ZERO
-	var total_scale := Vector3.ZERO
-
-	for eff_variant: Variant in effects:
-		var eff_3d := eff_variant as Juice3DEffectBase
-		if eff_3d == null:
-			continue
-		if eff_3d._contributes_position:
-			total_pos += eff_3d._pos_delta
-		if eff_3d._contributes_rotation:
-			total_rot += eff_3d._rot_delta
-		if eff_3d._contributes_scale:
-			total_scale += eff_3d._scale_delta
-
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	var prev_pos: Vector3 = contrib.get("pos", Vector3.ZERO)
-	var prev_rot: Vector3 = contrib.get("rot", Vector3.ZERO)
-	var prev_scale: Vector3 = contrib.get("scale", Vector3.ZERO)
-
-	var natural_pos := n3d.position - prev_pos
-	var natural_rot := n3d.rotation - prev_rot
-	var natural_scale := n3d.scale - prev_scale
-
-	n3d.position = natural_pos + total_pos
-	n3d.rotation = natural_rot + total_rot
-	n3d.scale = natural_scale + total_scale
-
-	_seq_target_contributions[target] = {
-		"pos": total_pos,
-		"rot": total_rot,
-		"scale": total_scale,
-	}
-
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
 # =============================================================================
