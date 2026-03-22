@@ -88,3 +88,30 @@ Before implementing, verify:
 - [ ] Is V1 improving on V0, or just copying? (Document the improvement)
 - [ ] Are all 3 domains covered?
 - [ ] Is there a test for this?
+
+## Rule 11: Generic Protocols at Effect↔Node Boundaries
+
+When effects need to report data to domain nodes (or vice versa), use **generic protocols**, never hardcoded channel reads.
+
+**The pattern:** Each domain effect base implements a protocol method returning a Dictionary keyed by Godot property names. The node consumes it generically via `target.get(key)` / `target.set(key, val)`.
+
+**Existing protocol: Sequencer contributions**
+- Effects implement `_get_seq_contribution() -> Dictionary` (e.g., `{"position": Vector2, "rotation": float, "scale": Vector2}`)
+- `JuiceBase._seq_post_tick_write_target()` aggregates all effects' dicts and applies via `target.get/set` — one implementation, zero per-domain overrides
+- `JuiceBase._seq_restore_target_natural()` subtracts stored contributions generically — prevents warmup from polluting base re-capture
+- `JuiceBase._seq_zero_for(val)` returns the zero value for any Variant type
+
+**How to add a new effect type to Sequencer RECIPE mode:**
+1. Override `_get_seq_contribution()` in your effect class
+2. Return property names as keys, additive deltas as values
+3. Done — no domain node changes needed
+
+**The litmus test:** "Would adding a new effect type require modifying the aggregation/write code?" If yes, the protocol is not generic enough.
+
+## Rule 12: No Band-Aid Fixes
+
+When a fix touches a protocol boundary (how effects report data, how nodes aggregate/write):
+- Never hardcode specific properties or types
+- Never copy-paste logic into all 3 domain nodes
+- If you recognize an architectural choice (narrow vs generic), STOP and present both options to the user
+- The generic approach is almost always correct at protocol boundaries

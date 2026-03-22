@@ -81,6 +81,7 @@ Using the templates from `@juice-architecture`:
 - Port ALL V0 properties — no cuts, no deferrals
 - Implement `_apply_effect()` math as delta calculations (NEVER write to target)
 - Set `_contributes_position/rotation/scale` flags correctly
+- Override `_get_seq_contribution()` if the effect contributes channels beyond the base pos/rot/scale (the base implementation in domain effect bases already handles those three). New channels (e.g., `modulate`, `self_modulate`) must be added to the returned Dictionary keyed by Godot property name.
 - Include the full conditional export system (`_get_property_list`, `_set`, `_get`)
 
 ---

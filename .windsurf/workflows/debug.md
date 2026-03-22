@@ -67,6 +67,19 @@ You may discuss proposed fixes, but you must follow these rules:
 
 ---
 
+### 3b. Band-Aid vs Architectural Fix Detection
+
+When forming hypotheses and proposing fixes, actively check:
+
+- **Does the fix enumerate specific cases?** (e.g., hardcoding "position", "rotation", "scale" channels) If yes, it's a band-aid. The fix should use a generic protocol that future cases automatically plug into.
+- **Does the fix require copy-pasting into multiple domain nodes?** If JuiceControl, Juice2D, and Juice3D all need the same logic, it belongs in JuiceBase or in a shared protocol method on effect bases.
+- **Would adding a new effect type require modifying this fix?** If yes, the fix is fragile. A proper fix defines a protocol contract (e.g., `_get_seq_contribution() -> Dictionary`) that new effects implement independently.
+- **Is the fix at a protocol boundary?** (how effects report data to nodes, how nodes aggregate and write) Protocol boundaries demand generic solutions. Always present both the narrow fix and the generic alternative to the user.
+
+If you catch yourself designing a fix that answers "yes" to any of the above: **STOP, document both approaches, and ask the user which to take.**
+
+---
+
 ### 4. Test Planning (Conceptual Only)
 
 - Identify which types of tests are needed (unit, component, integration, system).

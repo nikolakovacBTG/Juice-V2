@@ -110,6 +110,9 @@ Flag the following anti-patterns from AGENTS.md:
 - [ ] Circular dependencies
 - [ ] Missing configuration warnings for required dependencies
 - [ ] Hardcoded paths to non-existent resources
+- [ ] **Hardcoded property channels** — code that enumerates specific properties ("position", "rotation", "scale") instead of using a generic protocol (e.g., `_get_seq_contribution() -> Dictionary`). Symptom: adding a new effect type would require modifying the aggregation/write code.
+- [ ] **Per-domain copy-paste** — identical logic duplicated across JuiceControl, Juice2D, Juice3D that should live in JuiceBase or in a shared protocol method on effect bases
+- [ ] **Band-aid protocol fixes** — fixes at effect↔node boundaries that only cover known cases instead of defining an extensible contract
 
 ---
 

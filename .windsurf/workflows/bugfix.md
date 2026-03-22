@@ -158,6 +158,17 @@ For each root-cause group, design the fix:
 **Regression risk:** [what existing passing tests could break]
 ```
 
+### 5b. Architectural Quality Gate (MANDATORY)
+
+Before presenting the fix, answer these questions:
+
+- [ ] **Generic vs hardcoded?** Does this fix hardcode specific channels/properties/types, or does it use a generic protocol that extends to future cases? If hardcoded, redesign.
+- [ ] **Per-domain duplication?** Does this fix require copy-pasting logic into JuiceControl, Juice2D, AND Juice3D? If yes, the logic likely belongs in JuiceBase or in a shared protocol method on effect bases.
+- [ ] **Future effect types?** Would a new effect type (e.g., Appearance, Audio) automatically benefit from this fix, or would it require modifying the fix? If the latter, the fix is a band-aid.
+- [ ] **Protocol boundary?** Does this fix touch how effects report data to nodes? If yes, it MUST use a generic protocol (e.g., `_get_seq_contribution()` returning a Dictionary keyed by property names), not hardcoded field reads.
+
+If ANY answer reveals a band-aid approach: **STOP and present the generic alternative to the user.** Never default to the quick narrow fix at a protocol boundary.
+
 Present ALL fixes together. Wait for user approval before implementing.
 
 ---

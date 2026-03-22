@@ -255,6 +255,19 @@ If the design is unclear or missing:
 
 ---
 
+### 9b. Generic Over Hardcoded (Protocol Boundaries)
+
+When implementing a fix or feature that involves **how components communicate data** (e.g., effects reporting deltas to nodes, nodes aggregating and writing to targets):
+
+1. **Never hardcode specific channels/properties/types.** Use a generic protocol where each component reports its own data via a standard method (e.g., `_get_seq_contribution() -> Dictionary` keyed by Godot property names).
+2. **Never copy-paste the same logic into JuiceControl, Juice2D, AND Juice3D.** If all 3 domains need identical logic, it belongs in `JuiceBase` or in a shared method on effect bases.
+3. **The litmus test:** "Would adding a new effect type require modifying this code?" If yes, redesign with a generic protocol.
+4. **When you recognize an architectural choice** (narrow vs generic), STOP and present both options to the user with tradeoffs BEFORE implementing. Never silently pick the quick path.
+
+This rule exists because band-aid fixes at protocol boundaries create maintenance burden, debugging difficulty, and silent regressions when new effect types are added.
+
+---
+
 ### 10. Project Architecture Patterns
 
 The following patterns are established for this project. Follow them for consistency:

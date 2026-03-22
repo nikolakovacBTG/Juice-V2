@@ -50,6 +50,16 @@ NO TEST EXISTS for this feature. Before marking complete:
 | Assumption | "This fix covers all domains" | "Verified Control: PASS. Verified 2D: PASS. Verified 3D: PASS." |
 | Premature closure | "Bug fixed, moving on" | "Bug fixed. Test `suite::method` now passes. No regressions in full suite." |
 
+## Extensibility Check
+
+When claiming a **fix** is complete, also verify:
+
+- [ ] **Does the fix cover future cases?** Not just the reported symptom. If a new effect type or property channel were added tomorrow, would it automatically benefit from this fix?
+- [ ] **Is the fix generic or hardcoded?** If it enumerates specific properties (position, rotation, scale) instead of using a protocol (e.g., `_get_seq_contribution()`), it's a band-aid — flag it.
+- [ ] **Did you present the architectural choice to the user?** If you recognized a narrow vs generic approach and silently picked the narrow one, that's a process failure.
+
+If any of these fail: the fix is NOT complete. Redesign before claiming done.
+
 ## The Rule
 
 **Tests verify. Reviews suggest. Only test results can mark something ✅.**
