@@ -867,7 +867,70 @@ func _get_configuration_warnings() -> PackedStringArray:
 func _resolve_target() -> Node:
 	if mode == Mode.STACK:
 		return get_parent()
-	return null  # SEQUENCER resolves per-target (Phase 5)
+	return null  # SEQUENCER resolves per-target dynamically
+
+
+## Get filtered list of target nodes for SEQUENCER mode based on target_scope.
+func _get_seq_targets() -> Array[Node]:
+	var targets: Array[Node] = []
+	var parent := get_parent()
+	if parent == null:
+		return targets
+
+	# Get candidate nodes based on scope
+	var candidates: Array[Node] = []
+	match target_scope:
+		TargetScope.SIBLINGS, TargetScope.CHILDREN:
+			for child in parent.get_children():
+				candidates.append(child)
+		TargetScope.CUSTOM:
+			for path in seq_custom_targets:
+				var node := get_node_or_null(path)
+				if node == null:
+					if debug_enabled:
+						print("[%s] CUSTOM target not found: %s" % [name, str(path)])
+					continue
+				candidates.append(node)
+
+	# Apply filters
+	for node in candidates:
+		if seq_skip_self and node == self:
+			continue
+		if seq_skip_invisible:
+			if node is CanvasItem and not node.visible:
+				continue
+			if node is Node3D and not node.visible:
+				continue
+		if seq_skip_juice_nodes and node is JuiceBase:
+			continue
+		targets.append(node)
+
+	return targets
+
+
+## Apply sequence ordering to target list, with optional mirror on exit.
+func _apply_seq_stagger_order(targets: Array[Node], is_reverse: bool) -> Array[Node]:
+	var ordered := targets.duplicate()
+
+	var effective_type: SequenceType = sequence_type
+
+	# Mirror stagger direction on exit if enabled
+	if is_reverse and seq_mirror_stagger_on_exit:
+		match sequence_type:
+			SequenceType.STAGGER_FORWARD:
+				effective_type = SequenceType.STAGGER_REVERSE
+			SequenceType.STAGGER_REVERSE:
+				effective_type = SequenceType.STAGGER_FORWARD
+
+	match effective_type:
+		SequenceType.STAGGER_FORWARD, SequenceType.ALL_AT_ONCE:
+			pass  # Keep forward order
+		SequenceType.STAGGER_REVERSE:
+			ordered.reverse()
+		SequenceType.RANDOM:
+			ordered.shuffle()
+
+	return ordered
 
 
 ## Clone recipe effects for independent runtime state.
