@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="3_vvv2e"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="4_32dbb"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
+[ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_i3blr"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
@@ -16,30 +17,84 @@ gradient = SubResource("Gradient_8smnx")
 fill = 1
 fill_from = Vector2(0.52136755, 0.48290598)
 
+[sub_resource type="Resource" id="Resource_04vrh"]
+script = ExtResource("5_i3blr")
+squash_amount = 0.3
+squash_axis = 1
+preserve_volume = true
+trigger_behaviour = 1
+start_delay = -1.0
+loop_count = 1
+pivot_mode = 2
+custom_pivot = Vector2(1, 0.5)
+duration_in = 1.0
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
+
 [sub_resource type="Resource" id="Resource_i3blr"]
 script = ExtResource("5_32dbb")
 transform_target = 0
 trigger_behaviour = 1
-start_delay = 1.0
+start_delay = 0.0
 loop_count = 1
 from_reference = 0
 from_position_in = 3
-from_position = Vector2(-1, 0)
+from_position = Vector2(-0.85, 0)
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 0.1)
-duration_in = 0.3
-transition_in = 4
+duration_in = 1.0
+transition_in = 6
 ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+hold_at_peak = 0.0
+chain_to = SubResource("Resource_04vrh")
+interrupt_siblings = false
+crossfade_time = 2.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://bf43e3idc17tt"
+
+[sub_resource type="Resource" id="Resource_tx2cu"]
+script = ExtResource("6_i3blr")
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="Resource" id="Resource_r7ray"]
+script = ExtResource("5_32dbb")
+transform_target = 2
+trigger_behaviour = 1
+start_delay = 0.0
+loop_count = 1
+from_reference = 0
+from_scale = Vector2(0, 0)
+to_reference = 1
+capture_at = 2
+pivot_mode = 0
+_editor_cached_position = Vector2(0, 0)
+_editor_cached_rotation = 0.0
+_editor_cached_scale = Vector2(1, 1)
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
 hold_at_peak = 0.0
 interrupt_siblings = false
 crossfade_time = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_tx2cu"]
+[sub_resource type="Resource" id="Resource_lq48p"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_r7ray")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [node name="ControlIntro" type="Control" unique_id=1014118090]
@@ -124,7 +179,7 @@ stretch_mode = 5
 
 [node name="ControlJuice" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4" unique_id=1400879192]
 script = ExtResource("3_vvv2e")
-start_delay = 2.0
+start_delay = 1.0
 recipe = SubResource("Resource_tx2cu")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
@@ -160,3 +215,10 @@ text = "Demo"
 horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
+
+[node name="JuiceControl" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=298918015]
+script = ExtResource("3_vvv2e")
+mode = 1
+start_delay = 2.0
+recipe = SubResource("Resource_lq48p")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
