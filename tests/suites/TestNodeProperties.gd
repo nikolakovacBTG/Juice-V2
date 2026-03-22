@@ -45,6 +45,11 @@ func get_test_methods() -> Array[String]:
 		"test_custom_curve_in_overrides_easing",
 		"test_elastic_easing_overshoots",
 		"test_back_easing_overshoots",
+		"test_custom_curve_out_overrides_easing",
+		"test_elastic_easing_out_overshoots",
+		"test_back_easing_out_overshoots",
+		"test_loop_counter_preserved_during_auto_out",
+		"test_play_in_and_out_loop_restart",
 		"test_autoconnect_button_pressed",
 		"test_autoconnect_visibility_on_show",
 	]
@@ -793,6 +798,177 @@ func test_back_easing_overshoots() -> void:
 		"Back EASE_OUT: max position (%.1f) should overshoot past 100" % max_x)
 	assert_approx_vec2(btn.position, Vector2(100, 0),
 		"Back EASE_OUT: should settle near target after animation", 5.0)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: Animate Out easing params
+# =============================================================================
+
+func test_custom_curve_out_overrides_easing() -> void:
+	# A custom_curve_out flat at 1.0 should snap to From immediately during OUT.
+	# PLAY_OUT_ONLY: effect goes from To(100,0) → From(Self=0,0).
+	var rig := await _create_position_rig("curve_out", Vector2(100, 0), 0.3,
+		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY, 0.3)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	var flat_curve := Curve.new()
+	flat_curve.add_point(Vector2(0.0, 1.0))
+	flat_curve.add_point(Vector2(1.0, 1.0))
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.custom_curve_out = flat_curve
+
+	juice.animate_out()
+	await wait_frames(3)
+
+	# Flat curve@1.0 means eased_time=1.0 always → progress snaps to 0.0 → position at base
+	assert_true(btn.position.x < 20.0,
+		"Custom curve_out (flat@1.0): position (%.1f) should snap near 0 immediately" % btn.position.x)
+
+	await cleanup(btn)
+
+
+func test_elastic_easing_out_overshoots() -> void:
+	# Elastic EASE_OUT on the OUT direction should overshoot past From (base).
+	# PLAY_OUT_ONLY: effect goes from To(100,0) → From(Self=0,0).
+	var rig := await _create_position_rig("elastic_out", Vector2(100, 0), 0.3,
+		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY, 0.5)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.transition_out = Tween.TRANS_ELASTIC
+			eff.ease_out = Tween.EASE_OUT
+			eff.elastic_amplitude_out = 1.0
+			eff.elastic_period_out = 0.3
+
+	var min_x := 999.0
+	juice.animate_out()
+	for i in 20:
+		await wait_frames(2)
+		if btn.position.x < min_x:
+			min_x = btn.position.x
+
+	await wait_seconds(0.3)
+
+	# Elastic EASE_OUT overshoots past base (goes negative)
+	assert_true(min_x < 0.0,
+		"Elastic OUT EASE_OUT: min position (%.1f) should overshoot past 0" % min_x)
+	# Should settle near base
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"Elastic OUT EASE_OUT: should settle near base after animation", 5.0)
+
+	await cleanup(btn)
+
+
+func test_back_easing_out_overshoots() -> void:
+	# Back EASE_OUT on the OUT direction should overshoot past From (base).
+	# PLAY_OUT_ONLY: effect goes from To(100,0) → From(Self=0,0).
+	var rig := await _create_position_rig("back_out", Vector2(100, 0), 0.3,
+		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY, 0.3)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.transition_out = Tween.TRANS_BACK
+			eff.ease_out = Tween.EASE_OUT
+			eff.back_overshoot_out = 1.70158
+
+	var min_x := 999.0
+	juice.animate_out()
+	for i in 15:
+		await wait_frames(2)
+		if btn.position.x < min_x:
+			min_x = btn.position.x
+
+	await wait_seconds(0.3)
+
+	assert_true(min_x < 0.0,
+		"Back OUT EASE_OUT: min position (%.1f) should overshoot past 0" % min_x)
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"Back OUT EASE_OUT: should settle near base after animation", 5.0)
+
+	await cleanup(btn)
+
+
+# =============================================================================
+# TESTS: Loop edge cases
+# =============================================================================
+
+func test_loop_counter_preserved_during_auto_out() -> void:
+	# In PLAY_IN_AND_OUT, the loop counter should NOT increment after the IN phase.
+	# It increments only after the full IN+OUT cycle.
+	var rig := await _create_position_rig("loop_auto_out", Vector2(100, 0), 0.15,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.15)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.loop_count = 1
+
+	juice.animate_in()
+
+	# Mid-IN phase: effect should be playing, at some positive X
+	await wait_seconds(0.08)
+	assert_true(juice._is_playing, "Should still be playing during IN phase")
+
+	# After IN completes (~0.15s), auto-reverse starts. Effect still playing.
+	await wait_seconds(0.12)  # ~0.2s total
+	assert_true(juice._is_playing, "Should still be playing during auto-OUT phase")
+	# Position should be heading back toward base
+	var pos_during_out := btn.position.x
+	assert_true(pos_during_out < 100.0,
+		"During auto-OUT, position (%.1f) should be below 100 (heading back)" % pos_during_out)
+
+	# After full IN+OUT cycle (~0.3s): animation should be done
+	await wait_seconds(0.25)  # ~0.45s total — generous margin
+	assert_false(juice._is_playing, "Should stop after 1 full IN+OUT cycle")
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After IN+OUT, target should be back at base", 5.0)
+
+	await cleanup(btn)
+
+
+func test_play_in_and_out_loop_restart() -> void:
+	# With loop_count=2 and PLAY_IN_AND_OUT, the effect should play two full
+	# IN+OUT cycles, visiting the To position twice.
+	var rig := await _create_position_rig("loop_in_out", Vector2(100, 0), 0.15,
+		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT, 0.15)
+	var btn: Button = rig[0]
+	var juice: JuiceControl = rig[1]
+
+	for eff in juice._runtime_effects:
+		if eff != null:
+			eff.loop_count = 2
+
+	juice.animate_in()
+
+	# Track how many times the position crosses the 80px threshold (near To)
+	var times_near_peak := 0
+	var was_near_peak := false
+	for i in 40:
+		await wait_frames(2)
+		var near_peak := btn.position.x > 80.0
+		if near_peak and not was_near_peak:
+			times_near_peak += 1
+		was_near_peak = near_peak
+
+	await wait_seconds(0.3)  # generous margin for completion
+
+	# Should have visited near-peak at least twice (once per cycle)
+	assert_true(times_near_peak >= 2,
+		"PLAY_IN_AND_OUT loop_count=2: should visit peak %d times (expected >=2)" % times_near_peak)
+	# After 2 full cycles, should be back at base
+	assert_false(juice._is_playing, "Should stop after 2 full IN+OUT cycles")
+	assert_approx_vec2(btn.position, Vector2.ZERO,
+		"After 2 IN+OUT cycles, target should be back at base", 5.0)
 
 	await cleanup(btn)
 

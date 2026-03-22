@@ -107,12 +107,12 @@
 | Property | V0 | V1 | Status | Test |
 |----------|-----|-----|--------|------|
 | `duration_out` | var on comp | var on effect | ✅ | Via PLAY_IN_AND_OUT tests |
-| `transition_out` | var on comp | var on effect | ⚠️ Untested | — |
-| `ease_out` | var on comp | var on effect | ⚠️ Untested | — |
-| `custom_curve_out` | var on comp | var on effect | ⚠️ Untested | — |
-| `elastic_amplitude_out` | var on comp | var on effect | ⚠️ Untested | — |
-| `elastic_period_out` | var on comp | var on effect | ⚠️ Untested | — |
-| `back_overshoot_out` | var on comp | var on effect | ⚠️ Untested | — |
+| `transition_out` | var on comp | var on effect | ✅ Tested (ELASTIC, BACK) | `test_elastic_easing_out_overshoots` + `test_back_easing_out_overshoots` ✅ |
+| `ease_out` | var on comp | var on effect | ✅ Tested (EASE_OUT) | `test_elastic_easing_out_overshoots` + `test_back_easing_out_overshoots` ✅ |
+| `custom_curve_out` | var on comp | var on effect | ✅ Tested | `test_custom_curve_out_overrides_easing` ✅ |
+| `elastic_amplitude_out` | var on comp | var on effect | ✅ Tested | `test_elastic_easing_out_overshoots` ✅ |
+| `elastic_period_out` | var on comp | var on effect | ✅ Tested | `test_elastic_easing_out_overshoots` ✅ |
+| `back_overshoot_out` | var on comp | var on effect | ✅ Tested | `test_back_easing_out_overshoots` ✅ |
 
 ### Chaining
 
@@ -147,11 +147,11 @@
 | Behavior | V0 Reference | V1 Reference | Status | Test |
 |----------|-------------|-------------|--------|------|
 | Loop counter increment | `_on_cycle_complete:1834` | effect: `_handle_cycle_complete:548`; node: `_on_all_effects_completed:561` | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
-| Loop counter preserved during auto-OUT | `_animate_to:910` `if not is_one_shot_return` | effect: `_current_loop` reset in `start():376` | ⚠️ effect.start() always resets — need to verify IN+OUT counting | — |
+| Loop counter preserved during auto-OUT | `_animate_to:910` `if not is_one_shot_return` | effect: `_current_loop` reset in `start():376` | ✅ Tested — counter increments after full IN+OUT cycle | `test_loop_counter_preserved_during_auto_out` ✅ |
 | Infinite loop (loop_count = -1) | `_on_cycle_complete:1838-1849` | effect: `_handle_cycle_complete:550-551`; node: `_on_all_effects_completed:565-566` | ✅ Tested | `test_infinite_loop_keeps_playing` ✅ |
 | Loop delay | `_on_cycle_complete:1872-1884` (await timer) | effect: tick-based `_in_loop_delay`; node: tick-based `_in_loop_delay` | ✅ Fixed (commit 246aecd) | `test_loop_delay_pauses_between_iterations` ✅ |
 | Loop phase offset | `_animate_to:925-927` | `effect.start():387-389` | ✅ Tested | `test_loop_phase_offset_starts_mid_cycle` ✅ |
-| PLAY_IN_AND_OUT loop restart | `_on_cycle_complete:1865-1877` | `_handle_cycle_complete:560-564` | ⚠️ Untested | — |
+| PLAY_IN_AND_OUT loop restart | `_on_cycle_complete:1865-1877` | `_handle_cycle_complete:560-564` | ✅ Tested | `test_play_in_and_out_loop_restart` ✅ |
 
 ### Restart / Retrigger
 

@@ -1,15 +1,19 @@
-[gd_scene load_steps=10 format=3 uid="uid://bux4xeyti54rs"]
+[gd_scene format=3 uid="uid://bux4xeyti54rs"]
 
-[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/3D/Juice3D.gd" id="1_7qp4h"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/JuiceEffectBase.gd" id="2_6f2mv"]
+[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/Base Classes/Juice3D.gd" id="1_7qp4h"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="2_6f2mv"]
 [ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="3_0iv50"]
 [ext_resource type="Script" uid="uid://d0qrq7m3dhui7" path="res://addons/Juice_V1/3D/SquashStretch3DJuiceEffect.gd" id="4_j1d5r"]
-[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/3D/Juice3DRecipe.gd" id="5_nfb0a"]
+[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/Base Classes/Juice3DRecipe.gd" id="5_nfb0a"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_v8ha8"]
 
 [sub_resource type="Resource" id="Resource_gd0pe"]
 script = ExtResource("3_0iv50")
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+loop_count = 1
 from_reference = 1
 capture_at = 0
 to_reference = 0
@@ -26,6 +30,13 @@ metadata/_custom_type_script = "uid://88wafaejhpwm"
 
 [sub_resource type="Resource" id="Resource_8m8qx"]
 script = ExtResource("4_j1d5r")
+squash_amount = 0.3
+squash_axis = 1
+preserve_volume = true
+trigger_behaviour = 1
+start_delay = 0.0
+loop_count = 1
+pivot_offset = Vector3(0, 0, 0)
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -40,12 +51,12 @@ script = ExtResource("5_nfb0a")
 effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx")])
 metadata/_custom_type_script = "uid://cnyhp6eiv4xb1"
 
-[node name="3dDemo" type="Node3D"]
+[node name="3dDemo" type="Node3D" unique_id=508674959]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1295085492]
 mesh = SubResource("CylinderMesh_v8ha8")
 
-[node name="Juice3D" type="Node" parent="MeshInstance3D"]
+[node name="Juice3D" type="Node" parent="MeshInstance3D" unique_id=313749577]
 script = ExtResource("1_7qp4h")
 trigger_behaviour = 3
 recipe = SubResource("Resource_uaa1d")

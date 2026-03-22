@@ -1,11 +1,11 @@
-[gd_scene load_steps=11 format=3 uid="uid://m41m3r0267kg"]
+[gd_scene format=3 uid="uid://m41m3r0267kg"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_32dbb"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="2_i3blr"]
-[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Control/JuiceControl.gd" id="3_vvv2e"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/JuiceEffectBase.gd" id="4_32dbb"]
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="3_vvv2e"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="4_32dbb"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
-[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Control/JuiceControlRecipe.gd" id="6_i3blr"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -42,7 +42,7 @@ script = ExtResource("6_i3blr")
 effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[node name="ControlIntro" type="Control"]
+[node name="ControlIntro" type="Control" unique_id=1014118090]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -51,7 +51,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_32dbb")
 
-[node name="BG" type="TextureRect" parent="."]
+[node name="BG" type="TextureRect" parent="." unique_id=24404452]
 z_index = -2
 layout_mode = 1
 anchors_preset = 15
@@ -64,12 +64,12 @@ size_flags_vertical = 3
 texture = SubResource("GradientTexture2D_3etqj")
 expand_mode = 2
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=1531755791]
 anchors_preset = 0
 offset_right = 50.0
 offset_bottom = 50.0
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1662018017]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -78,23 +78,23 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_top = 85
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1942779841]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_stretch_ratio = 1.94
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=114898750]
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 59
 theme_override_constants/margin_bottom = -37
 
-[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer"]
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer" unique_id=1668093945]
 custom_minimum_size = Vector2(600, 300)
 layout_mode = 2
 
-[node name="JuiceLogoSeparated4" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control"]
+[node name="JuiceLogoSeparated4" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control" unique_id=1196959873]
 custom_minimum_size = Vector2(601.235, 300)
 layout_mode = 0
 offset_right = 601.7151
@@ -107,7 +107,7 @@ texture = ExtResource("2_i3blr")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="JuiceLogoSeparated3" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+[node name="JuiceLogoSeparated3" type="TextureRect" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4" unique_id=1304530670]
 modulate = Color(0, 0.12400003, 0.62, 0.20784314)
 show_behind_parent = true
 custom_minimum_size = Vector2(601.235, 300)
@@ -122,18 +122,18 @@ texture = ExtResource("2_i3blr")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="ControlJuice" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4"]
+[node name="ControlJuice" type="Node" parent="MarginContainer/VBoxContainer/MarginContainer/Control/JuiceLogoSeparated4" unique_id=1400879192]
 script = ExtResource("3_vvv2e")
 start_delay = 2.0
 recipe = SubResource("Resource_tx2cu")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
-[node name="VBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=579797280]
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="Control" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+[node name="Control" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=733825188]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
 theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
@@ -147,7 +147,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="Demo" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer"]
+[node name="Demo" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=1063983274]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9983921, 1, 0.9735091, 1)
 theme_override_colors/font_shadow_color = Color(0.225, 0.5, 0.43125, 0.5254902)
