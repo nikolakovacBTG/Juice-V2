@@ -1020,6 +1020,10 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 	# Release held entry (warmup hold) before real animation starts
 	_seq_release_held_for_target(target)
 
+	# Undo warmup contribution so effects re-capture the natural base,
+	# not the warmup-modified state. Same principle as _temporarily_undo_visual().
+	_seq_restore_target_natural(target)
+
 	# Start root effects and track active indices
 	var play_in := not is_reverse
 	var active_indices: Array[int] = []
@@ -1358,6 +1362,14 @@ func _temporarily_undo_visual() -> void:
 ## Re-add all current contributions to target after temporary undo.
 func _temporarily_reapply_visual() -> void:
 	pass
+
+
+## Sequencer: undo warmup contribution on a target, restoring it to its natural
+## (Container-managed / editor) state. Called before effects re-capture base for
+## the real animation, preventing warmup contributions from polluting the base.
+## Override in domain nodes (JuiceControl, Juice2D, Juice3D).
+func _seq_restore_target_natural(target: Node) -> void:
+	_seq_target_contributions.erase(target)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.

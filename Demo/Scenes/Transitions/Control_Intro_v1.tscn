@@ -181,17 +181,6 @@ stretch_mode = 5
 script = ExtResource("3_vvv2e")
 start_delay = 1.0
 recipe = SubResource("Resource_tx2cu")
-juice_source = null
-target_scope = null
-seq_custom_targets = null
-seq_stack_name = null
-sequence_type = null
-seq_stagger_delay = null
-seq_mirror_stagger_on_exit = null
-seq_skip_invisible = null
-seq_skip_self = null
-seq_skip_juice_nodes = null
-seq_hide_parent_on_reverse_complete = null
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="VBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=579797280]
@@ -227,10 +216,10 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=388513304]
+[node name="JuiceControl" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=147627048]
 script = ExtResource("3_vvv2e")
 mode = 1
-start_delay = 2.5
+start_delay = 2.0
+retrigger_policy = 2
 recipe = SubResource("Resource_lq48p")
-seq_stagger_delay = 0.5
 metadata/_custom_type_script = "uid://c7dye3orhby4j"

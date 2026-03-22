@@ -292,6 +292,19 @@ func _temporarily_reapply_visual() -> void:
 	ctrl.scale += _total_scale_contribution
 
 
+## Sequencer: undo warmup contribution, restoring target to natural state.
+func _seq_restore_target_natural(target: Node) -> void:
+	var ctrl := target as Control
+	if ctrl == null:
+		super._seq_restore_target_natural(target)
+		return
+	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	ctrl.position -= contrib.get("pos", Vector2.ZERO)
+	ctrl.rotation -= contrib.get("rot", 0.0)
+	ctrl.scale -= contrib.get("scale", Vector2.ZERO)
+	super._seq_restore_target_natural(target)
+
+
 ## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
 ## Uses contribution-tracking pattern (not frozen base) so Container re-sorts
 ## are automatically absorbed — same principle as STACK mode's external-move detection.

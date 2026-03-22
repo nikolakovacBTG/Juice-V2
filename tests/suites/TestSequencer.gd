@@ -31,6 +31,7 @@ func get_test_methods() -> Array[String]:
 		"test_completed_signal_fires",
 		"test_warmup_prepositions_during_start_delay",
 		"test_container_layout_preserved_during_animation",
+		"test_custom_from_scale_not_polluted_by_warmup",
 	]
 
 
@@ -63,10 +64,16 @@ func _create_seq_rig(
 		parent.add_child(btn)
 		buttons.append(btn)
 
-	# Build recipe: position animation (move Y by 60px — perpendicular to HBox axis)
+	# Build recipe: position animation with CUSTOM From (non-zero warmup delta).
+	# From = base + (0, -40) — 40px above natural during warmup/hold.
+	# To   = base + (0, 60)  — 60px below natural at animation end.
+	# CUSTOM From is critical: exercises the warmup-to-animation transition where
+	# effects re-capture base. From=SELF would produce zero warmup delta, hiding bugs.
 	var effect := TransformControlJuiceEffect.new()
 	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
-	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.from_position = Vector2(0, -40)
+	effect.from_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
 	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect.to_position = Vector2(0, 60)
 	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
@@ -322,11 +329,11 @@ func test_sequencer_play_in_and_out_auto_reverse() -> void:
 	# Forward + reverse: ~2 × (2 × 0.02 + 0.1) + buffer
 	await wait_seconds(0.6)
 
-	# After IN_AND_OUT, targets should be back near starting Y position
+	# After IN_AND_OUT, targets should be back at From state = CUSTOM(0, -40)
 	for i in rig.buttons.size():
 		var btn: Button = rig.buttons[i]
-		assert_approx_float(btn.position.y, 0.0,
-			"PLAY_IN_AND_OUT: Btn%d returned near start (pos.y=%.1f)" % [i, btn.position.y], 5.0)
+		assert_approx_float(btn.position.y, -40.0,
+			"PLAY_IN_AND_OUT: Btn%d returned to From=-40 (pos.y=%.1f)" % [i, btn.position.y], 5.0)
 
 	await cleanup(rig.parent)
 
@@ -370,30 +377,28 @@ func test_completed_signal_fires() -> void:
 
 func test_warmup_prepositions_during_start_delay() -> void:
 	# Create rig with a long start_delay — targets should be at From state
-	# immediately, NOT staying at Self/natural during the delay.
+	# immediately, NOT staying at natural during the delay.
+	# Rig uses From=CUSTOM(0, -40) so warmup delta is non-zero.
 	var rig := await _create_seq_rig(2, 0.02, 0.15)
 	var seq: JuiceControl = rig.sequencer
 	seq.start_delay = 0.5  # Long delay
 
-	# Record starting Y positions
-	var start_y_0 := (rig.buttons[0] as Button).position.y
-
 	seq.animate_in()
 
-	# Wait a few frames — warmup should have run (effects initialized).
-	# From=SELF means delta is 0 at progress 0.0 — target stays at natural.
+	# Wait a few frames — warmup should have pre-positioned at From state.
+	# From=CUSTOM(0, -40) means targets should be 40px ABOVE natural (Y ≈ -40).
 	await wait_frames(5)
 
 	var mid_delay_y_0 := (rig.buttons[0] as Button).position.y
-	assert_approx_float(mid_delay_y_0, start_y_0,
-		"Warmup during delay: Btn0 at From=SELF (natural pos) not moved yet", 2.0)
+	assert_approx_float(mid_delay_y_0, -40.0,
+		"Warmup during delay: Btn0 at From=CUSTOM(-40) (pos.y=%.1f)" % mid_delay_y_0, 5.0)
 
 	# Now wait for delay + animation to finish
 	await wait_seconds(0.8)
 
-	# After delay + stagger + animation, targets should have moved down
-	assert_greater((rig.buttons[0] as Button).position.y, 10.0,
-		"After delay: Btn0 eventually moved (pos.y=%.1f)" % (rig.buttons[0] as Button).position.y)
+	# After delay + stagger + animation, targets should be at To = +60
+	assert_greater((rig.buttons[0] as Button).position.y, 50.0,
+		"After delay: Btn0 reached To state (pos.y=%.1f)" % (rig.buttons[0] as Button).position.y)
 
 	await cleanup(rig.parent)
 
@@ -440,3 +445,80 @@ func test_container_layout_preserved_during_animation() -> void:
 		"Post-anim: Btn0 Y reached target (pos.y=%.1f)" % (buttons[0] as Button).position.y)
 
 	await cleanup(rig.parent)
+
+
+func test_custom_from_scale_not_polluted_by_warmup() -> void:
+	# Reproduces the exact bug: warmup sets scale to From=0, then effect.start()
+	# re-captures base from the warmup-modified target (scale=0 instead of 1).
+	# With polluted base: animation goes 1→2 instead of 0→1.
+	# Fix: _seq_restore_target_natural() undoes contribution before base capture.
+	var parent := HBoxContainer.new()
+	parent.name = "ScaleHBox"
+	parent.size = Vector2(600, 100)
+	_runner.add_child(parent)
+
+	var buttons: Array[Button] = []
+	for i in 2:
+		var btn := Button.new()
+		btn.text = "ScaleBtn%d" % i
+		btn.custom_minimum_size = Vector2(80, 30)
+		parent.add_child(btn)
+		buttons.append(btn)
+
+	# Scale effect: From=CUSTOM(0,0) → To=CUSTOM(1,1)
+	# At warmup (progress 0): scale goes to (0,0). Non-zero warmup delta!
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.SCALE
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.from_scale = Vector2(0, 0)
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_scale = Vector2(1, 1)
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+
+	var seq := JuiceControl.new()
+	seq.name = "ScaleSeq"
+	seq.mode = JuiceBase.Mode.SEQUENCER
+	seq.juice_source = JuiceBase.JuiceSource.RECIPE
+	seq.target_scope = JuiceBase.TargetScope.SIBLINGS
+	seq.sequence_type = JuiceBase.SequenceType.STAGGER_FORWARD
+	seq.seq_stagger_delay = 0.05
+	seq.seq_skip_self = true
+	seq.seq_skip_juice_nodes = true
+	seq.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	seq.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	seq.recipe = recipe
+	parent.add_child(seq)
+
+	await wait_frames(3)
+
+	# Natural scale should be (1, 1)
+	for btn: Button in buttons:
+		assert_approx_float(btn.scale.x, 1.0,
+			"Pre-anim: %s scale.x = 1 (natural)" % btn.text, 0.01)
+
+	# Use start_delay so warmup holds long enough to verify From state
+	seq.start_delay = 0.3
+	seq.animate_in()
+
+	# During delay, warmup holds targets at From state (scale 0)
+	await wait_frames(5)
+	assert_approx_float(buttons[0].scale.x, 0.0,
+		"Warmup: Btn0 at From scale=0 (scale.x=%.2f)" % buttons[0].scale.x, 0.05)
+	assert_approx_float(buttons[1].scale.x, 0.0,
+		"Warmup: Btn1 at From scale=0 (scale.x=%.2f)" % buttons[1].scale.x, 0.05)
+
+	# Wait for delay + animation to complete
+	await wait_seconds(0.8)
+
+	# After animation: scale should be at To = (1, 1), NOT (2, 2)
+	for btn: Button in buttons:
+		assert_approx_float(btn.scale.x, 1.0,
+			"Post-anim: %s scale.x = 1 (To state), NOT 2 (polluted)" % btn.text, 0.1)
+		assert_approx_float(btn.scale.y, 1.0,
+			"Post-anim: %s scale.y = 1 (To state), NOT 2 (polluted)" % btn.text, 0.1)
+
+	await cleanup(parent)

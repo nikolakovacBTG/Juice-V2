@@ -269,6 +269,19 @@ func _temporarily_reapply_visual() -> void:
 	n2d.scale += _total_scale_contribution
 
 
+## Sequencer: undo warmup contribution, restoring target to natural state.
+func _seq_restore_target_natural(target: Node) -> void:
+	var n2d := target as Node2D
+	if n2d == null:
+		super._seq_restore_target_natural(target)
+		return
+	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	n2d.position -= contrib.get("pos", Vector2.ZERO)
+	n2d.rotation -= contrib.get("rot", 0.0)
+	n2d.scale -= contrib.get("scale", Vector2.ZERO)
+	super._seq_restore_target_natural(target)
+
+
 ## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
 ## Uses contribution-tracking pattern — consistent with JuiceControl.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
