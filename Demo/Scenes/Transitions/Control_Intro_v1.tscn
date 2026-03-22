@@ -17,27 +17,6 @@ gradient = SubResource("Gradient_8smnx")
 fill = 1
 fill_from = Vector2(0.52136755, 0.48290598)
 
-[sub_resource type="Resource" id="Resource_04vrh"]
-script = ExtResource("5_i3blr")
-squash_amount = 0.3
-squash_axis = 1
-preserve_volume = true
-trigger_behaviour = 1
-start_delay = -1.0
-loop_count = 1
-pivot_mode = 2
-custom_pivot = Vector2(1, 0.5)
-duration_in = 1.0
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-hold_at_peak = 0.0
-interrupt_siblings = false
-crossfade_time = 0.0
-debug_enabled = false
-metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
-
 [sub_resource type="Resource" id="Resource_i3blr"]
 script = ExtResource("5_32dbb")
 transform_target = 0
@@ -56,11 +35,31 @@ ease_in = 1
 elastic_amplitude_in = 1.0
 elastic_period_in = 0.3
 hold_at_peak = 0.0
-chain_to = SubResource("Resource_04vrh")
 interrupt_siblings = false
 crossfade_time = 2.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
+
+[sub_resource type="Resource" id="Resource_04vrh"]
+script = ExtResource("5_i3blr")
+squash_amount = 0.3
+squash_axis = 1
+preserve_volume = true
+trigger_behaviour = 1
+start_delay = 0.1
+loop_count = 1
+pivot_mode = 2
+custom_pivot = Vector2(1, 0.5)
+duration_in = 1.0
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+hold_at_peak = 0.0
+interrupt_siblings = false
+crossfade_time = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
 
 [sub_resource type="Resource" id="Resource_tx2cu"]
 script = ExtResource("6_i3blr")

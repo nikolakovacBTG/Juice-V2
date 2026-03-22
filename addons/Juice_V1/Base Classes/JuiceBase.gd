@@ -155,7 +155,7 @@ enum TriggerSource {
 					effect.trigger_behaviour = value
 
 ## Delay before the entire recipe starts after trigger (seconds).
-@export var start_delay: float = 0.0
+@export_range(0.0, 100.0, 0.01, "or_greater") var start_delay: float = 0.0
 
 ## How to handle re-triggers while playing.
 @export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
@@ -512,6 +512,31 @@ func _process(delta: float) -> void:
 		if result == JuiceEffectBase.TickResult.COMPLETED:
 			newly_completed.append(idx)
 
+	# --- Chained preroll: start chained effects early for overlap ---
+	for idx in _active_effect_indices:
+		if idx < 0 or idx >= _runtime_effects.size():
+			continue
+		var effect := _runtime_effects[idx]
+		if effect == null or not effect.is_playing():
+			continue
+		if effect.chain_to == null or effect.chained_preroll <= 0.0:
+			continue
+		if effect._chained_preroll_triggered:
+			continue
+		if effect._get_time_to_completion() <= effect.chained_preroll:
+			var chain_idx := _runtime_effects.find(effect.chain_to)
+			if chain_idx >= 0:
+				var chained := _runtime_effects[chain_idx]
+				if chained != null:
+					var play_in := effect._animation_progress >= 0.5
+					chained.start(_target_node, play_in, false, self)
+					if chain_idx not in _active_effect_indices:
+						_active_effect_indices.append(chain_idx)
+					effect._chained_preroll_triggered = true
+					if debug_enabled:
+						print("[%s] Chained preroll: effect %d → %d (%.2fs early)" % [
+							name, idx, chain_idx, effect.chained_preroll])
+
 	# --- Post-tick: domain-specific aggregation + write once ---
 	_post_tick_write()
 
@@ -767,14 +792,12 @@ func _on_effect_completed(idx: int) -> void:
 	if debug_enabled:
 		print("[%s] Effect %d completed" % [name, idx])
 
-	# Follow chain_to
-	if effect.chain_to != null:
+	# Follow chain_to (skip if chained_preroll already started it)
+	if effect.chain_to != null and not effect._chained_preroll_triggered:
 		var chain_idx := _runtime_effects.find(effect.chain_to)
 		if chain_idx >= 0:
 			var chained := _runtime_effects[chain_idx]
 			if chained != null:
-				# Determine direction: chained effect inherits the direction
-				# For now, use the same direction as the trigger
 				var play_in := effect._animation_progress >= 0.5
 				chained.start(_target_node, play_in, false)
 				if chain_idx not in _active_effect_indices:
@@ -1205,13 +1228,37 @@ func _seq_process_tick(delta: float) -> void:
 			if result == JuiceEffectBase.TickResult.COMPLETED:
 				newly_completed.append(idx)
 
+		# Chained preroll: start chained effects early for overlap
+		for idx_variant2: Variant in active_indices:
+			var pidx: int = idx_variant2 as int
+			if pidx < 0 or pidx >= effects.size():
+				continue
+			var peff: JuiceEffectBase = effects[pidx] as JuiceEffectBase
+			if peff == null or not peff.is_playing():
+				continue
+			if peff.chain_to == null or peff.chained_preroll <= 0.0:
+				continue
+			if peff._chained_preroll_triggered:
+				continue
+			if peff._get_time_to_completion() <= peff.chained_preroll:
+				var chain_idx := effects.find(peff.chain_to)
+				if chain_idx >= 0:
+					var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
+					if chained != null:
+						var play_in := peff._animation_progress >= 0.5
+						chained.start(target, play_in, false)
+						if chain_idx not in active_indices:
+							active_indices.append(chain_idx)
+						peff._chained_preroll_triggered = true
+						any_playing = true
+
 		# Write aggregated deltas to target (domain-specific)
 		_seq_post_tick_write_target(target, effects)
 
-		# Handle chaining within this target's effects
+		# Handle chaining within this target's effects (skip if preroll already started)
 		for idx in newly_completed:
 			var effect: JuiceEffectBase = effects[idx] as JuiceEffectBase
-			if effect != null and effect.chain_to != null:
+			if effect != null and effect.chain_to != null and not effect._chained_preroll_triggered:
 				var chain_idx := effects.find(effect.chain_to)
 				if chain_idx >= 0:
 					var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
