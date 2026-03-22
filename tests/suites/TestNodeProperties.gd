@@ -51,6 +51,9 @@ func get_test_methods() -> Array[String]:
 		"test_loop_counter_preserved_during_auto_out",
 		"test_play_in_and_out_loop_restart",
 		"test_autoconnect_button_pressed",
+		"test_autoconnect_control_hover",
+		"test_autoconnect_control_focus",
+		"test_autoconnect_control_gui_input_press",
 		"test_autoconnect_visibility_on_show",
 	]
 
@@ -1012,6 +1015,118 @@ func test_autoconnect_button_pressed() -> void:
 		"Auto-connect ON_PRESS: button emission should trigger animation (pos.x=%.1f)" % btn.position.x)
 
 	await cleanup(btn)
+
+
+func test_autoconnect_control_hover() -> void:
+	# Non-button Control with ON_HOVER_START: mouse_entered triggers animation
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(50, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	# Emit mouse_entered on the Panel (non-button Control)
+	panel.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 30.0,
+		"Auto-connect ON_HOVER_START (Control): mouse_entered should trigger animation (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
+
+
+func test_autoconnect_control_focus() -> void:
+	# Non-button Control with ON_FOCUS: focus_entered triggers animation
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	panel.focus_mode = Control.FOCUS_ALL
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(50, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_FOCUS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	# Emit focus_entered on the Panel
+	panel.emit_signal("focus_entered")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 30.0,
+		"Auto-connect ON_FOCUS (Control): focus_entered should trigger animation (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
+
+
+func test_autoconnect_control_gui_input_press() -> void:
+	# Non-button Control with ON_PRESS: gui_input with mouse press triggers animation
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(50, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	# Emit gui_input with a mouse button press event
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	panel.emit_signal("gui_input", event)
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 30.0,
+		"Auto-connect ON_PRESS (Control): gui_input mouse press should trigger animation (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
 
 
 func test_autoconnect_visibility_on_show() -> void:

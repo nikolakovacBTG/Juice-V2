@@ -197,7 +197,7 @@
 | Feature | V0 Reference | V1 Reference | Status | Test |
 |---------|-------------|-------------|--------|------|
 | BaseButton signals | `_connect_button_signals:1281` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (commit afbfaa6) | `test_autoconnect_button_pressed` ✅ |
-| Control signals | `_connect_control_signals:1327` | JuiceControl `_auto_connect_domain_signals` | ⚠️ Untested | — |
+| Control signals | `_connect_control_signals:1327` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (hover, focus, gui_input) | `test_autoconnect_control_hover` + `test_autoconnect_control_focus` + `test_autoconnect_control_gui_input_press` ✅ |
 | CollisionObject3D signals | `_connect_collision_object_3d_signals:1363` | JuiceBase callbacks (lines 769-795) | ⚠️ Untested | — |
 | CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ⚠️ Untested | — |
 | AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_on_animation_finished:830` | ⚠️ Untested | — |
