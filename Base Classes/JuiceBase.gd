@@ -1157,16 +1157,79 @@ func _seq_process_tick(delta: float) -> void:
 
 
 ## Called when a full sequence pass completes (all targets done).
-## Handles ping-pong, looping, auto-reverse, and final completion.
-## (Loop/ping-pong logic added in Phase 5e — for now just completes.)
+## Handles ping-pong cycling, PLAY_IN_AND_OUT auto-reverse, non-ping-pong
+## looping, hide_parent_on_reverse_complete, and final completion.
 func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: int) -> void:
+	if debug_enabled:
+		print("[%s] Seq pass complete (reverse=%s, osr=%s)" % [name, is_reverse, is_one_shot_return])
+
+	# --- Ping-pong cycling ---
+	# Forward leg → reverse leg = 1 cycle. Superset of PLAY_IN_AND_OUT auto-reverse.
+	if trigger_behaviour == JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT \
+			and not is_one_shot_return:
+		if _seq_pp_forward:
+			# Forward leg just completed → start reverse leg
+			_seq_pp_forward = false
+			if debug_enabled:
+				print("[%s] Seq ping-pong: forward → reverse" % name)
+			if loop_delay > 0.0:
+				await get_tree().create_timer(loop_delay).timeout
+				if _seq_generation != my_gen:
+					return
+			_seq_start_sequence(true)
+			return
+		else:
+			# Reverse leg just completed → one full cycle done
+			_seq_pp_current_cycle += 1
+			_seq_pp_forward = true
+
+			var should_continue := false
+			if loop_count < 0:
+				should_continue = true  # Infinite
+			elif _seq_pp_current_cycle < loop_count:
+				should_continue = true
+
+			if should_continue:
+				if debug_enabled:
+					print("[%s] Seq ping-pong: cycle %d/%s → next" % [
+						name, _seq_pp_current_cycle, str(loop_count)])
+				if loop_delay > 0.0:
+					await get_tree().create_timer(loop_delay).timeout
+					if _seq_generation != my_gen:
+						return
+				_seq_start_sequence(false)
+				return
+			# else: all cycles done, fall through to completion
+
+	# --- Non-ping-pong looping ---
+	if trigger_behaviour != JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT \
+			and loop_count != 1:
+		_seq_current_loop += 1
+		var should_loop := false
+		if loop_count < 0:
+			should_loop = true
+		elif _seq_current_loop < loop_count:
+			should_loop = true
+
+		if should_loop:
+			if debug_enabled:
+				print("[%s] Seq loop: pass %d/%s → next" % [
+					name, _seq_current_loop, str(loop_count)])
+			if loop_delay > 0.0:
+				await get_tree().create_timer(loop_delay).timeout
+				if _seq_generation != my_gen:
+					return
+			# Restart from the initial trigger direction
+			_seq_start_sequence(_seq_initial_reverse)
+			return
+
 	# --- Sequence fully complete ---
 	_is_playing = false
 
 	if debug_enabled:
-		print("[%s] Seq pass complete (reverse=%s)" % [name, is_reverse])
+		print("[%s] Seq fully complete" % name)
 
-	# Handle hide_parent_on_reverse_complete
+	# Handle hide_parent_on_reverse_complete (only after FINAL reverse)
 	if is_reverse and seq_hide_parent_on_reverse_complete:
 		var parent := get_parent()
 		if parent and parent is CanvasItem:
