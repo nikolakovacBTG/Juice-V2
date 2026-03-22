@@ -1112,11 +1112,12 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 			continue
 
 		# Start effects at From state (progress 0.0 for in, 1.0 for out)
-		# then immediately stop — this applies From delta as a one-shot.
+		# then write deltas to target as a one-shot.
 		for eff in effects:
 			eff._on_animate_start(target)
 			var from_progress := 0.0 if play_in else 1.0
 			eff._apply_effect(from_progress, target)
+		_seq_post_tick_write_target(target, effects)
 
 		# Control targets inside Containers need continuous hold
 		if target is Control:
@@ -1156,6 +1157,7 @@ func _seq_process_tick(delta: float) -> void:
 			var eff: JuiceEffectBase = eff_variant as JuiceEffectBase
 			if eff != null:
 				eff._apply_effect(from_progress, held_target)
+		_seq_post_tick_write_target(held_target, held_effects)
 
 	var targets_done: Array[Node] = []
 
@@ -1182,6 +1184,9 @@ func _seq_process_tick(delta: float) -> void:
 			var result := effect.tick(delta, target)
 			if result == JuiceEffectBase.TickResult.COMPLETED:
 				newly_completed.append(idx)
+
+		# Write aggregated deltas to target (domain-specific)
+		_seq_post_tick_write_target(target, effects)
 
 		# Handle chaining within this target's effects
 		for idx in newly_completed:
@@ -1344,6 +1349,14 @@ func _temporarily_undo_visual() -> void:
 ## Re-add all current contributions to target after temporary undo.
 func _temporarily_reapply_visual() -> void:
 	pass
+
+
+## Sequencer RECIPE mode: aggregate effect deltas and write to target.
+## Unlike _post_tick_write() which uses _target_node + _runtime_effects,
+## this takes an arbitrary target and its per-target effect clones.
+## Override in domain nodes (JuiceControl, Juice2D, Juice3D).
+func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
+	pass  # Domain nodes implement
 
 # =============================================================================
 # CONFIGURATION WARNINGS

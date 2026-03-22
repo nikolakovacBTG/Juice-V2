@@ -268,6 +268,45 @@ func _temporarily_reapply_visual() -> void:
 	n2d.rotation += _total_rot_contribution
 	n2d.scale += _total_scale_contribution
 
+
+## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
+func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
+	var n2d := target as Node2D
+	if n2d == null:
+		return
+
+	var total_pos := Vector2.ZERO
+	var total_rot := 0.0
+	var total_scale := Vector2.ZERO
+
+	for eff_variant: Variant in effects:
+		var eff_2d := eff_variant as Juice2DEffectBase
+		if eff_2d == null:
+			continue
+		if eff_2d._contributes_position:
+			total_pos += eff_2d._pos_delta
+		if eff_2d._contributes_rotation:
+			total_rot += eff_2d._rot_delta
+		if eff_2d._contributes_scale:
+			total_scale += eff_2d._scale_delta
+
+	# Use first Transform effect's base as reference
+	var base_pos := Vector2.ZERO
+	var base_rot := 0.0
+	var base_scale := Vector2.ONE
+	for eff_variant2: Variant in effects:
+		if eff_variant2 is Transform2DJuiceEffect:
+			var t2d := eff_variant2 as Transform2DJuiceEffect
+			if t2d._has_base:
+				base_pos = t2d._base_position
+				base_rot = t2d._base_rotation_radians
+				base_scale = t2d._base_scale
+				break
+
+	n2d.position = base_pos + total_pos
+	n2d.rotation = base_rot + total_rot
+	n2d.scale = base_scale + total_scale
+
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
 # =============================================================================
