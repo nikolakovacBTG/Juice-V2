@@ -1013,16 +1013,60 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 		print("[%s] Seq RECIPE: started %d roots on '%s'" % [name, root_indices.size(), target.name])
 
 
-## TARGETS_STACK mode: find JuiceBase nodes in named container and trigger them.
-## (Placeholder — full implementation in Phase 5d)
+## TARGETS_STACK mode: find JuiceBase nodes inside a named container on target.
 func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
-	pass
+	var stack := target.get_node_or_null(seq_stack_name)
+	if stack == null:
+		if debug_enabled:
+			print("[%s] Seq STACK: target '%s' has no stack '%s'" % [name, target.name, seq_stack_name])
+		return
+
+	var juice_nodes: Array[JuiceBase] = []
+	for child in stack.get_children():
+		if child is JuiceBase:
+			juice_nodes.append(child as JuiceBase)
+
+	if juice_nodes.is_empty():
+		if debug_enabled:
+			print("[%s] Seq STACK: stack '%s' on '%s' has no JuiceBase children" % [name, seq_stack_name, target.name])
+		return
+
+	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "STACK")
 
 
-## TARGETS_CHILDREN mode: find JuiceBase children on target and trigger them.
-## (Placeholder — full implementation in Phase 5d)
+## TARGETS_CHILDREN mode: find JuiceBase children directly on target.
 func _seq_animate_target_children(target: Node, is_reverse: bool) -> void:
-	pass
+	var juice_nodes: Array[JuiceBase] = []
+	for child in target.get_children():
+		if child is JuiceBase:
+			juice_nodes.append(child as JuiceBase)
+
+	if juice_nodes.is_empty():
+		if debug_enabled:
+			print("[%s] Seq CHILDREN: target '%s' has no JuiceBase children" % [name, target.name])
+		return
+
+	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "CHILDREN")
+
+
+## Shared helper: trigger a list of JuiceBase nodes and track their completion.
+func _seq_trigger_juice_nodes(juice_nodes: Array[JuiceBase], is_reverse: bool, target_name: String, mode_label: String) -> void:
+	for juice in juice_nodes:
+		_seq_active_animations += 1
+		if not juice.completed.is_connected(_seq_on_ext_juice_completed):
+			juice.completed.connect(_seq_on_ext_juice_completed)
+		if is_reverse:
+			juice.animate_out()
+		else:
+			juice.animate_in()
+
+	if debug_enabled:
+		print("[%s] Seq %s: triggered %d JuiceBase nodes on '%s'" % [name, mode_label, juice_nodes.size(), target_name])
+
+
+## Callback when an externally-triggered JuiceBase node completes (STACK/CHILDREN modes).
+func _seq_on_ext_juice_completed() -> void:
+	_seq_active_animations = maxi(0, _seq_active_animations - 1)
 
 
 ## Get or create per-target runtime effect clones for RECIPE mode.
