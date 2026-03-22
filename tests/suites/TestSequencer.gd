@@ -32,6 +32,7 @@ func get_test_methods() -> Array[String]:
 		"test_warmup_prepositions_during_start_delay",
 		"test_container_layout_preserved_during_animation",
 		"test_custom_from_scale_not_polluted_by_warmup",
+		"test_external_reset_during_warmup_hold_recovers",
 	]
 
 
@@ -520,5 +521,80 @@ func test_custom_from_scale_not_polluted_by_warmup() -> void:
 			"Post-anim: %s scale.x = 1 (To state), NOT 2 (polluted)" % btn.text, 0.1)
 		assert_approx_float(btn.scale.y, 1.0,
 			"Post-anim: %s scale.y = 1 (To state), NOT 2 (polluted)" % btn.text, 0.1)
+
+	await cleanup(parent)
+
+
+func test_external_reset_during_warmup_hold_recovers() -> void:
+	# Reproduces the exact bug from Control_Intro_v1.tscn:
+	# Something externally resets scale from 0 (warmup From) back to 1 (natural)
+	# between warmup and the first process tick. Without external-reset detection,
+	# contribution tracking computes wrong natural: (1,1)-(-1,-1)=(2,2) instead of (1,1).
+	# Result: scale stays at 1 during delay, then animates 1→2 instead of 0→1.
+	var parent := HBoxContainer.new()
+	parent.name = "ResetHBox"
+	parent.size = Vector2(600, 100)
+	_runner.add_child(parent)
+
+	var buttons: Array[Button] = []
+	for i in 2:
+		var btn := Button.new()
+		btn.text = "ResetBtn%d" % i
+		btn.custom_minimum_size = Vector2(80, 30)
+		parent.add_child(btn)
+		buttons.append(btn)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.SCALE
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.from_scale = Vector2(0, 0)
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_scale = Vector2(1, 1)
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.2
+
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+
+	var seq := JuiceControl.new()
+	seq.name = "ResetSeq"
+	seq.mode = JuiceBase.Mode.SEQUENCER
+	seq.juice_source = JuiceBase.JuiceSource.RECIPE
+	seq.target_scope = JuiceBase.TargetScope.SIBLINGS
+	seq.sequence_type = JuiceBase.SequenceType.STAGGER_FORWARD
+	seq.seq_stagger_delay = 0.05
+	seq.seq_skip_self = true
+	seq.seq_skip_juice_nodes = true
+	seq.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	seq.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	seq.recipe = recipe
+	seq.start_delay = 0.5
+	parent.add_child(seq)
+
+	await wait_frames(3)
+
+	seq.animate_in()
+	# Warmup just ran synchronously — targets should be at scale=0
+	# Now SIMULATE the external reset that happens in real scenes
+	# (something resets scale back to 1 before the first process tick)
+	for btn in buttons:
+		btn.scale = Vector2(1, 1)
+
+	# Wait a few frames — held entry enforcement must recover from the reset
+	await wait_frames(5)
+	assert_approx_float(buttons[0].scale.x, 0.0,
+		"Post-reset recovery: Btn0 scale.x = 0 (scale.x=%.2f)" % buttons[0].scale.x, 0.05)
+	assert_approx_float(buttons[1].scale.x, 0.0,
+		"Post-reset recovery: Btn1 scale.x = 0 (scale.x=%.2f)" % buttons[1].scale.x, 0.05)
+
+	# Wait for delay + animation to complete
+	await wait_seconds(1.0)
+
+	# After animation: scale must be at To=(1,1), NOT (2,2)
+	for btn: Button in buttons:
+		assert_approx_float(btn.scale.x, 1.0,
+			"Post-anim: %s scale.x = 1, NOT 2 (polluted)" % btn.text, 0.1)
+		assert_approx_float(btn.scale.y, 1.0,
+			"Post-anim: %s scale.y = 1, NOT 2 (polluted)" % btn.text, 0.1)
 
 	await cleanup(parent)

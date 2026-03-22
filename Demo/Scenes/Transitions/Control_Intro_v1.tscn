@@ -81,7 +81,7 @@ pivot_mode = 0
 _editor_cached_position = Vector2(0, 0)
 _editor_cached_rotation = 0.0
 _editor_cached_scale = Vector2(1, 1)
-duration_in = 0.5
+duration_in = 0.6
 transition_in = 6
 ease_in = 1
 elastic_amplitude_in = 1.0
@@ -216,10 +216,11 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=147627048]
+[node name="JuiceControl" type="Node" parent="MarginContainer/VBoxContainer/VBoxContainer" unique_id=773470793]
 script = ExtResource("3_vvv2e")
 mode = 1
-start_delay = 2.0
+start_delay = 3.0
 retrigger_policy = 2
+seq_stagger_delay = 0.8
 recipe = SubResource("Resource_lq48p")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"

@@ -188,7 +188,7 @@ enum TriggerSource {
 		notify_property_list_changed()
 
 ## Time delay between targets (stagger delay). Hidden for ALL_AT_ONCE.
-@export_range(0.0, 10.0, 0.01, "or_greater") var seq_stagger_delay: float = 0.1
+@export_range(0.0, 100.0, 0.01, "or_greater") var seq_stagger_delay: float = 0.1
 
 ## Mirror the stagger direction when playing the exit animation.
 ## Example: Stagger Forward on entry → Stagger Reverse on exit.
@@ -357,6 +357,12 @@ var _seq_held_entries: Array[Dictionary] = []
 ## Used by domain _seq_post_tick_write_target to compute:
 ##   natural = current - last_contribution; write = natural + new_delta
 var _seq_target_contributions: Dictionary = {}
+
+## Per-target expected values after our last write. Used for external-reset detection.
+## Maps target Node → { "property_name": expected_value_after_write }
+## If the actual value differs from expected, an external system reset the property
+## and our stored contribution is stale — must be cleared before computing natural.
+var _seq_expected_after_write: Dictionary = {}
 
 # =============================================================================
 # LIFECYCLE
@@ -898,6 +904,7 @@ func _seq_stop() -> void:
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
 	_seq_target_contributions.clear()
+	_seq_expected_after_write.clear()
 
 	# Stop all per-target effect clones
 	for target_variant: Variant in _seq_target_effects.keys():
@@ -1370,9 +1377,17 @@ func _temporarily_reapply_visual() -> void:
 ## Generic — works for any property channel effects report via _get_seq_contribution().
 func _seq_restore_target_natural(target: Node) -> void:
 	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	var expected: Dictionary = _seq_expected_after_write.get(target, {})
 	for prop_name: String in contrib:
-		target.set(prop_name, target.get(prop_name) - contrib[prop_name])
+		var actual: Variant = target.get(prop_name)
+		# External-reset detection: if actual differs from what we wrote last,
+		# an external system reset this property. Our contribution is no longer
+		# baked into the current value — skip subtraction (value is already natural).
+		if prop_name in expected and not _seq_values_approx_equal(actual, expected[prop_name]):
+			continue
+		target.set(prop_name, actual - contrib[prop_name])
 	_seq_target_contributions.erase(target)
+	_seq_expected_after_write.erase(target)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
@@ -1396,6 +1411,16 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	# Retrieve our last contribution for this target
 	var prev: Dictionary = _seq_target_contributions.get(target, {})
 
+	# External-reset detection: if the current value differs from what we wrote
+	# last frame, an external system changed the property. Our stored contribution
+	# is stale — clear it so we derive natural correctly from the reset value.
+	var expected: Dictionary = _seq_expected_after_write.get(target, {})
+	for key: String in prev:
+		if key in expected:
+			var actual: Variant = target.get(key)
+			if not _seq_values_approx_equal(actual, expected[key]):
+				prev.erase(key)
+
 	# For each property we're contributing to now: derive natural, then write
 	for key: String in total:
 		var prev_val: Variant = prev.get(key, _seq_zero_for(total[key]))
@@ -1409,6 +1434,12 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 
 	_seq_target_contributions[target] = total
 
+	# Store expected values after write for next frame's external-reset detection
+	var new_expected := {}
+	for key: String in total:
+		new_expected[key] = target.get(key)
+	_seq_expected_after_write[target] = new_expected
+
 
 ## Return the zero value for the same type as the given Variant.
 ## Used by contribution-tracking when no previous contribution exists.
@@ -1419,6 +1450,23 @@ static func _seq_zero_for(val: Variant) -> Variant:
 		TYPE_VECTOR3: return Vector3.ZERO
 		TYPE_COLOR: return Color(0, 0, 0, 0)
 	return val - val  # fallback for other numeric types
+
+
+## Compare two Variant values with approximate equality.
+## Used by external-reset detection to avoid false positives from float imprecision.
+static func _seq_values_approx_equal(a: Variant, b: Variant) -> bool:
+	if typeof(a) != typeof(b):
+		return false
+	match typeof(a):
+		TYPE_FLOAT:
+			return is_equal_approx(a, b)
+		TYPE_VECTOR2:
+			return (a as Vector2).is_equal_approx(b as Vector2)
+		TYPE_VECTOR3:
+			return (a as Vector3).is_equal_approx(b as Vector3)
+		TYPE_COLOR:
+			return (a as Color).is_equal_approx(b as Color)
+	return a == b
 
 # =============================================================================
 # CONFIGURATION WARNINGS
