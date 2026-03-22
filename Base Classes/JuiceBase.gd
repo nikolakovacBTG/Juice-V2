@@ -352,6 +352,12 @@ var _seq_target_active_indices: Dictionary = {}
 ## Effects are continuously re-applied at From state every frame until released.
 var _seq_held_entries: Array[Dictionary] = []
 
+## Per-target contribution tracking for Container-safe writes.
+## Maps target Node → { "pos": Vector2/3, "rot": float/Vector3, "scale": Vector2/3 }
+## Used by domain _seq_post_tick_write_target to compute:
+##   natural = current - last_contribution; write = natural + new_delta
+var _seq_target_contributions: Dictionary = {}
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -891,6 +897,7 @@ func _seq_stop() -> void:
 	_seq_current_loop = 0
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
+	_seq_target_contributions.clear()
 
 	# Stop all per-target effect clones
 	for target_variant: Variant in _seq_target_effects.keys():
