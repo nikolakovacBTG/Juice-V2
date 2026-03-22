@@ -30,15 +30,19 @@ func get_test_methods() -> Array[String]:
 		"test_sequencer_retrigger_restart",
 		"test_completed_signal_fires",
 		"test_warmup_prepositions_during_start_delay",
+		"test_container_layout_preserved_during_animation",
 	]
 
 
 # =============================================================================
-# HELPER: Create a sequencer rig with N sibling buttons
+# HELPER: Create a sequencer rig with N sibling buttons inside HBoxContainer
 # =============================================================================
 
-## Creates a parent Node with N Button children and a JuiceControl sequencer.
-## Returns { "parent": Node, "buttons": Array[Button], "sequencer": JuiceControl }
+## Creates an HBoxContainer with N Button children and a JuiceControl sequencer.
+## Uses a real Container so tests catch layout-management bugs.
+## Animation moves Y axis (perpendicular to HBox layout) so Container-managed
+## X positions can be independently verified.
+## Returns { "parent": HBoxContainer, "buttons": Array[Button], "sequencer": JuiceControl }
 func _create_seq_rig(
 	button_count: int = 3,
 	stagger_delay: float = 0.05,
@@ -46,8 +50,9 @@ func _create_seq_rig(
 	sequence_type: JuiceBase.SequenceType = JuiceBase.SequenceType.STAGGER_FORWARD,
 	juice_source: JuiceBase.JuiceSource = JuiceBase.JuiceSource.RECIPE,
 ) -> Dictionary:
-	var parent := Control.new()
-	parent.name = "SeqParent"
+	var parent := HBoxContainer.new()
+	parent.name = "SeqHBox"
+	parent.size = Vector2(600, 100)
 	_runner.add_child(parent)
 
 	var buttons: Array[Button] = []
@@ -55,16 +60,15 @@ func _create_seq_rig(
 		var btn := Button.new()
 		btn.text = "Btn%d" % i
 		btn.custom_minimum_size = Vector2(80, 30)
-		btn.position = Vector2(0, i * 40)
 		parent.add_child(btn)
 		buttons.append(btn)
 
-	# Build recipe: position animation (move X by 60px)
+	# Build recipe: position animation (move Y by 60px — perpendicular to HBox axis)
 	var effect := TransformControlJuiceEffect.new()
 	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
 	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
-	effect.to_position = Vector2(60, 0)
+	effect.to_position = Vector2(0, 60)
 	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = duration
@@ -101,21 +105,21 @@ func test_recipe_stagger_forward_moves_targets() -> void:
 	var buttons: Array = rig.buttons
 	var seq: JuiceControl = rig.sequencer
 
-	# Record starting positions
+	# Record starting Y positions (HBox-managed)
 	var start_positions: Array[float] = []
 	for btn: Button in buttons:
-		start_positions.append(btn.position.x)
+		start_positions.append(btn.position.y)
 
 	seq.animate_in()
 
 	# Wait for full sequence: 3 targets × 0.05 stagger + 0.15 duration + buffer
 	await wait_seconds(0.5)
 
-	# All buttons should have moved right
+	# All buttons should have moved down (Y increased)
 	for i in buttons.size():
 		var btn: Button = buttons[i]
-		assert_greater(btn.position.x, start_positions[i] + 10.0,
-			"Btn%d moved right after stagger forward (pos.x=%.1f)" % [i, btn.position.x])
+		assert_greater(btn.position.y, start_positions[i] + 10.0,
+			"Btn%d moved down after stagger forward (pos.y=%.1f)" % [i, btn.position.y])
 
 	await cleanup(rig.parent)
 
@@ -132,7 +136,7 @@ func test_recipe_all_at_once_moves_simultaneously() -> void:
 	# Mid-animation: all should be moving (not still at start)
 	var any_moved := false
 	for btn: Button in buttons:
-		if btn.position.x > 5.0:
+		if btn.position.y > 5.0:
 			any_moved = true
 			break
 
@@ -162,10 +166,10 @@ func test_recipe_stagger_reverse_order() -> void:
 
 	# All should eventually complete
 	await wait_seconds(0.3)
-	assert_greater(btn0.position.x, 30.0,
-		"STAGGER_REVERSE: Btn0 eventually moved (pos.x=%.1f)" % btn0.position.x)
-	assert_greater(btn2.position.x, 30.0,
-		"STAGGER_REVERSE: Btn2 eventually moved (pos.x=%.1f)" % btn2.position.x)
+	assert_greater(btn0.position.y, 30.0,
+		"STAGGER_REVERSE: Btn0 eventually moved (pos.y=%.1f)" % btn0.position.y)
+	assert_greater(btn2.position.y, 30.0,
+		"STAGGER_REVERSE: Btn2 eventually moved (pos.y=%.1f)" % btn2.position.y)
 
 	await cleanup(rig.parent)
 
@@ -181,8 +185,8 @@ func test_target_scope_siblings() -> void:
 	# Both buttons should have moved, sequencer node should not error
 	for i in rig.buttons.size():
 		var btn: Button = rig.buttons[i]
-		assert_greater(btn.position.x, 10.0,
-			"SIBLINGS: Btn%d moved (pos.x=%.1f)" % [i, btn.position.x])
+		assert_greater(btn.position.y, 10.0,
+			"SIBLINGS: Btn%d moved (pos.y=%.1f)" % [i, btn.position.y])
 
 	await cleanup(rig.parent)
 
@@ -192,18 +196,24 @@ func test_skip_invisible_filters_hidden() -> void:
 	var buttons: Array = rig.buttons
 	var seq: JuiceControl = rig.sequencer
 
-	# Hide button 1
+	# Capture btn1 Y before hiding (HBox re-sort may change it)
+	var _btn1_pre_y := (buttons[1] as Button).position.y
+
+	# Hide button 1 and wait for HBox re-sort
 	(buttons[1] as Button).visible = false
+	await wait_frames(2)
+	var btn1_hidden_y := (buttons[1] as Button).position.y
 
 	seq.animate_in()
 	await wait_seconds(0.4)
 
-	# Btn0 and Btn2 should move, Btn1 should NOT
-	assert_greater((buttons[0] as Button).position.x, 10.0,
+	# Btn0 and Btn2 should move (Y increased), Btn1 should NOT
+	assert_greater((buttons[0] as Button).position.y, 10.0,
 		"skip_invisible: Btn0 visible, moved")
-	assert_approx_float((buttons[1] as Button).position.x, 0.0,
-		"skip_invisible: Btn1 hidden, NOT moved", 2.0)
-	assert_greater((buttons[2] as Button).position.x, 10.0,
+	assert_approx_float((buttons[1] as Button).position.y, btn1_hidden_y,
+		"skip_invisible: Btn1 hidden, NOT moved (y=%.1f vs pre=%.1f)" % [
+			(buttons[1] as Button).position.y, btn1_hidden_y], 2.0)
+	assert_greater((buttons[2] as Button).position.y, 10.0,
 		"skip_invisible: Btn2 visible, moved")
 
 	await cleanup(rig.parent)
@@ -219,7 +229,7 @@ func test_skip_juice_nodes_filters_juice() -> void:
 	seq.animate_in()
 	await wait_seconds(0.4)
 
-	assert_greater((rig.buttons[0] as Button).position.x, 10.0,
+	assert_greater((rig.buttons[0] as Button).position.y, 10.0,
 		"skip_juice_nodes: Btn0 moved (sequencer sibling filtered)")
 
 	await cleanup(rig.parent)
@@ -312,11 +322,11 @@ func test_sequencer_play_in_and_out_auto_reverse() -> void:
 	# Forward + reverse: ~2 × (2 × 0.02 + 0.1) + buffer
 	await wait_seconds(0.6)
 
-	# After IN_AND_OUT, targets should be back near starting position
+	# After IN_AND_OUT, targets should be back near starting Y position
 	for i in rig.buttons.size():
 		var btn: Button = rig.buttons[i]
-		assert_approx_float(btn.position.x, 0.0,
-			"PLAY_IN_AND_OUT: Btn%d returned near start (pos.x=%.1f)" % [i, btn.position.x], 5.0)
+		assert_approx_float(btn.position.y, 0.0,
+			"PLAY_IN_AND_OUT: Btn%d returned near start (pos.y=%.1f)" % [i, btn.position.y], 5.0)
 
 	await cleanup(rig.parent)
 
@@ -337,8 +347,8 @@ func test_sequencer_retrigger_restart() -> void:
 	# All targets should still complete (from the restarted sequence)
 	for i in rig.buttons.size():
 		var btn: Button = rig.buttons[i]
-		assert_greater(btn.position.x, 10.0,
-			"RESTART retrigger: Btn%d completed (pos.x=%.1f)" % [i, btn.position.x])
+		assert_greater(btn.position.y, 10.0,
+			"RESTART retrigger: Btn%d completed (pos.y=%.1f)" % [i, btn.position.y])
 
 	await cleanup(rig.parent)
 
@@ -365,32 +375,68 @@ func test_warmup_prepositions_during_start_delay() -> void:
 	var seq: JuiceControl = rig.sequencer
 	seq.start_delay = 0.5  # Long delay
 
-	# Record starting positions (should be 0)
-	var start_x_0 := (rig.buttons[0] as Button).position.x
-	var _start_x_1 := (rig.buttons[1] as Button).position.x
+	# Record starting Y positions
+	var start_y_0 := (rig.buttons[0] as Button).position.y
 
 	seq.animate_in()
 
-	# Wait a few frames — warmup should have pre-positioned targets at From
-	# The effect is From=SELF, To=CUSTOM(60,0), so at progress 0.0 the
-	# target should be at its original position (From=SELF means natural).
-	# BUT the delta is computed and written, so position should reflect the
-	# From state. For SELF reference, From = captured base = natural pos.
-	# This test verifies that warmup ran (effects started) before the delay.
+	# Wait a few frames — warmup should have run (effects initialized).
+	# From=SELF means delta is 0 at progress 0.0 — target stays at natural.
 	await wait_frames(5)
 
-	# The From reference is SELF (natural), so at progress 0.0 the target
-	# stays at natural pos. This verifies warmup executed (no crash, effects init'd).
-	# The key V0 parity: warmup runs BEFORE delay, not after.
-	var mid_delay_x_0 := (rig.buttons[0] as Button).position.x
-	assert_approx_float(mid_delay_x_0, start_x_0,
+	var mid_delay_y_0 := (rig.buttons[0] as Button).position.y
+	assert_approx_float(mid_delay_y_0, start_y_0,
 		"Warmup during delay: Btn0 at From=SELF (natural pos) not moved yet", 2.0)
 
 	# Now wait for delay + animation to finish
 	await wait_seconds(0.8)
 
-	# After delay + stagger + animation, targets should have moved
-	assert_greater((rig.buttons[0] as Button).position.x, 10.0,
-		"After delay: Btn0 eventually moved (pos.x=%.1f)" % (rig.buttons[0] as Button).position.x)
+	# After delay + stagger + animation, targets should have moved down
+	assert_greater((rig.buttons[0] as Button).position.y, 10.0,
+		"After delay: Btn0 eventually moved (pos.y=%.1f)" % (rig.buttons[0] as Button).position.y)
+
+	await cleanup(rig.parent)
+
+
+func test_container_layout_preserved_during_animation() -> void:
+	# HBoxContainer manages X positions. Animation moves Y.
+	# Verify that Container-managed X positions remain correct and distinct
+	# throughout the animation — not collapsed to 0 or overlapping.
+	var rig := await _create_seq_rig(3, 0.0, 0.2, JuiceBase.SequenceType.ALL_AT_ONCE)
+	var buttons: Array = rig.buttons
+	var seq: JuiceControl = rig.sequencer
+
+	# Record HBox-managed X positions before animation
+	var natural_x: Array[float] = []
+	for btn: Button in buttons:
+		natural_x.append(btn.position.x)
+
+	# Buttons should have distinct X positions (HBox lays them out horizontally)
+	assert_greater(natural_x[1], natural_x[0] + 10.0,
+		"Pre-anim: Btn1.x (%.1f) > Btn0.x (%.1f) — HBox layout" % [natural_x[1], natural_x[0]])
+	assert_greater(natural_x[2], natural_x[1] + 10.0,
+		"Pre-anim: Btn2.x (%.1f) > Btn1.x (%.1f) — HBox layout" % [natural_x[2], natural_x[1]])
+
+	seq.animate_in()
+
+	# Check mid-animation: Y should be moving, X should stay at HBox values
+	await wait_seconds(0.1)
+	for i in buttons.size():
+		var btn: Button = buttons[i]
+		assert_approx_float(btn.position.x, natural_x[i],
+			"Mid-anim: Btn%d X preserved (%.1f vs natural %.1f)" % [i, btn.position.x, natural_x[i]], 2.0)
+		assert_greater(btn.position.y, 5.0,
+			"Mid-anim: Btn%d Y moved (pos.y=%.1f)" % [i, btn.position.y])
+
+	# Check post-animation: X should still be at HBox values
+	await wait_seconds(0.3)
+	for i in buttons.size():
+		var btn: Button = buttons[i]
+		assert_approx_float(btn.position.x, natural_x[i],
+			"Post-anim: Btn%d X preserved (%.1f vs natural %.1f)" % [i, btn.position.x, natural_x[i]], 2.0)
+
+	# Y should have reached ~60 (full animation)
+	assert_greater((buttons[0] as Button).position.y, 50.0,
+		"Post-anim: Btn0 Y reached target (pos.y=%.1f)" % (buttons[0] as Button).position.y)
 
 	await cleanup(rig.parent)

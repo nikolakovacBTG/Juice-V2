@@ -270,6 +270,7 @@ func _temporarily_reapply_visual() -> void:
 
 
 ## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
+## Uses contribution-tracking pattern — consistent with JuiceControl.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	var n2d := target as Node2D
 	if n2d == null:
@@ -290,22 +291,24 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 		if eff_2d._contributes_scale:
 			total_scale += eff_2d._scale_delta
 
-	# Use first Transform effect's base as reference
-	var base_pos := Vector2.ZERO
-	var base_rot := 0.0
-	var base_scale := Vector2.ONE
-	for eff_variant2: Variant in effects:
-		if eff_variant2 is Transform2DJuiceEffect:
-			var t2d := eff_variant2 as Transform2DJuiceEffect
-			if t2d._has_base:
-				base_pos = t2d._base_position
-				base_rot = t2d._base_rotation_radians
-				base_scale = t2d._base_scale
-				break
+	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	var prev_pos: Vector2 = contrib.get("pos", Vector2.ZERO)
+	var prev_rot: float = contrib.get("rot", 0.0)
+	var prev_scale: Vector2 = contrib.get("scale", Vector2.ZERO)
 
-	n2d.position = base_pos + total_pos
-	n2d.rotation = base_rot + total_rot
-	n2d.scale = base_scale + total_scale
+	var natural_pos := n2d.position - prev_pos
+	var natural_rot := n2d.rotation - prev_rot
+	var natural_scale := n2d.scale - prev_scale
+
+	n2d.position = natural_pos + total_pos
+	n2d.rotation = natural_rot + total_rot
+	n2d.scale = natural_scale + total_scale
+
+	_seq_target_contributions[target] = {
+		"pos": total_pos,
+		"rot": total_rot,
+		"scale": total_scale,
+	}
 
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)

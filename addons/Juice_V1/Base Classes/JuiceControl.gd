@@ -293,11 +293,14 @@ func _temporarily_reapply_visual() -> void:
 
 
 ## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
+## Uses contribution-tracking pattern (not frozen base) so Container re-sorts
+## are automatically absorbed — same principle as STACK mode's external-move detection.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
 		return
 
+	# Sum deltas from all effects on this target
 	var total_pos := Vector2.ZERO
 	var total_rot := 0.0
 	var total_scale := Vector2.ZERO
@@ -313,24 +316,30 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 		if ctrl_effect._contributes_scale:
 			total_scale += ctrl_effect._scale_delta
 
-	# Effects store their own _base; use the first effect's base as the reference.
-	# All effects on the same target should have captured the same base.
-	var base_pos := Vector2.ZERO
-	var base_rot := 0.0
-	var base_scale := Vector2.ONE
-	for eff_variant2: Variant in effects:
-		var ctrl_effect := eff_variant2 as JuiceControlEffectBase
-		if ctrl_effect != null and ctrl_effect is TransformControlJuiceEffect:
-			var tce := ctrl_effect as TransformControlJuiceEffect
-			if tce._has_base:
-				base_pos = tce._base_position
-				base_rot = tce._base_rotation_radians
-				base_scale = tce._base_scale
-				break
+	# Retrieve our last contribution for this target (zero if first write)
+	var contrib: Dictionary = _seq_target_contributions.get(target, {})
+	var prev_pos: Vector2 = contrib.get("pos", Vector2.ZERO)
+	var prev_rot: float = contrib.get("rot", 0.0)
+	var prev_scale: Vector2 = contrib.get("scale", Vector2.ZERO)
 
-	ctrl.position = base_pos + total_pos
-	ctrl.rotation = base_rot + total_rot
-	ctrl.scale = base_scale + total_scale
+	# Derive natural (Container-managed) values by subtracting what we wrote last frame.
+	# If the Container re-sorted since then, ctrl.position already reflects that +
+	# our old contribution — subtracting it recovers the Container's intended position.
+	var natural_pos := ctrl.position - prev_pos
+	var natural_rot := ctrl.rotation - prev_rot
+	var natural_scale := ctrl.scale - prev_scale
+
+	# Write: natural + new deltas
+	ctrl.position = natural_pos + total_pos
+	ctrl.rotation = natural_rot + total_rot
+	ctrl.scale = natural_scale + total_scale
+
+	# Store our new contribution for next frame
+	_seq_target_contributions[target] = {
+		"pos": total_pos,
+		"rot": total_rot,
+		"scale": total_scale,
+	}
 
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
