@@ -47,7 +47,29 @@ signal animate_out_started
 ## Operating mode for this node.
 enum Mode {
 	STACK,      ## All effects target the parent. Delta-first stacking.
-	SEQUENCER   ## Effects target NodePath array. Stagger + target order. (Phase 5)
+	SEQUENCER   ## Effects target multiple nodes. Stagger + target order.
+}
+
+## Where the sequencer sources its animations (SEQUENCER mode only).
+enum JuiceSource {
+	RECIPE,           ## Apply the node's own recipe to each target
+	TARGETS_STACK,    ## Trigger JuiceBase nodes inside a named container on each target
+	TARGETS_CHILDREN  ## Trigger JuiceBase children directly on each target
+}
+
+## What nodes to animate (SEQUENCER mode only).
+enum TargetScope {
+	SIBLINGS,  ## Animate siblings of this node (parent's other children)
+	CHILDREN,  ## Animate children of parent
+	CUSTOM     ## Use a manually authored list of targets
+}
+
+## How targets are ordered and timed during the sequence.
+enum SequenceType {
+	STAGGER_FORWARD,  ## First to last with delay between each
+	STAGGER_REVERSE,  ## Last to first with delay between each
+	RANDOM,           ## Random order with delay between each
+	ALL_AT_ONCE       ## All targets fire simultaneously
 }
 
 ## What event triggers the animation.
@@ -157,6 +179,52 @@ enum TriggerSource {
 		recipe = value
 		_invalidate_runtime_effects()
 
+@export_group("Sequencer")
+
+## Where this sequencer sources its animations (SEQUENCER mode only).
+@export var juice_source: JuiceSource = JuiceSource.RECIPE:
+	set(value):
+		juice_source = value
+		notify_property_list_changed()
+
+## Which nodes to target for animation (SEQUENCER mode only).
+@export var target_scope: TargetScope = TargetScope.SIBLINGS:
+	set(value):
+		target_scope = value
+		notify_property_list_changed()
+
+## Manually authored list of target nodes (visible when target_scope == CUSTOM).
+@export var seq_custom_targets: Array[NodePath] = []
+
+## Name of the container node holding juice on each target
+## (visible when juice_source == TARGETS_STACK).
+@export var seq_stack_name: String = ""
+
+## Order and timing strategy for the sequence.
+@export var sequence_type: SequenceType = SequenceType.STAGGER_FORWARD:
+	set(value):
+		sequence_type = value
+		notify_property_list_changed()
+
+## Time delay between targets (stagger delay). Hidden for ALL_AT_ONCE.
+@export_range(0.0, 10.0, 0.01, "or_greater") var seq_stagger_delay: float = 0.1
+
+## Mirror the stagger direction when playing the exit animation.
+## Example: Stagger Forward on entry → Stagger Reverse on exit.
+@export var seq_mirror_stagger_on_exit: bool = true
+
+## Skip targets that are not visible.
+@export var seq_skip_invisible: bool = true
+
+## Skip self when targeting siblings (almost always true).
+@export var seq_skip_self: bool = true
+
+## Skip targets that are JuiceBase nodes (don't animate our own juice siblings).
+@export var seq_skip_juice_nodes: bool = true
+
+## When the exit animation completes, hide the parent node.
+@export var seq_hide_parent_on_reverse_complete: bool = false
+
 @export_group("Debug")
 
 ## Print debug information to console.
@@ -184,8 +252,30 @@ func _validate_property(property: Dictionary) -> void:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 	# --- Mode-specific: SEQUENCER settings hidden in STACK mode ---
-	# (Sequencer-specific exports will be added in Phase 5.
-	#  For now this serves as the pattern for future settings.)
+	var _seq_props := [
+		"juice_source", "target_scope", "seq_custom_targets", "seq_stack_name",
+		"sequence_type", "seq_stagger_delay", "seq_mirror_stagger_on_exit",
+		"seq_skip_invisible", "seq_skip_self", "seq_skip_juice_nodes",
+		"seq_hide_parent_on_reverse_complete",
+	]
+	if mode == Mode.STACK and property.name in _seq_props:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+
+	# --- Within SEQUENCER mode: conditional visibility ---
+	if mode == Mode.SEQUENCER:
+		# custom_targets only when target_scope == CUSTOM
+		if property.name == "seq_custom_targets" and target_scope != TargetScope.CUSTOM:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
+		# stack_name only when juice_source == TARGETS_STACK
+		if property.name == "seq_stack_name" and juice_source != JuiceSource.TARGETS_STACK:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
+		# stagger_delay hidden for ALL_AT_ONCE
+		if property.name == "seq_stagger_delay" and sequence_type == SequenceType.ALL_AT_ONCE:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
+		# mirror_stagger_on_exit only for directional stagger types
+		if property.name == "seq_mirror_stagger_on_exit" \
+				and sequence_type not in [SequenceType.STAGGER_FORWARD, SequenceType.STAGGER_REVERSE]:
+			property.usage = PROPERTY_USAGE_NO_EDITOR
 
 # =============================================================================
 # INTERNAL STATE
