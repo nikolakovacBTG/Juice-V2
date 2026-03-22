@@ -291,6 +291,47 @@ func _temporarily_reapply_visual() -> void:
 	ctrl.rotation += _total_rot_contribution
 	ctrl.scale += _total_scale_contribution
 
+
+## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
+func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
+	var ctrl := target as Control
+	if ctrl == null:
+		return
+
+	var total_pos := Vector2.ZERO
+	var total_rot := 0.0
+	var total_scale := Vector2.ZERO
+
+	for eff_variant: Variant in effects:
+		var ctrl_effect := eff_variant as JuiceControlEffectBase
+		if ctrl_effect == null:
+			continue
+		if ctrl_effect._contributes_position:
+			total_pos += ctrl_effect._pos_delta
+		if ctrl_effect._contributes_rotation:
+			total_rot += ctrl_effect._rot_delta
+		if ctrl_effect._contributes_scale:
+			total_scale += ctrl_effect._scale_delta
+
+	# Effects store their own _base; use the first effect's base as the reference.
+	# All effects on the same target should have captured the same base.
+	var base_pos := Vector2.ZERO
+	var base_rot := 0.0
+	var base_scale := Vector2.ONE
+	for eff_variant2: Variant in effects:
+		var ctrl_effect := eff_variant2 as JuiceControlEffectBase
+		if ctrl_effect != null and ctrl_effect is TransformControlJuiceEffect:
+			var tce := ctrl_effect as TransformControlJuiceEffect
+			if tce._has_base:
+				base_pos = tce._base_position
+				base_rot = tce._base_rotation_radians
+				base_scale = tce._base_scale
+				break
+
+	ctrl.position = base_pos + total_pos
+	ctrl.rotation = base_rot + total_rot
+	ctrl.scale = base_scale + total_scale
+
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
 # =============================================================================
