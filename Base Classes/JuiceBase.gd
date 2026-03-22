@@ -347,6 +347,11 @@ var _seq_target_effects: Dictionary = {}
 ## Keys: target Node, Values: Array[int] (indices into that target's effects array).
 var _seq_target_active_indices: Dictionary = {}
 
+## Held entries for Container hold pattern (RECIPE mode, Control targets).
+## Each entry: { "target": Node, "effects": Array[JuiceEffectBase] }
+## Effects are continuously re-applied at From state every frame until released.
+var _seq_held_entries: Array[Dictionary] = []
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -885,6 +890,7 @@ func _seq_stop() -> void:
 	_seq_pp_current_cycle = 0
 	_seq_current_loop = 0
 	_seq_target_active_indices.clear()
+	_seq_held_entries.clear()
 
 	# Stop all per-target effect clones
 	for target_variant: Variant in _seq_target_effects.keys():
@@ -929,6 +935,10 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
+
+	# Warmup: pre-position targets at From state (RECIPE mode only)
+	if juice_source == JuiceSource.RECIPE:
+		_seq_warmup_recipe_targets(targets, is_reverse)
 
 	# Emit started signal only on the very first pass
 	if not is_one_shot_return and _seq_current_loop == 0 \
@@ -997,6 +1007,9 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 	for i in effects.size():
 		if effects[i] != null and effects[i] not in chained_set:
 			root_indices.append(i)
+
+	# Release held entry (warmup hold) before real animation starts
+	_seq_release_held_for_target(target)
 
 	# Start root effects and track active indices
 	var play_in := not is_reverse
@@ -1086,10 +1099,64 @@ func _seq_get_or_create_target_effects(target: Node) -> Array[JuiceEffectBase]:
 	return clones
 
 
+## Pre-position all targets at their From state before the stagger loop begins.
+## For Control targets inside Containers, registers a hold entry so the From state
+## is re-applied every frame (beating Container re-sort). 2D/3D get one-shot only.
+func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
+	_seq_held_entries.clear()
+	var play_in := not is_reverse
+
+	for target in targets:
+		var effects := _seq_get_or_create_target_effects(target)
+		if effects.is_empty():
+			continue
+
+		# Start effects at From state (progress 0.0 for in, 1.0 for out)
+		# then immediately stop — this applies From delta as a one-shot.
+		for eff in effects:
+			eff._on_animate_start(target)
+			var from_progress := 0.0 if play_in else 1.0
+			eff._apply_effect(from_progress, target)
+
+		# Control targets inside Containers need continuous hold
+		if target is Control:
+			_seq_held_entries.append({
+				"target": target,
+				"effects": effects,
+				"play_in": play_in,
+			})
+
+	if not _seq_held_entries.is_empty():
+		set_process(true)
+
+	if debug_enabled:
+		print("[%s] Seq warmup: %d targets, %d held" % [name, targets.size(), _seq_held_entries.size()])
+
+
+## Release held entries for a target when its real animation starts.
+func _seq_release_held_for_target(target: Node) -> void:
+	for i in range(_seq_held_entries.size() - 1, -1, -1):
+		if _seq_held_entries[i].get("target") == target:
+			_seq_held_entries.remove_at(i)
+
+
 ## Tick all per-target effects in SEQUENCER RECIPE mode.
 ## Called from _process() when mode == SEQUENCER.
 ## Handles chaining and per-target completion tracking.
 func _seq_process_tick(delta: float) -> void:
+	# Enforce held entries (Control targets in Containers, pre-positioned at From)
+	for entry in _seq_held_entries:
+		var held_target: Node = entry.get("target")
+		var held_effects: Array = entry.get("effects", [])
+		var held_play_in: bool = entry.get("play_in", true)
+		if held_target == null or not is_instance_valid(held_target):
+			continue
+		var from_progress := 0.0 if held_play_in else 1.0
+		for eff_variant: Variant in held_effects:
+			var eff: JuiceEffectBase = eff_variant as JuiceEffectBase
+			if eff != null:
+				eff._apply_effect(from_progress, held_target)
+
 	var targets_done: Array[Node] = []
 
 	for target_variant: Variant in _seq_target_active_indices.keys():
