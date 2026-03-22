@@ -818,6 +818,15 @@ func _try_auto_connect() -> void:
 		_connect_visibility_signals(_trigger_source_node)
 		return
 
+	# AnimationPlayer: cross-domain, connect animation_finished
+	if _trigger_source_node is AnimationPlayer:
+		var anim := _trigger_source_node as AnimationPlayer
+		if not anim.animation_finished.is_connected(_on_animation_finished):
+			anim.animation_finished.connect(_on_animation_finished)
+		if debug_enabled:
+			print("[%s] Auto-connected to AnimationPlayer '%s'" % [name, anim.name])
+		return
+
 	# Subclasses handle domain-specific signal connection
 	_auto_connect_domain_signals()
 

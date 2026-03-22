@@ -50,11 +50,14 @@ func get_test_methods() -> Array[String]:
 		"test_back_easing_out_overshoots",
 		"test_loop_counter_preserved_during_auto_out",
 		"test_play_in_and_out_loop_restart",
+		"test_mirror_in_to_out_copies_all_params",
+		"test_mirror_in_to_out_reverses_custom_curve",
 		"test_autoconnect_button_pressed",
 		"test_autoconnect_control_hover",
 		"test_autoconnect_control_focus",
 		"test_autoconnect_control_gui_input_press",
 		"test_autoconnect_visibility_on_show",
+		"test_autoconnect_animation_player",
 	]
 
 
@@ -977,6 +980,88 @@ func test_play_in_and_out_loop_restart() -> void:
 
 
 # =============================================================================
+# TESTS: Mirror In -> Out
+# =============================================================================
+
+func test_mirror_in_to_out_copies_all_params() -> void:
+	# _mirror_in_to_out should copy all IN params to OUT with reversed ease
+	var effect := TransformControlJuiceEffect.new()
+	effect.duration_in = 0.42
+	effect.transition_in = Tween.TRANS_ELASTIC
+	effect.ease_in = Tween.EASE_IN
+	effect.elastic_amplitude_in = 2.5
+	effect.elastic_period_in = 0.6
+	effect.back_overshoot_in = 3.0
+
+	effect._mirror_in_to_out()
+
+	assert_equal(effect.duration_out, 0.42,
+		"Mirror: duration_out should equal duration_in")
+	assert_equal(effect.transition_out, Tween.TRANS_ELASTIC,
+		"Mirror: transition_out should equal transition_in")
+	# EASE_IN -> EASE_OUT (reversed)
+	assert_equal(effect.ease_out, Tween.EASE_OUT,
+		"Mirror: ease_out should be reversed (EASE_IN -> EASE_OUT)")
+	assert_equal(effect.elastic_amplitude_out, 2.5,
+		"Mirror: elastic_amplitude_out should equal elastic_amplitude_in")
+	assert_equal(effect.elastic_period_out, 0.6,
+		"Mirror: elastic_period_out should equal elastic_period_in")
+	assert_equal(effect.back_overshoot_out, 3.0,
+		"Mirror: back_overshoot_out should equal back_overshoot_in")
+
+	# Also test other ease reversals
+	effect.ease_in = Tween.EASE_OUT
+	effect._mirror_in_to_out()
+	assert_equal(effect.ease_out, Tween.EASE_IN,
+		"Mirror: EASE_OUT -> EASE_IN")
+
+	effect.ease_in = Tween.EASE_IN_OUT
+	effect._mirror_in_to_out()
+	assert_equal(effect.ease_out, Tween.EASE_OUT_IN,
+		"Mirror: EASE_IN_OUT -> EASE_OUT_IN")
+
+	effect.ease_in = Tween.EASE_OUT_IN
+	effect._mirror_in_to_out()
+	assert_equal(effect.ease_out, Tween.EASE_IN_OUT,
+		"Mirror: EASE_OUT_IN -> EASE_IN_OUT")
+
+
+func test_mirror_in_to_out_reverses_custom_curve() -> void:
+	# _mirror_in_to_out should time-reverse the custom_curve_in into custom_curve_out
+	var effect := TransformControlJuiceEffect.new()
+
+	# Create a curve: starts at (0, 0), goes to (1, 1) — basically linear
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.0))
+	curve.add_point(Vector2(0.5, 0.8))
+	curve.add_point(Vector2(1.0, 1.0))
+	effect.custom_curve_in = curve
+
+	effect._mirror_in_to_out()
+
+	assert_true(effect.custom_curve_out != null,
+		"Mirror: custom_curve_out should not be null after mirror")
+	assert_equal(effect.custom_curve_out.get_point_count(), 3,
+		"Mirror: reversed curve should have same point count")
+
+	# Reversed curve: point at t=0 should have value 1.0 (was t=1.0, y=1.0)
+	# Point at t=0.5 should have value 0.8 (was t=0.5, y=0.8)
+	# Point at t=1.0 should have value 0.0 (was t=0.0, y=0.0)
+	var p0 := effect.custom_curve_out.get_point_position(0)
+	var p2 := effect.custom_curve_out.get_point_position(2)
+	assert_true(absf(p0.x) < 0.01 and absf(p0.y - 1.0) < 0.01,
+		"Mirror curve: first point should be near (0, 1), got (%.2f, %.2f)" % [p0.x, p0.y])
+	assert_true(absf(p2.x - 1.0) < 0.01 and absf(p2.y) < 0.01,
+		"Mirror curve: last point should be near (1, 0), got (%.2f, %.2f)" % [p2.x, p2.y])
+
+	# Null custom_curve_in should result in null custom_curve_out
+	effect.custom_curve_in = null
+	effect._mirror_in_to_out()
+	assert_true(effect.custom_curve_out == null,
+		"Mirror: null custom_curve_in should produce null custom_curve_out")
+
+
+# =============================================================================
 # TESTS: Auto-connect integration
 # =============================================================================
 
@@ -1127,6 +1212,50 @@ func test_autoconnect_control_gui_input_press() -> void:
 		"Auto-connect ON_PRESS (Control): gui_input mouse press should trigger animation (pos.x=%.1f)" % panel.position.x)
 
 	await cleanup(panel)
+
+
+func test_autoconnect_animation_player() -> void:
+	# AnimationPlayer as trigger source: animation_finished triggers Juice animation
+	var btn := Button.new()
+	btn.text = "anim_trigger"
+	btn.custom_minimum_size = Vector2(120, 40)
+	btn.position = Vector2.ZERO
+	_runner.add_child(btn)
+
+	# Create an AnimationPlayer sibling
+	var anim_player := AnimationPlayer.new()
+	anim_player.name = "TestAnimPlayer"
+	btn.add_child(anim_player)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := JuiceControl.new()
+	# Use NODE trigger source pointing at the AnimationPlayer
+	juice.trigger_source = JuiceBase.TriggerSource.NODE
+	juice.trigger_source_path = NodePath("../TestAnimPlayer")
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS  # any non-MANUAL event
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	btn.add_child(juice)
+	await wait_frames(3)
+
+	# Emit animation_finished signal (simulating an animation completing)
+	anim_player.emit_signal("animation_finished", &"test_anim")
+	await wait_seconds(0.3)
+
+	assert_true(btn.position.x > 30.0,
+		"Auto-connect AnimationPlayer: animation_finished should trigger Juice (pos.x=%.1f)" % btn.position.x)
+
+	await cleanup(btn)
 
 
 func test_autoconnect_visibility_on_show() -> void:

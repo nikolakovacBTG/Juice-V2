@@ -125,7 +125,7 @@
 
 | Property | V0 | V1 | Status | Test |
 |----------|-----|-----|--------|------|
-| `_btn_mirror_in_to_out` | var on comp | var on effect | ⚠️ Untested (inspector tool button) | — |
+| `_btn_mirror_in_to_out` | var on comp | var on effect | ✅ Tested (params + curve reversal + ease reversal) | `test_mirror_in_to_out_copies_all_params` + `test_mirror_in_to_out_reverses_custom_curve` ✅ |
 | `debug_enabled` | var on comp | @export on node + var on effect | ✅ | Used in many tests |
 
 ---
@@ -200,7 +200,7 @@
 | Control signals | `_connect_control_signals:1327` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (hover, focus, gui_input) | `test_autoconnect_control_hover` + `test_autoconnect_control_focus` + `test_autoconnect_control_gui_input_press` ✅ |
 | CollisionObject3D signals | `_connect_collision_object_3d_signals:1363` | JuiceBase callbacks (lines 769-795) | ✅ Tested (body_entered, hover) | `test_autoconnect_area3d_body_entered` + `test_autoconnect_area3d_hover` ✅ |
 | CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ✅ Tested (body_entered, hover) | `test_autoconnect_area2d_body_entered` + `test_autoconnect_area2d_hover` ✅ |
-| AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_on_animation_finished:830` | ⚠️ Untested | — |
+| AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_try_auto_connect` + `_on_animation_finished` | ✅ Fixed + Tested (was dead code) | `test_autoconnect_animation_player` ✅ |
 | Visibility (ON_SHOW/ON_HIDE) | `_connect_visibility_signals:1517` | JuiceBase `_connect_visibility_signals:692` | ✅ Tested (commit afbfaa6) | `test_autoconnect_visibility_on_show` ✅ |
 | **Sibling fallback scan** | `_try_auto_connect:1215-1235` | JuiceBase `_ready():256-278` | ✅ Fixed (commit bbf9754) | — (integration) |
 | **Config warning: ambiguous siblings** | `_get_configuration_warnings:1164-1189` | JuiceBase `_get_configuration_warnings:734` | ✅ Fixed (commit bbf9754) | — (visual) |
@@ -285,12 +285,15 @@
 
 ### ⚠️ UNTESTED (code exists, no automated verification)
 
-**Remaining untested:** Control signals (non-button), CollisionObject2D/3D signals,
-AnimationPlayer signals.
+**Remaining untested:** Editor preview lifecycle (`_enter/_exit_editor_preview`) — deferred to preview transport sprint.
 
-**Newly tested (commits 523544a–afbfaa6):** hold_at_peak, 2-phase ping-pong, 4-phase ping-pong,
+**Newly tested (commits 523544a–current):** hold_at_peak, 2-phase ping-pong, 4-phase ping-pong,
 infinite loops, QUEUE retrigger, chaining, loop_phase_offset, cross-node stacking (all 3 domains),
-Container re-sort handling, custom curves, elastic/back easing, button auto-connect, visibility auto-connect.
+Container re-sort handling, custom curves, elastic/back easing, button auto-connect, visibility auto-connect,
+animate_out params (custom_curve_out, elastic_out, back_out), loop counter during auto-OUT,
+PLAY_IN_AND_OUT loop restart, mirror_in_to_out (params + curve reversal + ease reversal),
+Control signals (hover, focus, gui_input), CollisionObject2D/3D signals (body_entered, hover),
+AnimationPlayer auto-connect (was dead code — fixed + tested).
 
 ---
 
