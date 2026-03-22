@@ -198,8 +198,8 @@
 |---------|-------------|-------------|--------|------|
 | BaseButton signals | `_connect_button_signals:1281` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (commit afbfaa6) | `test_autoconnect_button_pressed` ✅ |
 | Control signals | `_connect_control_signals:1327` | JuiceControl `_auto_connect_domain_signals` | ✅ Tested (hover, focus, gui_input) | `test_autoconnect_control_hover` + `test_autoconnect_control_focus` + `test_autoconnect_control_gui_input_press` ✅ |
-| CollisionObject3D signals | `_connect_collision_object_3d_signals:1363` | JuiceBase callbacks (lines 769-795) | ⚠️ Untested | — |
-| CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ⚠️ Untested | — |
+| CollisionObject3D signals | `_connect_collision_object_3d_signals:1363` | JuiceBase callbacks (lines 769-795) | ✅ Tested (body_entered, hover) | `test_autoconnect_area3d_body_entered` + `test_autoconnect_area3d_hover` ✅ |
+| CollisionObject2D signals | `_connect_collision_object_2d_signals:1436` | JuiceBase callbacks (lines 777-807) | ✅ Tested (body_entered, hover) | `test_autoconnect_area2d_body_entered` + `test_autoconnect_area2d_hover` ✅ |
 | AnimationPlayer signals | `_connect_animation_signals:1507` | JuiceBase `_on_animation_finished:830` | ⚠️ Untested | — |
 | Visibility (ON_SHOW/ON_HIDE) | `_connect_visibility_signals:1517` | JuiceBase `_connect_visibility_signals:692` | ✅ Tested (commit afbfaa6) | `test_autoconnect_visibility_on_show` ✅ |
 | **Sibling fallback scan** | `_try_auto_connect:1215-1235` | JuiceBase `_ready():256-278` | ✅ Fixed (commit bbf9754) | — (integration) |

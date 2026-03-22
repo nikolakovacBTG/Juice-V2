@@ -21,6 +21,8 @@ func get_test_methods() -> Array[String]:
 		"test_stacking_two_position_effects",
 		"test_stacking_cross_node",
 		"test_external_move_detection_position",
+		"test_autoconnect_area2d_body_entered",
+		"test_autoconnect_area2d_hover",
 	]
 
 
@@ -283,6 +285,79 @@ func test_stacking_cross_node() -> void:
 		"2D Cross-node stacking: two nodes should sum to (40, 25)", 5.0)
 
 	await cleanup(target)
+
+
+func test_autoconnect_area2d_body_entered() -> void:
+	# Area2D with ON_PRESS: body_entered triggers animation
+	var area := Area2D.new()
+	area.position = Vector2.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform2DJuiceEffect.new()
+	effect.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(80, 0)
+	effect.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	# Emit body_entered (connected for ON_PRESS on Area2D)
+	var dummy_body := Node2D.new()
+	_runner.add_child(dummy_body)
+	area.emit_signal("body_entered", dummy_body)
+	await wait_seconds(0.3)
+
+	assert_true(area.position.x > 50.0,
+		"Auto-connect Area2D ON_PRESS: body_entered should trigger animation (pos.x=%.1f)" % area.position.x)
+
+	await cleanup(dummy_body)
+	await cleanup(area)
+
+
+func test_autoconnect_area2d_hover() -> void:
+	# Area2D with ON_HOVER_START: mouse_entered triggers animation
+	var area := Area2D.new()
+	area.position = Vector2.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform2DJuiceEffect.new()
+	effect.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(80, 0)
+	effect.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	# Emit mouse_entered on Area2D
+	area.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_true(area.position.x > 50.0,
+		"Auto-connect Area2D ON_HOVER_START: mouse_entered should trigger animation (pos.x=%.1f)" % area.position.x)
+
+	await cleanup(area)
 
 
 func test_external_move_detection_position() -> void:

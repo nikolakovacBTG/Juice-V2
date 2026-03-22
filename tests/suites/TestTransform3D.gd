@@ -20,6 +20,8 @@ func get_test_methods() -> Array[String]:
 		"test_stacking_two_position_effects",
 		"test_stacking_cross_node",
 		"test_external_move_detection_position",
+		"test_autoconnect_area3d_body_entered",
+		"test_autoconnect_area3d_hover",
 	]
 
 
@@ -276,3 +278,76 @@ func test_external_move_detection_position() -> void:
 		"3D External move: y offset should be preserved (y=%.2f)" % target.position.y)
 
 	await cleanup(target)
+
+
+func test_autoconnect_area3d_body_entered() -> void:
+	# Area3D with ON_PRESS: body_entered triggers animation
+	var area := Area3D.new()
+	area.position = Vector3.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform3DJuiceEffect.new()
+	effect.transform_target = Transform3DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform3DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform3DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector3(5, 0, 0)
+	effect.to_position_in = Transform3DJuiceEffect.PositionIn3D.WORLD_UNITS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := Juice3D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice3DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	# Emit body_entered (connected for ON_PRESS on Area3D)
+	var dummy_body := Node3D.new()
+	_runner.add_child(dummy_body)
+	area.emit_signal("body_entered", dummy_body)
+	await wait_seconds(0.3)
+
+	assert_greater(area.position.x, 3.0,
+		"Auto-connect Area3D ON_PRESS: body_entered should trigger animation (pos.x=%.2f)" % area.position.x)
+
+	await cleanup(dummy_body)
+	await cleanup(area)
+
+
+func test_autoconnect_area3d_hover() -> void:
+	# Area3D with ON_HOVER_START: mouse_entered triggers animation
+	var area := Area3D.new()
+	area.position = Vector3.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform3DJuiceEffect.new()
+	effect.transform_target = Transform3DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform3DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform3DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector3(5, 0, 0)
+	effect.to_position_in = Transform3DJuiceEffect.PositionIn3D.WORLD_UNITS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+
+	var juice := Juice3D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice3DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	# Emit mouse_entered on Area3D
+	area.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_greater(area.position.x, 3.0,
+		"Auto-connect Area3D ON_HOVER_START: mouse_entered should trigger animation (pos.x=%.2f)" % area.position.x)
+
+	await cleanup(area)
