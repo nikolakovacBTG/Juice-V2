@@ -116,16 +116,24 @@ var back_overshoot_out: float = 1.70158
 var _btn_mirror_in_to_out: Callable:
 	get: return _mirror_in_to_out
 
+# --- RETRIGGER CROSSFADE ---
+## Blend time when switching direction mid-animation (retrigger with RESTART policy).
+var crossfade_time: float = 0.0
+
 # --- CHAINING ---
 ## Reference to another effect in the same recipe to trigger when this completes.
-var chain_to: JuiceEffectBase
+var chain_to: JuiceEffectBase:
+	set(value):
+		chain_to = value
+		notify_property_list_changed()
 
 ## Stop sibling effects with same interrupt identity when this starts.
 var interrupt_siblings: bool = false
 
-# --- CROSSFADE ---
-## Blend time when switching direction mid-animation.
-var crossfade_time: float = 0.0
+## Start the chained effect this many seconds before this effect completes.
+## Creates visual overlap between the two effects (e.g. squash on impact).
+## Only visible when chain_to is set.
+var chained_preroll: float = 0.0
 
 # --- DEBUG ---
 var debug_enabled: bool = false
@@ -148,6 +156,10 @@ func _get_effect_base_properties() -> Array[Dictionary]:
 		"hint_string": "Play In And Out,Play In Only,Play Out Only,Toggle,Set From Source",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "start_delay", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "crossfade_time", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.01,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "loop_count", "type": TYPE_INT,
 		"usage": PROPERTY_USAGE_DEFAULT})
@@ -245,8 +257,10 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "interrupt_siblings", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "crossfade_time", "type": TYPE_FLOAT,
-		"usage": PROPERTY_USAGE_DEFAULT})
+	if chain_to != null:
+		props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.01,or_greater",
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Debug ---
 	props.append({"name": "Debug", "type": TYPE_NIL,
@@ -276,6 +290,7 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"back_overshoot_out": back_overshoot_out = value; return true
 		&"chain_to": chain_to = value; return true
 		&"interrupt_siblings": interrupt_siblings = value; return true
+		&"chained_preroll": chained_preroll = value; return true
 		&"crossfade_time": crossfade_time = value; return true
 		&"debug_enabled": debug_enabled = value; return true
 		# Effect group properties (now dynamic, not @export)
@@ -308,6 +323,7 @@ func _get(property: StringName) -> Variant:
 		&"_btn_mirror_in_to_out": return _mirror_in_to_out
 		&"chain_to": return chain_to
 		&"interrupt_siblings": return interrupt_siblings
+		&"chained_preroll": return chained_preroll
 		&"crossfade_time": return crossfade_time
 		&"debug_enabled": return debug_enabled
 		# Effect group properties (now dynamic, not @export)
@@ -346,6 +362,9 @@ var _crossfade_elapsed: float = 0.0
 var _crossfade_start_progress: float = 0.0
 var _is_crossfading: bool = false
 
+# Chained preroll state
+var _chained_preroll_triggered: bool = false
+
 # Ping-pong state
 var _ping_pong_phase: int = 0
 var _pp_reversed: bool = false
@@ -375,6 +394,7 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 	_is_one_shot_return = false
 	_current_loop = 0
 	_elapsed = 0.0
+	_chained_preroll_triggered = false
 	_reset_ping_pong()
 
 	# Initialize ping-pong state
@@ -499,6 +519,32 @@ func is_playing() -> bool:
 ## Get current animation progress
 func get_progress() -> float:
 	return _animation_progress
+
+
+## Estimate seconds remaining until this effect returns COMPLETED.
+## Used by the host node to trigger chained_preroll at the right time.
+func _get_time_to_completion() -> float:
+	if not _is_playing:
+		return 0.0
+	# Don't preroll during delays or if looping
+	if _in_start_delay or _in_loop_delay:
+		return INF
+	if loop_count != 1:
+		return INF  # Looping effects: preroll not supported
+
+	var remaining := maxf(0.0, _get_current_duration() - _elapsed)
+
+	if _in_hold_at_peak:
+		remaining = maxf(0.0, hold_at_peak - _hold_elapsed)
+		if _will_auto_reverse and not _is_one_shot_return:
+			remaining += duration_out
+		return remaining
+
+	# If will auto-reverse and hasn't started out phase yet, add hold + out
+	if _will_auto_reverse and not _is_one_shot_return:
+		remaining += hold_at_peak + duration_out
+
+	return remaining
 
 # =============================================================================
 # CORE LOGIC
