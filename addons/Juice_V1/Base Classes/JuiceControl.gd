@@ -292,68 +292,6 @@ func _temporarily_reapply_visual() -> void:
 	ctrl.scale += _total_scale_contribution
 
 
-## Sequencer: undo warmup contribution, restoring target to natural state.
-func _seq_restore_target_natural(target: Node) -> void:
-	var ctrl := target as Control
-	if ctrl == null:
-		super._seq_restore_target_natural(target)
-		return
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	ctrl.position -= contrib.get("pos", Vector2.ZERO)
-	ctrl.rotation -= contrib.get("rot", 0.0)
-	ctrl.scale -= contrib.get("scale", Vector2.ZERO)
-	super._seq_restore_target_natural(target)
-
-
-## Sequencer RECIPE mode: aggregate deltas from per-target effects and write once.
-## Uses contribution-tracking pattern (not frozen base) so Container re-sorts
-## are automatically absorbed — same principle as STACK mode's external-move detection.
-func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
-	var ctrl := target as Control
-	if ctrl == null:
-		return
-
-	# Sum deltas from all effects on this target
-	var total_pos := Vector2.ZERO
-	var total_rot := 0.0
-	var total_scale := Vector2.ZERO
-
-	for eff_variant: Variant in effects:
-		var ctrl_effect := eff_variant as JuiceControlEffectBase
-		if ctrl_effect == null:
-			continue
-		if ctrl_effect._contributes_position:
-			total_pos += ctrl_effect._pos_delta
-		if ctrl_effect._contributes_rotation:
-			total_rot += ctrl_effect._rot_delta
-		if ctrl_effect._contributes_scale:
-			total_scale += ctrl_effect._scale_delta
-
-	# Retrieve our last contribution for this target (zero if first write)
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	var prev_pos: Vector2 = contrib.get("pos", Vector2.ZERO)
-	var prev_rot: float = contrib.get("rot", 0.0)
-	var prev_scale: Vector2 = contrib.get("scale", Vector2.ZERO)
-
-	# Derive natural (Container-managed) values by subtracting what we wrote last frame.
-	# If the Container re-sorted since then, ctrl.position already reflects that +
-	# our old contribution — subtracting it recovers the Container's intended position.
-	var natural_pos := ctrl.position - prev_pos
-	var natural_rot := ctrl.rotation - prev_rot
-	var natural_scale := ctrl.scale - prev_scale
-
-	# Write: natural + new deltas
-	ctrl.position = natural_pos + total_pos
-	ctrl.rotation = natural_rot + total_rot
-	ctrl.scale = natural_scale + total_scale
-
-	# Store our new contribution for next frame
-	_seq_target_contributions[target] = {
-		"pos": total_pos,
-		"rot": total_rot,
-		"scale": total_scale,
-	}
-
 # =============================================================================
 # CONFIGURATION WARNINGS (Override)
 # =============================================================================
