@@ -160,25 +160,6 @@ enum TriggerSource {
 ## How to handle re-triggers while playing.
 @export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
 
-@export_group("Loop")
-
-## Number of times to repeat the full recipe (-1 = infinite, 1 = no loop).
-@export_range(-1, 999) var loop_count: int = 1:
-	set(value):
-		loop_count = value
-		notify_property_list_changed()
-
-## Delay between recipe iterations.
-@export var loop_delay: float = 0.0
-
-@export_group("Recipe")
-
-## The recipe containing effects to play.
-@export var recipe: JuiceRecipe:
-	set(value):
-		recipe = value
-		_invalidate_runtime_effects()
-
 @export_group("Sequencer")
 
 ## Where this sequencer sources its animations (SEQUENCER mode only).
@@ -224,6 +205,25 @@ enum TriggerSource {
 
 ## When the exit animation completes, hide the parent node.
 @export var seq_hide_parent_on_reverse_complete: bool = false
+
+@export_group("Loop")
+
+## Number of times to repeat the full recipe (-1 = infinite, 1 = no loop).
+@export_range(-1, 999) var loop_count: int = 1:
+	set(value):
+		loop_count = value
+		notify_property_list_changed()
+
+## Delay between recipe iterations.
+@export var loop_delay: float = 0.0
+
+@export_group("Recipe")
+
+## The recipe containing effects to play.
+@export var recipe: JuiceRecipe:
+	set(value):
+		recipe = value
+		_invalidate_runtime_effects()
 
 @export_group("Debug")
 
@@ -916,14 +916,7 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	_seq_generation += 1
 	var my_gen := _seq_generation
 
-	# Handle start delay (skip for one_shot return and internal loop/ping-pong restarts)
-	if start_delay > 0.0 and not is_one_shot_return \
-			and _seq_current_loop == 0 and _seq_pp_current_cycle == 0:
-		await get_tree().create_timer(start_delay).timeout
-		if _seq_generation != my_gen:
-			return  # Aborted by retrigger
-
-	# Get filtered and ordered targets
+	# Get filtered and ordered targets early — needed for warmup before delay
 	var targets := _get_seq_targets()
 
 	if targets.is_empty():
@@ -936,9 +929,18 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
 
-	# Warmup: pre-position targets at From state (RECIPE mode only)
+	# Warmup BEFORE start_delay: pre-position targets at From state immediately
+	# so they don't flash at Self/natural position during the delay window.
+	# Hold pattern keeps Control targets enforced every frame (beats Container re-sort).
 	if juice_source == JuiceSource.RECIPE:
 		_seq_warmup_recipe_targets(targets, is_reverse)
+
+	# Handle start delay (skip for one_shot return and internal loop/ping-pong restarts)
+	if start_delay > 0.0 and not is_one_shot_return \
+			and _seq_current_loop == 0 and _seq_pp_current_cycle == 0:
+		await get_tree().create_timer(start_delay).timeout
+		if _seq_generation != my_gen:
+			return  # Aborted by retrigger
 
 	# Emit started signal only on the very first pass
 	if not is_one_shot_return and _seq_current_loop == 0 \
