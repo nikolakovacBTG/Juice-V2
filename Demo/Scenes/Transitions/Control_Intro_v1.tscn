@@ -59,7 +59,7 @@ elastic_period_in = 0.3
 hold_at_peak = 0.0
 chain_to = SubResource("Resource_04vrh")
 interrupt_siblings = false
-chained_preroll = 1.28
+chained_preroll = 0.91
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
