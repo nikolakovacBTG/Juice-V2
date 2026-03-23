@@ -86,6 +86,9 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestShakeControl.gd").new())
 	_suites.append(load("res://tests/suites/TestShake2D.gd").new())
 	_suites.append(load("res://tests/suites/TestShake3D.gd").new())
+	_suites.append(load("res://tests/suites/TestSpringControl.gd").new())
+	_suites.append(load("res://tests/suites/TestSpring2D.gd").new())
+	_suites.append(load("res://tests/suites/TestSpring3D.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():
