@@ -228,6 +228,8 @@ enum TriggerSource {
 	set(value):
 		recipe = value
 		_invalidate_runtime_effects()
+		if Engine.is_editor_hint():
+			update_configuration_warnings()
 
 @export_group("Debug")
 
@@ -1530,6 +1532,12 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("No recipe assigned. Add a JuiceRecipe to get started.")
 	elif recipe.effects.is_empty():
 		warnings.append("Recipe has no effects. Add JuiceEffectBase resources to the recipe.")
+	elif recipe.effects.has(null):
+		var null_count := 0
+		for eff in recipe.effects:
+			if eff == null:
+				null_count += 1
+		warnings.append("Recipe has %d empty effect slot(s). They will be ignored at runtime." % null_count)
 	if mode == Mode.STACK and get_parent() == null:
 		warnings.append("STACK mode requires a parent node as the target.")
 
