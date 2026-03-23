@@ -84,6 +84,11 @@ Using the templates from `@juice-architecture`:
 - Override `_get_seq_contribution()` if the effect contributes channels beyond the base pos/rot/scale (the base implementation in domain effect bases already handles those three). New channels (e.g., `modulate`, `self_modulate`) must be added to the returned Dictionary keyed by Godot property name.
 - Include the full conditional export system (`_get_property_list`, `_set`, `_get`)
 
+2d. **Register in recipe whitelists** (MANDATORY — effects won't appear in inspector without this):
+- Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/JuiceControlRecipe.gd`
+- Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/Juice2DRecipe.gd`
+- Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/Juice3DRecipe.gd`
+
 ---
 
 ## Step 3: Write Tests (All 3 Domains)
