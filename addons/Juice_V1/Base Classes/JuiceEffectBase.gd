@@ -361,6 +361,7 @@ var _start_delay_duration: float = 0.0
 var _delay_elapsed: float = 0.0
 var _in_hold_at_peak: bool = false
 var _hold_elapsed: float = 0.0
+var _in_sustain: bool = false
 var _in_loop_delay: bool = false
 var _loop_delay_elapsed: float = 0.0
 
@@ -399,6 +400,7 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 	_start_progress = _animation_progress
 	_is_playing = true
 	_is_one_shot_return = false
+	_in_sustain = false
 	_current_loop = 0
 	_elapsed = 0.0
 	_chained_preroll_triggered = false
@@ -445,6 +447,11 @@ func tick(delta: float, target: Node) -> TickResult:
 			return TickResult.PLAYING
 		_in_start_delay = false
 		_elapsed = 0.0
+
+	# --- Sustain: hold at peak indefinitely, keep applying effect ---
+	if _in_sustain:
+		_apply_effect(1.0, target)
+		return TickResult.PLAYING
 
 	# --- Hold at peak ---
 	if _in_hold_at_peak:
@@ -497,6 +504,7 @@ func stop(target: Node) -> void:
 	_is_playing = false
 	_in_start_delay = false
 	_in_hold_at_peak = false
+	_in_sustain = false
 	_in_loop_delay = false
 	_animation_progress = 0.0
 	_reset_ping_pong()
@@ -508,6 +516,7 @@ func stop_and_hold() -> void:
 	_is_playing = false
 	_in_start_delay = false
 	_in_hold_at_peak = false
+	_in_sustain = false
 	_in_loop_delay = false
 	_reset_ping_pong()
 
@@ -534,7 +543,7 @@ func _get_time_to_completion() -> float:
 	if not _is_playing:
 		return 0.0
 	# Don't preroll during delays or if looping
-	if _in_start_delay or _in_loop_delay:
+	if _in_start_delay or _in_loop_delay or _in_sustain:
 		return INF
 	if loop_count != 1:
 		return INF  # Looping effects: preroll not supported
@@ -634,6 +643,15 @@ func _finish(target: Node) -> TickResult:
 	_apply_effect(_animation_progress, target)
 
 	var just_animated_in := _animation_progress >= 0.5
+
+	# Sustain after animate_in for procedural effects that need continuous
+	# ticking (Noise, Shake, Spring). Non-procedural effects (Transform,
+	# SquashStretch) complete normally — their frozen delta is the desired state.
+	if just_animated_in and not _will_auto_reverse and _needs_sustain():
+		_in_sustain = true
+		_on_animate_in_complete(target)
+		return TickResult.COMPLETED
+
 	_is_playing = false
 
 	if just_animated_in:
@@ -884,6 +902,13 @@ func _get_viewport_size(target: Node) -> Vector2:
 # =============================================================================
 # VIRTUAL METHODS (Subclasses Override)
 # =============================================================================
+
+## Whether this effect needs continuous ticking after animate_in completes.
+## Procedural effects (Noise, Shake, Spring) override to return true.
+## Non-procedural effects (Transform, SquashStretch) return false — their
+## frozen delta at progress=1.0 is the desired state, no further ticking needed.
+func _needs_sustain() -> bool:
+	return false
 
 ## Apply the effect at the given progress. THIS IS THE CORE METHOD.
 ## progress: 0.0 = natural state, 1.0 = fully applied

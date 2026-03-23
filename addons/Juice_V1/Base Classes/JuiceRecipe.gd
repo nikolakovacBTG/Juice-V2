@@ -46,23 +46,25 @@ extends Resource
 ## Each host node gets its own cloned set so animation state is independent.
 ## This is critical when the same recipe .tres is shared across multiple nodes.
 func create_runtime_effects() -> Array[JuiceEffectBase]:
+	# Filter out null slots — users may leave empty slots in the inspector.
+	var valid_effects: Array[JuiceEffectBase] = []
+	for effect in effects:
+		if effect != null:
+			valid_effects.append(effect)
+
 	var clones: Array[JuiceEffectBase] = []
 	# Save original chain_to refs BEFORE deep duplicate replaces them with copies
 	var original_chains: Array[JuiceEffectBase] = []
-	for effect in effects:
-		if effect == null:
-			clones.append(null)
-			original_chains.append(null)
-			continue
+	for effect in valid_effects:
 		original_chains.append(effect.chain_to)
 		clones.append(effect.duplicate(true) as JuiceEffectBase)
 
 	# Remap chain_to references using the saved originals (not deep-copied refs)
 	for i in clones.size():
-		if clones[i] == null or original_chains[i] == null:
-			clones[i].chain_to = null if clones[i] == null else null
+		if original_chains[i] == null:
+			clones[i].chain_to = null
 			continue
-		var chain_idx := effects.find(original_chains[i])
+		var chain_idx := valid_effects.find(original_chains[i])
 		if chain_idx >= 0 and chain_idx < clones.size():
 			clones[i].chain_to = clones[chain_idx]
 		else:

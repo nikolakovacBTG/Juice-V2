@@ -208,6 +208,10 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+func _needs_sustain() -> bool:
+	return true
+
+
 func _on_animate_start(target: Node) -> void:
 	# Check cooldown
 	if trigger_cooldown > 0.0:

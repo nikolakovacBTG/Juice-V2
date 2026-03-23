@@ -295,6 +295,10 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+func _needs_sustain() -> bool:
+	return true
+
+
 func _on_animate_start(target: Node) -> void:
 	# Set contribution flags
 	_contributes_position = (transform_target == TransformTarget.POSITION)
