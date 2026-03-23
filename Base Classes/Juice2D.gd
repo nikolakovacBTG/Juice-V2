@@ -1,11 +1,16 @@
-## Juice2D.gd
-## ============================================================================
-## WHAT: Juice node for Node2D targets (Sprite2D, CharacterBody2D, etc.).
-## WHY: Validates parent is Node2D, connects Area2D/CollisionObject2D signals,
-##      handles pivot compensation for rotation/scale (Node2D has no pivot_offset).
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
-## ============================================================================
+## Juice node for [Node2D] targets (Sprite2D, CharacterBody2D, etc.).
+##
+## Attach as a child of any [Node2D]. Assign a [JuiceRecipe] and configure
+## triggers to animate position, scale, rotation, appearance, and more.
+## Effects stack automatically when multiple Juice nodes share a target.
+
+# ============================================================================
+# WHAT: Juice node for Node2D targets (Sprite2D, CharacterBody2D, etc.).
+# WHY: Validates parent is Node2D, connects Area2D/CollisionObject2D signals,
+#      handles pivot compensation for rotation/scale (Node2D has no pivot_offset).
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")

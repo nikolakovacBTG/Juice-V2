@@ -1,24 +1,29 @@
-## JuiceRecipe.gd
-## ============================================================================
-## WHAT: A shareable, savable collection of JuiceEffectBase resources.
-## WHY: Recipes are the "preset" unit — drop a .tres onto a Juice node and get
-##      a complete visual behavior. Marketplace-ready, copy-pasteable, reusable.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Execute effects — the host node (JuiceControl etc.) does that.
-## DOES NOT: Own animation state — effects hold their own state per-instance.
-## ============================================================================
+## A shareable collection of [JuiceEffectBase] resources.
 ##
-## USAGE:
-## 1. Create a JuiceRecipe resource (.tres)
-## 2. Add JuiceEffectBase sub-resources to the effects array
-## 3. Assign the recipe to a Juice node's recipe property
-## 4. The node clones effects at runtime for independent state
-##
-## CHAINING:
-## Effects in the array can reference each other via chain_to.
-## Unchained effects fire simultaneously on trigger.
-## Array order is IRRELEVANT for execution — chain pointers define ordering.
-## ============================================================================
+## Recipes are the preset unit — drop a [code].tres[/code] onto a Juice node
+## and get a complete visual behavior. Effects fire simultaneously unless
+## linked via [member JuiceEffectBase.chain_to] references.
+
+# ============================================================================
+# WHAT: A shareable, savable collection of JuiceEffectBase resources.
+# WHY: Recipes are the "preset" unit — drop a .tres onto a Juice node and get
+#      a complete visual behavior. Marketplace-ready, copy-pasteable, reusable.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Execute effects — the host node (JuiceControl etc.) does that.
+# DOES NOT: Own animation state — effects hold their own state per-instance.
+# ============================================================================
+#
+# USAGE:
+# 1. Create a JuiceRecipe resource (.tres)
+# 2. Add JuiceEffectBase sub-resources to the effects array
+# 3. Assign the recipe to a Juice node's recipe property
+# 4. The node clones effects at runtime for independent state
+#
+# CHAINING:
+# Effects in the array can reference each other via chain_to.
+# Unchained effects fire simultaneously on trigger.
+# Array order is IRRELEVANT for execution — chain pointers define ordering.
+# ============================================================================
 
 @tool
 class_name JuiceRecipe

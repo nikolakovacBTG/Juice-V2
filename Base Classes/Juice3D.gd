@@ -1,10 +1,15 @@
-## Juice3D.gd
-## ============================================================================
-## WHAT: Juice node for Node3D targets (MeshInstance3D, CharacterBody3D, etc.).
-## WHY: Validates parent is Node3D, connects Area3D/CollisionObject3D signals.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
-## ============================================================================
+## Juice node for [Node3D] targets (MeshInstance3D, CharacterBody3D, etc.).
+##
+## Attach as a child of any [Node3D]. Assign a [JuiceRecipe] and configure
+## triggers to animate position, scale, rotation, appearance, and more.
+## Effects stack automatically when multiple Juice nodes share a target.
+
+# ============================================================================
+# WHAT: Juice node for Node3D targets (MeshInstance3D, CharacterBody3D, etc.).
+# WHY: Validates parent is Node3D, connects Area3D/CollisionObject3D signals.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
