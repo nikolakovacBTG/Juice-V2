@@ -181,7 +181,7 @@ func tick(delta: float, target: Node) -> TickResult:
 	var result := super.tick(delta, target)
 	if _in_hold_at_peak and _is_playing:
 		_shake_time += delta
-		_compute_shake_deltas(1.0 if not decay else 0.0)
+		_compute_shake_deltas(1.0)
 	return result
 
 
@@ -216,8 +216,7 @@ func _on_animate_start(target: Node) -> void:
 
 func _apply_effect(progress: float, _target: Node) -> void:
 	_shake_time += _tick_delta
-	var intensity := (1.0 - progress) if decay else 1.0
-	_compute_shake_deltas(intensity)
+	_compute_shake_deltas(progress)
 
 
 func _on_animate_in_complete(_target: Node) -> void:

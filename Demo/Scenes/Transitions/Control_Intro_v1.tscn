@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
 [ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_i3blr"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
-[ext_resource type="Script" uid="uid://chkjoiswnmqg5" path="res://addons/Juice_V1/Control/NoiseControlJuiceEffect.gd" id="7_04vrh"]
+[ext_resource type="Script" uid="uid://cgdw7reti11jj" path="res://addons/Juice_V1/Control/SpringControlJuiceEffect.gd" id="9_lq48p"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -53,10 +53,8 @@ to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 0.1)
 duration_in = 1.0
-transition_in = 6
+transition_in = 0
 ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
 hold_at_peak = 0.0
 chain_to = SubResource("Resource_04vrh")
 interrupt_siblings = false
@@ -69,35 +67,31 @@ script = ExtResource("6_i3blr")
 effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="Resource_1htyt"]
-script = ExtResource("7_04vrh")
+[sub_resource type="Resource" id="Resource_hcbql"]
+script = ExtResource("9_lq48p")
 transform_target = 0
-position_amplitude = Vector2(50, 50)
-noise_speed = 1.0
-noise_direction = 0
+stiffness = 300.0
+damping = 10.0
+mass = 1.0
+position_offset = Vector2(0, -20)
+velocity_threshold = 0.5
+value_threshold = 0.1
+trigger_cooldown = 0.0
 trigger_behaviour = 1
-start_delay = 0.0
+start_delay = 3.0
 crossfade_time = 0.0
 loop_count = 1
-noise_type = 1
-noise_frequency = 1.0
-noise_seed = 0
-fractal_type = 0
-domain_warp_enabled = false
-position_axis_speed = Vector2(1, 1)
-clamp_min = -1.0
-clamp_max = 1.0
-duration_in = 0.3
+duration_in = 5.0
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://chkjoiswnmqg5"
+metadata/_custom_type_script = "uid://cgdw7reti11jj"
 
 [sub_resource type="Resource" id="Resource_0go64"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_1htyt"), null, null])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_hcbql")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_r7ray"]
