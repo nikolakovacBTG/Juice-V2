@@ -11,7 +11,8 @@
 - Effects **NEVER write** to the target node — the domain node writes once per frame
 - Effects **NEVER track** `_my_*_contribution`, `_last_written_*`, or `_base_*` at the node level — effects track their own base values per-effect
 - Effects **NEVER detect** external moves — the domain node does that
-- Effects store deltas in `_pos_delta`, `_rot_delta`, `_scale_delta` (inherited from domain EffectBase)
+- Effects store deltas in `_pos_delta`, `_rot_delta`, `_scale_delta` (inherited from domain TransformEffect)
+- Non-transform effects (Appearance, VFX, etc.) extend the domain EffectBase directly
 
 ## Rule 2: Domain Nodes Own Write Coordination
 
@@ -63,6 +64,7 @@ Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
 |----------|---------|---------|
 | Domain nodes | `Juice[Domain]` | `JuiceControl`, `Juice2D`, `Juice3D` |
 | Domain effect base | `Juice[Domain]EffectBase` | `JuiceControlEffectBase` |
+| Domain transform base | `Juice[Domain]TransformEffect` | `JuiceControlTransformEffect` |
 | Domain recipe | `Juice[Domain]Recipe` | `JuiceControlRecipe` |
 | Concrete effects | `[Effect][Domain]JuiceEffect` | `TransformControlJuiceEffect`, `Shake2DJuiceEffect` |
 

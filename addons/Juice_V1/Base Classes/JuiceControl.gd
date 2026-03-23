@@ -249,8 +249,8 @@ func _post_tick_write() -> void:
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
-		# Effects must be JuiceControlEffectBase to have typed deltas
-		var ctrl_effect := effect as JuiceControlEffectBase
+		# Only transform effects have typed deltas
+		var ctrl_effect := effect as JuiceControlTransformEffect
 		if ctrl_effect == null:
 			continue
 		if ctrl_effect._contributes_position:

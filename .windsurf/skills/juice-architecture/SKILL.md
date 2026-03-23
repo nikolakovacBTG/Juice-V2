@@ -22,7 +22,7 @@ description: Core architecture rules and code templates for the Juice V1 addon. 
 | `test-template.gd` | Creating a new test suite for any effect |
 
 For 2D and 3D effects, adapt the Control template by:
-- Changing `extends JuiceControlEffectBase` → `extends Juice2DEffectBase` / `extends Juice3DEffectBase`
+- Changing `extends JuiceControlTransformEffect` → `extends Juice2DTransformEffect` / `extends Juice3DTransformEffect`
 - Changing `Vector2` → `Vector2` (2D) or `Vector3` (3D) for position/scale
 - Changing `Control` → `Node2D` / `Node3D` for target type
 - Changing `JuiceControl` → `Juice2D` / `Juice3D` for host node

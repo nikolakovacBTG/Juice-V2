@@ -15,7 +15,7 @@
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
 class_name REPLACE_EffectNameControlJuiceEffect
-extends JuiceControlEffectBase
+extends JuiceControlTransformEffect
 
 
 # =============================================================================

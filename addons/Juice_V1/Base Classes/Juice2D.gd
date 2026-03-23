@@ -228,7 +228,7 @@ func _post_tick_write() -> void:
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
-		var eff_2d := effect as Juice2DEffectBase
+		var eff_2d := effect as Juice2DTransformEffect
 		if eff_2d == null:
 			continue
 		if eff_2d._contributes_position:

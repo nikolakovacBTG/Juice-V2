@@ -18,7 +18,7 @@
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
 class_name Shake2DJuiceEffect
-extends Juice2DEffectBase
+extends Juice2DTransformEffect
 
 
 # =============================================================================
