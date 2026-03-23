@@ -1,15 +1,20 @@
-## JuiceEffectBase.gd
-## ============================================================================
-## WHAT: Base class for all juice effects in the JuiceStack system.
-## WHY: Provides shared timing, easing, animation loop, and virtual methods so
-##      concrete effects only implement their specific visual/audio behavior.
-##      Effects are Resources (not Nodes) — they hold config + math + state
-##      but have no scene tree lifecycle. A host node (JuiceControl etc.) ticks them.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement any visual/audio effect — subclasses do that.
-## DOES NOT: Auto-connect signals or manage triggers — the host node does that.
-## DOES NOT: Store persistent references to Nodes — target is always passed in.
-## ============================================================================
+## Base class for all Juice effects. Extend this to create custom effects.
+##
+## Effects are [Resource]s with timing, easing, and animation state. A host
+## node ([JuiceControl], [Juice2D], [Juice3D]) ticks them each frame.
+## Subclasses override [method _apply_effect] to implement their visual behavior.
+
+# ============================================================================
+# WHAT: Base class for all juice effects in the JuiceStack system.
+# WHY: Provides shared timing, easing, animation loop, and virtual methods so
+#      concrete effects only implement their specific visual/audio behavior.
+#      Effects are Resources (not Nodes) — they hold config + math + state
+#      but have no scene tree lifecycle. A host node (JuiceControl etc.) ticks them.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement any visual/audio effect — subclasses do that.
+# DOES NOT: Auto-connect signals or manage triggers — the host node does that.
+# DOES NOT: Store persistent references to Nodes — target is always passed in.
+# ============================================================================
 
 @tool
 class_name JuiceEffectBase
@@ -132,8 +137,11 @@ var interrupt_siblings: bool = false
 
 ## Start the chained effect this many seconds before this effect completes.
 ## Creates visual overlap between the two effects (e.g. squash on impact).
-## Only visible when chain_to is set.
-var chained_preroll: float = 0.0
+## Auto-clamped to this effect's total duration. Only visible when chain_to is set.
+var chained_preroll: float = 0.0:
+	set(value):
+		chained_preroll = clampf(value, 0.0, _get_max_chained_preroll())
+		notify_property_list_changed()
 
 # --- DEBUG ---
 var debug_enabled: bool = false
@@ -258,8 +266,10 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "interrupt_siblings", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
 	if chain_to != null:
+		var max_preroll := _get_max_chained_preroll()
 		props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.01,or_greater",
+			"hint": PROPERTY_HINT_RANGE,
+			"hint_string": "0.0,%s,0.01" % max_preroll,
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Debug ---
@@ -843,6 +853,17 @@ func get_total_preview_duration() -> float:
 	if trigger_behaviour == TriggerBehaviour.PLAY_IN_AND_OUT:
 		total += hold_at_peak + duration_out
 	return total
+
+## Returns the maximum sensible chained_preroll value — the total duration
+## from start to completion for this effect's trigger_behaviour.
+func _get_max_chained_preroll() -> float:
+	match trigger_behaviour:
+		TriggerBehaviour.PLAY_IN_AND_OUT:
+			return duration_in + hold_at_peak + duration_out
+		TriggerBehaviour.PLAY_OUT_ONLY:
+			return duration_out
+		_:  # PLAY_IN_ONLY, TOGGLE, SET_FROM_SOURCE
+			return duration_in + hold_at_peak
 
 # =============================================================================
 # HELPERS FOR SUBCLASSES

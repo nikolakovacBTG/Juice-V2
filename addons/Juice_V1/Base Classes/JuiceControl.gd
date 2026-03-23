@@ -1,11 +1,16 @@
-## JuiceControl.gd
-## ============================================================================
-## WHAT: Juice node for Control targets (Button, Label, Panel, etc.).
-## WHY: Validates parent is Control, connects Control/Button-specific signals,
-##      handles Container-aware external-move detection.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
-## ============================================================================
+## Juice node for [Control] targets (Button, Label, Panel, etc.).
+##
+## Attach as a child of any [Control]. Assign a [JuiceRecipe] and configure
+## triggers to animate position, scale, rotation, appearance, and more.
+## Effects stack automatically when multiple Juice nodes share a target.
+
+# ============================================================================
+# WHAT: Juice node for Control targets (Button, Label, Panel, etc.).
+# WHY: Validates parent is Control, connects Control/Button-specific signals,
+#      handles Container-aware external-move detection.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")

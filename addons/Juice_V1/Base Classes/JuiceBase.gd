@@ -1,26 +1,30 @@
-## JuiceBase.gd
-## ============================================================================
-## WHAT: Unified base node that drives JuiceEffectBase resources via a recipe.
-## WHY: Replaces per-effect Node architecture with a single node per target.
-##      Manages triggers, animation lifecycle, chaining, and looping.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Know about domain specifics — subclasses (JuiceControl, Juice2D,
-##           Juice3D) handle target type validation and domain auto-connect.
-## ============================================================================
+## Base class for all Juice nodes. Use [JuiceControl], [Juice2D], or [Juice3D] instead.
 ##
-## MODES:
-## - STACK: All effects target the parent node. Delta-first stacking.
-##          Multiple Juice nodes on the same parent are allowed.
-## - SEQUENCER: Effects target an array of NodePaths. Stagger, target order.
-##              (Implemented in Phase 5)
-##
-## TRIGGER FLOW:
-## 1. Signal/event fires → _on_trigger_momentary() or _on_trigger_polarity()
-## 2. _handle_trigger() dispatches based on trigger_behaviour
-## 3. _start_effects() clones recipe, starts root effects
-## 4. _process() ticks active effects each frame
-## 5. On TickResult.COMPLETED → follow chain_to, handle loops
-## ============================================================================
+## Drives [JuiceEffectBase] resources via a [JuiceRecipe]. Manages triggers,
+## animation lifecycle, chaining, looping, and delta-first stacking. Supports
+## STACK mode (single target) and SEQUENCER mode (multiple targets with stagger).
+
+# ============================================================================
+# WHAT: Unified base node that drives JuiceEffectBase resources via a recipe.
+# WHY: Replaces per-effect Node architecture with a single node per target.
+#      Manages triggers, animation lifecycle, chaining, and looping.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Know about domain specifics — subclasses (JuiceControl, Juice2D,
+#           Juice3D) handle target type validation and domain auto-connect.
+# ============================================================================
+#
+# MODES:
+# - STACK: All effects target the parent node. Delta-first stacking.
+#          Multiple Juice nodes on the same parent are allowed.
+# - SEQUENCER: Effects target an array of NodePaths. Stagger, target order.
+#
+# TRIGGER FLOW:
+# 1. Signal/event fires → _on_trigger_momentary() or _on_trigger_polarity()
+# 2. _handle_trigger() dispatches based on trigger_behaviour
+# 3. _start_effects() clones recipe, starts root effects
+# 4. _process() ticks active effects each frame
+# 5. On TickResult.COMPLETED → follow chain_to, handle loops
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase.svg")

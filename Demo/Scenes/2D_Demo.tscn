@@ -6,12 +6,14 @@
 [ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="4_rrb6h"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="5_n8ykl"]
 [ext_resource type="Texture2D" uid="uid://c2h0wt5po6fse" path="res://Textures/Kenney/spritesheet-tiles-default.png" id="6_n8ykl"]
+[ext_resource type="Texture2D" uid="uid://cqy0csvxav4m2" path="res://Textures/Kenney/spritesheet-characters-default.png" id="7_naj6s"]
 
 [sub_resource type="Resource" id="Resource_n8ykl"]
 script = ExtResource("4_rrb6h")
 transform_target = 0
 trigger_behaviour = 1
 start_delay = 0.0
+crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
 capture_at = 2
@@ -26,7 +28,6 @@ transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
-crossfade_time = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
@@ -35,6 +36,7 @@ script = ExtResource("4_rrb6h")
 transform_target = 0
 trigger_behaviour = 1
 start_delay = 0.0
+crossfade_time = 0.0
 loop_count = 1
 from_reference = 0
 from_position_in = 1
@@ -49,7 +51,6 @@ transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
-crossfade_time = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
@@ -389,10 +390,115 @@ texture_region_size = Vector2i(64, 64)
 
 [sub_resource type="TileSet" id="TileSet_wwan6"]
 tile_size = Vector2i(64, 64)
+physics_layer_0/collision_layer = 1
 terrain_set_0/mode = 0
 terrain_set_0/terrain_0/name = "Terrain 0"
 terrain_set_0/terrain_0/color = Color(0.5, 0.34375, 0.25, 1)
 sources/0 = SubResource("TileSetAtlasSource_naj6s")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wwan6"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(129, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ufvpt"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(258, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4nq8g"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(387, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_53ch6"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(516, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yssye"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(645, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6yyf2"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(774, 645, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cq53s"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(0, 774, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i4foe"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(129, 774, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nv2n5"]
+atlas = ExtResource("7_naj6s")
+region = Rect2(258, 774, 128, 128)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_8xudc"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wwan6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ufvpt")
+}],
+"loop": true,
+"name": &"climb",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4nq8g")
+}],
+"loop": true,
+"name": &"duck",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_53ch6")
+}],
+"loop": true,
+"name": &"front",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_yssye")
+}],
+"loop": true,
+"name": &"hit",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6yyf2")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cq53s")
+}],
+"loop": true,
+"name": &"jump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i4foe")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nv2n5")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 5.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_naj6s"]
+size = Vector2(62, 93)
 
 [node name="2dDemo" type="Node2D" unique_id=375246502]
 
@@ -408,3 +514,14 @@ metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=892077014]
 tile_set = SubResource("TileSet_wwan6")
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1227547402]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CharacterBody2D" unique_id=431634661]
+sprite_frames = SubResource("SpriteFrames_8xudc")
+animation = &"walk"
+offset = Vector2(0, -64)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=1101086319]
+position = Vector2(-1, -49)
+shape = SubResource("RectangleShape2D_naj6s")
