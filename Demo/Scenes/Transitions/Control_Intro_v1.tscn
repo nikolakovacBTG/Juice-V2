@@ -65,7 +65,7 @@ metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
 [sub_resource type="Resource" id="Resource_tx2cu"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh"), null])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_r7ray"]
