@@ -86,14 +86,8 @@ var _subclass_owns_effect_group: bool = false
 # =============================================================================
 
 # --- ANIMATE IN ---
-var hold_at_peak: float = 0.0:
-	set(value):
-		hold_at_peak = value
-		_reclamp_chained_preroll()
-var duration_in: float = 0.3:
-	set(value):
-		duration_in = value
-		_reclamp_chained_preroll()
+var hold_at_peak: float = 0.0
+var duration_in: float = 0.3
 var transition_in: Tween.TransitionType = Tween.TRANS_QUAD:
 	set(value):
 		transition_in = value
@@ -108,10 +102,7 @@ var elastic_period_in: float = 0.3
 var back_overshoot_in: float = 1.70158
 
 # --- ANIMATE OUT ---
-var duration_out: float = 0.3:
-	set(value):
-		duration_out = value
-		_reclamp_chained_preroll()
+var duration_out: float = 0.3
 var transition_out: Tween.TransitionType = Tween.TRANS_QUAD:
 	set(value):
 		transition_out = value
@@ -861,17 +852,6 @@ func get_total_preview_duration() -> float:
 	if trigger_behaviour == TriggerBehaviour.PLAY_IN_AND_OUT:
 		total += hold_at_peak + duration_out
 	return total
-
-## Re-clamp chained_preroll when duration/hold changes. Only refreshes
-## the property list when chain_to is set (to avoid sticky duration sliders).
-func _reclamp_chained_preroll() -> void:
-	if chain_to == null:
-		return
-	var max_val := _get_max_chained_preroll()
-	if chained_preroll > max_val:
-		chained_preroll = max_val
-	notify_property_list_changed()
-
 
 ## Returns the maximum sensible chained_preroll value — the total duration
 ## from start to completion for this effect's trigger_behaviour.
