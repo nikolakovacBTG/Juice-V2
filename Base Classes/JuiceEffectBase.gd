@@ -265,10 +265,8 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "interrupt_siblings", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
 	if chain_to != null:
-		var max_preroll := _get_max_chained_preroll()
 		props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE,
-			"hint_string": "0.0,%s,0.01" % max_preroll,
+			"hint": PROPERTY_HINT_NONE,
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Debug ---
