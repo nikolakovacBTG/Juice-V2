@@ -141,7 +141,6 @@ var interrupt_siblings: bool = false
 var chained_preroll: float = 0.0:
 	set(value):
 		chained_preroll = clampf(value, 0.0, _get_max_chained_preroll())
-		notify_property_list_changed()
 
 # --- DEBUG ---
 var debug_enabled: bool = false
