@@ -57,6 +57,9 @@ var mass: float = 1.0
 var velocity_threshold: float = 0.5
 var value_threshold: float = 0.1
 
+# --- Mode ---
+var one_shot_mode: bool = false
+
 # --- Re-trigger prevention ---
 var trigger_cooldown: float = 0.0
 
@@ -97,6 +100,8 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	# Spring physics (always visible)
+	props.append({"name": "one_shot_mode", "type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "stiffness", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,1000.0,1.0,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
@@ -145,6 +150,7 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"transform_target": transform_target = value; return true
+		&"one_shot_mode": one_shot_mode = value; return true
 		&"stiffness": stiffness = value; return true
 		&"damping": damping = value; return true
 		&"mass": mass = value; return true
@@ -162,6 +168,7 @@ func _set(property: StringName, value: Variant) -> bool:
 func _get(property: StringName) -> Variant:
 	match property:
 		&"transform_target": return transform_target
+		&"one_shot_mode": return one_shot_mode
 		&"stiffness": return stiffness
 		&"damping": return damping
 		&"mass": return mass
@@ -210,6 +217,21 @@ func tick(delta: float, target: Node) -> TickResult:
 
 func _needs_sustain() -> bool:
 	return true
+
+
+func _on_external_displacement(displacement: Dictionary) -> void:
+	if one_shot_mode:
+		return
+	match transform_target:
+		TransformTarget.POSITION:
+			if displacement.has("position"):
+				_current_value -= displacement["position"]
+		TransformTarget.ROTATION:
+			if displacement.has("rotation"):
+				_current_value -= displacement["rotation"]
+		TransformTarget.SCALE:
+			if displacement.has("scale"):
+				_current_value -= displacement["scale"]
 
 
 func _on_animate_start(target: Node) -> void:
@@ -272,21 +294,38 @@ func _get_interrupt_identity() -> Variant:
 # =============================================================================
 
 func _initialize_spring_state(target: Node) -> void:
-	_springing_to_offset = true
+	_springing_to_offset = one_shot_mode
 
-	match transform_target:
-		TransformTarget.POSITION:
-			_current_value = Vector2.ZERO  # delta starts at zero
-			_spring_target_value = position_offset
-			_velocity = Vector2.ZERO
-		TransformTarget.ROTATION:
-			_current_value = 0.0
-			_spring_target_value = deg_to_rad(rotation_offset_degrees)
-			_velocity = 0.0
-		TransformTarget.SCALE:
-			_current_value = Vector2.ZERO
-			_spring_target_value = scale_offset
-			_velocity = Vector2.ZERO
+	if one_shot_mode:
+		# One-shot: spring FROM rest TO offset, then settle at offset
+		match transform_target:
+			TransformTarget.POSITION:
+				_current_value = Vector2.ZERO
+				_spring_target_value = position_offset
+				_velocity = Vector2.ZERO
+			TransformTarget.ROTATION:
+				_current_value = 0.0
+				_spring_target_value = deg_to_rad(rotation_offset_degrees)
+				_velocity = 0.0
+			TransformTarget.SCALE:
+				_current_value = Vector2.ZERO
+				_spring_target_value = scale_offset
+				_velocity = Vector2.ZERO
+	else:
+		# Reactive: spring FROM offset BACK TO rest (delta=0), then respond to external forces
+		match transform_target:
+			TransformTarget.POSITION:
+				_current_value = position_offset
+				_spring_target_value = Vector2.ZERO
+				_velocity = Vector2.ZERO
+			TransformTarget.ROTATION:
+				_current_value = deg_to_rad(rotation_offset_degrees)
+				_spring_target_value = 0.0
+				_velocity = 0.0
+			TransformTarget.SCALE:
+				_current_value = scale_offset
+				_spring_target_value = Vector2.ZERO
+				_velocity = Vector2.ZERO
 
 
 func _spring_step(delta: float) -> void:

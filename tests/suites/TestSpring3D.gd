@@ -21,7 +21,8 @@ func get_test_methods() -> Array[String]:
 func _create_spring_rig(
 	label: String,
 	target_type: int = Spring3DJuiceEffect.TransformTarget.POSITION,
-	duration: float = 0.5
+	duration: float = 0.5,
+	one_shot: bool = false
 ) -> Array:
 	var target := Node3D.new()
 	target.name = label
@@ -35,6 +36,7 @@ func _create_spring_rig(
 	effect.position_offset = Vector3(2.0, 0.0, 0.0)
 	effect.rotation_offset = Vector3(0.0, 20.0, 0.0)
 	effect.scale_offset = Vector3(0.3, 0.3, 0.3)
+	effect.one_shot_mode = one_shot
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = duration
 
@@ -99,7 +101,7 @@ func test_scale_spring_applies() -> void:
 
 func test_position_spring_settles_near_offset() -> void:
 	var rig := await _create_spring_rig("SpringSettle3D",
-		Spring3DJuiceEffect.TransformTarget.POSITION, 1.0)
+		Spring3DJuiceEffect.TransformTarget.POSITION, 1.0, true)
 	var target: Node3D = rig[0]
 	var juice: Juice3D = rig[1]
 	var effect: Spring3DJuiceEffect = rig[2]

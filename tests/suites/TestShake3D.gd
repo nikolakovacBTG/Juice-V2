@@ -30,7 +30,6 @@ func _create_shake_rig(
 	var effect := Shake3DJuiceEffect.new()
 	effect.transform_target = target_type
 	effect.shake_frequency = 20.0
-	effect.decay = true
 	effect.position_strength = Vector3(2.0, 2.0, 2.0)
 	effect.rotation_amplitude = Vector3(0.0, 15.0, 0.0)
 	effect.scale_amplitude = Vector3(0.5, 0.5, 0.5)

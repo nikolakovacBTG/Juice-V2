@@ -916,6 +916,13 @@ func _needs_sustain() -> bool:
 func _apply_effect(_progress: float, _target: Node) -> void:
 	pass  # Subclass MUST implement
 
+## Called by domain node when external displacement is detected (pre-tick).
+## displacement: Dictionary keyed by channel name ("position", "rotation", "scale")
+## with the external displacement value (Vector2, Vector3, or float).
+## Only effects that need to react to external movement override this.
+func _on_external_displacement(_displacement: Dictionary) -> void:
+	pass
+
 ## Called when animation starts (either direction). Capture base values here.
 func _on_animate_start(_target: Node) -> void:
 	pass
