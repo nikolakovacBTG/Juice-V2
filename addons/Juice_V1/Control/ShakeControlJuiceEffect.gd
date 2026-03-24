@@ -168,7 +168,10 @@ var _shake_seed: float = 0.0
 var _tick_delta: float = 0.0
 var _direction_multiplier: float = 1.0
 var _last_sine_sign: float = 1.0
-var _pivot_applied: bool = false
+var _pivot_computed: bool = false
+var _pivot_arm: Vector2 = Vector2.ZERO
+var _base_rotation_for_pivot: float = 0.0
+var _base_scale_for_pivot: Vector2 = Vector2.ONE
 
 
 # =============================================================================
@@ -193,7 +196,6 @@ func _needs_sustain() -> bool:
 
 
 func _on_animate_start(target: Node) -> void:
-	_contributes_position = (transform_target == TransformTarget.POSITION)
 	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
 	_contributes_scale = (transform_target == TransformTarget.SCALE)
 
@@ -202,9 +204,14 @@ func _on_animate_start(target: Node) -> void:
 	_direction_multiplier = 1.0
 	_last_sine_sign = 1.0
 
-	if transform_target != TransformTarget.POSITION and not _pivot_applied:
-		_apply_pivot_mode(target)
-		_pivot_applied = true
+	# Compute virtual pivot arm for rotation/scale compensation
+	if transform_target != TransformTarget.POSITION and not _pivot_computed:
+		_compute_pivot_arm(target)
+		_pivot_computed = true
+
+	# Position is contributed when target is position OR when pivot compensation is needed
+	var uses_pivot := (transform_target != TransformTarget.POSITION and _pivot_arm != Vector2.ZERO)
+	_contributes_position = (transform_target == TransformTarget.POSITION or uses_pivot)
 
 	if debug_enabled:
 		print("[ShakeCtrl] Start: %s, freq=%.1f Hz" % [
@@ -222,7 +229,7 @@ func _on_animate_in_complete(_target: Node) -> void:
 
 func _on_animate_out_complete(_target: Node) -> void:
 	_clear_deltas()
-	_pivot_applied = false
+	_pivot_computed = false
 
 
 func _restore_to_natural(_target: Node) -> void:
@@ -230,7 +237,7 @@ func _restore_to_natural(_target: Node) -> void:
 
 
 func _invalidate_base_cache() -> void:
-	_pivot_applied = false
+	_pivot_computed = false
 	_clear_deltas()
 
 
@@ -270,6 +277,11 @@ func _compute_shake_deltas(intensity: float) -> void:
 					_last_sine_sign = cs
 			_rot_delta = deg_to_rad(
 				sine_val * rotation_amplitude * intensity * _direction_multiplier)
+			# Virtual pivot: position compensation for rotation around desired pivot
+			if _pivot_arm != Vector2.ZERO:
+				var original_arm := _pivot_arm.rotated(_base_rotation_for_pivot)
+				var rotated_arm := _pivot_arm.rotated(_base_rotation_for_pivot + _rot_delta)
+				_pos_delta = original_arm - rotated_arm
 
 		TransformTarget.SCALE:
 			var freq := _shake_time * shake_frequency * TAU
@@ -286,20 +298,30 @@ func _compute_shake_deltas(intensity: float) -> void:
 				_scale_delta = Vector2(
 					lerpf(sx, rx, scale_randomness) * scale_amplitude.x * intensity,
 					lerpf(sy, ry, scale_randomness) * scale_amplitude.y * intensity)
+			# Virtual pivot: position compensation for scale around desired pivot
+			if _pivot_arm != Vector2.ZERO:
+				var new_scale := _base_scale_for_pivot + _scale_delta
+				var scale_ratio := Vector2(
+					new_scale.x / _base_scale_for_pivot.x if _base_scale_for_pivot.x != 0.0 else 1.0,
+					new_scale.y / _base_scale_for_pivot.y if _base_scale_for_pivot.y != 0.0 else 1.0)
+				_pos_delta = _pivot_arm * (Vector2.ONE - scale_ratio)
 
 
 # =============================================================================
-# PIVOT (Control uses native pivot_offset)
+# VIRTUAL PIVOT (position delta compensation — never touches ctrl.pivot_offset)
 # =============================================================================
 
-func _apply_pivot_mode(target: Node) -> void:
+func _compute_pivot_arm(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
+		_pivot_arm = Vector2.ZERO
 		return
+	_base_rotation_for_pivot = ctrl.rotation
+	_base_scale_for_pivot = ctrl.scale
+	var desired_pivot := ctrl.pivot_offset
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			ctrl.pivot_offset = ctrl.size / 2.0
+			desired_pivot = ctrl.size / 2.0
 		PivotMode.CUSTOM:
-			ctrl.pivot_offset = ctrl.size * custom_pivot
-		PivotMode.INHERIT:
-			pass
+			desired_pivot = ctrl.size * custom_pivot
+	_pivot_arm = desired_pivot - ctrl.pivot_offset

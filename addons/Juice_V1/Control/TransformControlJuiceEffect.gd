@@ -460,7 +460,9 @@ var _base_position: Vector2 = Vector2.ZERO
 var _base_rotation_radians: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
 var _has_base: bool = false
-var _pivot_applied: bool = false
+var _pivot_computed: bool = false
+var _pivot_arm: Vector2 = Vector2.ZERO
+var _base_rotation_for_pivot: float = 0.0
 
 # Resolved From/To target node references (cached at animation start)
 var _from_ref: Control = null
@@ -510,7 +512,6 @@ func _on_animate_start(target: Node) -> void:
 		_capture_base(target)
 
 	# Set contribution flags so the domain node knows which channel to aggregate
-	_contributes_position = (transform_target == TransformTarget.POSITION)
 	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
 	_contributes_scale = (transform_target == TransformTarget.SCALE)
 
@@ -527,10 +528,14 @@ func _on_animate_start(target: Node) -> void:
 			TransformTarget.SCALE:
 				_capture_self_scale_snapshot(target)
 
-	# Resolve pivot for rotation/scale targets
-	if transform_target != TransformTarget.POSITION and not _pivot_applied:
-		_apply_pivot_mode(target)
-		_pivot_applied = true
+	# Compute virtual pivot arm for rotation/scale compensation
+	if transform_target != TransformTarget.POSITION and not _pivot_computed:
+		_compute_pivot_arm(target)
+		_pivot_computed = true
+
+	# Position is contributed when target is position OR when pivot compensation is needed
+	var uses_pivot := (transform_target != TransformTarget.POSITION and _pivot_arm != Vector2.ZERO)
+	_contributes_position = (transform_target == TransformTarget.POSITION or uses_pivot)
 
 	if debug_enabled:
 		print("[TransformCtrl] Start: %s" % TransformTarget.keys()[transform_target])
@@ -557,7 +562,7 @@ func _restore_to_natural(_target: Node) -> void:
 
 func _invalidate_base_cache() -> void:
 	_has_base = false
-	_pivot_applied = false
+	_pivot_computed = false
 	_from_ref = null
 	_to_ref = null
 	_has_self_position_snapshot = false
@@ -640,7 +645,7 @@ func _get_ref_local_position(ref: Control, animated: Control) -> Vector2:
 # =============================================================================
 
 ## Compute rotation delta using From/To lerp model.
-## Control has native pivot_offset, so no position compensation is needed.
+## Virtual pivot: position compensation via _pivot_arm (never touches ctrl.pivot_offset).
 ## Stores result in _rot_delta — the domain node writes once per frame.
 func _apply_rotation_effect(progress: float, target: Control) -> void:
 	var from_rad := _resolve_from_rotation(target)
@@ -649,6 +654,12 @@ func _apply_rotation_effect(progress: float, target: Control) -> void:
 
 	# Store delta from natural state — node aggregates and writes
 	_rot_delta = desired_absolute - _base_rotation_radians
+
+	# Virtual pivot: position compensation for rotation around desired pivot
+	if _pivot_arm != Vector2.ZERO:
+		var original_arm := _pivot_arm.rotated(_base_rotation_for_pivot)
+		var rotated_arm := _pivot_arm.rotated(_base_rotation_for_pivot + _rot_delta)
+		_pos_delta = original_arm - rotated_arm
 
 
 func _resolve_from_rotation(ctrl: Control) -> float:
@@ -690,7 +701,7 @@ func _get_ref_local_rotation(ref: Control, animated: Control) -> float:
 # =============================================================================
 
 ## Compute scale delta using From/To lerp model.
-## Control has native pivot_offset, so no position compensation is needed.
+## Virtual pivot: position compensation via _pivot_arm (never touches ctrl.pivot_offset).
 ## Stores result in _scale_delta — the domain node writes once per frame.
 func _apply_scale_effect(progress: float, target: Control) -> void:
 	var from_value := _resolve_from_scale(target)
@@ -699,6 +710,13 @@ func _apply_scale_effect(progress: float, target: Control) -> void:
 
 	# Store delta from natural state — node aggregates and writes
 	_scale_delta = desired_absolute - _base_scale
+
+	# Virtual pivot: position compensation for scale around desired pivot
+	if _pivot_arm != Vector2.ZERO:
+		var scale_ratio := Vector2(
+			desired_absolute.x / _base_scale.x if _base_scale.x != 0.0 else 1.0,
+			desired_absolute.y / _base_scale.y if _base_scale.y != 0.0 else 1.0)
+		_pos_delta = _pivot_arm * (Vector2.ONE - scale_ratio)
 
 
 func _resolve_from_scale(ctrl: Control) -> Vector2:
@@ -846,22 +864,23 @@ func _capture_base(target: Node) -> void:
 # PIVOT HANDLING
 # =============================================================================
 
-## Apply pivot mode to the Control node. Called once per animation start
-## for ROTATION and SCALE targets.
-func _apply_pivot_mode(target: Node) -> void:
+## Compute virtual pivot arm for position delta compensation.
+## Never touches ctrl.pivot_offset — stacking-safe.
+func _compute_pivot_arm(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
+		_pivot_arm = Vector2.ZERO
 		return
+	_base_rotation_for_pivot = ctrl.rotation
+	var desired_pivot := ctrl.pivot_offset
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			ctrl.pivot_offset = ctrl.size / 2.0
-		PivotMode.INHERIT:
-			return
+			desired_pivot = ctrl.size / 2.0
 		PivotMode.CUSTOM:
-			ctrl.pivot_offset = Vector2(
+			desired_pivot = Vector2(
 				ctrl.size.x * custom_pivot.x,
-				ctrl.size.y * custom_pivot.y
-			)
+				ctrl.size.y * custom_pivot.y)
+	_pivot_arm = desired_pivot - ctrl.pivot_offset
 
 
 # =============================================================================

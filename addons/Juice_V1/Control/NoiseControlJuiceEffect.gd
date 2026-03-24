@@ -273,7 +273,10 @@ func _get(property: StringName) -> Variant:
 var _noise: FastNoiseLite
 var _noise_time: float = 0.0
 var _tick_delta: float = 0.0
-var _pivot_applied: bool = false
+var _pivot_computed: bool = false
+var _pivot_arm: Vector2 = Vector2.ZERO  # desired_pivot - ctrl.pivot_offset
+var _base_rotation_for_pivot: float = 0.0
+var _base_scale_for_pivot: Vector2 = Vector2.ONE
 
 
 # =============================================================================
@@ -301,7 +304,6 @@ func _needs_sustain() -> bool:
 
 func _on_animate_start(target: Node) -> void:
 	# Set contribution flags
-	_contributes_position = (transform_target == TransformTarget.POSITION)
 	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
 	_contributes_scale = (transform_target == TransformTarget.SCALE)
 
@@ -310,10 +312,14 @@ func _on_animate_start(target: Node) -> void:
 		_noise_time = 0.0
 		_setup_noise()
 
-	# Apply pivot for rotation/scale (Control uses native pivot_offset)
-	if transform_target != TransformTarget.POSITION and not _pivot_applied:
-		_apply_pivot_mode(target)
-		_pivot_applied = true
+	# Compute virtual pivot arm for rotation/scale compensation
+	if transform_target != TransformTarget.POSITION and not _pivot_computed:
+		_compute_pivot_arm(target)
+		_pivot_computed = true
+
+	# Position is contributed when target is position OR when pivot compensation is needed
+	var uses_pivot := (transform_target != TransformTarget.POSITION and _pivot_arm != Vector2.ZERO)
+	_contributes_position = (transform_target == TransformTarget.POSITION or uses_pivot)
 
 	if debug_enabled:
 		print("[NoiseCtrl] Start: %s, speed=%.2f" % [
@@ -331,7 +337,7 @@ func _on_animate_in_complete(_target: Node) -> void:
 
 func _on_animate_out_complete(_target: Node) -> void:
 	_clear_deltas()
-	_pivot_applied = false
+	_pivot_computed = false
 
 
 func _restore_to_natural(_target: Node) -> void:
@@ -339,7 +345,7 @@ func _restore_to_natural(_target: Node) -> void:
 
 
 func _invalidate_base_cache() -> void:
-	_pivot_applied = false
+	_pivot_computed = false
 	_clear_deltas()
 
 
@@ -376,6 +382,11 @@ func _compute_noise_deltas(intensity: float) -> void:
 		TransformTarget.ROTATION:
 			var s := _sample_noise(0.0, 1.0)
 			_rot_delta = deg_to_rad(rotation_amplitude * s * intensity)
+			# Virtual pivot: position compensation for rotation around desired pivot
+			if _pivot_arm != Vector2.ZERO:
+				var original_arm := _pivot_arm.rotated(_base_rotation_for_pivot)
+				var rotated_arm := _pivot_arm.rotated(_base_rotation_for_pivot + _rot_delta)
+				_pos_delta = original_arm - rotated_arm
 
 		TransformTarget.SCALE:
 			var sx: float
@@ -389,37 +400,52 @@ func _compute_noise_deltas(intensity: float) -> void:
 			_scale_delta = Vector2(
 				scale_amplitude.x * sx * intensity,
 				scale_amplitude.y * sy * intensity)
+			# Virtual pivot: position compensation for scale around desired pivot
+			if _pivot_arm != Vector2.ZERO:
+				var new_scale := _base_scale_for_pivot + _scale_delta
+				var scale_ratio := Vector2(
+					new_scale.x / _base_scale_for_pivot.x if _base_scale_for_pivot.x != 0.0 else 1.0,
+					new_scale.y / _base_scale_for_pivot.y if _base_scale_for_pivot.y != 0.0 else 1.0)
+				_pos_delta = _pivot_arm * (Vector2.ONE - scale_ratio)
 
 
 # =============================================================================
-# PIVOT (Control uses native pivot_offset)
+# VIRTUAL PIVOT (position delta compensation — never touches ctrl.pivot_offset)
 # =============================================================================
 
-func _apply_pivot_mode(target: Node) -> void:
+func _compute_pivot_arm(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
+		_pivot_arm = Vector2.ZERO
 		return
+	# Capture base transform values for pivot compensation math
+	_base_rotation_for_pivot = ctrl.rotation
+	_base_scale_for_pivot = ctrl.scale
+	# Compute desired pivot in local content space
+	var desired_pivot := ctrl.pivot_offset  # default: use existing (INHERIT)
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			ctrl.pivot_offset = ctrl.size / 2.0
+			desired_pivot = ctrl.size / 2.0
 			if not ctrl.resized.is_connected(_on_control_resized.bind(ctrl)):
 				ctrl.resized.connect(_on_control_resized.bind(ctrl))
 		PivotMode.CUSTOM:
-			ctrl.pivot_offset = ctrl.size * custom_pivot
+			desired_pivot = ctrl.size * custom_pivot
 			if not ctrl.resized.is_connected(_on_control_resized.bind(ctrl)):
 				ctrl.resized.connect(_on_control_resized.bind(ctrl))
-		PivotMode.INHERIT:
-			pass
+	# Arm from actual pivot to desired pivot
+	_pivot_arm = desired_pivot - ctrl.pivot_offset
 
 
 func _on_control_resized(ctrl: Control) -> void:
 	if not is_instance_valid(ctrl):
 		return
+	var desired_pivot := ctrl.pivot_offset
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			ctrl.pivot_offset = ctrl.size / 2.0
+			desired_pivot = ctrl.size / 2.0
 		PivotMode.CUSTOM:
-			ctrl.pivot_offset = ctrl.size * custom_pivot
+			desired_pivot = ctrl.size * custom_pivot
+	_pivot_arm = desired_pivot - ctrl.pivot_offset
 
 
 # =============================================================================

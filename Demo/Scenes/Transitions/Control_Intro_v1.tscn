@@ -63,37 +63,31 @@ chained_preroll = 1.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_tx2cu"]
-script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
-metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
-
 [sub_resource type="Resource" id="Resource_1htyt"]
-script = ExtResource("8_tx2cu")
-transform_target = 1
+script = ExtResource("5_i3blr")
+squash_amount = 0.3
+squash_axis = 0
+preserve_volume = true
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-stiffness = 83.0
-damping = 4.1
-mass = 1.9
-swing_range_degrees = 45.0
 pivot_mode = 0
-center_of_gravity = Vector2(0.5, 0.9)
-velocity_threshold = 0.5
-value_threshold = 0.1
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://cgdw7reti11jj"
+metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
+
+[sub_resource type="Resource" id="Resource_tx2cu"]
+script = ExtResource("6_i3blr")
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_1htyt")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_0go64"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_1htyt")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_r7ray"]
