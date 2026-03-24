@@ -112,6 +112,45 @@ convincing depth from simple 2D manipulations. Domains: **Control, 2D**.
 - Simple to configure (just add comp + optional shadow/backface), dramatic visual payoff
 - No actual 3D nodes needed — stays in the 2D/Control rendering pipeline
 
+### Physics-Driven Reactive Juice Pack
+
+A dedicated DLC built around Godot's physics engine for truly physical "juice" effects.
+Born from the V1 Spring experience — continuous physics simulations are fundamentally
+different from animation-driven effects and deserve their own architecture layer.
+
+**Core Concept:**
+- Effects driven by actual physics (rigid body dynamics, spring-damper systems, pendulums)
+- Uses Godot's physics engine where possible, custom integration where needed
+- **Decoupled custom pivot layer** — each physics effect owns its own virtual pivot,
+  independent of `pivot_offset` / node transform. Pivots stack via delta composition,
+  never fight over a shared property.
+- Packaged in familiar Component + Recipe format for Juice users
+
+**Potential Effects:**
+| Effect | Description | Domains | Complexity |
+|--------|-------------|---------|------------|
+| **Spring** | Mass-spring-damper on position/rotation/scale | Control, 2D, 3D | Medium |
+| **Pendulum** | Gravity-driven swing (signs, chains, lanterns) | 2D, 3D | Medium |
+| **Jiggle/Soft Body** | Vertex-level spring mesh for wobbly UI/sprites | Control, 2D | High |
+| **Momentum** | Inertia-based overshoot on any transform change | Control, 2D, 3D | Medium |
+| **Buoyancy** | Float/bob with configurable wave surface | 2D, 3D | Medium |
+| **Wind Response** | Procedural sway driven by wind vector field | 2D, 3D | Medium-High |
+
+**Why Separate DLC (not core):**
+- Physics simulations need sub-stepping, velocity clamping, NaN guards — different
+  runtime assumptions than animation-driven effects
+- Virtual pivot layer adds complexity that only physics effects need
+- Settlement semantics are physics-based (energy dissipation), not animation-based
+  (progress reaching 1.0)
+- Allows focused testing and tuning without complicating the core addon
+
+**Architecture Notes:**
+- Own base class (`JuicePhysicsEffectBase`) with built-in integration stability
+- Virtual pivot system: each effect computes rotation/scale around its own arbitrary
+  point, outputs a position + rotation + scale delta — no node property mutation
+- Delta composition: multiple physics effects stack by summing deltas, same as core Juice
+- Reactive displacement: receives external/sibling displacement same as current Spring
+
 ### Particle Presets Pack
 - Pre-configured GPUParticles2D/3D scenes for common effects
 - Explosion, sparkle, rain, fire, smoke, confetti
