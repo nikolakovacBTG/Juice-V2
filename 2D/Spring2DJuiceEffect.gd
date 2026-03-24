@@ -234,14 +234,15 @@ var _vel_pos: Vector2 = Vector2.ZERO
 var _vel_rot: float = 0.0
 var _vel_scale: Vector2 = Vector2.ZERO
 
-# Cached torque arm as RATIO (fraction of bounding box, dimensionless)
-var _torque_arm_ratio: Vector2 = Vector2.ZERO
+# Cached torque arm in pixel space (from rotation pivot to CoG)
+var _torque_arm: Vector2 = Vector2.ZERO
+# Length squared of torque arm for moment of inertia normalization
+var _torque_arm_len_sq: float = 0.0
 
-# Cached bounding box size for displacement normalization (rotation torque)
-var _box_size: Vector2 = Vector2.ZERO
-
-# True when displacement was received this frame — skip settlement check
-var _received_impulse: bool = false
+# Frames remaining before settlement checks resume after last impulse.
+# Prevents the spring from snapping to rest before visible overshoot.
+var _impulse_cooldown: int = 0
+const IMPULSE_COOLDOWN_FRAMES: int = 5
 
 
 # =============================================================================
@@ -278,7 +279,7 @@ func _on_sibling_displacement(displacement: Dictionary) -> void:
 
 
 func _handle_displacement(displacement: Dictionary) -> void:
-	_received_impulse = true
+	_impulse_cooldown = IMPULSE_COOLDOWN_FRAMES
 	match transform_target:
 		TransformTarget.POSITION:
 			if displacement.has("position"):
@@ -286,16 +287,13 @@ func _handle_displacement(displacement: Dictionary) -> void:
 		TransformTarget.ROTATION:
 			if displacement.has("rotation"):
 				_current_rot -= displacement["rotation"] as float
-			# Torque from position displacement (ratio-based)
-			if displacement.has("position") and _torque_arm_ratio != Vector2.ZERO:
+			# Torque from position displacement (pixel-space, moment of inertia normalized)
+			if displacement.has("position") and _torque_arm != Vector2.ZERO and _torque_arm_len_sq > 0.0:
 				var pos_disp := displacement["position"] as Vector2
-				var disp_ratio := Vector2.ZERO
-				if _box_size.x > 0.0:
-					disp_ratio.x = pos_disp.x / _box_size.x
-				if _box_size.y > 0.0:
-					disp_ratio.y = pos_disp.y / _box_size.y
-				var torque := _torque_arm_ratio.x * disp_ratio.y - _torque_arm_ratio.y * disp_ratio.x
-				_vel_rot += torque / mass
+				# 2D cross product: arm × displacement → torque (pixels²)
+				var torque := _torque_arm.x * pos_disp.y - _torque_arm.y * pos_disp.x
+				# Normalize by moment of inertia (mass * r²)
+				_vel_rot += torque / (mass * _torque_arm_len_sq)
 		TransformTarget.SCALE:
 			if displacement.has("scale"):
 				_current_scale -= displacement["scale"] as Vector2
@@ -325,27 +323,29 @@ func _on_animate_start(target: Node) -> void:
 	_vel_pos = Vector2.ZERO
 	_vel_rot = 0.0
 	_vel_scale = Vector2.ZERO
+	_impulse_cooldown = 0
 
-	# Compute torque arm ratio for rotation (dimensionless)
-	_torque_arm_ratio = Vector2.ZERO
-	_box_size = Vector2.ZERO
+	# Compute torque arm for rotation (pixel-space)
+	_torque_arm = Vector2.ZERO
+	_torque_arm_len_sq = 0.0
 	if transform_target == TransformTarget.ROTATION:
-		_compute_torque_arm_ratio(target)
+		_compute_torque_arm(target)
 
 	if debug_enabled:
-		print("[Spring2D] Start: %s, stiffness=%.0f, damping=%.0f, arm_ratio=%s" % [
-			TransformTarget.keys()[transform_target], stiffness, damping, _torque_arm_ratio])
+		print("[Spring2D] Start: %s, stiffness=%.0f, damping=%.0f, arm=%s" % [
+			TransformTarget.keys()[transform_target], stiffness, damping, _torque_arm])
 
 
 func _apply_effect(progress: float, _target: Node) -> void:
 	_spring_step(_tick_delta)
 	_write_deltas()
 
-	# Check settlement (skip on frames where we just received an impulse)
-	if not _received_impulse and _is_settled():
+	# Check settlement (skip while impulse cooldown is active)
+	if _impulse_cooldown > 0:
+		_impulse_cooldown -= 1
+	elif _is_settled():
 		_snap_to_rest()
 		_write_deltas()
-	_received_impulse = false
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -501,27 +501,31 @@ func _resolve_swing_range(target: Node) -> void:
 
 
 # =============================================================================
-# TORQUE ARM — ratio-based (rotation only)
+# TORQUE ARM — pixel-space (rotation only)
 # =============================================================================
 
-func _compute_torque_arm_ratio(target: Node) -> void:
-	_torque_arm_ratio = Vector2.ZERO
+func _compute_torque_arm(target: Node) -> void:
+	_torque_arm = Vector2.ZERO
+	_torque_arm_len_sq = 0.0
 	if not is_instance_valid(target):
 		return
-	_box_size = _estimate_bounding_box(target)
-	if _box_size == Vector2.ZERO:
+	var box_size := _estimate_bounding_box(target)
+	if box_size == Vector2.ZERO:
 		return
-	# CoG as fraction (already 0–1)
-	var cog_ratio := center_of_gravity
-	# Pivot as fraction of bounding box
-	# For Node2D with AUTO_CENTER pivot, pivot_offset is the visual center
-	# which maps to (0.5, 0.5) ratio when centered
-	var pivot_ratio := Vector2(0.5, 0.5)  # Default for AUTO_CENTER
-	if pivot_mode == PivotMode.CUSTOM and _box_size != Vector2.ZERO:
-		pivot_ratio = _pivot_offset / _box_size
-	elif pivot_mode == PivotMode.INHERIT:
-		pivot_ratio = Vector2.ZERO  # Origin
-	_torque_arm_ratio = cog_ratio - pivot_ratio
+	# CoG position in pixels (relative to visual top-left)
+	var cog_px := center_of_gravity * box_size
+	# Pivot position in pixels
+	var pivot_px := Vector2.ZERO
+	match pivot_mode:
+		PivotMode.AUTO_CENTER:
+			pivot_px = box_size * 0.5
+		PivotMode.CUSTOM:
+			pivot_px = _pivot_offset
+		PivotMode.INHERIT:
+			pivot_px = Vector2.ZERO  # Origin
+	# Arm = CoG - pivot (pixel-space vector)
+	_torque_arm = cog_px - pivot_px
+	_torque_arm_len_sq = _torque_arm.length_squared()
 
 
 func _estimate_bounding_box(target: Node) -> Vector2:

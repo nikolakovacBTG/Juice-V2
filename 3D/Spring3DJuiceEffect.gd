@@ -241,8 +241,10 @@ var _torque_arm: Vector3 = Vector3.ZERO
 # Length squared of torque arm for moment of inertia normalization
 var _torque_arm_len_sq: float = 0.0
 
-# True when displacement was received this frame — skip settlement check
-var _received_impulse: bool = false
+# Frames remaining before settlement checks resume after last impulse.
+# Prevents the spring from snapping to rest before visible overshoot.
+var _impulse_cooldown: int = 0
+const IMPULSE_COOLDOWN_FRAMES: int = 5
 
 
 # =============================================================================
@@ -279,7 +281,7 @@ func _on_sibling_displacement(displacement: Dictionary) -> void:
 
 
 func _handle_displacement(displacement: Dictionary) -> void:
-	_received_impulse = true
+	_impulse_cooldown = IMPULSE_COOLDOWN_FRAMES
 	match transform_target:
 		TransformTarget.POSITION:
 			if displacement.has("position"):
@@ -329,6 +331,7 @@ func _on_animate_start(target: Node) -> void:
 	_vel_pos = Vector3.ZERO
 	_vel_rot = Vector3.ZERO
 	_vel_scale = Vector3.ZERO
+	_impulse_cooldown = 0
 
 	# Compute torque arm for rotation
 	_torque_arm = Vector3.ZERO
@@ -346,11 +349,12 @@ func _apply_effect(progress: float, _target: Node) -> void:
 	_spring_step(_tick_delta)
 	_write_deltas()
 
-	# Check settlement (skip on frames where we just received an impulse)
-	if not _received_impulse and _is_settled():
+	# Check settlement (skip while impulse cooldown is active)
+	if _impulse_cooldown > 0:
+		_impulse_cooldown -= 1
+	elif _is_settled():
 		_snap_to_rest()
 		_write_deltas()
-	_received_impulse = false
 
 
 func _on_animate_in_complete(_target: Node) -> void:
