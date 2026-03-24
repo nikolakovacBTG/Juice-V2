@@ -2,7 +2,7 @@
 # ============================================================================
 # WHAT: Drives position, rotation, or scale of a Node2D with oscillating shake.
 #       Uses sin(time * frequency) blended with per-frame randomness.
-#       Progress envelope controls decay (amplitude reduction over duration).
+#       Progress envelope controls intensity (fade-in, sustain, fade-out).
 # WHY: Unified shake component — one effect handles all transform targets.
 # SYSTEM: Juicing System (addons/Juice_V1/)
 # DOES NOT: Handle Control or Node3D targets — use ShakeControl/Shake3DJuiceEffect.
@@ -48,7 +48,6 @@ var transform_target: int = TransformTarget.POSITION:
 		notify_property_list_changed()
 
 var shake_frequency: float = 20.0
-var decay: bool = true
 
 var position_strength: Vector2 = Vector2(5.0, 5.0)
 var position_randomness: float = 0.5
@@ -88,8 +87,6 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,100.0,0.1,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "decay", "type": TYPE_BOOL,
-		"usage": PROPERTY_USAGE_DEFAULT})
 
 	if is_pos:
 		props.append({"name": "position_strength", "type": TYPE_VECTOR2,
@@ -127,7 +124,6 @@ func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"transform_target": transform_target = value; return true
 		&"shake_frequency": shake_frequency = value; return true
-		&"decay": decay = value; return true
 		&"position_strength": position_strength = value; return true
 		&"position_randomness": position_randomness = value; return true
 		&"rotation_amplitude": rotation_amplitude = value; return true
@@ -144,7 +140,6 @@ func _get(property: StringName) -> Variant:
 	match property:
 		&"transform_target": return transform_target
 		&"shake_frequency": return shake_frequency
-		&"decay": return decay
 		&"position_strength": return position_strength
 		&"position_randomness": return position_randomness
 		&"rotation_amplitude": return rotation_amplitude

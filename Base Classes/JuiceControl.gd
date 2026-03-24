@@ -212,6 +212,7 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	var ext_disp := {}
 
 	# Position: compare current to what we last wrote
 	if _last_written_position != Vector2.INF:
@@ -219,6 +220,7 @@ func _pre_tick() -> void:
 			# External move detected — absorb into base
 			var external_delta := ctrl.position - _last_written_position
 			_base_position += external_delta
+			ext_disp["position"] = external_delta
 			if debug_enabled:
 				print("[%s] External position move detected: %s" % [name, external_delta])
 
@@ -227,12 +229,20 @@ func _pre_tick() -> void:
 		if not is_equal_approx(ctrl.rotation, _last_written_rotation):
 			var external_delta := ctrl.rotation - _last_written_rotation
 			_base_rotation += external_delta
+			ext_disp["rotation"] = external_delta
 
 	# Scale
 	if _last_written_scale != Vector2.INF:
 		if not ctrl.scale.is_equal_approx(_last_written_scale):
 			var external_delta := ctrl.scale - _last_written_scale
 			_base_scale += external_delta
+			ext_disp["scale"] = external_delta
+
+	# Notify effects of external displacement (for reactive effects like Spring)
+	if not ext_disp.is_empty():
+		for effect in _runtime_effects:
+			if effect != null and effect.is_playing():
+				effect._on_external_displacement(ext_disp)
 
 
 ## Aggregate all effect deltas and write to target ONCE per frame.

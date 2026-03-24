@@ -191,12 +191,14 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
+	var ext_disp := {}
 
 	# Position
 	if _last_written_position != Vector3.INF:
 		if not n3d.position.is_equal_approx(_last_written_position):
 			var external_delta := n3d.position - _last_written_position
 			_base_position += external_delta
+			ext_disp["position"] = external_delta
 			if debug_enabled:
 				print("[%s] External position move detected: %s" % [name, external_delta])
 
@@ -205,12 +207,20 @@ func _pre_tick() -> void:
 		if not n3d.rotation.is_equal_approx(_last_written_rotation):
 			var external_delta := n3d.rotation - _last_written_rotation
 			_base_rotation += external_delta
+			ext_disp["rotation"] = external_delta
 
 	# Scale
 	if _last_written_scale != Vector3.INF:
 		if not n3d.scale.is_equal_approx(_last_written_scale):
 			var external_delta := n3d.scale - _last_written_scale
 			_base_scale += external_delta
+			ext_disp["scale"] = external_delta
+
+	# Notify effects of external displacement (for reactive effects like Spring)
+	if not ext_disp.is_empty():
+		for effect in _runtime_effects:
+			if effect != null and effect.is_playing():
+				effect._on_external_displacement(ext_disp)
 
 
 ## Aggregate all effect deltas and write to target ONCE per frame.
