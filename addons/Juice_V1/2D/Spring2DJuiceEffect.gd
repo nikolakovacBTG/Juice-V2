@@ -1,18 +1,27 @@
-## Physics-based spring animation for Node2D nodes.
+## Reactive physics-based spring animation for Node2D nodes.
 # ============================================================================
 # WHAT: Drives position, rotation, or scale of a Node2D with spring physics.
-#       Uses stiffness/damping/mass simulation, NOT easing curves.
+#       Purely reactive — sits idle until external displacement from stacked
+#       Transform effects, other Juice nodes, or game logic.
 # WHY: Unified spring component — one effect handles all transform targets.
 # SYSTEM: Juicing System (addons/Juice_V1/)
 # DOES NOT: Handle Control or Node3D targets — use SpringControl/Spring3DJuiceEffect.
 # ============================================================================
 #
-# WRITE PATTERN: Delta-first. Spring simulation runs internally, delta =
-#   current_spring_value - base_value stored in _pos_delta / _rot_delta /
-#   _scale_delta. Domain node writes once per frame.
+# WRITE PATTERN: Delta-first. Spring simulation runs internally, delta stored
+#   in _pos_delta / _rot_delta / _scale_delta. Domain node writes once per frame.
 #
 # PIVOT: Node2D has no native pivot. Position compensation simulates
 #   rotation/scale around the pivot point — stored in _pos_delta.
+#
+# KEY CONCEPTS:
+#   - Spring does NOT use easing curves or progress interpolation.
+#   - Progress only serves as a maximum timeout.
+#   - Spring settles when velocity and displacement drop below thresholds.
+#   - Rotation can cross-read position displacement as torque when
+#     center_of_gravity is offset from pivot.
+#   - Swing range provides a soft clamp: restoring force increases non-linearly
+#     near the boundary, preventing runaway oscillation.
 # ============================================================================
 
 @tool
@@ -47,24 +56,31 @@ var transform_target: int = TransformTarget.POSITION:
 		transform_target = value
 		notify_property_list_changed()
 
+# --- Spring physics ---
 var stiffness: float = 300.0
 var damping: float = 10.0
 var mass: float = 1.0
 
-var velocity_threshold: float = 0.5
-var value_threshold: float = 0.1
-var one_shot_mode: bool = false
-var trigger_cooldown: float = 0.0
+## Per-axis maximum displacement (soft clamp). Zero = unlimited.
+## Position/Scale: Vector2 per axis. Rotation: float (radians internally, degrees in inspector).
+var swing_range: Variant = Vector2.ZERO
+var swing_range_degrees: float = 0.0  # Inspector-facing for rotation
 
-var position_offset: Vector2 = Vector2(0, -20)
-var rotation_offset_degrees: float = 15.0
-var scale_offset: Vector2 = Vector2(0.2, 0.2)
-
+# --- Pivot (rotation/scale visual center) ---
 var pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
 		notify_property_list_changed()
 var custom_pivot: Vector2 = Vector2.ZERO
+
+## Center of gravity as fraction of bounding box (rotation only).
+## Default (0.5, 0.5) = box center = balanced, no torque from position.
+## Offset from pivot creates torque from position displacement.
+var center_of_gravity: Vector2 = Vector2(0.5, 0.5)
+
+# --- Settlement (Advanced) ---
+var velocity_threshold: float = 0.5
+var value_threshold: float = 0.1
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
@@ -85,8 +101,8 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "transform_target", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "one_shot_mode", "type": TYPE_BOOL,
-		"usage": PROPERTY_USAGE_DEFAULT})
+
+	# Spring physics (always visible)
 	props.append({"name": "stiffness", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,1000.0,1.0,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
@@ -97,16 +113,16 @@ func _get_property_list() -> Array[Dictionary]:
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,10.0,0.1",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
-	if is_pos:
-		props.append({"name": "position_offset", "type": TYPE_VECTOR2,
+	# Swing range (per target type)
+	if is_rot:
+		props.append({"name": "swing_range_degrees", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,360.0,0.1,or_greater",
 			"usage": PROPERTY_USAGE_DEFAULT})
-	elif is_rot:
-		props.append({"name": "rotation_offset_degrees", "type": TYPE_FLOAT,
-			"usage": PROPERTY_USAGE_DEFAULT})
-	elif is_scale:
-		props.append({"name": "scale_offset", "type": TYPE_VECTOR2,
+	else:
+		props.append({"name": "swing_range", "type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_DEFAULT})
 
+	# Pivot for rotation/scale
 	if not is_pos:
 		props.append({"name": "pivot_mode", "type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM, "hint_string": "Auto Center,Inherit,Custom",
@@ -115,14 +131,19 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "custom_pivot", "type": TYPE_VECTOR2,
 				"usage": PROPERTY_USAGE_DEFAULT})
 
+	# Center of gravity (rotation only — for torque from position displacement)
+	if is_rot:
+		props.append({"name": "center_of_gravity", "type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_DEFAULT})
+
+	# Advanced subgroup
+	props.append({"name": "Advanced", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
 	props.append({"name": "velocity_threshold", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,10.0,0.01",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "value_threshold", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,5.0,0.001",
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "trigger_cooldown", "type": TYPE_FLOAT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,5.0,0.01",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
@@ -132,36 +153,32 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"transform_target": transform_target = value; return true
-		&"one_shot_mode": one_shot_mode = value; return true
 		&"stiffness": stiffness = value; return true
 		&"damping": damping = value; return true
 		&"mass": mass = value; return true
+		&"swing_range": swing_range = value; return true
+		&"swing_range_degrees": swing_range_degrees = value; return true
 		&"velocity_threshold": velocity_threshold = value; return true
 		&"value_threshold": value_threshold = value; return true
-		&"trigger_cooldown": trigger_cooldown = value; return true
-		&"position_offset": position_offset = value; return true
-		&"rotation_offset_degrees": rotation_offset_degrees = value; return true
-		&"scale_offset": scale_offset = value; return true
 		&"pivot_mode": pivot_mode = value; return true
 		&"custom_pivot": custom_pivot = value; return true
+		&"center_of_gravity": center_of_gravity = value; return true
 	return false
 
 
 func _get(property: StringName) -> Variant:
 	match property:
 		&"transform_target": return transform_target
-		&"one_shot_mode": return one_shot_mode
 		&"stiffness": return stiffness
 		&"damping": return damping
 		&"mass": return mass
+		&"swing_range": return swing_range
+		&"swing_range_degrees": return swing_range_degrees
 		&"velocity_threshold": return velocity_threshold
 		&"value_threshold": return value_threshold
-		&"trigger_cooldown": return trigger_cooldown
-		&"position_offset": return position_offset
-		&"rotation_offset_degrees": return rotation_offset_degrees
-		&"scale_offset": return scale_offset
 		&"pivot_mode": return pivot_mode
 		&"custom_pivot": return custom_pivot
+		&"center_of_gravity": return center_of_gravity
 	return null
 
 
@@ -170,14 +187,19 @@ func _get(property: StringName) -> Variant:
 # =============================================================================
 
 var _tick_delta: float = 0.0
-var _last_trigger_time: float = -INF
 var _pivot_offset: Vector2 = Vector2.ZERO
 var _base_scale: Vector2 = Vector2.ONE
 
-# Spring simulation state (deltas from base)
-var _current_value: Variant = null
-var _spring_target_value: Variant = null
-var _velocity: Variant = null
+# Spring simulation state — all values are DELTAS from natural (rest = 0)
+var _current_pos: Vector2 = Vector2.ZERO
+var _current_rot: float = 0.0
+var _current_scale: Vector2 = Vector2.ZERO
+var _vel_pos: Vector2 = Vector2.ZERO
+var _vel_rot: float = 0.0
+var _vel_scale: Vector2 = Vector2.ZERO
+
+# Cached arm vector for rotation torque (pixels, from pivot to CoG)
+var _torque_arm: Vector2 = Vector2.ZERO
 
 
 # =============================================================================
@@ -189,7 +211,7 @@ func tick(delta: float, target: Node) -> TickResult:
 	var result := super.tick(delta, target)
 	if _in_hold_at_peak and _is_playing:
 		_spring_step(_tick_delta)
-		_compute_deltas_from_spring()
+		_write_deltas()
 	return result
 
 
@@ -202,27 +224,26 @@ func _needs_sustain() -> bool:
 
 
 func _on_external_displacement(displacement: Dictionary) -> void:
-	if one_shot_mode:
-		return
+	# Reactive: external displacement perturbs the spring away from rest.
 	match transform_target:
 		TransformTarget.POSITION:
 			if displacement.has("position"):
-				_current_value -= displacement["position"]
+				_current_pos -= displacement["position"] as Vector2
 		TransformTarget.ROTATION:
 			if displacement.has("rotation"):
-				_current_value -= displacement["rotation"]
+				_current_rot -= displacement["rotation"] as float
+			# Torque from position displacement (if CoG is offset from pivot)
+			if displacement.has("position") and _torque_arm != Vector2.ZERO:
+				var pos_disp := displacement["position"] as Vector2
+				# 2D cross product: arm × displacement → scalar torque
+				var torque := _torque_arm.x * pos_disp.y - _torque_arm.y * pos_disp.x
+				_vel_rot += torque / mass
 		TransformTarget.SCALE:
 			if displacement.has("scale"):
-				_current_value -= displacement["scale"]
+				_current_scale -= displacement["scale"] as Vector2
 
 
 func _on_animate_start(target: Node) -> void:
-	if trigger_cooldown > 0.0:
-		var current_time := Time.get_ticks_msec() / 1000.0
-		if current_time - _last_trigger_time < trigger_cooldown:
-			return
-		_last_trigger_time = current_time
-
 	_contributes_position = (transform_target == TransformTarget.POSITION)
 	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
 	_contributes_scale = (transform_target == TransformTarget.SCALE)
@@ -236,20 +257,32 @@ func _on_animate_start(target: Node) -> void:
 		_compute_pivot_offset(target)
 		_contributes_position = (_contributes_position or _pivot_offset != Vector2.ZERO)
 
-	_initialize_spring_state()
+	# Initialize at rest — spring is purely reactive
+	_current_pos = Vector2.ZERO
+	_current_rot = 0.0
+	_current_scale = Vector2.ZERO
+	_vel_pos = Vector2.ZERO
+	_vel_rot = 0.0
+	_vel_scale = Vector2.ZERO
+
+	# Compute torque arm for rotation
+	_torque_arm = Vector2.ZERO
+	if transform_target == TransformTarget.ROTATION:
+		_compute_torque_arm(target)
 
 	if debug_enabled:
-		print("[Spring2D] Start: %s, stiffness=%.0f, damping=%.0f" % [
-			TransformTarget.keys()[transform_target], stiffness, damping])
+		print("[Spring2D] Start: %s, stiffness=%.0f, damping=%.0f, arm=%s" % [
+			TransformTarget.keys()[transform_target], stiffness, damping, _torque_arm])
 
 
 func _apply_effect(progress: float, _target: Node) -> void:
 	_spring_step(_tick_delta)
-	_compute_deltas_from_spring()
+	_write_deltas()
 
-	if _is_spring_settled():
-		_current_value = _spring_target_value
-		_compute_deltas_from_spring()
+	# Check settlement
+	if _is_settled():
+		_snap_to_rest()
+		_write_deltas()
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -276,106 +309,127 @@ func _get_interrupt_identity() -> Variant:
 # SPRING SIMULATION
 # =============================================================================
 
-func _initialize_spring_state() -> void:
-	if one_shot_mode:
-		# One-shot: spring FROM rest TO offset, then settle at offset
-		match transform_target:
-			TransformTarget.POSITION:
-				_current_value = Vector2.ZERO
-				_spring_target_value = position_offset
-				_velocity = Vector2.ZERO
-			TransformTarget.ROTATION:
-				_current_value = 0.0
-				_spring_target_value = deg_to_rad(rotation_offset_degrees)
-				_velocity = 0.0
-			TransformTarget.SCALE:
-				_current_value = Vector2.ZERO
-				_spring_target_value = scale_offset
-				_velocity = Vector2.ZERO
-	else:
-		# Reactive: spring FROM offset BACK TO rest (delta=0), then respond to external forces
-		match transform_target:
-			TransformTarget.POSITION:
-				_current_value = position_offset
-				_spring_target_value = Vector2.ZERO
-				_velocity = Vector2.ZERO
-			TransformTarget.ROTATION:
-				_current_value = deg_to_rad(rotation_offset_degrees)
-				_spring_target_value = 0.0
-				_velocity = 0.0
-			TransformTarget.SCALE:
-				_current_value = scale_offset
-				_spring_target_value = Vector2.ZERO
-				_velocity = Vector2.ZERO
-
-
 func _spring_step(delta: float) -> void:
 	if delta <= 0.0:
 		return
 	match transform_target:
-		TransformTarget.POSITION, TransformTarget.SCALE:
-			_spring_step_vector2(delta)
+		TransformTarget.POSITION:
+			_spring_step_vec2_pos(delta)
 		TransformTarget.ROTATION:
-			_spring_step_float(delta)
+			_spring_step_rot(delta)
+		TransformTarget.SCALE:
+			_spring_step_vec2_scale(delta)
 
 
-func _spring_step_float(delta: float) -> void:
-	var current := _current_value as float
-	var target := _spring_target_value as float
-	var vel := _velocity as float
-	var displacement := target - current
-	var acceleration := (displacement * stiffness - vel * damping) / mass
-	vel += acceleration * delta
-	current += vel * delta
-	_velocity = vel
-	_current_value = current
+func _spring_step_vec2_pos(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_vec2(_current_pos, swing_range as Vector2)
+	var acceleration := (-_current_pos * eff_stiffness - _vel_pos * damping) / mass
+	_vel_pos += acceleration * delta
+	_current_pos += _vel_pos * delta
 
 
-func _spring_step_vector2(delta: float) -> void:
-	var current := _current_value as Vector2
-	var target := _spring_target_value as Vector2
-	var vel := _velocity as Vector2
-	var displacement := target - current
-	var acceleration := (displacement * stiffness - vel * damping) / mass
-	vel += acceleration * delta
-	current += vel * delta
-	_velocity = vel
-	_current_value = current
+func _spring_step_vec2_scale(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_vec2(_current_scale, swing_range as Vector2)
+	var acceleration := (-_current_scale * eff_stiffness - _vel_scale * damping) / mass
+	_vel_scale += acceleration * delta
+	_current_scale += _vel_scale * delta
 
 
-func _is_spring_settled() -> bool:
+func _spring_step_rot(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_float(_current_rot, deg_to_rad(swing_range_degrees))
+	var acceleration := (-_current_rot * eff_stiffness - _vel_rot * damping) / mass
+	_vel_rot += acceleration * delta
+	_current_rot += _vel_rot * delta
+
+
+# --- Soft clamp: non-linear stiffness increase near swing_range boundary ---
+
+func _soft_clamp_stiffness_vec2(current: Vector2, range_limit: Vector2) -> Vector2:
+	if range_limit == Vector2.ZERO:
+		return Vector2(stiffness, stiffness)
+	var ratio := Vector2(
+		current.x / range_limit.x if range_limit.x != 0.0 else 0.0,
+		current.y / range_limit.y if range_limit.y != 0.0 else 0.0)
+	return Vector2(
+		stiffness * (1.0 + ratio.x * ratio.x),
+		stiffness * (1.0 + ratio.y * ratio.y))
+
+
+func _soft_clamp_stiffness_float(current: float, range_limit: float) -> float:
+	if range_limit <= 0.0:
+		return stiffness
+	var ratio := current / range_limit
+	return stiffness * (1.0 + ratio * ratio)
+
+
+# --- Settlement ---
+
+func _is_settled() -> bool:
 	match transform_target:
-		TransformTarget.POSITION, TransformTarget.SCALE:
-			var vel := _velocity as Vector2
-			var current := _current_value as Vector2
-			var target := _spring_target_value as Vector2
-			return vel.length() < velocity_threshold and current.distance_to(target) < value_threshold
+		TransformTarget.POSITION:
+			return _vel_pos.length() < velocity_threshold and _current_pos.length() < value_threshold
 		TransformTarget.ROTATION:
-			var vel := _velocity as float
-			var current := _current_value as float
-			var target := _spring_target_value as float
-			return absf(vel) < velocity_threshold and absf(current - target) < value_threshold
+			return absf(_vel_rot) < velocity_threshold and absf(_current_rot) < value_threshold
+		TransformTarget.SCALE:
+			return _vel_scale.length() < velocity_threshold and _current_scale.length() < value_threshold
 	return false
 
 
-func _compute_deltas_from_spring() -> void:
+func _snap_to_rest() -> void:
 	match transform_target:
 		TransformTarget.POSITION:
-			_pos_delta = _current_value as Vector2
+			_current_pos = Vector2.ZERO; _vel_pos = Vector2.ZERO
 		TransformTarget.ROTATION:
-			var rot_delta_val := _current_value as float
-			_rot_delta = rot_delta_val
-			# Position compensation for pivot
-			if _pivot_offset != Vector2.ZERO:
-				_pos_delta = _pivot_offset - _pivot_offset.rotated(rot_delta_val)
+			_current_rot = 0.0; _vel_rot = 0.0
 		TransformTarget.SCALE:
-			var scale_delta_val := _current_value as Vector2
-			_scale_delta = scale_delta_val
+			_current_scale = Vector2.ZERO; _vel_scale = Vector2.ZERO
+
+
+func _write_deltas() -> void:
+	match transform_target:
+		TransformTarget.POSITION:
+			_pos_delta = _current_pos
+		TransformTarget.ROTATION:
+			_rot_delta = _current_rot
 			# Position compensation for pivot
 			if _pivot_offset != Vector2.ZERO:
-				var new_scale := _base_scale + scale_delta_val
+				_pos_delta = _pivot_offset - _pivot_offset.rotated(_current_rot)
+		TransformTarget.SCALE:
+			_scale_delta = _current_scale
+			# Position compensation for pivot
+			if _pivot_offset != Vector2.ZERO:
+				var new_scale := _base_scale + _current_scale
 				var scale_ratio := new_scale / _base_scale
 				_pos_delta = _pivot_offset - _pivot_offset * scale_ratio
+
+
+# =============================================================================
+# TORQUE ARM (rotation only — center of gravity offset)
+# =============================================================================
+
+func _compute_torque_arm(target: Node) -> void:
+	# For Node2D, we estimate bounding box from the first Sprite2D child
+	_torque_arm = Vector2.ZERO
+	if not is_instance_valid(target):
+		return
+	var box_size := _estimate_bounding_box(target)
+	if box_size == Vector2.ZERO:
+		return
+	# CoG in local pixels (fraction of bounding box, centered at origin)
+	var half_box := box_size / 2.0
+	var cog_px := Vector2(
+		lerp(-half_box.x, half_box.x, center_of_gravity.x),
+		lerp(-half_box.y, half_box.y, center_of_gravity.y))
+	# Pivot in local pixels
+	var pivot_px := _pivot_offset  # already computed by _compute_pivot_offset
+	_torque_arm = cog_px - pivot_px
+
+
+func _estimate_bounding_box(target: Node) -> Vector2:
+	for child in target.get_children():
+		if child is Sprite2D and (child as Sprite2D).texture != null:
+			return (child as Sprite2D).texture.get_size()
+	return Vector2.ZERO
 
 
 # =============================================================================
