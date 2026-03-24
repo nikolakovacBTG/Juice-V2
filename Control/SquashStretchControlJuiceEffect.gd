@@ -134,7 +134,8 @@ func _get(property: StringName) -> Variant:
 
 var _base_scale: Vector2 = Vector2.ONE
 var _has_base: bool = false
-var _pivot_applied: bool = false
+var _pivot_computed: bool = false
+var _pivot_arm: Vector2 = Vector2.ZERO
 
 
 # =============================================================================
@@ -148,9 +149,13 @@ func _on_animate_start(target: Node) -> void:
 	# Set contribution flag so the domain node knows to aggregate scale
 	_contributes_scale = true
 
-	if not _pivot_applied:
-		_apply_pivot_mode(target)
-		_pivot_applied = true
+	# Compute virtual pivot arm for scale compensation
+	if not _pivot_computed:
+		_compute_pivot_arm(target)
+		_pivot_computed = true
+
+	# Position is contributed when pivot compensation is needed
+	_contributes_position = (_pivot_arm != Vector2.ZERO)
 
 
 ## Compute squash/stretch scale delta at the given progress.
@@ -177,6 +182,13 @@ func _apply_effect(progress: float, target: Node) -> void:
 	# Store delta from natural scale — node aggregates and writes
 	_scale_delta = new_scale - _base_scale
 
+	# Virtual pivot: position compensation for scale around desired pivot
+	if _pivot_arm != Vector2.ZERO:
+		var scale_ratio := Vector2(
+			new_scale.x / _base_scale.x if _base_scale.x != 0.0 else 1.0,
+			new_scale.y / _base_scale.y if _base_scale.y != 0.0 else 1.0)
+		_pos_delta = _pivot_arm * (Vector2.ONE - scale_ratio)
+
 
 ## Snap back to zero delta to avoid floating point drift.
 func _on_animate_out_complete(_target: Node) -> void:
@@ -191,7 +203,7 @@ func _restore_to_natural(_target: Node) -> void:
 ## Reset cached base values when target changes.
 func _invalidate_base_cache() -> void:
 	_has_base = false
-	_pivot_applied = false
+	_pivot_computed = false
 	_clear_deltas()
 
 
@@ -215,19 +227,19 @@ func _capture_base(target: Node) -> void:
 	_has_base = true
 
 
-## Apply pivot offset to the Control based on pivot_mode.
-func _apply_pivot_mode(target: Node) -> void:
+## Compute virtual pivot arm for position delta compensation.
+## Never touches ctrl.pivot_offset — stacking-safe.
+func _compute_pivot_arm(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
+		_pivot_arm = Vector2.ZERO
 		return
-
+	var desired_pivot := ctrl.pivot_offset
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			ctrl.pivot_offset = ctrl.size / 2.0
-		PivotMode.INHERIT:
-			return
+			desired_pivot = ctrl.size / 2.0
 		PivotMode.CUSTOM:
-			ctrl.pivot_offset = Vector2(
+			desired_pivot = Vector2(
 				ctrl.size.x * custom_pivot.x,
-				ctrl.size.y * custom_pivot.y
-			)
+				ctrl.size.y * custom_pivot.y)
+	_pivot_arm = desired_pivot - ctrl.pivot_offset
