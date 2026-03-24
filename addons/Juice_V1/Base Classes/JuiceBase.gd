@@ -780,6 +780,11 @@ func _start_effects(play_in: bool) -> void:
 	# Reapply visuals after effects have captured their From/To references
 	_temporarily_reapply_visual()
 
+	# Write immediately so first-frame state is correct. With contribution
+	# tracking this applies: target = target - old(0) + new(first_delta),
+	# ensuring the target is at the correct position before the first _process.
+	_post_tick_write()
+
 	set_process(true)
 
 	if debug_enabled:

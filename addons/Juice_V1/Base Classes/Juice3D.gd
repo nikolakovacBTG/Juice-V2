@@ -35,16 +35,18 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Natural state — captured at _ready, updated on external-move detection
+# Natural state — captured once at _ready. Read-only reference after capture;
+# contribution tracking does not modify these.
 var _base_position: Vector3 = Vector3.ZERO
 var _base_rotation: Vector3 = Vector3.ZERO
 var _base_scale: Vector3 = Vector3.ONE
 
-# Last values written by this node — used for external-move detection.
-# INF sentinel means "no write yet" so the first frame doesn't false-detect.
-var _last_written_position: Vector3 = Vector3.INF
-var _last_written_rotation: Vector3 = Vector3.INF
-var _last_written_scale: Vector3 = Vector3.INF
+# Expected values after our last write — used for external-move detection.
+# Difference between current and expected = displacement from other writers
+# (sibling Juice nodes, game logic). INF sentinel = no write yet.
+var _expected_position: Vector3 = Vector3.INF
+var _expected_rotation: Vector3 = Vector3.INF
+var _expected_scale: Vector3 = Vector3.INF
 
 # Sum of all effect deltas currently applied — used by undo/reapply
 var _total_pos_contribution: Vector3 = Vector3.ZERO
@@ -169,6 +171,7 @@ func _connect_collision_object_3d_signals(col_obj: CollisionObject3D) -> void:
 # =============================================================================
 
 ## Capture target's natural position/rotation/scale.
+## Base values are a read-only reference; contribution tracking handles writes.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node3D:
 		return
@@ -178,43 +181,40 @@ func _capture_base_values() -> void:
 	_base_scale = n3d.scale
 	_base_captured = true
 	# Reset tracking — no write has happened yet
-	_last_written_position = Vector3.INF
-	_last_written_rotation = Vector3.INF
-	_last_written_scale = Vector3.INF
+	_expected_position = Vector3.INF
+	_expected_rotation = Vector3.INF
+	_expected_scale = Vector3.INF
 	_total_pos_contribution = Vector3.ZERO
 	_total_rot_contribution = Vector3.ZERO
 	_total_scale_contribution = Vector3.ZERO
 
 
-## Detect external moves: did something else change the target since our last write?
+## Detect external displacement: did something change the target since our last write?
+## With contribution tracking, displacement = current - expected. This captures
+## sibling Juice node writes and game logic — anything that isn't our own contribution.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
 	var ext_disp := {}
 
-	# Position
-	if _last_written_position != Vector3.INF:
-		if not n3d.position.is_equal_approx(_last_written_position):
-			var external_delta := n3d.position - _last_written_position
-			_base_position += external_delta
-			ext_disp["position"] = external_delta
+	# Position: compare current to what we expected after our last write
+	if _expected_position != Vector3.INF:
+		if not n3d.position.is_equal_approx(_expected_position):
+			var displacement := n3d.position - _expected_position
+			ext_disp["position"] = displacement
 			if debug_enabled:
-				print("[%s] External position move detected: %s" % [name, external_delta])
+				print("[%s] External displacement (position): %s" % [name, displacement])
 
 	# Rotation
-	if _last_written_rotation != Vector3.INF:
-		if not n3d.rotation.is_equal_approx(_last_written_rotation):
-			var external_delta := n3d.rotation - _last_written_rotation
-			_base_rotation += external_delta
-			ext_disp["rotation"] = external_delta
+	if _expected_rotation != Vector3.INF:
+		if not n3d.rotation.is_equal_approx(_expected_rotation):
+			ext_disp["rotation"] = n3d.rotation - _expected_rotation
 
 	# Scale
-	if _last_written_scale != Vector3.INF:
-		if not n3d.scale.is_equal_approx(_last_written_scale):
-			var external_delta := n3d.scale - _last_written_scale
-			_base_scale += external_delta
-			ext_disp["scale"] = external_delta
+	if _expected_scale != Vector3.INF:
+		if not n3d.scale.is_equal_approx(_expected_scale):
+			ext_disp["scale"] = n3d.scale - _expected_scale
 
 	# Notify effects of external displacement (for reactive effects like Spring)
 	if not ext_disp.is_empty():
@@ -223,16 +223,18 @@ func _pre_tick() -> void:
 				effect._on_external_displacement(ext_disp)
 
 
-## Aggregate all effect deltas and write to target ONCE per frame.
+## Contribution-tracking write: subtract old contribution, add new contribution.
+## Multiple Juice nodes on the same target can write independently without
+## overwriting each other — each node only touches its own layer of changes.
 func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
 
 	# Sum deltas from all runtime effects
-	var total_pos := Vector3.ZERO
-	var total_rot := Vector3.ZERO
-	var total_scale := Vector3.ZERO
+	var new_pos := Vector3.ZERO
+	var new_rot := Vector3.ZERO
+	var new_scale := Vector3.ZERO
 
 	for effect in _runtime_effects:
 		if effect == null:
@@ -241,29 +243,29 @@ func _post_tick_write() -> void:
 		if eff_3d == null:
 			continue
 		if eff_3d._contributes_position:
-			total_pos += eff_3d._pos_delta
+			new_pos += eff_3d._pos_delta
 		if eff_3d._contributes_rotation:
-			total_rot += eff_3d._rot_delta
+			new_rot += eff_3d._rot_delta
 		if eff_3d._contributes_scale:
-			total_scale += eff_3d._scale_delta
+			new_scale += eff_3d._scale_delta
 
-	# Write once: base + sum(deltas)
-	n3d.position = _base_position + total_pos
-	n3d.rotation = _base_rotation + total_rot
-	n3d.scale = _base_scale + total_scale
+	# Contribution tracking: subtract what we added last frame, add what we want now
+	n3d.position = n3d.position - _total_pos_contribution + new_pos
+	n3d.rotation = n3d.rotation - _total_rot_contribution + new_rot
+	n3d.scale = n3d.scale - _total_scale_contribution + new_scale
 
-	# Track what we wrote (for external-move detection next frame)
-	_last_written_position = n3d.position
-	_last_written_rotation = n3d.rotation
-	_last_written_scale = n3d.scale
+	# Track expected values (for external-displacement detection next frame)
+	_expected_position = n3d.position
+	_expected_rotation = n3d.rotation
+	_expected_scale = n3d.scale
 
-	# Track total contribution (for undo/reapply)
-	_total_pos_contribution = total_pos
-	_total_rot_contribution = total_rot
-	_total_scale_contribution = total_scale
+	# Track total contribution (for undo/reapply and next frame's subtraction)
+	_total_pos_contribution = new_pos
+	_total_rot_contribution = new_rot
+	_total_scale_contribution = new_scale
 
 
-## Subtract all contributions — target returns to natural state.
+## Subtract this node's contributions — other nodes' contributions remain.
 func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return

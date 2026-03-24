@@ -36,16 +36,18 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Natural state — captured at _ready, updated on external-move detection
+# Natural state — captured once at _ready. Read-only reference after capture;
+# contribution tracking does not modify these.
 var _base_position: Vector2 = Vector2.ZERO
 var _base_rotation: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
 
-# Last values written by this node — used for external-move detection.
-# INF sentinel means "no write yet" so the first frame doesn't false-detect.
-var _last_written_position: Vector2 = Vector2.INF
-var _last_written_rotation: float = INF
-var _last_written_scale: Vector2 = Vector2.INF
+# Expected values after our last write — used for external-move detection.
+# Difference between current and expected = displacement from other writers
+# (sibling Juice nodes, Containers, game logic). INF sentinel = no write yet.
+var _expected_position: Vector2 = Vector2.INF
+var _expected_rotation: float = INF
+var _expected_scale: Vector2 = Vector2.INF
 
 # Sum of all effect deltas currently applied — used by undo/reapply
 var _total_pos_contribution: Vector2 = Vector2.ZERO
@@ -189,6 +191,7 @@ func _connect_control_signals(control: Control) -> void:
 # =============================================================================
 
 ## Capture target's natural position/rotation/scale.
+## Base values are a read-only reference; contribution tracking handles writes.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Control:
 		return
@@ -198,45 +201,41 @@ func _capture_base_values() -> void:
 	_base_scale = ctrl.scale
 	_base_captured = true
 	# Reset tracking — no write has happened yet
-	_last_written_position = Vector2.INF
-	_last_written_rotation = INF
-	_last_written_scale = Vector2.INF
+	_expected_position = Vector2.INF
+	_expected_rotation = INF
+	_expected_scale = Vector2.INF
 	_total_pos_contribution = Vector2.ZERO
 	_total_rot_contribution = 0.0
 	_total_scale_contribution = Vector2.ZERO
 
 
-## Detect external moves: did something else change the target since our last write?
-## If so, update base values to absorb the external change.
+## Detect external displacement: did something change the target since our last write?
+## With contribution tracking, displacement = current - expected. This captures
+## sibling Juice node writes, Container re-sorts, and game logic — anything that
+## isn't our own contribution. Spring effects react to this displacement.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
 	var ext_disp := {}
 
-	# Position: compare current to what we last wrote
-	if _last_written_position != Vector2.INF:
-		if not ctrl.position.is_equal_approx(_last_written_position):
-			# External move detected — absorb into base
-			var external_delta := ctrl.position - _last_written_position
-			_base_position += external_delta
-			ext_disp["position"] = external_delta
+	# Position: compare current to what we expected after our last write
+	if _expected_position != Vector2.INF:
+		if not ctrl.position.is_equal_approx(_expected_position):
+			var displacement := ctrl.position - _expected_position
+			ext_disp["position"] = displacement
 			if debug_enabled:
-				print("[%s] External position move detected: %s" % [name, external_delta])
+				print("[%s] External displacement (position): %s" % [name, displacement])
 
 	# Rotation
-	if _last_written_rotation != INF:
-		if not is_equal_approx(ctrl.rotation, _last_written_rotation):
-			var external_delta := ctrl.rotation - _last_written_rotation
-			_base_rotation += external_delta
-			ext_disp["rotation"] = external_delta
+	if _expected_rotation != INF:
+		if not is_equal_approx(ctrl.rotation, _expected_rotation):
+			ext_disp["rotation"] = ctrl.rotation - _expected_rotation
 
 	# Scale
-	if _last_written_scale != Vector2.INF:
-		if not ctrl.scale.is_equal_approx(_last_written_scale):
-			var external_delta := ctrl.scale - _last_written_scale
-			_base_scale += external_delta
-			ext_disp["scale"] = external_delta
+	if _expected_scale != Vector2.INF:
+		if not ctrl.scale.is_equal_approx(_expected_scale):
+			ext_disp["scale"] = ctrl.scale - _expected_scale
 
 	# Notify effects of external displacement (for reactive effects like Spring)
 	if not ext_disp.is_empty():
@@ -245,49 +244,50 @@ func _pre_tick() -> void:
 				effect._on_external_displacement(ext_disp)
 
 
-## Aggregate all effect deltas and write to target ONCE per frame.
+## Contribution-tracking write: subtract old contribution, add new contribution.
+## Multiple Juice nodes on the same target can write independently without
+## overwriting each other — each node only touches its own layer of changes.
 func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
 
 	# Sum deltas from all runtime effects
-	var total_pos := Vector2.ZERO
-	var total_rot := 0.0
-	var total_scale := Vector2.ZERO
+	var new_pos := Vector2.ZERO
+	var new_rot := 0.0
+	var new_scale := Vector2.ZERO
 
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
-		# Only transform effects have typed deltas
 		var ctrl_effect := effect as JuiceControlTransformEffect
 		if ctrl_effect == null:
 			continue
 		if ctrl_effect._contributes_position:
-			total_pos += ctrl_effect._pos_delta
+			new_pos += ctrl_effect._pos_delta
 		if ctrl_effect._contributes_rotation:
-			total_rot += ctrl_effect._rot_delta
+			new_rot += ctrl_effect._rot_delta
 		if ctrl_effect._contributes_scale:
-			total_scale += ctrl_effect._scale_delta
+			new_scale += ctrl_effect._scale_delta
 
-	# Write once: base + sum(deltas)
-	ctrl.position = _base_position + total_pos
-	ctrl.rotation = _base_rotation + total_rot
-	ctrl.scale = _base_scale + total_scale
+	# Contribution tracking: subtract what we added last frame, add what we want now
+	ctrl.position = ctrl.position - _total_pos_contribution + new_pos
+	ctrl.rotation = ctrl.rotation - _total_rot_contribution + new_rot
+	ctrl.scale = ctrl.scale - _total_scale_contribution + new_scale
 
-	# Track what we wrote (for external-move detection next frame)
-	_last_written_position = ctrl.position
-	_last_written_rotation = ctrl.rotation
-	_last_written_scale = ctrl.scale
+	# Track expected values (for external-displacement detection next frame)
+	_expected_position = ctrl.position
+	_expected_rotation = ctrl.rotation
+	_expected_scale = ctrl.scale
 
-	# Track total contribution (for undo/reapply)
-	_total_pos_contribution = total_pos
-	_total_rot_contribution = total_rot
-	_total_scale_contribution = total_scale
+	# Update tracked contribution (for undo/reapply and next frame's subtraction)
+	_total_pos_contribution = new_pos
+	_total_rot_contribution = new_rot
+	_total_scale_contribution = new_scale
 
 
-## Subtract all contributions — target returns to natural state.
-## Called before effects capture From/To and before editor save.
+## Subtract this node's contributions — other nodes' contributions remain.
+## Called before effects capture From/To references and before editor save.
 func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return

@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
 [ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_i3blr"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
-[ext_resource type="Script" uid="uid://cgdw7reti11jj" path="res://addons/Juice_V1/Control/SpringControlJuiceEffect.gd" id="9_lq48p"]
+[ext_resource type="Script" uid="uid://7hfqcu4nr8co" path="res://addons/Juice_V1/Control/ShakeControlJuiceEffect.gd" id="8_04vrh"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -67,31 +67,27 @@ script = ExtResource("6_i3blr")
 effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="Resource_hcbql"]
-script = ExtResource("9_lq48p")
+[sub_resource type="Resource" id="Resource_1htyt"]
+script = ExtResource("8_04vrh")
 transform_target = 0
-stiffness = 300.0
-damping = 10.0
-mass = 1.0
-position_offset = Vector2(0, -20)
-velocity_threshold = 0.5
-value_threshold = 0.1
-trigger_cooldown = 0.0
+shake_frequency = 20.0
+position_strength = Vector2(5, 5)
+position_randomness = 0.5
 trigger_behaviour = 1
-start_delay = 3.0
+start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-duration_in = 5.0
+duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://cgdw7reti11jj"
+metadata/_custom_type_script = "uid://7hfqcu4nr8co"
 
 [sub_resource type="Resource" id="Resource_0go64"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_hcbql")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_1htyt")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_r7ray"]
