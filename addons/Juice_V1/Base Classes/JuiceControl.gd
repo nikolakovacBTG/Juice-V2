@@ -367,4 +367,67 @@ func _get_configuration_warnings() -> PackedStringArray:
 		if parent != null and not parent is Control:
 			warnings.append("JuiceControl requires a Control parent in STACK mode. Current parent is '%s' (%s)." % [
 				parent.name, parent.get_class()])
+
+	# Check for pivot_offset conflicts between effects
+	if recipe != null:
+		var pivot_warning := _check_pivot_conflicts()
+		if not pivot_warning.is_empty():
+			warnings.append(pivot_warning)
+
 	return warnings
+
+
+# Detect pivot_offset conflicts: Control nodes have a single pivot_offset property,
+# so multiple effects with different pivot modes will overwrite each other (last-write wins).
+# Returns a warning string if a conflict is found, or empty string if no conflict.
+func _check_pivot_conflicts() -> String:
+	if recipe == null or recipe.effects.size() < 2:
+		return ""
+
+	# Collect pivot configurations from effects that use pivot
+	# (effects that only affect position don't touch pivot_offset)
+	var pivot_configs: Array[Dictionary] = []
+	for effect in recipe.effects:
+		if effect == null:
+			continue
+		if not ("pivot_mode" in effect):
+			continue
+		var pm: int = effect.pivot_mode
+		# INHERIT doesn't write pivot_offset, so it never conflicts
+		if pm == 1:  # INHERIT
+			continue
+		var config := {"mode": pm, "effect": effect.get_class()}
+		if pm == 2 and "custom_pivot" in effect:  # CUSTOM
+			config["custom_pivot"] = effect.custom_pivot
+		pivot_configs.append(config)
+
+	if pivot_configs.size() < 2:
+		return ""
+
+	# Check for conflicts: AUTO_CENTER vs CUSTOM, or two CUSTOMs with different values
+	var has_auto := false
+	var has_custom := false
+	var custom_pivots: Array[Vector2] = []
+	for cfg in pivot_configs:
+		if cfg.mode == 0:  # AUTO_CENTER
+			has_auto = true
+		elif cfg.mode == 2:  # CUSTOM
+			has_custom = true
+			if cfg.has("custom_pivot"):
+				custom_pivots.append(cfg.custom_pivot)
+
+	var conflict := false
+	if has_auto and has_custom:
+		conflict = true
+	elif custom_pivots.size() >= 2:
+		for i in range(1, custom_pivots.size()):
+			if not custom_pivots[i].is_equal_approx(custom_pivots[0]):
+				conflict = true
+				break
+
+	if conflict:
+		return "Multiple effects on this node use different pivot modes. " \
+			+ "Control nodes have a single pivot_offset — the last effect to start wins. " \
+			+ "For independent pivots, use separate JuiceControl nodes on wrapper Controls."
+
+	return ""
