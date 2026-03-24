@@ -65,7 +65,7 @@ metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
 [sub_resource type="Resource" id="Resource_tx2cu"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResource("Resource_04vrh")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_1htyt"]
@@ -80,9 +80,7 @@ damping = 4.1
 mass = 1.9000000000000001
 swing_range_degrees = 45.0
 pivot_mode = 0
-center_of_gravity = Vector2(0.545, 0.675)
-velocity_threshold = 0.5
-value_threshold = 0.1
+center_of_gravity = Vector2(0.5, 1)
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -145,9 +143,29 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://chkjoiswnmqg5"
 
+[sub_resource type="Resource" id="Resource_hcbql"]
+script = ExtResource("8_tx2cu")
+transform_target = 2
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+stiffness = 300.0
+damping = 10.0
+mass = 1.0
+swing_range = Vector2(1.8, 2.04)
+pivot_mode = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cgdw7reti11jj"
+
 [sub_resource type="Resource" id="Resource_lq48p"]
 script = ExtResource("6_i3blr")
-effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_r7ray"), SubResource("Resource_ii4t7")])
+effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_r7ray"), SubResource("Resource_ii4t7"), SubResource("Resource_hcbql")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [node name="ControlIntro" type="Control" unique_id=1014118090]

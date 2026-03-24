@@ -95,9 +95,9 @@ var center_of_gravity: Vector3 = Vector3.ZERO
 
 # --- Settlement (Advanced) ---
 ## Velocity below this threshold is considered settled.
-var velocity_threshold: float = 0.5
+var velocity_threshold: float = 0.01
 ## Displacement below this threshold is considered settled.
-var value_threshold: float = 0.1
+var value_threshold: float = 0.001
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
@@ -167,7 +167,7 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "Advanced", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
 	props.append({"name": "velocity_threshold", "type": TYPE_FLOAT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,10.0,0.01",
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,10.0,0.001",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "value_threshold", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,5.0,0.001",
@@ -241,11 +241,6 @@ var _torque_arm: Vector3 = Vector3.ZERO
 # Length squared of torque arm for moment of inertia normalization
 var _torque_arm_len_sq: float = 0.0
 
-# Frames remaining before settlement checks resume after last impulse.
-# Prevents the spring from snapping to rest before visible overshoot.
-var _impulse_cooldown: int = 0
-const IMPULSE_COOLDOWN_FRAMES: int = 5
-
 
 # =============================================================================
 # TICK OVERRIDE
@@ -281,7 +276,6 @@ func _on_sibling_displacement(displacement: Dictionary) -> void:
 
 
 func _handle_displacement(displacement: Dictionary) -> void:
-	_impulse_cooldown = IMPULSE_COOLDOWN_FRAMES
 	match transform_target:
 		TransformTarget.POSITION:
 			if displacement.has("position"):
@@ -331,7 +325,6 @@ func _on_animate_start(target: Node) -> void:
 	_vel_pos = Vector3.ZERO
 	_vel_rot = Vector3.ZERO
 	_vel_scale = Vector3.ZERO
-	_impulse_cooldown = 0
 
 	# Compute torque arm for rotation
 	_torque_arm = Vector3.ZERO
@@ -349,10 +342,8 @@ func _apply_effect(progress: float, _target: Node) -> void:
 	_spring_step(_tick_delta)
 	_write_deltas()
 
-	# Check settlement (skip while impulse cooldown is active)
-	if _impulse_cooldown > 0:
-		_impulse_cooldown -= 1
-	elif _is_settled():
+	# Settlement: spring snaps to rest when physics say it's done
+	if _is_settled():
 		_snap_to_rest()
 		_write_deltas()
 
