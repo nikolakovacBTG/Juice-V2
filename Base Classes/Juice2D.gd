@@ -54,6 +54,11 @@ var _total_pos_contribution: Vector2 = Vector2.ZERO
 var _total_rot_contribution: float = 0.0
 var _total_scale_contribution: Vector2 = Vector2.ZERO
 
+# Previous frame's non-reactive sibling contribution — for sibling displacement detection
+var _prev_nr_pos: Vector2 = Vector2.ZERO
+var _prev_nr_rot: float = 0.0
+var _prev_nr_scale: Vector2 = Vector2.ZERO
+
 # Whether base values have been captured at least once
 var _base_captured: bool = false
 
@@ -188,6 +193,9 @@ func _capture_base_values() -> void:
 	_total_pos_contribution = Vector2.ZERO
 	_total_rot_contribution = 0.0
 	_total_scale_contribution = Vector2.ZERO
+	_prev_nr_pos = Vector2.ZERO
+	_prev_nr_rot = 0.0
+	_prev_nr_scale = Vector2.ZERO
 
 
 ## Detect external displacement: did something change the target since our last write?
@@ -222,6 +230,47 @@ func _pre_tick() -> void:
 		for effect in _runtime_effects:
 			if effect != null and effect.is_playing():
 				effect._on_external_displacement(ext_disp)
+
+
+## Compute sibling displacement: compare non-reactive effects' current deltas
+## to their previous-frame deltas and notify reactive effects of the change.
+func _compute_sibling_displacement() -> void:
+	if _runtime_effects.is_empty():
+		return
+
+	var nr_pos := Vector2.ZERO
+	var nr_rot := 0.0
+	var nr_scale := Vector2.ZERO
+
+	for effect in _runtime_effects:
+		if effect == null or effect._is_reactive():
+			continue
+		var eff_2d := effect as Juice2DTransformEffect
+		if eff_2d == null:
+			continue
+		if eff_2d._contributes_position:
+			nr_pos += eff_2d._pos_delta
+		if eff_2d._contributes_rotation:
+			nr_rot += eff_2d._rot_delta
+		if eff_2d._contributes_scale:
+			nr_scale += eff_2d._scale_delta
+
+	var sib_disp := {}
+	if not nr_pos.is_equal_approx(_prev_nr_pos):
+		sib_disp["position"] = nr_pos - _prev_nr_pos
+	if not is_equal_approx(nr_rot, _prev_nr_rot):
+		sib_disp["rotation"] = nr_rot - _prev_nr_rot
+	if not nr_scale.is_equal_approx(_prev_nr_scale):
+		sib_disp["scale"] = nr_scale - _prev_nr_scale
+
+	_prev_nr_pos = nr_pos
+	_prev_nr_rot = nr_rot
+	_prev_nr_scale = nr_scale
+
+	if not sib_disp.is_empty():
+		for effect in _runtime_effects:
+			if effect != null and effect._is_reactive() and effect.is_playing():
+				effect._on_sibling_displacement(sib_disp)
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
