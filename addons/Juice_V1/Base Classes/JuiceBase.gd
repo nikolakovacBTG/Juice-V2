@@ -1097,6 +1097,11 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 
 	_seq_target_active_indices[target] = active_indices
 	_seq_active_animations += 1  # One completion event per target
+
+	# Write immediately so first-frame state is correct (same as STACK mode).
+	# Without this, the target sits at natural state for one frame → visible flash.
+	_seq_post_tick_write_target(target, effects)
+
 	set_process(true)
 
 	if debug_enabled:

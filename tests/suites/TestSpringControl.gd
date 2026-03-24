@@ -211,11 +211,10 @@ func test_rotation_torque_from_cog_offset() -> void:
 
 	# Get the runtime clone AFTER animate_in (arm is computed in _on_animate_start)
 	var runtime_effect := juice._runtime_effects[0] as SpringControlJuiceEffect
-	assert_true(runtime_effect._torque_arm_ratio != Vector2.ZERO,
-		"Torque arm ratio should be non-zero with CoG offset")
+	assert_true(runtime_effect._torque_arm != Vector2.ZERO,
+		"Torque arm should be non-zero with CoG offset")
 
-	# Displace position vertically — with CoG to the right of pivot,
-	# arm=(0.5, 0) cross disp_ratio=(0, 2.0) = 0.5*2.0 - 0*0 = 1.0 torque
+	# Displace position vertically — pixel-space torque: arm × disp / (mass * |arm|²)
 	target.position += Vector2(0.0, 200.0)
 	await wait_frames(3)
 

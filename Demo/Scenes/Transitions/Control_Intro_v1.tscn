@@ -7,8 +7,8 @@
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
 [ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_i3blr"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
-[ext_resource type="Script" uid="uid://7hfqcu4nr8co" path="res://addons/Juice_V1/Control/ShakeControlJuiceEffect.gd" id="8_04vrh"]
 [ext_resource type="Script" uid="uid://chkjoiswnmqg5" path="res://addons/Juice_V1/Control/NoiseControlJuiceEffect.gd" id="8_r7ray"]
+[ext_resource type="Script" uid="uid://cgdw7reti11jj" path="res://addons/Juice_V1/Control/SpringControlJuiceEffect.gd" id="8_tx2cu"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -69,30 +69,27 @@ effects = Array[ExtResource("4_32dbb")]([SubResource("Resource_i3blr"), SubResou
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_1htyt"]
-script = ExtResource("8_r7ray")
-transform_target = 0
-position_amplitude = Vector2(5, 5)
-noise_speed = 1.0
-noise_direction = 0
+script = ExtResource("8_tx2cu")
+transform_target = 1
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-noise_type = 1
-noise_frequency = 1.0
-noise_seed = 0
-fractal_type = 0
-domain_warp_enabled = false
-position_axis_speed = Vector2(1, 1)
-clamp_min = -1.0
-clamp_max = 1.0
+stiffness = 83.0
+damping = 4.1
+mass = 1.9000000000000001
+swing_range_degrees = 45.0
+pivot_mode = 0
+center_of_gravity = Vector2(0.545, 0.675)
+velocity_threshold = 0.5
+value_threshold = 0.1
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://chkjoiswnmqg5"
+metadata/_custom_type_script = "uid://cgdw7reti11jj"
 
 [sub_resource type="Resource" id="Resource_0go64"]
 script = ExtResource("6_i3blr")
@@ -123,22 +120,30 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
 [sub_resource type="Resource" id="Resource_ii4t7"]
-script = ExtResource("8_04vrh")
+script = ExtResource("8_r7ray")
 transform_target = 0
-shake_frequency = 20.0
-position_strength = Vector2(5, 5)
-position_randomness = 0.5
+position_amplitude = Vector2(5, 5)
+noise_speed = 1.0
+noise_direction = 0
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
+noise_type = 1
+noise_frequency = 1.0
+noise_seed = 0
+fractal_type = 0
+domain_warp_enabled = false
+position_axis_speed = Vector2(1, 1)
+clamp_min = -1.0
+clamp_max = 1.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://7hfqcu4nr8co"
+metadata/_custom_type_script = "uid://chkjoiswnmqg5"
 
 [sub_resource type="Resource" id="Resource_lq48p"]
 script = ExtResource("6_i3blr")
