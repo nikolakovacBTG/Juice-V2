@@ -501,22 +501,45 @@ func _process(delta: float) -> void:
 	# --- Pre-tick: domain-specific external-move detection ---
 	_pre_tick()
 
-	# --- Tick active effects ---
+	# --- Two-phase tick: non-reactive first, then reactive ---
 	var all_done := true
 	var newly_completed: Array[int] = []
+	var has_reactive := false
 
+	# Phase 1: Tick non-reactive effects
 	for idx in _active_effect_indices:
 		if idx < 0 or idx >= _runtime_effects.size():
 			continue
 		var effect := _runtime_effects[idx]
 		if effect == null or not effect.is_playing():
 			continue
+		if effect._is_reactive():
+			has_reactive = true
+			all_done = false
+			continue
 
 		all_done = false
 		var result := effect.tick(delta, _target_node)
-
 		if result == JuiceEffectBase.TickResult.COMPLETED:
 			newly_completed.append(idx)
+
+	# Mid-phase: Notify reactive effects of sibling delta changes
+	if has_reactive:
+		_compute_sibling_displacement()
+
+	# Phase 2: Tick reactive effects
+	if has_reactive:
+		for idx in _active_effect_indices:
+			if idx < 0 or idx >= _runtime_effects.size():
+				continue
+			var effect := _runtime_effects[idx]
+			if effect == null or not effect.is_playing():
+				continue
+			if not effect._is_reactive():
+				continue
+			var result := effect.tick(delta, _target_node)
+			if result == JuiceEffectBase.TickResult.COMPLETED:
+				newly_completed.append(idx)
 
 	# --- Chained preroll: start chained effects early for overlap ---
 	for idx in _active_effect_indices:
@@ -1408,6 +1431,14 @@ func _capture_base_values() -> void:
 ## Pre-tick hook: detect external moves (something else changed the target).
 ## Called once per frame BEFORE effects are ticked.
 func _pre_tick() -> void:
+	pass
+
+
+## Mid-tick hook: compute sibling displacement for reactive effects.
+## Called between Phase 1 (non-reactive tick) and Phase 2 (reactive tick).
+## Domain nodes sum non-reactive deltas, compare to previous frame, and notify
+## reactive effects via _on_sibling_displacement().
+func _compute_sibling_displacement() -> void:
 	pass
 
 

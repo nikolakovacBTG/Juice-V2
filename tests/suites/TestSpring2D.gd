@@ -184,8 +184,9 @@ func test_rotation_torque_from_cog_offset() -> void:
 	effect.stiffness = 300.0
 	effect.damping = 10.0
 	effect.mass = 1.0
-	# CoG at bottom (0.5, 1.0) — offset from visual center (0.5, 0.5)
-	effect.center_of_gravity = Vector2(0.5, 1.0)
+	# CoG at right-center (1.0, 0.5) — offset from visual center (0.5, 0.5)
+	# Arm ratio = (0.5, 0.0). Vertical displacement creates non-zero cross product.
+	effect.center_of_gravity = Vector2(1.0, 0.5)
 	effect.pivot_mode = Spring2DJuiceEffect.PivotMode.AUTO_CENTER
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 2.0
@@ -202,8 +203,9 @@ func test_rotation_torque_from_cog_offset() -> void:
 	juice.animate_in()
 	await wait_frames(2)
 
-	target.position += Vector2(40.0, 0.0)
-	await wait_frames(5)
+	# Large vertical displacement to produce significant torque
+	target.position += Vector2(0.0, 200.0)
+	await wait_frames(3)
 
 	assert_not_approx_float(target.rotation, natural_rot,
 		"Rotation should change from torque (CoG offset + position displacement)", 0.001)

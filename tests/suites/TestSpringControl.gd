@@ -19,6 +19,8 @@ func get_test_methods() -> Array[String]:
 		"test_reacts_to_scale_displacement",
 		"test_settles_back_after_displacement",
 		"test_rotation_torque_from_cog_offset",
+		"test_is_reactive_flag",
+		"test_scale_reacts_to_sibling_transform",
 	]
 
 
@@ -187,8 +189,10 @@ func test_rotation_torque_from_cog_offset() -> void:
 	effect.stiffness = 300.0
 	effect.damping = 10.0
 	effect.mass = 1.0
-	# CoG at bottom-center (0.5, 1.0) — offset from pivot at center (0.5, 0.5)
-	effect.center_of_gravity = Vector2(0.5, 1.0)
+	# CoG at right-center (1.0, 0.5) — offset from pivot at center (0.5, 0.5)
+	# Arm ratio = (0.5, 0.0). Vertical displacement creates cross product:
+	# 0.5 * disp_y/box_y - 0.0 * disp_x/box_x = non-zero torque
+	effect.center_of_gravity = Vector2(1.0, 0.5)
 	effect.pivot_mode = SpringControlJuiceEffect.PivotMode.AUTO_CENTER
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 2.0
@@ -205,12 +209,86 @@ func test_rotation_torque_from_cog_offset() -> void:
 	juice.animate_in()
 	await wait_frames(2)
 
-	# Displace position horizontally — with CoG below pivot, this should create torque
-	target.position += Vector2(40.0, 0.0)
-	await wait_frames(5)
+	# Get the runtime clone AFTER animate_in (arm is computed in _on_animate_start)
+	var runtime_effect := juice._runtime_effects[0] as SpringControlJuiceEffect
+	assert_true(runtime_effect._torque_arm_ratio != Vector2.ZERO,
+		"Torque arm ratio should be non-zero with CoG offset")
+
+	# Displace position vertically — with CoG to the right of pivot,
+	# arm=(0.5, 0) cross disp_ratio=(0, 2.0) = 0.5*2.0 - 0*0 = 1.0 torque
+	target.position += Vector2(0.0, 200.0)
+	await wait_frames(3)
 
 	# Rotation should have changed due to torque from position displacement
 	assert_not_approx_float(target.rotation, natural_rot,
 		"Rotation should change from torque (CoG offset + position displacement)", 0.001)
+
+	await cleanup(target)
+
+
+func test_is_reactive_flag() -> void:
+	var spring := SpringControlJuiceEffect.new()
+	assert_true(spring._is_reactive(), "Spring effect should report _is_reactive() = true")
+
+	var transform := TransformControlJuiceEffect.new()
+	assert_true(not transform._is_reactive(), "Transform effect should report _is_reactive() = false")
+
+
+func test_scale_reacts_to_sibling_transform() -> void:
+	# Spring (Scale) + Transform (Scale) on the SAME Juice node
+	# When Transform animates scale, Spring should react via sibling displacement
+	var target := create_control_target("SpringSiblingCtrl")
+
+	var transform_effect := TransformControlJuiceEffect.new()
+	transform_effect.transform_target = TransformControlJuiceEffect.TransformTarget.SCALE
+	transform_effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	transform_effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	transform_effect.to_scale = Vector2(1.5, 1.5)
+	transform_effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	transform_effect.duration_in = 0.3
+
+	var spring_effect := SpringControlJuiceEffect.new()
+	spring_effect.transform_target = SpringControlJuiceEffect.TransformTarget.SCALE
+	spring_effect.stiffness = 50.0   # Low stiffness = slow return, easier to observe
+	spring_effect.damping = 2.0      # Low damping = more oscillation
+	spring_effect.mass = 1.0
+	spring_effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	spring_effect.duration_in = 2.0
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(transform_effect)
+	recipe.effects.append(spring_effect)
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	var natural_scale := target.scale
+	juice.animate_in()
+	await wait_frames(10)
+
+	# After enough frames, the Transform effect should have produced visible scale delta
+	var scale_after := target.scale
+	# Scale should have changed from natural (Transform is animating + Spring reacting)
+	assert_not_approx_vec2(scale_after, natural_scale,
+		"Scale should change from Transform + Spring sibling interaction", 0.001)
+
+	# Access the runtime clones (not the originals we created)
+	var rt_spring: SpringControlJuiceEffect = null
+	for eff in juice._runtime_effects:
+		if eff is SpringControlJuiceEffect:
+			rt_spring = eff
+			break
+	assert_true(rt_spring != null, "Runtime Spring effect should exist")
+
+	# Wait a few more frames while Transform is still animating
+	await wait_frames(5)
+
+	# The Spring should have been perturbed by sibling displacement
+	if rt_spring != null:
+		var has_state := rt_spring._current_scale != Vector2.ZERO or rt_spring._vel_scale != Vector2.ZERO
+		assert_true(has_state,
+			"Spring should have non-zero state from sibling Transform displacement")
 
 	await cleanup(target)

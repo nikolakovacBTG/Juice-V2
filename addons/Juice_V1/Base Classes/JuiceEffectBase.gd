@@ -916,11 +916,24 @@ func _needs_sustain() -> bool:
 func _apply_effect(_progress: float, _target: Node) -> void:
 	pass  # Subclass MUST implement
 
+## Whether this effect reacts to displacement from sibling effects on the same node.
+## Reactive effects (Spring) tick in a second phase, after non-reactive siblings,
+## so they can observe sibling delta changes and respond to them.
+func _is_reactive() -> bool:
+	return false
+
 ## Called by domain node when external displacement is detected (pre-tick).
 ## displacement: Dictionary keyed by channel name ("position", "rotation", "scale")
 ## with the external displacement value (Vector2, Vector3, or float).
 ## Only effects that need to react to external movement override this.
 func _on_external_displacement(_displacement: Dictionary) -> void:
+	pass
+
+## Called by domain node when sibling (same-node) effects' deltas change between frames.
+## displacement: Dictionary keyed by channel name ("position", "rotation", "scale")
+## with the change in non-reactive sibling contributions since last frame.
+## Only reactive effects (e.g. Spring) override this.
+func _on_sibling_displacement(_displacement: Dictionary) -> void:
 	pass
 
 ## Called when animation starts (either direction). Capture base values here.

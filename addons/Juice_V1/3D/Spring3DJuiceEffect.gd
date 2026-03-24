@@ -22,6 +22,7 @@
 #     center_of_gravity is offset from rotation pivot.
 #   - Swing range provides a soft clamp: restoring force increases non-linearly
 #     near the boundary, preventing runaway oscillation.
+#   - Torque uses normalized arm (center_of_gravity is already in local units).
 # ============================================================================
 
 @tool
@@ -34,12 +35,14 @@ extends Juice3DTransformEffect
 # ENUMS
 # =============================================================================
 
+## Which transform channel this spring reacts to.
 enum TransformTarget {
 	POSITION,
 	ROTATION,
 	SCALE
 }
 
+## How the scale pivot is determined.
 enum PivotMode {
 	AUTO_CENTER,
 	INHERIT,
@@ -51,29 +54,38 @@ enum PivotMode {
 # CONFIGURATION
 # =============================================================================
 
+## Which transform property this spring reacts to (position, rotation, or scale).
 var transform_target: int = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
 		notify_property_list_changed()
 
 # --- Spring physics ---
+## Spring stiffness — higher values = faster return to rest, snappier feel.
 var stiffness: float = 300.0
+## Damping coefficient — higher values = less oscillation, faster settling.
 var damping: float = 10.0
+## Mass of the spring — higher values = slower, heavier movement.
 var mass: float = 1.0
 
-## Per-axis maximum displacement (soft clamp). Zero = unlimited.
-## Position/Scale: Vector3 per axis. Rotation: Vector3 (degrees in inspector, radians internally).
-var swing_range: Vector3 = Vector3.ZERO
-var swing_range_degrees: Vector3 = Vector3.ZERO  # Inspector-facing for rotation
+## Per-axis maximum displacement in world units before soft clamp engages.
+var swing_range: Vector3 = Vector3(1.0, 1.0, 1.0)
+
+## Per-axis maximum rotation swing in degrees before soft clamp engages.
+var swing_range_degrees: Vector3 = Vector3(45.0, 45.0, 45.0)
 
 # --- Rotation pivot ---
+## Rotation pivot offset in local space. Rotation happens around this point.
 var rotation_pivot_offset: Vector3 = Vector3.ZERO
 
 # --- Scale pivot ---
+## How the scale pivot is determined.
 var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		scale_pivot_mode = value
 		notify_property_list_changed()
+
+## Custom scale pivot in local space.
 var scale_custom_pivot: Vector3 = Vector3.ZERO
 
 ## Center of gravity in local space (rotation only).
@@ -82,7 +94,9 @@ var scale_custom_pivot: Vector3 = Vector3.ZERO
 var center_of_gravity: Vector3 = Vector3.ZERO
 
 # --- Settlement (Advanced) ---
+## Velocity below this threshold is considered settled.
 var velocity_threshold: float = 0.5
+## Displacement below this threshold is considered settled.
 var value_threshold: float = 0.1
 
 func _init() -> void:
@@ -105,6 +119,9 @@ func _get_property_list() -> Array[Dictionary]:
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
+	# Base effect properties (trigger_behaviour, start_delay, etc.) — BEFORE Advanced
+	props.append_array(_get_effect_base_properties())
+
 	# Spring physics (always visible)
 	props.append({"name": "stiffness", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,1000.0,1.0,or_greater",
@@ -117,11 +134,17 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	# Swing range (per target type)
-	if is_pos or is_scale:
+	if is_pos:
 		props.append({"name": "swing_range", "type": TYPE_VECTOR3,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
 			"usage": PROPERTY_USAGE_DEFAULT})
 	elif is_rot:
 		props.append({"name": "swing_range_degrees", "type": TYPE_VECTOR3,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,360.0,0.1,or_greater",
+			"usage": PROPERTY_USAGE_DEFAULT})
+	elif is_scale:
+		props.append({"name": "swing_range", "type": TYPE_VECTOR3,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.01,or_greater",
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# Rotation pivot + CoG
@@ -140,7 +163,7 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "scale_custom_pivot", "type": TYPE_VECTOR3,
 				"usage": PROPERTY_USAGE_DEFAULT})
 
-	# Advanced subgroup
+	# Advanced subgroup — settlement thresholds only
 	props.append({"name": "Advanced", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
 	props.append({"name": "velocity_threshold", "type": TYPE_FLOAT,
@@ -150,7 +173,6 @@ func _get_property_list() -> Array[Dictionary]:
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,5.0,0.001",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append_array(_get_effect_base_properties())
 	return props
 
 
@@ -160,8 +182,14 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"stiffness": stiffness = value; return true
 		&"damping": damping = value; return true
 		&"mass": mass = value; return true
-		&"swing_range": swing_range = value; return true
-		&"swing_range_degrees": swing_range_degrees = value; return true
+		&"swing_range":
+			var v := value as Vector3
+			swing_range = Vector3(maxf(v.x, 0.0), maxf(v.y, 0.0), maxf(v.z, 0.0))
+			return true
+		&"swing_range_degrees":
+			var v := value as Vector3
+			swing_range_degrees = Vector3(maxf(v.x, 0.0), maxf(v.y, 0.0), maxf(v.z, 0.0))
+			return true
 		&"rotation_pivot_offset": rotation_pivot_offset = value; return true
 		&"scale_pivot_mode": scale_pivot_mode = value; return true
 		&"scale_custom_pivot": scale_custom_pivot = value; return true
@@ -197,6 +225,9 @@ var _scale_pivot_point: Vector3 = Vector3.ZERO
 var _base_scale: Vector3 = Vector3.ONE
 var _base_basis: Basis = Basis.IDENTITY
 
+# Resolved swing range in radians (rotation only)
+var _resolved_swing_range_rot: Vector3 = Vector3.ZERO
+
 # Spring simulation state — all values are DELTAS from natural (rest = 0)
 var _current_pos: Vector3 = Vector3.ZERO
 var _current_rot: Vector3 = Vector3.ZERO
@@ -205,8 +236,13 @@ var _vel_pos: Vector3 = Vector3.ZERO
 var _vel_rot: Vector3 = Vector3.ZERO
 var _vel_scale: Vector3 = Vector3.ZERO
 
-# Cached arm vector for rotation torque (local space, from pivot to CoG)
+# Cached torque arm in local space (from rotation pivot to CoG)
 var _torque_arm: Vector3 = Vector3.ZERO
+# Length squared of torque arm for moment of inertia normalization
+var _torque_arm_len_sq: float = 0.0
+
+# True when displacement was received this frame — skip settlement check
+var _received_impulse: bool = false
 
 
 # =============================================================================
@@ -226,12 +262,24 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+func _is_reactive() -> bool:
+	return true
+
+
 func _needs_sustain() -> bool:
 	return true
 
 
 func _on_external_displacement(displacement: Dictionary) -> void:
-	# Reactive: external displacement perturbs the spring away from rest.
+	_handle_displacement(displacement)
+
+
+func _on_sibling_displacement(displacement: Dictionary) -> void:
+	_handle_displacement(displacement)
+
+
+func _handle_displacement(displacement: Dictionary) -> void:
+	_received_impulse = true
 	match transform_target:
 		TransformTarget.POSITION:
 			if displacement.has("position"):
@@ -239,12 +287,13 @@ func _on_external_displacement(displacement: Dictionary) -> void:
 		TransformTarget.ROTATION:
 			if displacement.has("rotation"):
 				_current_rot -= displacement["rotation"] as Vector3
-			# Torque from position displacement (if CoG is offset from pivot)
-			if displacement.has("position") and _torque_arm != Vector3.ZERO:
+			# Torque from position displacement (normalized by moment of inertia)
+			if displacement.has("position") and _torque_arm != Vector3.ZERO and _torque_arm_len_sq > 0.0:
 				var pos_disp := displacement["position"] as Vector3
 				# 3D cross product: arm × displacement → torque vector
 				var torque := _torque_arm.cross(pos_disp)
-				_vel_rot += torque / mass
+				# Normalize by moment of inertia (mass * r²)
+				_vel_rot += torque / (mass * _torque_arm_len_sq)
 		TransformTarget.SCALE:
 			if displacement.has("scale"):
 				_current_scale -= displacement["scale"] as Vector3
@@ -267,6 +316,12 @@ func _on_animate_start(target: Node) -> void:
 		if _scale_pivot_point != Vector3.ZERO:
 			_contributes_position = true
 
+	# Resolve rotation swing range to radians
+	_resolved_swing_range_rot = Vector3(
+		deg_to_rad(swing_range_degrees.x),
+		deg_to_rad(swing_range_degrees.y),
+		deg_to_rad(swing_range_degrees.z))
+
 	# Initialize at rest — spring is purely reactive
 	_current_pos = Vector3.ZERO
 	_current_rot = Vector3.ZERO
@@ -277,8 +332,10 @@ func _on_animate_start(target: Node) -> void:
 
 	# Compute torque arm for rotation
 	_torque_arm = Vector3.ZERO
+	_torque_arm_len_sq = 0.0
 	if transform_target == TransformTarget.ROTATION:
-		_torque_arm = center_of_gravity  # Already in local space offset from pivot
+		_torque_arm = center_of_gravity  # Local space offset from pivot
+		_torque_arm_len_sq = _torque_arm.length_squared()
 
 	if debug_enabled:
 		print("[Spring3D] Start: %s, stiffness=%.0f, damping=%.0f, arm=%s" % [
@@ -289,10 +346,11 @@ func _apply_effect(progress: float, _target: Node) -> void:
 	_spring_step(_tick_delta)
 	_write_deltas()
 
-	# Check settlement
-	if _is_settled():
+	# Check settlement (skip on frames where we just received an impulse)
+	if not _received_impulse and _is_settled():
 		_snap_to_rest()
 		_write_deltas()
+	_received_impulse = false
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -324,33 +382,32 @@ func _spring_step(delta: float) -> void:
 		return
 	match transform_target:
 		TransformTarget.POSITION:
-			_spring_step_vec3(delta, _current_pos, _vel_pos, swing_range, true)
+			_spring_step_pos(delta)
 		TransformTarget.ROTATION:
-			var range_rad := Vector3(
-				deg_to_rad(swing_range_degrees.x),
-				deg_to_rad(swing_range_degrees.y),
-				deg_to_rad(swing_range_degrees.z))
-			_spring_step_vec3(delta, _current_rot, _vel_rot, range_rad, false)
+			_spring_step_rot(delta)
 		TransformTarget.SCALE:
-			_spring_step_vec3(delta, _current_scale, _vel_scale, swing_range, false)
+			_spring_step_scale(delta)
 
 
-func _spring_step_vec3(delta: float, current: Vector3, vel: Vector3, range_limit: Vector3, is_pos_channel: bool) -> void:
-	# Target is always rest (zero) — spring only reacts to perturbation
-	var eff_stiffness := _soft_clamp_stiffness_vec3(current, range_limit)
-	var acceleration := (-current * eff_stiffness - vel * damping) / mass
-	vel += acceleration * delta
-	current += vel * delta
+func _spring_step_pos(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_vec3(_current_pos, swing_range)
+	var acceleration := (-_current_pos * eff_stiffness - _vel_pos * damping) / mass
+	_vel_pos += acceleration * delta
+	_current_pos += _vel_pos * delta
 
-	# Write back — GDScript passes by value for built-ins
-	if is_pos_channel:
-		_current_pos = current; _vel_pos = vel
-	else:
-		match transform_target:
-			TransformTarget.ROTATION:
-				_current_rot = current; _vel_rot = vel
-			TransformTarget.SCALE:
-				_current_scale = current; _vel_scale = vel
+
+func _spring_step_rot(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_vec3(_current_rot, _resolved_swing_range_rot)
+	var acceleration := (-_current_rot * eff_stiffness - _vel_rot * damping) / mass
+	_vel_rot += acceleration * delta
+	_current_rot += _vel_rot * delta
+
+
+func _spring_step_scale(delta: float) -> void:
+	var eff_stiffness := _soft_clamp_stiffness_vec3(_current_scale, swing_range)
+	var acceleration := (-_current_scale * eff_stiffness - _vel_scale * damping) / mass
+	_vel_scale += acceleration * delta
+	_current_scale += _vel_scale * delta
 
 
 # --- Soft clamp: non-linear stiffness increase near swing_range boundary ---
