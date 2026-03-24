@@ -158,9 +158,9 @@ func _get_property_list() -> Array[Dictionary]:
 
 	props.append_array(_get_effect_base_properties())
 
-	# --- Noise Pattern group ---
+	# --- Noise Pattern subgroup ---
 	props.append({"name": "Noise Pattern", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
 	props.append({"name": "noise_type", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM,
 		"hint_string": "Simplex,Simplex Smooth,Cellular,Perlin,Value,Value Cubic",
@@ -193,9 +193,9 @@ func _get_property_list() -> Array[Dictionary]:
 		props.append({"name": "domain_warp_frequency", "type": TYPE_FLOAT,
 			"usage": PROPERTY_USAGE_DEFAULT})
 
-	# --- Advanced group ---
+	# --- Advanced subgroup ---
 	props.append({"name": "Advanced", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
 	if is_pos:
 		props.append({"name": "position_axis_speed", "type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_DEFAULT})
