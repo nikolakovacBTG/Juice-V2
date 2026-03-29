@@ -1,15 +1,19 @@
-## ScreenOverlayJuiceEffectBase.gd
-## ============================================================================
-## WHAT: Domain-agnostic base for screen color/texture overlay effects.
-##       Animates a full-screen ColorRect via JuiceScreenOverlayProvider.
-##       Ignores the target node — overlay is always the shared screen canvas.
-## WHY: Screen flash and fade are not node-specific effects. Separating the
-##      shared logic here keeps the three domain wrappers empty (class_name only)
-##      while avoiding any multiple-inheritance workaround.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Write to the target node — always uses JuiceScreenOverlayProvider.
-## DOES NOT: Support multiple simultaneous overlays (last-write wins).
-## ============================================================================
+## Domain-agnostic base for screen color/texture overlay effects.
+##
+## Animates a full-screen ColorRect via JuiceScreenOverlayProvider.
+## Ignores the target node — overlay is always the shared screen canvas.
+
+# ============================================================================
+# WHAT: Domain-agnostic base for screen color/texture overlay effects.
+#       Animates a full-screen ColorRect via JuiceScreenOverlayProvider.
+#       Ignores the target node — overlay is always the shared screen canvas.
+# WHY: Screen flash and fade are not node-specific effects. Separating the
+#      shared logic here keeps the three domain wrappers empty (class_name only)
+#      while avoiding any multiple-inheritance workaround.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Write to the target node — always uses JuiceScreenOverlayProvider.
+# DOES NOT: Support multiple simultaneous overlays (last-write wins).
+# ============================================================================
 #
 # USAGE IN TRANSITIONS: Used by _JuiceTransitionHandler which ticks this effect
 #   manually (no host Juice node required). Pass null as target to start/tick.

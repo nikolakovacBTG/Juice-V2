@@ -89,6 +89,14 @@ Using the templates from `@juice-architecture`:
 - Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/Juice2DRecipe.gd`
 - Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/Juice3DRecipe.gd`
 
+2e. **Validate header formatting** (MANDATORY — prevents broken tooltips in Godot):
+- Each script MUST follow the Juice2D.gd pattern:
+  - First line: Single `##` with concise description (becomes the tooltip)
+  - Optional: Additional `##` lines for more detail (won't show in tooltip)  
+  - Then: `# ============================================================================` separator for detailed WHAT/WHY section
+- WRONG: Multiple `##` lines before the separator (causes broken tooltips)
+- Reference: `addons/Juice_V1/Base Classes/Juice2D.gd` lines 1-12`
+
 ---
 
 ## Step 3: Write Tests (All 3 Domains)
