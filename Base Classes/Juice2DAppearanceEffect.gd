@@ -1,12 +1,16 @@
-## Juice2DAppearanceEffect.gd
-## ============================================================================
-## WHAT: Intermediate base for 2D-domain effects that produce modulate contributions.
-## WHY: Separates modulate accumulation from domain filtering. Effects that
-##      animate color/alpha via modulate extend this. Non-modulate effects
-##      (Transform, OUTLINE via ShaderMaterial) extend Juice2DEffectBase directly.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement any effect behavior — concrete subclasses do that.
-## ============================================================================
+## Intermediate base for 2D-domain effects that produce modulate contributions.
+##
+## Separates modulate accumulation from domain filtering. Effects that
+## animate color/alpha via modulate extend this.
+
+# ============================================================================
+# WHAT: Intermediate base for 2D-domain effects that produce modulate contributions.
+# WHY: Separates modulate accumulation from domain filtering. Effects that
+#      animate color/alpha via modulate extend this. Non-modulate effects
+#      (Transform, OUTLINE via ShaderMaterial) extend Juice2DEffectBase directly.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement any effect behavior — concrete subclasses do that.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")

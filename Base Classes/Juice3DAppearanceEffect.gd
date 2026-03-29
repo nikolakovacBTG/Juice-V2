@@ -1,13 +1,17 @@
-## Juice3DAppearanceEffect.gd
-## ============================================================================
-## WHAT: Intermediate base for 3D-domain effects that produce albedo contributions.
-## WHY: Separates appearance accumulation from domain filtering. Effects that
-##      animate color/alpha via StandardMaterial3D extend this. Non-modulate
-##      effects (Transform, OUTLINE via next_pass) extend Juice3DEffectBase directly.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement any effect behavior — concrete subclasses do that.
-## DOES NOT: Manage MeshInstance3D or working materials — that is Juice3D's job.
-## ============================================================================
+## Intermediate base for 3D-domain effects that produce appearance contributions.
+##
+## Separates appearance accumulation from domain filtering. Effects that
+## animate albedo/alpha via material slots extend this.
+
+# ============================================================================
+# WHAT: Intermediate base for 3D-domain effects that produce appearance contributions.
+# WHY: Separates appearance accumulation from domain filtering. Effects that
+#      animate albedo/alpha via material slots extend this. Non-appearance effects
+#      (Transform, Spring) extend Juice3DEffectBase directly.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement any effect behavior — concrete subclasses do that.
+# DOES NOT: Manage MeshInstance3D or working materials — that is Juice3D's job.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")

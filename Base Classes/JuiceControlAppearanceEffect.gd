@@ -1,12 +1,16 @@
-## JuiceControlAppearanceEffect.gd
-## ============================================================================
-## WHAT: Intermediate base for Control-domain effects that produce modulate contributions.
-## WHY: Separates modulate accumulation from domain filtering. Effects that
-##      animate color/alpha via modulate extend this. Non-modulate effects
-##      (Transform, OUTLINE via StyleBox) extend JuiceControlEffectBase directly.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement any effect behavior — concrete subclasses do that.
-## ============================================================================
+## Intermediate base for Control-domain effects that produce modulate contributions.
+##
+## Separates modulate accumulation from domain filtering. Effects that
+## animate color/alpha via modulate extend this.
+
+# ============================================================================
+# WHAT: Intermediate base for Control-domain effects that produce modulate contributions.
+# WHY: Separates modulate accumulation from domain filtering. Effects that
+#      animate color/alpha via modulate extend this. Non-modulate effects
+#      (Transform, OUTLINE via StyleBox) extend JuiceControlEffectBase directly.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement any effect behavior — concrete subclasses do that.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
