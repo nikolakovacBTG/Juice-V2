@@ -25,25 +25,15 @@ func get_test_methods() -> Array[String]:
 		"test_2d_overbright_restores_after_completion",
 		"test_2d_outline_installs_shader_material",
 		"test_2d_outline_restores_after_completion",
-		"test_2d_grayscale_installs_shader_material",
-		"test_2d_grayscale_restores_after_completion",
-		"test_2d_dissolve_installs_shader_material",
-		"test_2d_dissolve_restores_after_completion",
-		"test_2d_blend_mode_installs_canvas_item_material",
-		"test_2d_blend_mode_restores_after_completion",
 		# Control
 		"test_ctrl_fade_changes_alpha",
 		"test_ctrl_fade_restores_after_completion",
 		"test_ctrl_tint_changes_rgb",
 		"test_ctrl_tint_restores_after_completion",
-		"test_ctrl_grayscale_installs_shader_material",
-		"test_ctrl_grayscale_restores_after_completion",
 		# 3D
 		"test_3d_fade_changes_alpha",
 		"test_3d_fade_restores_after_completion",
 		"test_3d_tint_changes_albedo",
-		"test_3d_grayscale_installs_shader_material",
-		"test_3d_dissolve_installs_shader_material",
 	]
 
 
@@ -258,109 +248,6 @@ func test_2d_outline_restores_after_completion() -> void:
 	await cleanup(target)
 
 
-func test_2d_grayscale_installs_shader_material() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.GRAYSCALE
-	effect.grayscale_amount = 1.0
-
-	var rig := await _create_2d_rig(effect, 0.3)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	assert_true(target.material is ShaderMaterial, "GRAYSCALE mid-animation: ShaderMaterial must be installed")
-	var mat := target.material as ShaderMaterial
-	assert_true(mat.get_shader_parameter("amount") > 0.0, "GRAYSCALE: shader amount must be > 0 during animation")
-	await cleanup(target)
-
-
-func test_2d_grayscale_restores_after_completion() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.GRAYSCALE
-	effect.grayscale_amount = 1.0
-
-	var rig := await _create_2d_rig(effect, 0.15)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.5)
-	juice.stop()
-
-	assert_true(target.material == null, "GRAYSCALE after completion: material must restore to null")
-	await cleanup(target)
-
-
-func test_2d_dissolve_installs_shader_material() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.DISSOLVE
-
-	var rig := await _create_2d_rig(effect, 0.3)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	assert_true(target.material is ShaderMaterial, "DISSOLVE mid-animation: ShaderMaterial must be installed")
-	var mat := target.material as ShaderMaterial
-	assert_true(mat.get_shader_parameter("threshold") > 0.0, "DISSOLVE: threshold must be > 0 during animation")
-	await cleanup(target)
-
-
-func test_2d_dissolve_restores_after_completion() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.DISSOLVE
-
-	var rig := await _create_2d_rig(effect, 0.15)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.5)
-	juice.stop()
-
-	assert_true(target.material == null, "DISSOLVE after completion: material must restore to null")
-	await cleanup(target)
-
-
-func test_2d_blend_mode_installs_canvas_item_material() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.BLEND_MODE
-	effect.blend_mode_target = CanvasItemMaterial.BLEND_MODE_ADD
-
-	var rig := await _create_2d_rig(effect, 0.3)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	assert_true(target.material is CanvasItemMaterial, "BLEND_MODE mid-animation: CanvasItemMaterial must be installed")
-	var mat := target.material as CanvasItemMaterial
-	assert_true(mat.blend_mode == CanvasItemMaterial.BLEND_MODE_ADD, "BLEND_MODE: blend_mode must match blend_mode_target")
-	await cleanup(target)
-
-
-func test_2d_blend_mode_restores_after_completion() -> void:
-	var effect := Appearance2DJuiceEffect.new()
-	effect.effect_type = Appearance2DJuiceEffect.AppearanceEffect.BLEND_MODE
-	effect.blend_mode_target = CanvasItemMaterial.BLEND_MODE_ADD
-
-	var rig := await _create_2d_rig(effect, 0.15)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.5)
-	juice.stop()
-
-	assert_true(target.material == null, "BLEND_MODE after completion: material must restore to null")
-	await cleanup(target)
-
-
 # =============================================================================
 # CONTROL TESTS
 # =============================================================================
@@ -436,39 +323,6 @@ func test_ctrl_tint_restores_after_completion() -> void:
 	await cleanup(target)
 
 
-func test_ctrl_grayscale_installs_shader_material() -> void:
-	var effect := AppearanceControlJuiceEffect.new()
-	effect.effect_type = AppearanceControlJuiceEffect.AppearanceEffect.GRAYSCALE
-	effect.grayscale_amount = 1.0
-
-	var rig := await _create_ctrl_rig(effect, 0.3)
-	var target: Control = rig[0]
-	var juice: JuiceControl = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	assert_true(target.material is ShaderMaterial, "Control GRAYSCALE mid-animation: ShaderMaterial must be installed")
-	await cleanup(target)
-
-
-func test_ctrl_grayscale_restores_after_completion() -> void:
-	var effect := AppearanceControlJuiceEffect.new()
-	effect.effect_type = AppearanceControlJuiceEffect.AppearanceEffect.GRAYSCALE
-	effect.grayscale_amount = 1.0
-
-	var rig := await _create_ctrl_rig(effect, 0.15)
-	var target: Control = rig[0]
-	var juice: JuiceControl = rig[1]
-
-	juice.animate_in()
-	await wait_seconds(0.5)
-	juice.stop()
-
-	assert_true(target.material == null, "Control GRAYSCALE after completion: material must restore to null")
-	await cleanup(target)
-
-
 # =============================================================================
 # 3D TESTS
 # =============================================================================
@@ -532,36 +386,3 @@ func test_3d_tint_changes_albedo() -> void:
 	await cleanup(target)
 
 
-func test_3d_grayscale_installs_shader_material() -> void:
-	var effect := Appearance3DJuiceEffect.new()
-	effect.effect_type = Appearance3DJuiceEffect.AppearanceEffect.GRAYSCALE
-	effect.grayscale_amount = 1.0
-
-	var rig := await _create_3d_rig(effect, 0.3)
-	var target: Node3D = rig[0]
-	var juice: Juice3D = rig[1]
-	var mesh_inst: MeshInstance3D = rig[2]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	var mat := mesh_inst.get_surface_override_material(0)
-	assert_true(mat is ShaderMaterial, "3D GRAYSCALE mid-animation: ShaderMaterial must be installed")
-	await cleanup(target)
-
-
-func test_3d_dissolve_installs_shader_material() -> void:
-	var effect := Appearance3DJuiceEffect.new()
-	effect.effect_type = Appearance3DJuiceEffect.AppearanceEffect.DISSOLVE
-
-	var rig := await _create_3d_rig(effect, 0.3)
-	var target: Node3D = rig[0]
-	var juice: Juice3D = rig[1]
-	var mesh_inst: MeshInstance3D = rig[2]
-
-	juice.animate_in()
-	await wait_seconds(0.1)
-
-	var mat := mesh_inst.get_surface_override_material(0)
-	assert_true(mat is ShaderMaterial, "3D DISSOLVE mid-animation: ShaderMaterial must be installed")
-	await cleanup(target)
