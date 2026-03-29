@@ -1,16 +1,17 @@
-## SoftTriggerControlJuiceUtility.gd
-## ============================================================================
-## WHAT: Proximity-driven continuous progress driver for the Control domain.
-##       Calculates a 0–1 progress value based on how deep the mouse cursor is
-##       inside this Control's rect, and drives sibling JuiceCompBase nodes
-##       each frame via set_external_progress().
+## Proximity-driven continuous progress driver for the Control domain.
 ##
-## WHY: Enables Balatro-style hover effects where juice intensity is proportional
-##      to spatial proximity, not just binary enter/exit. The spatial falloff
-##      IS the easing — no timing system needed.
-##
-## SYSTEM: Juicing System (addons/Juice_V1/) - Control Domain
-##
+## Calculates a 0–1 progress value based on how deep the mouse cursor is inside this Control's rect, and drives sibling JuiceCompBase nodes each frame via set_external_progress().
+
+# ============================================================================
+# WHAT: Proximity-driven continuous progress driver for the Control domain.
+#       Calculates a 0–1 progress value based on how deep the mouse cursor is
+#       inside this Control's rect, and drives sibling JuiceCompBase nodes
+#       each frame via set_external_progress().
+# WHY: Enables Balatro-style hover effects where juice intensity is proportional
+#      to spatial proximity, not just binary enter/exit. The spatial falloff
+#      IS the easing — no timing system needed.
+# SYSTEM: Juicing System (addons/Juice_V1/) - Control Domain
+#
 ## DOES NOT:
 ## - Apply any visual effect itself (it's a sensor/driver, not an effect)
 ## - Handle directional tilt (see future TiltTowardCursorComp)
