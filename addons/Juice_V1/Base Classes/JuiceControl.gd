@@ -62,6 +62,12 @@ var _prev_nr_scale: Vector2 = Vector2.ZERO
 # Whether base values have been captured at least once
 var _base_captured: bool = false
 
+# Modulate base — captured at _capture_base_values for appearance accumulation.
+# JuiceControlAppearanceEffect effects contribute _modulate_factor multiplicatively;
+# the domain node writes target.modulate = _base_modulate * combined_factor once per frame.
+var _base_modulate: Color = Color.WHITE
+var _has_modulate_base: bool = false
+
 # Whether the target is inside a Container. In V1's write-every-frame model,
 # _post_tick_write() inherently beats Container re-sorts each frame.
 # This flag is kept for potential future Container-specific edge cases.
@@ -204,6 +210,8 @@ func _capture_base_values() -> void:
 	_base_position = ctrl.position
 	_base_rotation = ctrl.rotation
 	_base_scale = ctrl.scale
+	_base_modulate = ctrl.modulate
+	_has_modulate_base = true
 	_base_captured = true
 	# Reset tracking — no write has happened yet
 	_expected_position = Vector2.INF
@@ -334,6 +342,29 @@ func _post_tick_write() -> void:
 	_total_rot_contribution = new_rot
 	_total_scale_contribution = new_scale
 
+	# Appearance: accumulate modulate factors from JuiceControlAppearanceEffect effects.
+	# Only write modulate when at least one appearance effect has a non-identity factor.
+	var combined_modulate := Color.WHITE
+	var has_appearance := false
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var app_eff := effect as JuiceControlAppearanceEffect
+		if app_eff == null or not app_eff._contributes_modulate:
+			continue
+		combined_modulate.r *= app_eff._modulate_factor.r
+		combined_modulate.g *= app_eff._modulate_factor.g
+		combined_modulate.b *= app_eff._modulate_factor.b
+		combined_modulate.a *= app_eff._modulate_factor.a
+		has_appearance = true
+
+	if has_appearance and _has_modulate_base:
+		ctrl.modulate = Color(
+			_base_modulate.r * combined_modulate.r,
+			_base_modulate.g * combined_modulate.g,
+			_base_modulate.b * combined_modulate.b,
+			_base_modulate.a * combined_modulate.a)
+
 
 ## Subtract this node's contributions — other nodes' contributions remain.
 ## Called before effects capture From/To references and before editor save.
@@ -344,6 +375,8 @@ func _temporarily_undo_visual() -> void:
 	ctrl.position -= _total_pos_contribution
 	ctrl.rotation -= _total_rot_contribution
 	ctrl.scale -= _total_scale_contribution
+	if _has_modulate_base:
+		ctrl.modulate = _base_modulate
 
 
 ## Re-add contributions after temporary undo.
@@ -354,6 +387,8 @@ func _temporarily_reapply_visual() -> void:
 	ctrl.position += _total_pos_contribution
 	ctrl.rotation += _total_rot_contribution
 	ctrl.scale += _total_scale_contribution
+	# Re-apply modulate by flushing a fresh post-tick write
+	_post_tick_write()
 
 
 # =============================================================================

@@ -61,6 +61,16 @@ var _prev_nr_scale: Vector3 = Vector3.ZERO
 # Whether base values have been captured at least once
 var _base_captured: bool = false
 
+# 3D Appearance — domain node owns the single working material to prevent multiple
+# Juice3DAppearanceEffect instances fighting over the surface_override_material slot.
+# Lazily initialised on first appearance effect use; cleared when no effects active.
+var _appearance_mesh: MeshInstance3D = null
+var _appearance_working_mat: StandardMaterial3D = null
+var _appearance_natural_mat: Material = null
+var _appearance_natural_albedo: Color = Color.WHITE
+var _appearance_natural_alpha: float = 1.0
+var _appearance_setup: bool = false
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -313,6 +323,33 @@ func _post_tick_write() -> void:
 	_total_rot_contribution = new_rot
 	_total_scale_contribution = new_scale
 
+	# Appearance: accumulate albedo/alpha factors from Juice3DAppearanceEffect effects.
+	# Domain node owns one working material; effects only contribute factors.
+	var combined_albedo := Color.WHITE
+	var combined_alpha := 1.0
+	var has_appearance := false
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var app_eff := effect as Juice3DAppearanceEffect
+		if app_eff == null or not app_eff._contributes_appearance:
+			continue
+		combined_albedo.r *= app_eff._albedo_factor.r
+		combined_albedo.g *= app_eff._albedo_factor.g
+		combined_albedo.b *= app_eff._albedo_factor.b
+		combined_alpha *= app_eff._alpha_factor
+		has_appearance = true
+
+	if has_appearance:
+		if _ensure_appearance_working_mat():
+			_appearance_working_mat.albedo_color = Color(
+				_appearance_natural_albedo.r * combined_albedo.r,
+				_appearance_natural_albedo.g * combined_albedo.g,
+				_appearance_natural_albedo.b * combined_albedo.b,
+				_appearance_natural_alpha * combined_alpha)
+	elif _appearance_setup:
+		_clear_appearance_working_mat()
+
 
 ## Subtract this node's contributions — other nodes' contributions remain.
 func _temporarily_undo_visual() -> void:
@@ -322,6 +359,9 @@ func _temporarily_undo_visual() -> void:
 	n3d.position -= _total_pos_contribution
 	n3d.rotation -= _total_rot_contribution
 	n3d.scale -= _total_scale_contribution
+	# Restore natural material so editor save doesn't serialise working material
+	if _appearance_setup and _appearance_mesh != null:
+		_appearance_mesh.surface_override_material = _appearance_natural_mat
 
 
 ## Re-add contributions after temporary undo.
@@ -332,6 +372,54 @@ func _temporarily_reapply_visual() -> void:
 	n3d.position += _total_pos_contribution
 	n3d.rotation += _total_rot_contribution
 	n3d.scale += _total_scale_contribution
+	# Re-install working material and recompute albedo
+	if _appearance_setup and _appearance_mesh != null and _appearance_working_mat != null:
+		_appearance_mesh.surface_override_material = _appearance_working_mat
+	_post_tick_write()
+
+
+# =============================================================================
+# 3D APPEARANCE HELPERS
+# =============================================================================
+
+## Find the first MeshInstance3D on target or among its direct children.
+func _find_mesh_on(target: Node) -> MeshInstance3D:
+	if target is MeshInstance3D:
+		return target as MeshInstance3D
+	for child in target.get_children():
+		if child is MeshInstance3D:
+			return child as MeshInstance3D
+	return null
+
+
+## Lazily set up the shared working material for albedo accumulation.
+## Returns true if a valid StandardMaterial3D working copy was established.
+func _ensure_appearance_working_mat() -> bool:
+	if _appearance_working_mat != null:
+		return true
+	if _target_node == null:
+		return false
+	_appearance_mesh = _find_mesh_on(_target_node)
+	if _appearance_mesh == null:
+		return false
+	_appearance_natural_mat = _appearance_mesh.get_active_material(0)
+	var std_mat := _appearance_natural_mat as StandardMaterial3D
+	if std_mat == null:
+		return false
+	_appearance_working_mat = std_mat.duplicate() as StandardMaterial3D
+	_appearance_mesh.surface_override_material = _appearance_working_mat
+	_appearance_natural_albedo = std_mat.albedo_color
+	_appearance_natural_alpha = std_mat.albedo_color.a
+	_appearance_setup = true
+	return true
+
+
+## Restore natural material and clear working material reference.
+func _clear_appearance_working_mat() -> void:
+	if _appearance_mesh != null:
+		_appearance_mesh.surface_override_material = _appearance_natural_mat
+	_appearance_working_mat = null
+	_appearance_setup = false
 
 
 # =============================================================================

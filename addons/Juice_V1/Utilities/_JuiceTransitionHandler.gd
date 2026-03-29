@@ -95,14 +95,29 @@ var completed_callback: Callable = Callable()
 # INTERNAL STATE
 # =============================================================================
 
-var _overlay_comp: Node = null  # Runtime ScreenOverlayJuiceComp instance
+var _overlay_effect: ScreenOverlayJuiceEffectBase = null  # Ticked manually in _process()
 var _transition_canvas: CanvasLayer = null
 var _transition_scene_instance: Node = null
+
+# Emitted from _process() when the currently ticking overlay effect completes.
+signal _overlay_animation_completed
 
 
 # =============================================================================
 # PUBLIC API
 # =============================================================================
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+func _process(delta: float) -> void:
+	if _overlay_effect == null or not _overlay_effect.is_playing():
+		return
+	var result := _overlay_effect.tick(delta, null)
+	if result == JuiceEffectBase.TickResult.COMPLETED:
+		_overlay_animation_completed.emit()
+
 
 ## Start the full transition sequence. Called once after configuration.
 func execute() -> void:
@@ -144,15 +159,15 @@ func _execute_overlay_transition() -> void:
 	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
 		_start_async_load(target_scene.resource_path)
 
-	# Phase 2: Cover — create runtime ScreenOverlayJuiceComp and fade to opaque
-	_overlay_comp = await _create_overlay_comp_cover()
-	if _overlay_comp == null:
-		push_warning("[TransitionHandler] Failed to create overlay comp — aborting")
+	# Phase 2: Cover — create cover effect and tick until complete
+	_overlay_effect = _create_overlay_effect_cover()
+	if _overlay_effect == null:
+		push_warning("[TransitionHandler] Failed to create overlay effect — aborting")
 		_emit_completed()
 		return
 
-	_overlay_comp.animate_in()
-	await _overlay_comp.completed
+	_overlay_effect.start(null, true, false)
+	await _overlay_animation_completed
 
 	if debug_enabled:
 		print("[TransitionHandler] Cover complete")
@@ -165,24 +180,25 @@ func _execute_overlay_transition() -> void:
 	_emit_action_executed()
 	_perform_scene_action()
 
-	# QUIT_GAME exits here — no reveal needed
+	# QUIT_GAME exits here — clear overlay and leave
 	if scene_action == SceneAction.QUIT_GAME:
+		JuiceScreenOverlayProvider.clear()
 		return
 
 	# Phase 5: Wait one frame for scene change to settle
 	await get_tree().process_frame
 
-	# Phase 6: Reveal — reconfigure overlay comp and fade to transparent
-	_configure_overlay_comp_reveal(_overlay_comp)
-	_overlay_comp.animate_in()
-	await _overlay_comp.completed
+	# Phase 6: Reveal — reconfigure to TO_CLEAR direction and animate
+	_configure_overlay_effect_reveal(_overlay_effect)
+	_overlay_effect.start(null, true, false)
+	await _overlay_animation_completed
 
 	if debug_enabled:
 		print("[TransitionHandler] Reveal complete")
 
-	# Phase 7: Clean up overlay comp
-	_overlay_comp.queue_free()
-	_overlay_comp = null
+	# Phase 7: Clean up
+	JuiceScreenOverlayProvider.clear()
+	_overlay_effect = null
 
 	_emit_completed()
 
@@ -290,19 +306,34 @@ func _perform_scene_action() -> void:
 
 
 # =============================================================================
-# RUNTIME OVERLAY COMP CREATION (ScreenOverlayJuiceComp reuse)
+# OVERLAY EFFECT CREATION (ScreenOverlayJuiceEffectBase)
 # =============================================================================
 
-func _create_overlay_comp_cover() -> Node:
-	# STUB: ScreenOverlayJuiceComp is not yet ported to V1.
-	# SOLID_COLOR and IMAGE transitions are not functional until Screen effects are ported.
-	push_warning("[TransitionHandler] SOLID_COLOR/IMAGE transitions require ScreenOverlayJuiceComp (not yet ported to V1). Transition will be instant.")
-	return null
+func _create_overlay_effect_cover() -> ScreenOverlayJuiceEffectBase:
+	var effect := ScreenOverlayJuiceEffectBase.new()
+	effect.overlay_color = overlay_color
+	if overlay_image != null:
+		effect.overlay_texture = overlay_image
+	effect.blend_mode = overlay_blend_mode
+	effect.max_alpha = 1.0
+	effect.direction = ScreenOverlayJuiceEffectBase.OverlayDirection.TO_COLOR
+	effect.duration_in = cover_duration
+	effect.transition_in = cover_transition as Tween.TransitionType
+	effect.ease_in = cover_ease as Tween.EaseType
+	if cover_curve != null:
+		effect.custom_curve_in = cover_curve
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.debug_enabled = debug_enabled
+	return effect
 
 
-func _configure_overlay_comp_reveal(_comp: Node) -> void:
-	# STUB: No-op until ScreenOverlayJuiceComp is ported.
-	pass
+func _configure_overlay_effect_reveal(effect: ScreenOverlayJuiceEffectBase) -> void:
+	effect.direction = ScreenOverlayJuiceEffectBase.OverlayDirection.TO_CLEAR
+	effect.duration_in = reveal_duration
+	effect.transition_in = reveal_transition as Tween.TransitionType
+	effect.ease_in = reveal_ease as Tween.EaseType
+	if reveal_curve != null:
+		effect.custom_curve_in = reveal_curve
 
 
 # =============================================================================
