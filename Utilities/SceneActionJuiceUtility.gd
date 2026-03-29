@@ -1,18 +1,14 @@
-## SceneActionJuiceUtility — Scene Management for Designers
+## Scene Management for Designers — handles game flow actions with integrated transitions.
 ##
-## Handles game flow actions (scene switching, overlaying, reloading, quitting)
-## with integrated transition effects. Designed for non-programmers to build
-## complete interactive demos using only the inspector.
-##
-## @tutorial(Juice System): https://github.com/user/juice
+## Executes scene switching, overlaying, reloading, and quitting with visual transitions.
+## Designed for non-programmers to build complete interactive demos using only the inspector.
 
-# ============================================================================
-# SCENE ACTION JUICE UTILITY
 # ============================================================================
 # WHAT: Executes scene management actions (switch, overlay, reload, quit) with
 #       optional visual transitions and time manipulation — all inspector-driven.
 # WHY:  Allows artists and designers to build complete game flow without code.
 #       Combined with existing Juice components, enables a full interactive demo.
+# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
 # SYSTEM: Juice System (addons/Juice_V1/Utilities/)
 # DOES NOT HANDLE:
 #   - Loading progress bars (async loading is internal only)

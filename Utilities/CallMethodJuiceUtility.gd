@@ -1,13 +1,17 @@
-## CallMethodJuiceUtility.gd
-## ============================================================================
-## WHAT: Calls any method on any node when triggered, enabling designer-driven
-##       function calls without writing custom scripts.
-## WHY: Allows wiring "when juice triggers → call method X" in inspector.
-##      Useful for playing sounds, spawning effects, or any simple action.
-## SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
-## DOES NOT: Create any visual effect. This is a control/flow utility only.
-##           Does NOT handle return values from called methods.
-## ============================================================================
+## Calls any method on any node when triggered, enabling designer-driven function calls.
+##
+## Allows wiring "when juice triggers → call method X" in inspector.
+## Useful for playing sounds, spawning effects, or any simple action.
+
+# ============================================================================
+# WHAT: Calls any method on any node when triggered, enabling designer-driven
+#       function calls without writing custom scripts.
+# WHY: Allows wiring "when juice triggers → call method X" in inspector.
+#      Useful for playing sounds, spawning effects, or any simple action.
+# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
+# DOES NOT: Create any visual effect. This is a control/flow utility only.
+#           Does NOT handle return values from called methods.
+# ============================================================================
 ##
 ## LIFECYCLE:
 ##   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that

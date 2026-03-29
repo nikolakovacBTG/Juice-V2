@@ -1,13 +1,16 @@
-## SignalRelayJuiceUtility.gd
-## ============================================================================
-## WHAT: Lightweight relay that listens for a signal on a local node and
-##       re-emits a named signal on a global signal bus autoload.
-## WHY: Bridges the gap between local triggers (clicks, collisions) and
-##      remote juice components that listen on a signal bus. Essential for the
-##      signal relay pattern where juice comps live on a persistent camera
-##      rig or screen receiver in a different scene than the trigger.
-## SYSTEM: Juicing System (addons/Juice_V1/) - Utility
-## DOES NOT: Produce any visual effect. This is a pure signal-routing node.
+## Lightweight relay that listens for local signals and re-emits them on a global signal bus.
+##
+## Bridges the gap between local triggers and remote juice components that listen on a signal bus. Essential for signal relay patterns where juice comps live in different scenes than triggers.
+
+# ============================================================================
+# WHAT: Lightweight relay that listens for a signal on a local node and
+#       re-emits a named signal on a global signal bus autoload.
+# WHY: Bridges the gap between local triggers (clicks, collisions) and
+#      remote juice components that listen on a signal bus. Essential for the
+#      signal relay pattern where juice comps live on a persistent camera
+#      rig or screen receiver in a different scene than the trigger.
+# SYSTEM: Juicing System (addons/Juice_V1/) - Utility
+# DOES NOT: Produce any visual effect. This is a pure signal-routing node.
 ##
 ## USAGE:
 ## 1. Add as child of a node that emits a signal (Clickable3DComp, Button, etc.)

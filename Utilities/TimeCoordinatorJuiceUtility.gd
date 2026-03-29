@@ -1,18 +1,20 @@
 
-## ============================================================================
-## TIME COORDINATOR JUICE UTILITY — Optional Time Scale Manager
-## ============================================================================
-## Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances
-## (and any other system) to prevent conflicts when several effects manipulate
-## gameplay speed simultaneously.
+## Optional Time Scale Manager — coordinates Engine.time_scale requests from multiple effects.
 ##
-## SYSTEM: Juice System (addons/Juice_V1/)
-##
-## USAGE:
-## This script is OPTIONAL. TimeJuiceComp works without it (built-in static
-## fallback handles simple cases). Add this when you need:
-##   - Priority resolution (slowest slow-mo wins, fastest speed-up wins)
-##   - Audio pitch sync with time scale
+## Prevents conflicts when several TimeJuiceComp instances manipulate gameplay speed simultaneously. Handles priority resolution and audio pitch sync.
+
+# ============================================================================
+# WHAT: Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances
+#       (and any other system) to prevent conflicts when several effects manipulate
+#       gameplay speed simultaneously.
+# WHY: Prevents time scale conflicts when multiple effects run simultaneously.
+#       Provides priority resolution (slowest slow-mo wins, fastest speed-up wins)
+#       and audio pitch sync with time scale.
+# SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Replace individual TimeJuiceComp instances — it coordinates them.
+# USAGE: This script is OPTIONAL. TimeJuiceComp works without it (built-in static
+#        fallback handles simple cases). Add this when you need priority resolution
+#        or audio pitch sync.
 ##   - A central place for other systems to also request time changes
 ##   - The time_scale_changed signal for UI or gameplay reactions
 ##

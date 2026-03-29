@@ -1,12 +1,15 @@
-## SignalEmitJuiceUtility.gd
-## ============================================================================
-## WHAT: Emits a custom signal when triggered, allowing game systems to react
-##       to juice events without tight coupling.
-## WHY: Decouples juice animations from game logic. Designers can wire "when
-##       this juice completes → emit signal X" purely in inspector.
-## SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
-## DOES NOT: Create any visual effect. This is a control/flow utility only.
-## ============================================================================
+## Emits a custom signal when triggered, allowing game systems to react to juice events.
+##
+## Decouples juice animations from game logic. Designers can wire "when this juice completes → emit signal X" purely in inspector.
+
+# ============================================================================
+# WHAT: Emits a custom signal when triggered, allowing game systems to react
+#       to juice events without tight coupling.
+# WHY: Decouples juice animations from game logic. Designers can wire "when
+#       this juice completes → emit signal X" purely in inspector.
+# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
+# DOES NOT: Create any visual effect. This is a control/flow utility only.
+# ============================================================================
 ##
 ## LIFECYCLE:
 ##   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that

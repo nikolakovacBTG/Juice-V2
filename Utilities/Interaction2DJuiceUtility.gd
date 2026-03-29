@@ -1,18 +1,19 @@
-## Interaction2DJuiceUtility.gd
-## ============================================================================
-## WHAT: Convenience upgrade for Area2D that adds structural and gating value
-##       for interactive 2D game objects. Auto-creates collision shapes,
-##       manages trigger zone gating, and relays custom input actions as
-##       dynamically named signals.
+## Convenience upgrade for Area2D that adds structural and gating value for interactive 2D game objects.
 ##
-## WHY: Area2D already provides all needed native signals (mouse_entered,
-##       mouse_exited, input_event, body_entered, etc.). This utility adds
-##       value ON TOP of that: auto-shape creation, zone-gated interaction,
-##       and input action relay (emit named signals for InputMap actions or
-##       common mouse button presets not available as discrete Area2D signals).
-##
-## SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
-##
+## Auto-creates collision shapes, manages trigger zone gating, and relays custom input actions as dynamically named signals. Area2D already provides all needed native signals; this utility adds value ON TOP of that.
+
+# ============================================================================
+# WHAT: Convenience upgrade for Area2D that adds structural and gating value
+#       for interactive 2D game objects. Auto-creates collision shapes,
+#       manages trigger zone gating, and relays custom input actions as
+#       dynamically named signals.
+# WHY: Area2D already provides all needed native signals (mouse_entered,
+#       mouse_exited, input_event, body_entered, etc.). This utility adds
+#       value ON TOP of that: auto-shape creation, zone-gated interaction,
+#       and input action relay (emit named signals for InputMap actions or
+#       common mouse button presets not available as discrete Area2D signals).
+# SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
+#
 ## DOES NOT:
 ## - Wrap or replace native Area2D signals — they flow through unchanged
 ## - Provide continuous 0-1 progress (see SoftTrigger2DJuiceUtility)
