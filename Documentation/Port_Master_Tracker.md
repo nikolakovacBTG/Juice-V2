@@ -41,33 +41,33 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `NoiseControlJuiceComp` | `NoiseControlJuiceEffect` | ❌ | — | — |
-| `Noise2DJuiceComp` | `Noise2DJuiceEffect` | ❌ | — | — |
-| `Noise3DJuiceComp` | `Noise3DJuiceEffect` | ❌ | — | — |
+| `NoiseControlJuiceComp` | `NoiseControlJuiceEffect` | ✅ | `TestNoiseControl` | 2026-03-29 |
+| `Noise2DJuiceComp` | `Noise2DJuiceEffect` | ✅ | `TestNoise2D` | 2026-03-29 |
+| `Noise3DJuiceComp` | `Noise3DJuiceEffect` | ✅ | `TestNoise3D` | 2026-03-29 |
 
 ## Shake (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ShakeControlJuiceComp` | `ShakeControlJuiceEffect` | ❌ | — | — |
-| `Shake2DJuiceComp` | `Shake2DJuiceEffect` | ❌ | — | — |
-| `Shake3DJuiceComp` | `Shake3DJuiceEffect` | ❌ | — | — |
+| `ShakeControlJuiceComp` | `ShakeControlJuiceEffect` | ✅ | `TestShakeControl` | 2026-03-29 |
+| `Shake2DJuiceComp` | `Shake2DJuiceEffect` | ✅ | `TestShake2D` | 2026-03-29 |
+| `Shake3DJuiceComp` | `Shake3DJuiceEffect` | ✅ | `TestShake3D` | 2026-03-29 |
 
 ## Spring (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `SpringControlJuiceComp` | `SpringControlJuiceEffect` | ❌ | — | — |
-| `Spring2DJuiceComp` | `Spring2DJuiceEffect` | ❌ | — | — |
-| `Spring3DJuiceComp` | `Spring3DJuiceEffect` | ❌ | — | — |
+| `SpringControlJuiceComp` | `SpringControlJuiceEffect` | ✅ | `TestSpringControl` | 2026-03-29 |
+| `Spring2DJuiceComp` | `Spring2DJuiceEffect` | ✅ | `TestSpring2D` | 2026-03-29 |
+| `Spring3DJuiceComp` | `Spring3DJuiceEffect` | ✅ | `TestSpring3D` | 2026-03-29 |
 
 ## Appearance (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `AppearanceControlJuiceComp` | `AppearanceControlJuiceEffect` | ❌ | — | — |
-| `Appearance2DJuiceComp` | `Appearance2DJuiceEffect` | ❌ | — | — |
-| `Appearance3DJuiceComp` | `Appearance3DJuiceEffect` | ❌ | — | — |
+| `AppearanceControlJuiceComp` | `AppearanceControlJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
+| `Appearance2DJuiceComp` | `Appearance2DJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
+| `Appearance3DJuiceComp` | `Appearance3DJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
 
 ## Progress (4 effects)
 

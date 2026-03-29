@@ -91,6 +91,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestSpring3D.gd").new())
 	_suites.append(load("res://tests/suites/TestMultiWriter.gd").new())
 	_suites.append(load("res://tests/suites/TestContainerControl.gd").new())
+	_suites.append(load("res://tests/suites/TestAppearanceEffects.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

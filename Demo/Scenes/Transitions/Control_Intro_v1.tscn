@@ -59,7 +59,7 @@ ease_in = 1
 hold_at_peak = 0.0
 chain_to = SubResource("Resource_04vrh")
 interrupt_siblings = false
-chained_preroll = 1.0
+chained_preroll = 0.5
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
