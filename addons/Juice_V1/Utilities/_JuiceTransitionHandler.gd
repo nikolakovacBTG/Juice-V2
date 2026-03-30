@@ -1,3 +1,7 @@
+## Internal runtime helper for scene transition lifecycle management.
+##
+## Manages cover → action → reveal → cleanup for scene transitions that destroy the triggering scene. Lives on SceneTree root so it persists across scene changes.
+
 # ============================================================================
 # JUICE TRANSITION HANDLER — Internal Runtime Helper
 # ============================================================================
@@ -19,7 +23,7 @@
 # - Being user-facing (no class_name, underscore prefix = internal)
 #
 # RUNTIME COMP REUSE:
-# Creates ScreenOverlayJuiceComp instances at runtime for SOLID_COLOR/IMAGE
+# Creates ScreenOverlayJuiceEffectBase instances at runtime for SOLID_COLOR/IMAGE
 # transitions. For SCENE transitions, instances the user's transition scene.
 # This keeps all overlay logic in existing battle-tested components.
 # ============================================================================

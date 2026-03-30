@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="2_6f2mv"]
 [ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="3_0iv50"]
 [ext_resource type="Script" uid="uid://d0qrq7m3dhui7" path="res://addons/Juice_V1/3D/SquashStretch3DJuiceEffect.gd" id="4_j1d5r"]
-[ext_resource type="Script" uid="uid://do4l3s7v5yn35" path="res://addons/Juice_V1/Screen/ScreenOverlay3DJuiceEffect.gd" id="5_6f2mv"]
+[ext_resource type="Script" uid="uid://cytxx5icivdga" path="res://addons/Juice_V1/3D/Appearance3DJuiceEffect.gd" id="5_6f2mv"]
 [ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/Base Classes/Juice3DRecipe.gd" id="5_nfb0a"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_v8ha8"]
@@ -47,32 +47,27 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://d0qrq7m3dhui7"
 
-[sub_resource type="Resource" id="Resource_6f2mv"]
+[sub_resource type="Resource" id="Resource_0iv50"]
 script = ExtResource("5_6f2mv")
-overlay_color = Color(0, 0, 0, 1)
-max_alpha = 1.0
-direction = 0
-blend_mode = 0
+effect_type = 0
+tint_color = Color(1, 0.4, 0.4, 1)
+tint_blend = 1.0
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-debug_enabled = false
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
+flicker_mode = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://do4l3s7v5yn35"
+metadata/_custom_type_script = "uid://cytxx5icivdga"
 
 [sub_resource type="Resource" id="Resource_uaa1d"]
 script = ExtResource("5_nfb0a")
-effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx"), SubResource("Resource_6f2mv")])
+effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx"), SubResource("Resource_0iv50")])
 metadata/_custom_type_script = "uid://cnyhp6eiv4xb1"
 
 [node name="3dDemo" type="Node3D" unique_id=508674959]
