@@ -84,7 +84,7 @@ signal time_scale_changed(new_scale: float, old_scale: float)
 # RUNTIME STATE
 # =============================================================================
 
-## Active time scale requests: Node instance_id → requested scale
+## Active time scale requests: Object instance_id → requested scale
 var _requests: Dictionary = {}
 
 ## Current effective time scale (what Engine.time_scale is set to)
@@ -134,33 +134,34 @@ func _exit_tree() -> void:
 # PUBLIC API
 # =============================================================================
 
-func request_time_scale(requester: Node, scale: float) -> void:
+func request_time_scale(requester: Object, scale: float) -> void:
 	## Register a time scale request.
 	## The effective scale is computed from all active requests.
 	##
-	## @param requester: The node making the request (used as identifier)
+	## @param requester: The object making the request (Node or Resource) — used as identifier.
 	## @param scale: Desired time scale (0.0 = freeze, <1.0 = slow, >1.0 = fast)
 
 	if not is_instance_valid(requester):
-		push_warning("[TimeCoordinatorJuiceUtility] Invalid requester node")
+		push_warning("[TimeCoordinatorJuiceUtility] Invalid requester")
 		return
 
 	var requester_id := requester.get_instance_id()
 	_requests[requester_id] = scale
 
 	if debug_enabled:
+		var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
 		print("[TimeCoordinatorJuiceUtility] Request from '%s': scale=%.2f (total: %d)" % [
-			requester.name, scale, _requests.size()
+			label, scale, _requests.size()
 		])
 
 	_update_effective_scale()
 
 
-func release_time_scale(requester: Node) -> void:
+func release_time_scale(requester: Object) -> void:
 	## Release a time scale request.
 	## Called when the requesting system no longer needs time manipulation.
 	##
-	## @param requester: The node that made the original request
+	## @param requester: The object (Node or Resource) that made the original request.
 
 	if not is_instance_valid(requester):
 		return
@@ -171,8 +172,9 @@ func release_time_scale(requester: Node) -> void:
 		_requests.erase(requester_id)
 
 		if debug_enabled:
+			var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
 			print("[TimeCoordinatorJuiceUtility] Released by '%s' (remaining: %d)" % [
-				requester.name, _requests.size()
+				label, _requests.size()
 			])
 
 		_update_effective_scale()

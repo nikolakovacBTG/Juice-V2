@@ -18,7 +18,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete Control-domain effect class names.
 ## Update this list when adding new Control effects.
-const _CONCRETE_EFFECTS := "AppearanceControlJuiceEffect,NoiseControlJuiceEffect,ScreenOverlayControlJuiceEffect,ShakeControlJuiceEffect,SquashStretchControlJuiceEffect,TransformControlJuiceEffect"
+const _CONCRETE_EFFECTS := "AppearanceControlJuiceEffect,NoiseControlJuiceEffect,ScreenOverlayControlJuiceEffect,ShakeControlJuiceEffect,SquashStretchControlJuiceEffect,TimeControlJuiceEffect,TransformControlJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides JuiceControlEffectBase from the inspector dropdown.
