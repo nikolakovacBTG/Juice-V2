@@ -90,6 +90,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestContainerControl.gd").new())
 	_suites.append(load("res://tests/suites/TestAppearanceEffects.gd").new())
 	_suites.append(load("res://tests/suites/TestTimeEffect.gd").new())
+	_suites.append(load("res://tests/suites/TestMetaEffects.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

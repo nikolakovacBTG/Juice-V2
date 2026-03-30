@@ -18,7 +18,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete 3D-domain effect class names.
 ## Update this list when adding new 3D effects.
-const _CONCRETE_EFFECTS := "Appearance3DJuiceEffect,Noise3DJuiceEffect,ScreenOverlay3DJuiceEffect,Shake3DJuiceEffect,SquashStretch3DJuiceEffect,Time3DJuiceEffect,Transform3DJuiceEffect"
+const _CONCRETE_EFFECTS := "Appearance3DJuiceEffect,CallMethod3DJuiceEffect,Noise3DJuiceEffect,ScreenOverlay3DJuiceEffect,Shake3DJuiceEffect,SignalEmit3DJuiceEffect,SquashStretch3DJuiceEffect,Time3DJuiceEffect,Transform3DJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides Juice3DEffectBase from the inspector dropdown.
