@@ -23,12 +23,12 @@
 #   - Timing values (duration_in/out used as cover/reveal durations)
 #   - All inherited groups remain visible and functional
 #
-# RUNTIME COMP REUSE:
-#   - ScreenOverlayJuiceComp: instantiated at runtime for SOLID_COLOR/IMAGE
-#     transitions (handler creates it, configures from inspector settings)
-#   - TimeJuiceComp: instantiated at runtime for time manipulation during
-#     OVERLAY_SCENE (pause, slow-mo, bullet-time)
-#   These are NOT new implementations — existing battle-tested comps are reused.
+# RUNTIME OVERLAY:
+#   SOLID_COLOR/IMAGE transitions: creates ScreenOverlayJuiceEffectBase directly
+#   (same pattern as _JuiceTransitionHandler). Ticked in _process().
+# TIME EFFECT:
+#   Routes through TimeCoordinatorJuiceUtility.instance when available;
+#   falls back to direct Engine.time_scale manipulation.
 #
 # SCENE ACTION PATHS:
 #   SWITCH_SCENE (THIS_SCENE mode):
@@ -70,6 +70,8 @@ signal completed()
 ## Emitted at the exact moment the scene action executes (scene changes, quit
 ## fires, overlay instances). Useful for syncing SFX or analytics.
 signal action_executed()
+## Internal: emitted by _process() when the ticking overlay effect finishes.
+signal _overlay_animation_completed
 
 
 # =============================================================================
@@ -87,8 +89,8 @@ enum SceneAction {
 ## Visual transition type played before/after the scene action.
 enum TransitionOverlay {
 	NONE,            ## Instant cut — no visual transition
-	SOLID_COLOR,     ## Fade through solid color (uses ScreenOverlayJuiceComp)
-	IMAGE,           ## Fade through image/texture (uses ScreenOverlayJuiceComp)
+	SOLID_COLOR,     ## Fade through solid color (uses ScreenOverlayJuiceEffectBase)
+	IMAGE,           ## Fade through image/texture (uses ScreenOverlayJuiceEffectBase)
 	SCENE,           ## Custom animated transition scene (user-provided PackedScene)
 }
 
@@ -202,7 +204,7 @@ enum OldScenePostSwitchAction {
 @export var overlay_canvas_layer: int = 100
 
 ## Enable time manipulation on the base scene while overlay is active.
-## When true, exposes TimeJuiceComp settings (pause, slow-mo, bullet-time).
+## When true, exposes time settings (pause, slow-mo, bullet-time).
 @export var use_time_effect: bool = false:
 	set(value):
 		use_time_effect = value
@@ -296,11 +298,11 @@ var _active_overlay_instance: Node = null
 ## The CanvasLayer holding the overlay scene
 var _active_canvas_layer: CanvasLayer = null
 
-## Runtime time comp instance (TimeJuiceComp — unported, stubbed with warning)
-var _time_comp: Node = null
+## True while a time-scale request is active (set/cleared by _apply/_restore_time_effect).
+var _time_effect_active: bool = false
 
-## Runtime overlay comp (ScreenOverlayJuiceComp — unported, stubbed with warning)
-var _overlay_comp: Node = null
+## Runtime overlay effect instance. Ticked manually in _process(); null when inactive.
+var _overlay_effect: ScreenOverlayJuiceEffectBase = null
 
 ## Is the action currently playing
 var _is_playing: bool = false
@@ -325,6 +327,14 @@ var _removed_nodes: Dictionary = {}
 
 func _ready() -> void:
 	pass  # V1: self-contained Node, no base class setup needed
+
+
+func _process(delta: float) -> void:
+	if _overlay_effect == null or not _overlay_effect.is_playing():
+		return
+	var result := _overlay_effect.tick(delta, null)
+	if result == JuiceEffectBase.TickResult.COMPLETED:
+		_overlay_animation_completed.emit()
 
 
 # =============================================================================
@@ -652,7 +662,7 @@ func _show_overlay() -> void:
 
 	# Phase 3: Apply time effect (if enabled)
 	if use_time_effect:
-		_create_time_comp()
+		_apply_time_effect()
 
 	# Phase 4: Emit action_executed at the moment the overlay is live
 	action_executed.emit()
@@ -673,11 +683,7 @@ func _hide_overlay() -> void:
 	started.emit()
 
 	# Phase 1: Restore time (if time effect was active)
-	if _time_comp != null and is_instance_valid(_time_comp):
-		_time_comp.animate_out()
-		await _time_comp.completed
-		_time_comp.queue_free()
-		_time_comp = null
+	_restore_time_effect()
 
 	# Phase 2: Play cover transition (cover the overlay scene before removing it)
 	if overlay_type != TransitionOverlay.NONE:
@@ -715,12 +721,12 @@ func _hide_overlay() -> void:
 func _play_overlay_cover() -> void:
 	match overlay_type:
 		TransitionOverlay.SOLID_COLOR, TransitionOverlay.IMAGE:
-			# STUB: ScreenOverlayJuiceComp not yet ported — _create_runtime_overlay_comp returns null
-			_overlay_comp = _create_runtime_overlay_comp(0, duration_in, transition_in, ease_in, custom_curve_in)
-			if _overlay_comp != null:
-				await get_tree().process_frame
-				_overlay_comp.animate_in()
-				await _overlay_comp.completed
+			if _overlay_effect == null:
+				_overlay_effect = _create_overlay_effect_cover()
+			else:
+				_configure_overlay_effect_cover(_overlay_effect)
+			_overlay_effect.start(null, true, false)
+			await _overlay_animation_completed
 
 		TransitionOverlay.SCENE:
 			await _play_transition_scene_cover()
@@ -729,10 +735,13 @@ func _play_overlay_cover() -> void:
 func _play_overlay_reveal() -> void:
 	match overlay_type:
 		TransitionOverlay.SOLID_COLOR, TransitionOverlay.IMAGE:
-			# STUB: ScreenOverlayJuiceComp not yet ported — skip reveal
-			if _overlay_comp != null and is_instance_valid(_overlay_comp):
-				_overlay_comp.animate_in()
-				await _overlay_comp.completed
+			if _overlay_effect == null:
+				return
+			_configure_overlay_effect_reveal(_overlay_effect)
+			_overlay_effect.start(null, true, false)
+			await _overlay_animation_completed
+			JuiceScreenOverlayProvider.clear()
+			_overlay_effect = null
 
 		TransitionOverlay.SCENE:
 			await _play_transition_scene_reveal()
@@ -782,27 +791,67 @@ func _play_transition_scene_reveal() -> void:
 
 
 # =============================================================================
-# RUNTIME COMP CREATION
+# OVERLAY EFFECT & TIME EFFECT (V1 — no comp nodes needed)
 # =============================================================================
 
-func _create_runtime_overlay_comp(
-	_direction: int,
-	_dur: float,
-	_trans: int,
-	_ease_type: int,
-	_curve: Curve
-) -> Node:
-	# STUB: ScreenOverlayJuiceComp is not yet ported to V1.
-	# SOLID_COLOR and IMAGE transitions will log a warning and do nothing.
-	push_warning("[%s] SOLID_COLOR/IMAGE transitions require ScreenOverlayJuiceComp (not yet ported to V1). Transition will be instant." % name)
-	return null
+func _create_overlay_effect_cover() -> ScreenOverlayJuiceEffectBase:
+	var effect := ScreenOverlayJuiceEffectBase.new()
+	_configure_overlay_effect_cover(effect)
+	return effect
 
 
-func _create_time_comp() -> void:
-	# STUB: TimeJuiceComp is not yet ported to V1.
-	# Time manipulation during OVERLAY_SCENE will log a warning and be skipped.
-	push_warning("[%s] use_time_effect requires TimeJuiceComp (not yet ported to V1). Time effect will be skipped." % name)
-	_time_comp = null
+func _configure_overlay_effect_cover(effect: ScreenOverlayJuiceEffectBase) -> void:
+	effect.overlay_color = overlay_color
+	effect.overlay_texture = overlay_image
+	effect.blend_mode = overlay_blend_mode
+	effect.max_alpha = 1.0
+	effect.direction = ScreenOverlayJuiceEffectBase.OverlayDirection.TO_COLOR
+	effect.duration_in = duration_in
+	effect.transition_in = transition_in as Tween.TransitionType
+	effect.ease_in = ease_in as Tween.EaseType
+	effect.custom_curve_in = custom_curve_in
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.debug_enabled = debug_enabled
+
+
+func _configure_overlay_effect_reveal(effect: ScreenOverlayJuiceEffectBase) -> void:
+	effect.direction = ScreenOverlayJuiceEffectBase.OverlayDirection.TO_CLEAR
+	effect.duration_in = duration_out
+	effect.transition_in = transition_out as Tween.TransitionType
+	effect.ease_in = ease_out as Tween.EaseType
+	effect.custom_curve_in = custom_curve_out
+
+
+func _apply_time_effect() -> void:
+	var target_scale: float
+	match time_mode:
+		0:  # Freeze
+			target_scale = 0.0
+		1:  # Slow Mo
+			target_scale = time_target_scale
+		2:  # Bullet Time (V1: per-object exemption not supported — behaves as Slow Mo)
+			target_scale = time_target_scale
+		_:
+			target_scale = time_target_scale
+	_time_effect_active = true
+	if TimeCoordinatorJuiceUtility.instance != null:
+		TimeCoordinatorJuiceUtility.instance.request_time_scale(self, target_scale)
+	else:
+		Engine.time_scale = target_scale
+	if debug_enabled:
+		print("[%s] Time effect applied: mode=%d scale=%.2f" % [name, time_mode, target_scale])
+
+
+func _restore_time_effect() -> void:
+	if not _time_effect_active:
+		return
+	_time_effect_active = false
+	if TimeCoordinatorJuiceUtility.instance != null:
+		TimeCoordinatorJuiceUtility.instance.release_time_scale(self)
+	else:
+		Engine.time_scale = 1.0
+	if debug_enabled:
+		print("[%s] Time effect restored" % name)
 
 
 # =============================================================================
@@ -810,9 +859,7 @@ func _create_time_comp() -> void:
 # =============================================================================
 
 func _cleanup_overlay() -> void:
-	if _time_comp != null and is_instance_valid(_time_comp):
-		_time_comp.queue_free()
-		_time_comp = null
+	_restore_time_effect()
 	_cleanup_transition_resources()
 	if is_instance_valid(_active_overlay_instance):
 		_active_overlay_instance.queue_free()
@@ -825,9 +872,9 @@ func _cleanup_overlay() -> void:
 
 
 func _cleanup_transition_resources() -> void:
-	if _overlay_comp != null and is_instance_valid(_overlay_comp):
-		_overlay_comp.queue_free()
-		_overlay_comp = null
+	if _overlay_effect != null:
+		JuiceScreenOverlayProvider.clear()
+		_overlay_effect = null
 	if is_instance_valid(_transition_scene_instance):
 		_transition_scene_instance.queue_free()
 		_transition_scene_instance = null
