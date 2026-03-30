@@ -5,16 +5,6 @@
 extends EditorPlugin
 
 
-func _enable_plugin() -> void:
-	if Engine.is_editor_hint():
-		add_autoload_singleton("GDAIMCPRuntime", "res://addons/gdai-mcp-plugin-godot/gdai_mcp_runtime.gd")
-
-
-func _disable_plugin() -> void:
-	if Engine.is_editor_hint():
-		remove_autoload_singleton("GDAIMCPRuntime")
-
-
 func _enter_tree():
 	var os = OS.get_name().to_lower()
 	var arch = Engine.get_architecture_name().to_lower()

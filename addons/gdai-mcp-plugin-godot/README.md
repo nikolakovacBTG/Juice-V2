@@ -33,6 +33,9 @@ Take your Godot workflow to the next level by automating your game development.
 - 📝 **GDScript context**  
   Helps you write and debug GDScript
 
+- ⌨️ **Simulate Input**  
+  AI can press keyboard keys and input actions in your running game.
+
 ---
 
 ## 🛠️ How It Works

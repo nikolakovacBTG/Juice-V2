@@ -904,7 +904,7 @@ func _get_viewport_size(target: Node) -> Vector2:
 # =============================================================================
 
 ## Whether this effect needs continuous ticking after animate_in completes.
-## Procedural effects (Noise, Shake, Spring) override to return true.
+## Procedural effects (Noise, Shake) override to return true.
 ## Non-procedural effects (Transform, SquashStretch) return false — their
 ## frozen delta at progress=1.0 is the desired state, no further ticking needed.
 func _needs_sustain() -> bool:
@@ -915,26 +915,6 @@ func _needs_sustain() -> bool:
 ## target: the node being affected (passed by host, never stored)
 func _apply_effect(_progress: float, _target: Node) -> void:
 	pass  # Subclass MUST implement
-
-## Whether this effect reacts to displacement from sibling effects on the same node.
-## Reactive effects (Spring) tick in a second phase, after non-reactive siblings,
-## so they can observe sibling delta changes and respond to them.
-func _is_reactive() -> bool:
-	return false
-
-## Called by domain node when external displacement is detected (pre-tick).
-## displacement: Dictionary keyed by channel name ("position", "rotation", "scale")
-## with the external displacement value (Vector2, Vector3, or float).
-## Only effects that need to react to external movement override this.
-func _on_external_displacement(_displacement: Dictionary) -> void:
-	pass
-
-## Called by domain node when sibling (same-node) effects' deltas change between frames.
-## displacement: Dictionary keyed by channel name ("position", "rotation", "scale")
-## with the change in non-reactive sibling contributions since last frame.
-## Only reactive effects (e.g. Spring) override this.
-func _on_sibling_displacement(_displacement: Dictionary) -> void:
-	pass
 
 ## Called when animation starts (either direction). Capture base values here.
 func _on_animate_start(_target: Node) -> void:
