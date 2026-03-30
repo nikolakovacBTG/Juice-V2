@@ -301,6 +301,9 @@ var _active_canvas_layer: CanvasLayer = null
 ## True while a time-scale request is active (set/cleared by _apply/_restore_time_effect).
 var _time_effect_active: bool = false
 
+## Cached original process modes for exempt nodes (BULLET_TIME). instance_id → ProcessMode.
+var _exempt_original_modes: Dictionary = {}
+
 ## Runtime overlay effect instance. Ticked manually in _process(); null when inactive.
 var _overlay_effect: ScreenOverlayJuiceEffectBase = null
 
@@ -829,8 +832,9 @@ func _apply_time_effect() -> void:
 			target_scale = 0.0
 		1:  # Slow Mo
 			target_scale = time_target_scale
-		2:  # Bullet Time (V1: per-object exemption not supported — behaves as Slow Mo)
+		2:  # Bullet Time — slows world; exempt nodes run at full speed via PROCESS_MODE_ALWAYS
 			target_scale = time_target_scale
+			_setup_exempt_nodes()
 		_:
 			target_scale = time_target_scale
 	_time_effect_active = true
@@ -850,8 +854,36 @@ func _restore_time_effect() -> void:
 		TimeCoordinatorJuiceUtility.instance.release_time_scale(self)
 	else:
 		Engine.time_scale = 1.0
+	_restore_exempt_nodes()
 	if debug_enabled:
 		print("[%s] Time effect restored" % name)
+
+
+func _setup_exempt_nodes() -> void:
+	_exempt_original_modes.clear()
+	for node_path in time_exempt_nodes:
+		var node := get_node_or_null(node_path)
+		if node == null:
+			if debug_enabled:
+				push_warning("[%s] Exempt node not found: %s" % [name, node_path])
+			continue
+		_exempt_original_modes[node.get_instance_id()] = node.process_mode
+		node.process_mode = Node.PROCESS_MODE_ALWAYS
+		if debug_enabled:
+			print("[%s] Exempt node '%s' → PROCESS_MODE_ALWAYS" % [name, node.name])
+
+
+func _restore_exempt_nodes() -> void:
+	for node_path in time_exempt_nodes:
+		var node := get_node_or_null(node_path)
+		if node == null:
+			continue
+		var node_id := node.get_instance_id()
+		if _exempt_original_modes.has(node_id):
+			node.process_mode = _exempt_original_modes[node_id]
+			if debug_enabled:
+				print("[%s] Restored '%s' process_mode" % [name, node.name])
+	_exempt_original_modes.clear()
 
 
 # =============================================================================
