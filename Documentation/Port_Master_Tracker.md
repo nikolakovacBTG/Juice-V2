@@ -119,24 +119,24 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `VFXJuiceComp` | `VFXJuiceEffect` | ❌ | — | — |
-| `TrailJuiceComp` | `TrailJuiceEffect` | ❌ | — | — |
+| `VFXJuiceComp` | `VFXJuiceEffect` | | — | — |
+| `TrailJuiceComp` | `TrailJuiceEffect` | | — | — |
 
 ## Meta Effects (4 — includes 2 NEW)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
-|----------|----------|--------|-------|---------------|
+|----------|----------|--------|-------|-----------|
 | `PauseJuiceComp` | `PauseJuiceEffect` | ❌ | — | — |
-| `TimeJuiceComp` | `TimeJuiceEffect` | ❌ | — | — |
+| `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\|3D}JuiceEffect` | ✅ | `TestTimeEffect` | 2026-03-30 |
 | NEW | `TriggerStackJuiceEffect` | ❌ | — | — |
 | NEW | `TriggerSequencerJuiceEffect` | ❌ | — | — |
 
 ## Utility-Comps That Become Effects (2)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
-|----------|----------|--------|-------|---------------|
-| `SignalEmitJuiceUtility` | `SignalEmitJuiceEffect` | ❌ | — | — |
-| `CallMethodJuiceUtility` | `CallMethodJuiceEffect` | ❌ | — | — |
+|----------|----------|--------|-------|-----------|
+| `SignalEmitJuiceUtility` | `SignalEmitJuiceEffectBase` + `SignalEmit{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
+| `CallMethodJuiceUtility` | `CallMethodJuiceEffectBase` + `CallMethod{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
 
 ## Utilities (Stay as Nodes)
 
@@ -148,7 +148,7 @@
 | `SoftTrigger2DJuiceUtility` | Same | ❌ | — | — |
 | `SoftTriggerControlJuiceUtility` | Same | ❌ | — | — |
 | `SignalRelayJuiceUtility` | Same | ❌ | — | — |
-| `SceneActionJuiceUtility` | Same | ❌ | — | — |
+| `SceneActionJuiceUtility` | Same (time delegated to `TimeJuiceEffectBase`) | ✅ | `TestTimeEffect` (time), `TestMetaEffects` | 2026-03-30 |
 | `CameraJuiceUtility` | Same | ❌ | — | — |
 | `ScreenJuiceUtility` | Same | ❌ | — | — |
 | `TimeCoordinatorJuiceUtility` | NEW | ❌ | — | — |
@@ -166,7 +166,7 @@
 
 | Category | Total | Ported | In Progress | Not Started | Legacy |
 |----------|-------|--------|-------------|-------------|--------|
-| Effects | ~40 | 6 | 0 | ~30 | 4 |
-| Utilities | ~10 | 0 | 0 | ~10 | 0 |
+| Effects | ~40 | 9 | 0 | ~27 | 4 |
+| Utilities | ~10 | 1 | 0 | ~9 | 0 |
 | Infrastructure | 4 | 0 | 4 | 0 | 0 |
-| **Total** | **~54** | **6** | **4** | **~40** | **4** |
+| **Total** | **~54** | **10** | **4** | **~36** | **4** |

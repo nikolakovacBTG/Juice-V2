@@ -110,6 +110,20 @@ When effects need to report data to domain nodes (or vice versa), use **generic 
 
 **The litmus test:** "Would adding a new effect type require modifying the aggregation/write code?" If yes, the protocol is not generic enough.
 
+## Rule 13: Meta Effects Pattern
+
+Meta effects (Time, SignalEmit, CallMethod, etc.) are **domain-agnostic** — they don't write to the target node's transform/appearance. They still follow the `JuiceEffectBase` contract:
+
+- Extend `JuiceEffectBase` directly (no domain-specific base needed)
+- Named `[Name]JuiceEffectBase` — the domain suffix goes on thin wrapper subclasses
+- Domain wrappers (`[Name]{Control|2D|3D}JuiceEffect`) are 3–5 line subclasses whose only role is satisfying the recipe whitelist type system
+- Live in `addons/Juice_V1/Meta/`
+- `_apply_effect()` is a no-op or performs the meta action (time scale, signal emit, method call)
+- For effects that trigger at specific lifecycle points (start/complete), override `_on_animate_start()` and `_on_animate_out_complete()`
+- For smooth transitions (e.g. time scale lerp), override `tick()` and correct engine-scaled delta before calling `super.tick()`
+
+**Composing meta effects inside Nodes:** When a Node utility needs time manipulation (e.g. `SceneActionJuiceUtility`), create a `TimeJuiceEffectBase` instance internally — do NOT duplicate the time-coordination logic.
+
 ## Rule 12: No Band-Aid Fixes
 
 When a fix touches a protocol boundary (how effects report data, how nodes aggregate/write):

@@ -23,7 +23,10 @@ Replace individual effect Nodes with Resource-based effects inside host Nodes. E
 
 - **Nodes:** `JuiceControl`, `Juice2D`, `Juice3D` — `Juice` prefix, then domain
 - **Effects:** `TransformControlEffect`, `Noise2DEffect`, `Shake3DEffect`, etc.
-- **Meta effects:** `PauseEffect`, `TimeEffect`, `TriggerStackEffect`, `TriggerSequencerEffect`
+- **Meta effects:** `[Name]JuiceEffectBase` (domain-agnostic base) + `[Name]{Control|2D|3D}JuiceEffect` domain wrappers
+  - Examples: `TimeJuiceEffectBase`, `SignalEmitJuiceEffectBase`, `CallMethodJuiceEffectBase`
+  - Domain wrappers are thin subclasses (3–5 lines) that satisfy the recipe whitelist type system
+  - Meta effects live in `addons/Juice_V1/Meta/`
 - **Recipe:** `JuiceRecipe`
 - **Base:** `JuiceEffectBase`, `JuiceBase`
 
