@@ -92,8 +92,10 @@ func test_scale_from_zero_in_vbox() -> void:
 	await wait_frames(2)
 
 	juice.animate_in()
-	# At start (progress≈0): scale should be near (0,0), not near natural
-	await wait_frames(3)
+	# At start (progress≈0): scale should be near (0,0), not near natural.
+	# wait_frames(1) is safe at both 60fps and headless (~177fps): at 60fps,
+	# QUAD_OUT at frame-1 gives scale≈0.16, length≈0.23 < 0.5.
+	await wait_frames(1)
 	assert_true(target.scale.length() < 0.5,
 		"Scale from zero in VBox: start should be near zero, got %s" % target.scale)
 
@@ -319,7 +321,8 @@ func test_scale_in_nested_hbox_vbox() -> void:
 	await wait_frames(2)
 
 	juice.animate_in()
-	await wait_frames(3)
+	# wait_frames(1): safe at both 60fps and headless (see test_scale_from_zero_in_vbox)
+	await wait_frames(1)
 
 	# At start: should be near zero
 	assert_true(lbl_left.scale.length() < 0.5,
