@@ -295,9 +295,6 @@ enum OldScenePostSwitchAction {
 ## close API. Allows overlay scenes to close themselves without direct references.
 static var _active_overlay_utility: SceneActionJuiceUtility = null
 
-## Layer 1 fallback: active time scale requests keyed by instance_id.
-## Provides multi-source coordination when TimeCoordinatorJuiceUtility is absent.
-static var _static_time_requests: Dictionary = {}
 
 
 # =============================================================================
@@ -313,22 +310,8 @@ var _active_overlay_instance: Node = null
 ## The CanvasLayer holding the overlay scene
 var _active_canvas_layer: CanvasLayer = null
 
-## True while a time-scale request is active (set/cleared by _apply/_restore_time_effect).
-var _time_effect_active: bool = false
-
-## Real-time timer for FREEZE mode auto-release. Null when not active.
-var _freeze_timer: SceneTreeTimer = null
-
-## Smooth time-scale tween state (ticked in _process with real-time delta).
-var _time_tween_active: bool = false
-var _time_is_restoring: bool = false
-var _time_tween_elapsed: float = 0.0
-var _time_tween_duration: float = 0.0
-var _time_tween_from: float = 1.0
-var _time_tween_to: float = 1.0
-
-## Cached original process modes for exempt nodes (BULLET_TIME). instance_id → ProcessMode.
-var _exempt_original_modes: Dictionary = {}
+## Active TimeJuiceEffectBase instance. Created in _apply_time_effect(), ticked in _process().
+var _time_effect: TimeJuiceEffectBase = null
 
 ## Runtime overlay effect instance. Ticked manually in _process(); null when inactive.
 var _overlay_effect: ScreenOverlayJuiceEffectBase = null
@@ -364,17 +347,8 @@ func _process(delta: float) -> void:
 		if result == JuiceEffectBase.TickResult.COMPLETED:
 			_overlay_animation_completed.emit()
 
-	if _time_tween_active:
-		var real_delta := delta / Engine.time_scale if Engine.time_scale > 0.001 else delta
-		_time_tween_elapsed = minf(_time_tween_elapsed + real_delta, _time_tween_duration)
-		var t := _time_tween_elapsed / _time_tween_duration if _time_tween_duration > 0.0 else 1.0
-		_update_time_request(lerpf(_time_tween_from, _time_tween_to, t))
-		if _time_tween_elapsed >= _time_tween_duration:
-			_time_tween_active = false
-			if _time_is_restoring:
-				_time_is_restoring = false
-				_release_time_request()
-				_restore_exempt_nodes()
+	if _time_effect != null and _time_effect.is_playing():
+		_time_effect.tick(delta, self)
 
 
 # =============================================================================
@@ -862,143 +836,51 @@ func _configure_overlay_effect_reveal(effect: ScreenOverlayJuiceEffectBase) -> v
 	effect.custom_curve_in = custom_curve_out
 
 
+func _create_time_effect() -> TimeJuiceEffectBase:
+	var effect := TimeJuiceEffectBase.new()
+	effect.time_mode = time_mode as TimeJuiceEffectBase.TimeMode
+	effect.target_scale = time_target_scale
+	effect.smooth_transition = time_smooth_transition
+	effect.freeze_frames = time_freeze_frames
+	effect.exempt_nodes = time_exempt_nodes
+	effect.use_external_coordinator = time_external_coordinator
+	effect.duration_in = duration_in
+	effect.transition_in = transition_in as Tween.TransitionType
+	effect.ease_in = ease_in as Tween.EaseType
+	effect.duration_out = duration_out
+	effect.transition_out = transition_out as Tween.TransitionType
+	effect.ease_out = ease_out as Tween.EaseType
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	# Forward Layer 2 signal so inspector-wired connections still work.
+	effect.time_scale_requested.connect(func(s: float) -> void: time_scale_requested.emit(s))
+	return effect
+
+
 func _apply_time_effect() -> void:
-	var target_scale: float
-	match time_mode:
-		0:  # FREEZE: instant scale=0, real-time auto-release after freeze_frames
-			_time_effect_active = true
-			_update_time_request(0.0)
-			var freeze_time := time_freeze_frames / 60.0
-			_freeze_timer = get_tree().create_timer(freeze_time, true, false, true)
-			_freeze_timer.timeout.connect(_on_freeze_complete)
-		1:  # SLOW_MO: smooth or instant transition to target_scale
-			target_scale = time_target_scale
-			_time_effect_active = true
-			if time_smooth_transition:
-				_start_time_tween(1.0, target_scale, duration_in, false)
-			else:
-				_update_time_request(target_scale)
-		2:  # BULLET_TIME: exempt nodes run at full speed via PROCESS_MODE_ALWAYS
-			target_scale = time_target_scale
-			_setup_exempt_nodes()
-			_time_effect_active = true
-			if time_smooth_transition:
-				_start_time_tween(1.0, target_scale, duration_in, false)
-			else:
-				_update_time_request(target_scale)
-		_:
-			target_scale = time_target_scale
-			_time_effect_active = true
-			_update_time_request(target_scale)
+	_time_effect = _create_time_effect()
+	_time_effect.start(self, true, false, self)
 	if debug_enabled:
 		var scale_label := "0.0 (freeze)" if time_mode == 0 else "%.2f" % time_target_scale
-		print("[%s] Time effect: mode=%d scale=%s smooth=%s" % [
+		print("[%s] Time effect started: mode=%d scale=%s smooth=%s" % [
 			name, time_mode, scale_label, time_smooth_transition])
 
 
 func _restore_time_effect() -> void:
-	if not _time_effect_active:
+	if _time_effect == null:
 		return
-	_time_effect_active = false
-	# Cancel freeze timer if still pending (overlay closed before timer fired)
-	_freeze_timer = null
-	if time_mode != 0 and time_smooth_transition:
-		# Compute actual current scale — from mid-tween if we're still applying
-		var current_scale: float
-		if _time_tween_active and not _time_is_restoring:
-			var t := _time_tween_elapsed / maxf(_time_tween_duration, 0.001)
-			current_scale = lerpf(_time_tween_from, _time_tween_to, t)
-		else:
-			current_scale = Engine.time_scale if Engine.time_scale > 0.001 else time_target_scale
-		_start_time_tween(current_scale, 1.0, duration_out, true)
+	if not _time_effect.is_playing():
+		# Already completed (e.g. FREEZE auto-released) — just clear the reference.
+		_time_effect = null
+		return
+	# Smooth restore: start(false) plays animate_out direction → lerps back to 1.0.
+	# Instant restore: stop() releases the request immediately.
+	if time_mode != TimeJuiceEffectBase.TimeMode.FREEZE and time_smooth_transition:
+		_time_effect.start(self, false, false)
 	else:
-		_release_time_request()
-		_restore_exempt_nodes()
+		_time_effect.stop(self)
+		_time_effect = null
 	if debug_enabled:
-		print("[%s] Time effect restored (smooth=%s)" % [name, time_mode != 0 and time_smooth_transition])
-
-
-func _on_freeze_complete() -> void:
-	_freeze_timer = null
-	_time_effect_active = false
-	_release_time_request()
-	if debug_enabled:
-		print("[%s] FREEZE complete — time released" % name)
-
-
-func _start_time_tween(from: float, to: float, duration: float, is_restore: bool) -> void:
-	_time_tween_active = true
-	_time_is_restoring = is_restore
-	_time_tween_elapsed = 0.0
-	_time_tween_duration = maxf(duration, 0.001)
-	_time_tween_from = from
-	_time_tween_to = to
-
-
-func _update_time_request(scale: float) -> void:
-	if time_external_coordinator:
-		time_scale_requested.emit(scale)
-		return
-	if TimeCoordinatorJuiceUtility.instance != null:
-		TimeCoordinatorJuiceUtility.instance.request_time_scale(self, scale)
-	else:
-		_static_time_requests[get_instance_id()] = scale
-		Engine.time_scale = _compute_static_time_scale()
-
-
-func _release_time_request() -> void:
-	if time_external_coordinator:
-		time_scale_requested.emit(1.0)
-		return
-	if TimeCoordinatorJuiceUtility.instance != null:
-		TimeCoordinatorJuiceUtility.instance.release_time_scale(self)
-	else:
-		_static_time_requests.erase(get_instance_id())
-		Engine.time_scale = _compute_static_time_scale()
-
-
-static func _compute_static_time_scale() -> float:
-	if _static_time_requests.is_empty():
-		return 1.0
-	var slow_scales: Array[float] = []
-	var fast_scales: Array[float] = []
-	for scale: float in _static_time_requests.values():
-		if scale <= 1.0:
-			slow_scales.append(scale)
-		else:
-			fast_scales.append(scale)
-	if not slow_scales.is_empty():
-		return slow_scales.min()
-	if not fast_scales.is_empty():
-		return fast_scales.max()
-	return 1.0
-
-
-func _setup_exempt_nodes() -> void:
-	_exempt_original_modes.clear()
-	for node_path in time_exempt_nodes:
-		var node := get_node_or_null(node_path)
-		if node == null:
-			if debug_enabled:
-				push_warning("[%s] Exempt node not found: %s" % [name, node_path])
-			continue
-		_exempt_original_modes[node.get_instance_id()] = node.process_mode
-		node.process_mode = Node.PROCESS_MODE_ALWAYS
-		if debug_enabled:
-			print("[%s] Exempt node '%s' → PROCESS_MODE_ALWAYS" % [name, node.name])
-
-
-func _restore_exempt_nodes() -> void:
-	for node_path in time_exempt_nodes:
-		var node := get_node_or_null(node_path)
-		if node == null:
-			continue
-		var node_id := node.get_instance_id()
-		if _exempt_original_modes.has(node_id):
-			node.process_mode = _exempt_original_modes[node_id]
-			if debug_enabled:
-				print("[%s] Restored '%s' process_mode" % [name, node.name])
-	_exempt_original_modes.clear()
+		print("[%s] Time effect restoring (smooth=%s)" % [name, time_smooth_transition])
 
 
 # =============================================================================
@@ -1006,14 +888,10 @@ func _restore_exempt_nodes() -> void:
 # =============================================================================
 
 func _cleanup_overlay() -> void:
-	# Force-stop all time effects immediately (no smooth restore during cleanup)
-	_freeze_timer = null
-	if _time_effect_active or _time_tween_active:
-		_time_effect_active = false
-		_time_tween_active = false
-		_time_is_restoring = false
-		_release_time_request()
-		_restore_exempt_nodes()
+	# Force-stop time effect immediately (no smooth restore during cleanup).
+	if _time_effect != null:
+		_time_effect.stop(self)
+		_time_effect = null
 	_cleanup_transition_resources()
 	if is_instance_valid(_active_overlay_instance):
 		_active_overlay_instance.queue_free()

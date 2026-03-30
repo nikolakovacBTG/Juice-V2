@@ -234,8 +234,9 @@ func _on_animate_start(target: Node) -> void:
 	# Refresh coordinator reference (may have been added to scene since last play).
 	_coordinator = TimeCoordinatorJuiceUtility.instance
 
-	# Auto-reverse (one_shot return): keep existing request, just animate back.
-	if _is_one_shot_return:
+	# Restore direction: auto-reverse (one_shot) or explicit start(false).
+	# _apply_effect() already lerps back to 1.0 as progress falls to 0 — no restart needed.
+	if _is_one_shot_return or _target_progress == 0.0:
 		return
 
 	match time_mode:
