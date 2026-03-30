@@ -41,22 +41,10 @@ var _base_position: Vector3 = Vector3.ZERO
 var _base_rotation: Vector3 = Vector3.ZERO
 var _base_scale: Vector3 = Vector3.ONE
 
-# Expected values after our last write — used for external-move detection.
-# Difference between current and expected = displacement from other writers
-# (sibling Juice nodes, game logic). INF sentinel = no write yet.
-var _expected_position: Vector3 = Vector3.INF
-var _expected_rotation: Vector3 = Vector3.INF
-var _expected_scale: Vector3 = Vector3.INF
-
 # Sum of all effect deltas currently applied — used by undo/reapply
 var _total_pos_contribution: Vector3 = Vector3.ZERO
 var _total_rot_contribution: Vector3 = Vector3.ZERO
 var _total_scale_contribution: Vector3 = Vector3.ZERO
-
-# Previous frame's non-reactive sibling contribution — for sibling displacement detection
-var _prev_nr_pos: Vector3 = Vector3.ZERO
-var _prev_nr_rot: Vector3 = Vector3.ZERO
-var _prev_nr_scale: Vector3 = Vector3.ZERO
 
 # Whether base values have been captured at least once
 var _base_captured: bool = false
@@ -195,91 +183,10 @@ func _capture_base_values() -> void:
 	_base_rotation = n3d.rotation
 	_base_scale = n3d.scale
 	_base_captured = true
-	# Reset tracking — no write has happened yet
-	_expected_position = Vector3.INF
-	_expected_rotation = Vector3.INF
-	_expected_scale = Vector3.INF
+	# Reset contribution tracking
 	_total_pos_contribution = Vector3.ZERO
 	_total_rot_contribution = Vector3.ZERO
 	_total_scale_contribution = Vector3.ZERO
-	_prev_nr_pos = Vector3.ZERO
-	_prev_nr_rot = Vector3.ZERO
-	_prev_nr_scale = Vector3.ZERO
-
-
-## Detect external displacement: did something change the target since our last write?
-## With contribution tracking, displacement = current - expected. This captures
-## sibling Juice node writes and game logic — anything that isn't our own contribution.
-func _pre_tick() -> void:
-	if _target_node == null or not _base_captured:
-		return
-	var n3d := _target_node as Node3D
-	var ext_disp := {}
-
-	# Position: compare current to what we expected after our last write
-	if _expected_position != Vector3.INF:
-		if not n3d.position.is_equal_approx(_expected_position):
-			var displacement := n3d.position - _expected_position
-			ext_disp["position"] = displacement
-			if debug_enabled:
-				print("[%s] External displacement (position): %s" % [name, displacement])
-
-	# Rotation
-	if _expected_rotation != Vector3.INF:
-		if not n3d.rotation.is_equal_approx(_expected_rotation):
-			ext_disp["rotation"] = n3d.rotation - _expected_rotation
-
-	# Scale
-	if _expected_scale != Vector3.INF:
-		if not n3d.scale.is_equal_approx(_expected_scale):
-			ext_disp["scale"] = n3d.scale - _expected_scale
-
-	# Notify effects of external displacement (for reactive effects like Spring)
-	if not ext_disp.is_empty():
-		for effect in _runtime_effects:
-			if effect != null and effect.is_playing():
-				effect._on_external_displacement(ext_disp)
-
-
-## Compute sibling displacement: compare non-reactive effects' current deltas
-## to their previous-frame deltas and notify reactive effects of the change.
-func _compute_sibling_displacement() -> void:
-	if _runtime_effects.is_empty():
-		return
-
-	var nr_pos := Vector3.ZERO
-	var nr_rot := Vector3.ZERO
-	var nr_scale := Vector3.ZERO
-
-	for effect in _runtime_effects:
-		if effect == null or effect._is_reactive():
-			continue
-		var eff_3d := effect as Juice3DTransformEffect
-		if eff_3d == null:
-			continue
-		if eff_3d._contributes_position:
-			nr_pos += eff_3d._pos_delta
-		if eff_3d._contributes_rotation:
-			nr_rot += eff_3d._rot_delta
-		if eff_3d._contributes_scale:
-			nr_scale += eff_3d._scale_delta
-
-	var sib_disp := {}
-	if not nr_pos.is_equal_approx(_prev_nr_pos):
-		sib_disp["position"] = nr_pos - _prev_nr_pos
-	if not nr_rot.is_equal_approx(_prev_nr_rot):
-		sib_disp["rotation"] = nr_rot - _prev_nr_rot
-	if not nr_scale.is_equal_approx(_prev_nr_scale):
-		sib_disp["scale"] = nr_scale - _prev_nr_scale
-
-	_prev_nr_pos = nr_pos
-	_prev_nr_rot = nr_rot
-	_prev_nr_scale = nr_scale
-
-	if not sib_disp.is_empty():
-		for effect in _runtime_effects:
-			if effect != null and effect._is_reactive() and effect.is_playing():
-				effect._on_sibling_displacement(sib_disp)
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -312,11 +219,6 @@ func _post_tick_write() -> void:
 	n3d.position = n3d.position - _total_pos_contribution + new_pos
 	n3d.rotation = n3d.rotation - _total_rot_contribution + new_rot
 	n3d.scale = n3d.scale - _total_scale_contribution + new_scale
-
-	# Track expected values (for external-displacement detection next frame)
-	_expected_position = n3d.position
-	_expected_rotation = n3d.rotation
-	_expected_scale = n3d.scale
 
 	# Track total contribution (for undo/reapply and next frame's subtraction)
 	_total_pos_contribution = new_pos
