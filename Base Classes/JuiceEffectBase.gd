@@ -126,8 +126,9 @@ var _btn_mirror_in_to_out: Callable:
 var crossfade_time: float = 0.0
 
 # --- CHAINING ---
-## Reference to another effect in the same recipe to trigger when this completes.
-var chain_to: JuiceEffectBase:
+## References to other effects in the same recipe to trigger when this completes.
+## Array allows triggering multiple effects simultaneously.
+var chain_to: Array[JuiceEffectBase] = []:
 	set(value):
 		chain_to = value
 		notify_property_list_changed()
@@ -135,9 +136,9 @@ var chain_to: JuiceEffectBase:
 ## Stop sibling effects with same interrupt identity when this starts.
 var interrupt_siblings: bool = false
 
-## Start the chained effect this many seconds before this effect completes.
-## Creates visual overlap between the two effects (e.g. squash on impact).
-## Auto-clamped to this effect's total duration. Only visible when chain_to is set.
+## Start the chained effects this many seconds before this effect completes.
+## Creates visual overlap between effects (e.g. squash on impact).
+## Auto-clamped to this effect's total duration. Only visible when chain_to is not empty.
 var chained_preroll: float = 0.0:
 	set(value):
 		chained_preroll = clampf(value, 0.0, _get_max_chained_preroll())
@@ -180,7 +181,6 @@ func _get_effect_base_properties() -> Array[Dictionary]:
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
 			"usage": PROPERTY_USAGE_DEFAULT})
 	return props
-
 
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
@@ -259,12 +259,12 @@ func _get_property_list() -> Array[Dictionary]:
 	# --- Chaining group ---
 	props.append({"name": "Chaining", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "chain_to", "type": TYPE_OBJECT,
-		"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "JuiceEffectBase",
+	props.append({"name": "chain_to", "type": TYPE_ARRAY,
+		"hint": PROPERTY_HINT_ARRAY_TYPE, "hint_string": "JuiceEffectBase",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "interrupt_siblings", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
-	if chain_to != null:
+	if not chain_to.is_empty():
 		props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_NONE,
 			"usage": PROPERTY_USAGE_DEFAULT})

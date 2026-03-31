@@ -54,21 +54,21 @@ func create_runtime_effects() -> Array[JuiceEffectBase]:
 
 	var clones: Array[JuiceEffectBase] = []
 	# Save original chain_to refs BEFORE deep duplicate replaces them with copies
-	var original_chains: Array[JuiceEffectBase] = []
+	var original_chains: Array[Array] = []
 	for effect in valid_effects:
-		original_chains.append(effect.chain_to)
+		original_chains.append(effect.chain_to.duplicate())
 		clones.append(effect.duplicate(true) as JuiceEffectBase)
 
-	# Remap chain_to references using the saved originals (not deep-copied refs)
+	# Remap chain_to array references using the saved originals (not deep-copied refs)
 	for i in clones.size():
-		if original_chains[i] == null:
-			clones[i].chain_to = null
-			continue
-		var chain_idx := valid_effects.find(original_chains[i])
-		if chain_idx >= 0 and chain_idx < clones.size():
-			clones[i].chain_to = clones[chain_idx]
-		else:
-			clones[i].chain_to = null  # Broken reference, clear it
+		var remapped_array: Array[JuiceEffectBase] = []
+		for original_chain in original_chains[i]:
+			if original_chain == null:
+				continue
+			var chain_idx := valid_effects.find(original_chain)
+			if chain_idx >= 0 and chain_idx < clones.size():
+				remapped_array.append(clones[chain_idx])
+		clones[i].chain_to = remapped_array
 
 	return clones
 
@@ -78,8 +78,8 @@ func create_runtime_effects() -> Array[JuiceEffectBase]:
 func get_root_effect_indices() -> Array[int]:
 	var chained_targets: Array[JuiceEffectBase] = []
 	for effect in effects:
-		if effect != null and effect.chain_to != null:
-			chained_targets.append(effect.chain_to)
+		if effect != null:
+			chained_targets.append_array(effect.chain_to)
 
 	var roots: Array[int] = []
 	for i in effects.size():
