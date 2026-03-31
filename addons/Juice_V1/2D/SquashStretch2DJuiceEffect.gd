@@ -1,4 +1,4 @@
-## SquashStretch2DJuiceEffect.gd
+## Classic squash & stretch scaling for [Node2D] targets with optional volume preservation.
 ## ============================================================================
 ## WHAT: Classic squash & stretch scaling for Node2D targets with volume preservation.
 ## WHY: Provides organic, lively deformation feedback that follows the classic

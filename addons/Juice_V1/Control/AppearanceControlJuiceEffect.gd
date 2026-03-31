@@ -1,4 +1,4 @@
-## AppearanceControlJuiceEffect.gd
+## Animates visual appearance properties (tint, fade, overbright, outline) of [Control] (UI) targets.
 ## ============================================================================
 ## WHAT: Animates visual appearance properties of Control (UI) node targets.
 ##       Modulate effects (TINT, FADE, OVERBRIGHT) contribute a multiplicative

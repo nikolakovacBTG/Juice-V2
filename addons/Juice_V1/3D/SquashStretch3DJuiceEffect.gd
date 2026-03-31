@@ -1,4 +1,4 @@
-## SquashStretch3DJuiceEffect.gd
+## Classic 3D squash and stretch for [Node3D] targets with optional volume preservation.
 ## ============================================================================
 ## WHAT: Classic 3D squash and stretch with optional volume preservation.
 ## WHY: Provides organic deformation feedback for 3D objects (bounces, impacts,

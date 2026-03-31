@@ -1,4 +1,4 @@
-## Appearance3DJuiceEffect.gd
+## Animates visual appearance properties (tint, fade, overbright, outline) of [Node3D] targets.
 ## ============================================================================
 ## WHAT: Animates visual appearance properties of Node3D targets.
 ##       Modulate-equivalent effects (TINT, FADE, OVERBRIGHT) contribute
