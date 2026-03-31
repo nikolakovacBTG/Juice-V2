@@ -1,11 +1,11 @@
 ## Classic 3D squash and stretch for [Node3D] targets with optional volume preservation.
-## ============================================================================
+# ============================================================================
 ## WHAT: Classic 3D squash and stretch with optional volume preservation.
 ## WHY: Provides organic deformation feedback for 3D objects (bounces, impacts,
 ##      breathing motion) while maintaining volume.
 ## SYSTEM: Juicing System (addons/Juice_V1/)
 ## DOES NOT: Handle Control or Node2D targets — use SquashStretchControl/2DJuiceEffect.
-## ============================================================================
+# ============================================================================
 ##
 ## ARCHITECTURE:
 ## - Effects are Resources (not Nodes). The host Juice3D node ticks them.
@@ -21,7 +21,7 @@
 ## TYPICAL USAGE:
 ## - Landing impact: squash_axis = Y, squash_amount = 0.3, duration = 0.15
 ## - Breathing: loop = true, squash_amount = 0.05
-## ============================================================================
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
