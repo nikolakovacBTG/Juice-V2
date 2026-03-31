@@ -1,0 +1,8 @@
+[gd_resource type="JuiceRecipe" script_class="JuiceRecipe" load_steps=2 format=3 uid="uid://testarray"]
+
+[ext_resource type="JuiceEffectBase" uid="uid://test1" script_class="TestEffect" id="TestEffect_1"]
+
+[resource]
+script_class = "JuiceRecipe"
+effects = []
+name = "Test Array Export"

@@ -524,23 +524,23 @@ func _process(delta: float) -> void:
 		var effect := _runtime_effects[idx]
 		if effect == null or not effect.is_playing():
 			continue
-		if effect.chain_to == null or effect.chained_preroll <= 0.0:
+		if effect.chain_to.is_empty() or effect.chained_preroll <= 0.0:
 			continue
 		if effect._chained_preroll_triggered:
 			continue
 		if effect._get_time_to_completion() <= effect.chained_preroll:
-			var chain_idx := _runtime_effects.find(effect.chain_to)
-			if chain_idx >= 0:
-				var chained := _runtime_effects[chain_idx]
-				if chained != null:
-					var play_in := effect._animation_progress >= 0.5
-					chained.start(_target_node, play_in, false, self)
-					if chain_idx not in _active_effect_indices:
+			for chained_effect in effect.chain_to:
+				var chain_idx := _runtime_effects.find(chained_effect)
+				if chain_idx >= 0 and chain_idx not in _active_effect_indices:
+					var chained := _runtime_effects[chain_idx]
+					if chained != null:
+						var play_in := effect._animation_progress >= 0.5
+						chained.start(_target_node, play_in, false, self)
 						_active_effect_indices.append(chain_idx)
-					effect._chained_preroll_triggered = true
-					if debug_enabled:
-						print("[%s] Chained preroll: effect %d → %d (%.2fs early)" % [
-							name, idx, chain_idx, effect.chained_preroll])
+			effect._chained_preroll_triggered = true
+			if debug_enabled:
+				print("[%s] Chained preroll: effect %d → %d effects (%.2fs early)" % [
+					name, idx, effect.chain_to.size(), effect.chained_preroll])
 
 	# --- Post-tick: domain-specific aggregation + write once ---
 	_post_tick_write()
@@ -803,17 +803,17 @@ func _on_effect_completed(idx: int) -> void:
 		print("[%s] Effect %d completed" % [name, idx])
 
 	# Follow chain_to (skip if chained_preroll already started it)
-	if effect.chain_to != null and not effect._chained_preroll_triggered:
-		var chain_idx := _runtime_effects.find(effect.chain_to)
-		if chain_idx >= 0:
-			var chained := _runtime_effects[chain_idx]
-			if chained != null:
-				var play_in := effect._animation_progress >= 0.5
-				chained.start(_target_node, play_in, false)
-				if chain_idx not in _active_effect_indices:
+	if not effect.chain_to.is_empty() and not effect._chained_preroll_triggered:
+		for chained_effect in effect.chain_to:
+			var chain_idx := _runtime_effects.find(chained_effect)
+			if chain_idx >= 0 and chain_idx not in _active_effect_indices:
+				var chained := _runtime_effects[chain_idx]
+				if chained != null:
+					var play_in := effect._animation_progress >= 0.5
+					chained.start(_target_node, play_in, false)
 					_active_effect_indices.append(chain_idx)
-				if debug_enabled:
-					print("[%s] Chained to effect %d" % [name, chain_idx])
+		if debug_enabled:
+			print("[%s] Chained to %d effects from effect %d" % [name, effect.chain_to.size(), idx])
 
 
 func _on_all_effects_completed() -> void:
@@ -1050,8 +1050,8 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 	# Find root effect indices (not chained from another in this set)
 	var chained_set: Array[JuiceEffectBase] = []
 	for eff in effects:
-		if eff != null and eff.chain_to != null:
-			chained_set.append(eff.chain_to)
+		if eff != null:
+			chained_set.append_array(eff.chain_to)
 	var root_indices: Array[int] = []
 	for i in effects.size():
 		if effects[i] != null and effects[i] not in chained_set:
@@ -1251,21 +1251,21 @@ func _seq_process_tick(delta: float) -> void:
 			var peff: JuiceEffectBase = effects[pidx] as JuiceEffectBase
 			if peff == null or not peff.is_playing():
 				continue
-			if peff.chain_to == null or peff.chained_preroll <= 0.0:
+			if peff.chain_to.is_empty() or peff.chained_preroll <= 0.0:
 				continue
 			if peff._chained_preroll_triggered:
 				continue
 			if peff._get_time_to_completion() <= peff.chained_preroll:
-				var chain_idx := effects.find(peff.chain_to)
-				if chain_idx >= 0:
-					var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
-					if chained != null:
-						var play_in := peff._animation_progress >= 0.5
-						chained.start(target, play_in, false)
-						if chain_idx not in active_indices:
+				for chained_effect in peff.chain_to:
+					var chain_idx := effects.find(chained_effect)
+					if chain_idx >= 0 and chain_idx not in active_indices:
+						var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
+						if chained != null:
+							var play_in := peff._animation_progress >= 0.5
+							chained.start(target, play_in, false)
 							active_indices.append(chain_idx)
-						peff._chained_preroll_triggered = true
-						any_playing = true
+							any_playing = true
+				peff._chained_preroll_triggered = true
 
 		# Write aggregated deltas to target (domain-specific)
 		_seq_post_tick_write_target(target, effects)
@@ -1273,16 +1273,16 @@ func _seq_process_tick(delta: float) -> void:
 		# Handle chaining within this target's effects (skip if preroll already started)
 		for idx in newly_completed:
 			var effect: JuiceEffectBase = effects[idx] as JuiceEffectBase
-			if effect != null and effect.chain_to != null and not effect._chained_preroll_triggered:
-				var chain_idx := effects.find(effect.chain_to)
-				if chain_idx >= 0:
-					var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
-					if chained != null:
-						var play_in := effect._animation_progress >= 0.5
-						chained.start(target, play_in, false)
-						if chain_idx not in active_indices:
+			if effect != null and not effect.chain_to.is_empty() and not effect._chained_preroll_triggered:
+				for chained_effect in effect.chain_to:
+					var chain_idx := effects.find(chained_effect)
+					if chain_idx >= 0 and chain_idx not in active_indices:
+						var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
+						if chained != null:
+							var play_in := effect._animation_progress >= 0.5
+							chained.start(target, play_in, false)
 							active_indices.append(chain_idx)
-						any_playing = true
+							any_playing = true
 
 		# Re-check: any still playing after chaining?
 		if not any_playing and newly_completed.is_empty():
@@ -1550,6 +1550,17 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if mode == Mode.STACK and get_parent() == null:
 		warnings.append("STACK mode requires a parent node as the target.")
 
+	# Validate chain references point to effects in the same recipe
+	if recipe != null and not recipe.effects.is_empty():
+		for effect in recipe.effects:
+			if effect == null or effect.chain_to.is_empty():
+				continue
+			for chained in effect.chain_to:
+				if chained == null:
+					warnings.append("Effect '%s' has a null reference in chain_to array." % effect.get_script().get_global_name())
+				elif chained not in recipe.effects:
+					warnings.append("Effect '%s' chains to an effect not in the same recipe." % effect.get_script().get_global_name())
+
 	# M6: Warn about ambiguous sibling trigger sources
 	if auto_connect_parent and trigger_source == TriggerSource.PARENT \
 			and trigger_on != TriggerEvent.MANUAL and trigger_on != TriggerEvent.ON_READY:
@@ -1659,8 +1670,8 @@ func _invalidate_runtime_effects() -> void:
 func _get_root_effect_indices() -> Array[int]:
 	var chained_targets: Array[JuiceEffectBase] = []
 	for effect in _runtime_effects:
-		if effect != null and effect.chain_to != null:
-			chained_targets.append(effect.chain_to)
+		if effect != null:
+			chained_targets.append_array(effect.chain_to)
 
 	var roots: Array[int] = []
 	for i in _runtime_effects.size():
