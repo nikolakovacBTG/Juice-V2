@@ -1,10 +1,10 @@
 ## Classic squash & stretch scaling for [Control] (UI) targets with optional volume preservation.
-## ============================================================================
+# ============================================================================
 ## WHAT: Classic squash & stretch scaling for Control nodes with volume preservation.
 ## WHY: Provides lively UI deformation feedback without AnimationPlayer.
 ## SYSTEM: Juicing System (addons/Juice_V1/)
 ## DOES NOT: Support Node2D/Node3D targets — use SquashStretch2D/3DJuiceEffect.
-## ============================================================================
+# ============================================================================
 ##
 ## ARCHITECTURE:
 ## - Effects are Resources (not Nodes). The host JuiceControl node ticks them.
@@ -16,7 +16,7 @@
 ## TYPICAL USAGE:
 ## - Button press feedback: squash_axis = VERTICAL, squash_amount = 0.3, duration = 0.15
 ## - Hover bounce: squash_axis = VERTICAL, squash_amount = 0.2
-## ============================================================================
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")

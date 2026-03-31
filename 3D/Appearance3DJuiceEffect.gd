@@ -1,5 +1,5 @@
 ## Animates visual appearance properties (tint, fade, overbright, outline) of [Node3D] targets.
-## ============================================================================
+# ============================================================================
 ## WHAT: Animates visual appearance properties of Node3D targets.
 ##       Modulate-equivalent effects (TINT, FADE, OVERBRIGHT) contribute
 ##       multiplicative albedo/alpha factors; Juice3D owns one working material
@@ -11,7 +11,7 @@
 ## DOES NOT: Handle Control or Node2D targets — use AppearanceControl/2DJuiceEffect.
 ## DOES NOT: Animate position/rotation/scale — use Transform3DJuiceEffect.
 ## DOES NOT: Manage MeshInstance3D or surface materials — Juice3D does that.
-## ============================================================================
+# ============================================================================
 #
 # OVERBRIGHT NOTE: Uses albedo_color with RGB > 1.0 (HDR-compatible path).
 #   Works correctly with Godot's forward+ renderer + HDR enabled.

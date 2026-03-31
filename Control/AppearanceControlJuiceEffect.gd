@@ -1,5 +1,5 @@
 ## Animates visual appearance properties (tint, fade, overbright, outline) of [Control] (UI) targets.
-## ============================================================================
+# ============================================================================
 ## WHAT: Animates visual appearance properties of Control (UI) node targets.
 ##       Modulate effects (TINT, FADE, OVERBRIGHT) contribute a multiplicative
 ##       _modulate_factor; JuiceControl accumulates all factors and writes once.
@@ -9,7 +9,7 @@
 ## SYSTEM: Juicing System (addons/Juice_V1/)
 ## DOES NOT: Handle Node2D or Node3D targets — use Appearance2D/3DJuiceEffect.
 ## DOES NOT: Animate position/rotation/scale — use TransformControlJuiceEffect.
-## ============================================================================
+# ============================================================================
 #
 # SHADER PARAMETER NAMES:
 #   outline_2d:  outline_color (Color), outline_width (float)

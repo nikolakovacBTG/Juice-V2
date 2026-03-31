@@ -1,5 +1,5 @@
 ## Animate position, rotation, or scale of a [Control] (UI) with tween-based easing and From/To configuration.
-## ============================================================================
+# ============================================================================
 ## WHAT: Animate position, rotation, or scale of a Control with tween-based easing.
 ## WHY: Replaces 3 separate scripts with one unified component. Select a
 ##      transform_target (Position, Rotation, or Scale) and configure a From/To
@@ -7,7 +7,7 @@
 ## SYSTEM: Juicing System (addons/Juice_V1/)
 ## DOES NOT: Handle Node2D or Node3D targets — use Transform2D/3DJuiceEffect.
 ## DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
-## ============================================================================
+# ============================================================================
 ##
 ## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
 ##   contribution: node.property += (desired - _my_contribution). This enables
@@ -20,7 +20,7 @@
 ## CONDITIONAL EXPORTS:
 ## Uses _get_property_list() to conditionally show/hide parameters based on
 ## transform_target and from/to reference selections.
-## ============================================================================
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
