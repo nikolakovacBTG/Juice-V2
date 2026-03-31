@@ -86,34 +86,49 @@ var _subclass_owns_effect_group: bool = false
 # =============================================================================
 
 # --- ANIMATE IN ---
+## Time to hold at peak before auto-reverse (seconds). Only for PLAY_IN_AND_OUT.
 var hold_at_peak: float = 0.0
+## Duration of the animate-in phase (seconds).
 var duration_in: float = 0.3
+## Easing transition type for animate-in. Ignored when Custom Curve In is set.
 var transition_in: Tween.TransitionType = Tween.TRANS_QUAD:
 	set(value):
 		transition_in = value
 		notify_property_list_changed()
+## Easing direction for animate-in. Ignored when Custom Curve In is set.
 var ease_in: Tween.EaseType = Tween.EASE_OUT
+## Custom easing curve for animate-in. Overrides Transition In and Ease In.
 var custom_curve_in: Curve:
 	set(value):
 		custom_curve_in = value
 		notify_property_list_changed()
+## Amplitude multiplier for Elastic transitions (animate-in).
 var elastic_amplitude_in: float = 1.0
+## Period of the elastic wave for Elastic transitions (animate-in).
 var elastic_period_in: float = 0.3
+## Overshoot amount for Back transitions (animate-in).
 var back_overshoot_in: float = 1.70158
 
 # --- ANIMATE OUT ---
+## Duration of the animate-out phase (seconds).
 var duration_out: float = 0.3
+## Easing transition type for animate-out. Ignored when Custom Curve Out is set.
 var transition_out: Tween.TransitionType = Tween.TRANS_QUAD:
 	set(value):
 		transition_out = value
 		notify_property_list_changed()
+## Easing direction for animate-out. Ignored when Custom Curve Out is set.
 var ease_out: Tween.EaseType = Tween.EASE_IN
+## Custom easing curve for animate-out. Overrides Transition Out and Ease Out.
 var custom_curve_out: Curve:
 	set(value):
 		custom_curve_out = value
 		notify_property_list_changed()
+## Amplitude multiplier for Elastic transitions (animate-out).
 var elastic_amplitude_out: float = 1.0
+## Period of the elastic wave for Elastic transitions (animate-out).
 var elastic_period_out: float = 0.3
+## Overshoot amount for Back transitions (animate-out).
 var back_overshoot_out: float = 1.70158
 
 # --- MIRROR ---
@@ -144,6 +159,7 @@ var chained_preroll: float = 0.0:
 		chained_preroll = clampf(value, 0.0, _get_max_chained_preroll())
 
 # --- DEBUG ---
+## Enable debug print statements to console during animation.
 var debug_enabled: bool = false
 
 # =============================================================================
