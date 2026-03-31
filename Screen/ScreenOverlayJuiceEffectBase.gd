@@ -77,6 +77,10 @@ var overlay_texture_filter: int = CanvasItem.TEXTURE_FILTER_LINEAR
 var blend_mode: int = OverlayBlendMode.MIX
 
 
+func _init() -> void:
+	_subclass_owns_effect_group = true
+
+
 # =============================================================================
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
@@ -114,11 +118,6 @@ func _get_property_list() -> Array[Dictionary]:
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
-
-	props.append({"name": "Debug", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "debug_enabled", "type": TYPE_BOOL,
-		"usage": PROPERTY_USAGE_DEFAULT})
 
 	return props
 
