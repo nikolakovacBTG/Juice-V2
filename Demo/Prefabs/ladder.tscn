@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://vkjhkv6b4g35"]
+
+[ext_resource type="Script" uid="uid://c6xhbl580vgtu" path="res://Demo/Scripts/Ladder.gd" id="1_704qe"]
+[ext_resource type="Texture2D" uid="uid://c2h0wt5po6fse" path="res://Textures/Kenney/spritesheet-tiles-default.png" id="2_puhgs"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oq2pw"]
+size = Vector2(64, 256)
+
+[node name="Ladder" type="Area2D" unique_id=1951724701]
+script = ExtResource("1_704qe")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1378418849]
+shape = SubResource("RectangleShape2D_oq2pw")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1102782895]
+modulate = Color(0.7, 0.5, 0.3, 0.5)
+texture = ExtResource("2_puhgs")

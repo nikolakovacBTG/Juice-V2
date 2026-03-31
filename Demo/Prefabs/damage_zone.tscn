@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://b3vgx28j7osbo"]
+
+[ext_resource type="Script" uid="uid://do6d2bfg0qhco" path="res://Demo/Scripts/DamageZone.gd" id="1_5yffm"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nu046"]
+size = Vector2(64, 64)
+
+[node name="DamageZone" type="Area2D" unique_id=1823310058]
+script = ExtResource("1_5yffm")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2065067959]
+shape = SubResource("RectangleShape2D_nu046")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1724476036]
+offset_right = 64.0
+offset_bottom = 64.0
+color = Color(1, 0.2, 0.2, 0.3)
