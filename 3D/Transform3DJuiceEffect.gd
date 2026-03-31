@@ -1,4 +1,4 @@
-## Transform3DJuiceEffect.gd
+## Animate position, rotation, or scale of a [Node3D] with tween-based easing and From/To configuration.
 ## ============================================================================
 ## WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
 ## WHY: Replaces 3 separate scripts with one unified component. Select a

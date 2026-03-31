@@ -1,4 +1,4 @@
-## SquashStretchControlJuiceEffect.gd
+## Classic squash & stretch scaling for [Control] (UI) targets with optional volume preservation.
 ## ============================================================================
 ## WHAT: Classic squash & stretch scaling for Control nodes with volume preservation.
 ## WHY: Provides lively UI deformation feedback without AnimationPlayer.
