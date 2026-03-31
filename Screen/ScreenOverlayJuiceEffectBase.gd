@@ -1,15 +1,15 @@
-## Domain-agnostic base for screen color/texture overlay effects.
+## Fades a full-screen color or texture overlay in and out over the screen.
 ##
-## Animates a full-screen ColorRect via JuiceScreenOverlayProvider.
-## Ignores the target node — overlay is always the shared screen canvas.
+## Animates a screen-covering [ColorRect] via [JuiceScreenOverlayProvider].
+## The Juice target node is ignored — the overlay always covers the entire screen.
 
 # ============================================================================
-# WHAT: Domain-agnostic base for screen color/texture overlay effects.
+# WHAT: Shared base for all three domain ScreenOverlay effects (Control/2D/3D).
 #       Animates a full-screen ColorRect via JuiceScreenOverlayProvider.
-#       Ignores the target node — overlay is always the shared screen canvas.
-# WHY: Screen flash and fade are not node-specific effects. Separating the
-#      shared logic here keeps the three domain wrappers empty (class_name only)
-#      while avoiding any multiple-inheritance workaround.
+#       Target node is ignored — the overlay covers the entire screen.
+# WHY: Screen flash and fade are global effects, not node-specific.
+#      Centralising the logic here keeps the three domain wrappers as thin
+#      class_name stubs, avoiding multiple-inheritance workarounds.
 # SYSTEM: Juicing System (addons/Juice_V1/)
 # DOES NOT: Write to the target node — always uses JuiceScreenOverlayProvider.
 # DOES NOT: Support multiple simultaneous overlays (last-write wins).

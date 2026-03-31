@@ -1,14 +1,15 @@
-## Control-domain wrapper for ScreenOverlayJuiceEffectBase.
+## Full-screen color or texture overlay effect for [JuiceControl] node recipes.
 ##
-## Registers the effect in JuiceControlRecipe._CONCRETE_EFFECTS so it
-## appears in the inspector dropdown on JuiceControl nodes.
+## All behavior is provided by [ScreenOverlayJuiceEffectBase].
+## This class exists solely to appear in the [JuiceControlRecipe] inspector dropdown.
 
 # ============================================================================
-# WHAT: Control-domain wrapper for ScreenOverlayJuiceEffectBase.
-# WHY: Registers the effect in JuiceControlRecipe._CONCRETE_EFFECTS so it
-#      appears in the inspector dropdown on JuiceControl nodes.
-#      All behavior is inherited from ScreenOverlayJuiceEffectBase.
+# WHAT: Full-screen color or texture overlay effect, scoped to the Control domain.
+# WHY: Juice recipes are domain-typed. This thin subclass registers the effect
+#      in JuiceControlRecipe._CONCRETE_EFFECTS so it appears in the inspector
+#      dropdown on JuiceControl nodes. All logic lives in ScreenOverlayJuiceEffectBase.
 # SYSTEM: Juicing System (addons/Juice_V1/)
+# DOES NOT: Implement any behavior — see ScreenOverlayJuiceEffectBase.
 # ============================================================================
 
 @tool
