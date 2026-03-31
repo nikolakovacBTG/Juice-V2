@@ -52,6 +52,12 @@ Do NOT propose fixes to production code. Do NOT make system changes outside test
 **Fallback (shell command):** If MCP is unavailable or Godot editor isn't running:
 // turbo
 ```powershell
+& "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+```
+
+**Alternative fallback (if .bat not available):**
+// turbo
+```powershell
 & "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
 ```
 

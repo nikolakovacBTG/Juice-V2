@@ -573,7 +573,7 @@ func test_chain_to_sequential_effects() -> void:
 	effect_b.duration_in = 0.15
 
 	# Chain A -> B
-	effect_a.chain_to = effect_b
+	effect_a.chain_to = [effect_b]
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
