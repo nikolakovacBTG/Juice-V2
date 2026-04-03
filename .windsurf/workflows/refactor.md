@@ -4,6 +4,8 @@ description: Systematic, safe refactoring with backup, validation, and documenta
 
 You are in REFACTOR MODE.
 
+**Parent workflow:** `/architecture` - See `/architecture` for Juice V1 architecture context
+
 ---
 
 ## Authorization Gate (MANDATORY)

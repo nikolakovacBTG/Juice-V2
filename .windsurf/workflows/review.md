@@ -4,6 +4,8 @@ description: Comprehensive code review against project standards, architecture p
 
 You are in REVIEW MODE.
 
+**Parent workflow:** `/architecture` - See `/architecture` for Juice V1 architecture context
+
 ---
 
 ## Authorization Gate (MANDATORY)

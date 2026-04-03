@@ -9,6 +9,8 @@ It enforces batching all 3 domains together, using code templates, and auto-veri
 
 **Skills auto-invoked:** `@juice-architecture`, `@verify-claims`
 
+**Parent workflow:** `/architecture` - See `/architecture` for Juice V1 architecture context
+
 ---
 
 ## Anti-Patterns This Workflow Prevents
