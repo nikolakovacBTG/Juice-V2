@@ -70,17 +70,7 @@ Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
 
 ## Rule 9: Script Section Ordering
 
-1. Header comment (use `#` not `##` for section dividers, include architectural context: what script expects from specific classes and what it provides to specific classes)
-
-**Format Example:**
-```gdscript
-# ============================================================================
-# WHAT: Animate position, rotation, or scale of a Node2D with tween-based easing.
-# EXPECTS: Juice2D parent node, Juice2DRecipe with Transform2DJuiceEffect resources
-# PROVIDES: Delta calculations to Juice2D._post_tick_write() via _get_seq_contribution()
-# ARCHITECTURE: L3 effect, extends Juice2DTransformEffect, consumed by Juice2D (L2)
-# ============================================================================
-```
+1. Header comment
 2. Signals
 3. Enums
 4. Configuration (vars shown via `_get_property_list`)

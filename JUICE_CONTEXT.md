@@ -2,8 +2,8 @@
 
 > **Purpose:** Bootstrap document for AI assistants (Cascade/Windsurf) working in the Juice Demo project.
 > **Created:** 2026-03-06
-> **Source project:** Cold Soul (d:\Godot projekti\Cold_Soul_v0.1)
-> **This project:** Juice Demo (d:\Godot projekti\juice-demo)
+> **Source project:** Cold Soul (d:\Godot_projekti\Cold_Soul_v0.1)
+> **This project:** Juice Demo (d:\Godot_projekti\juice-demo)
 
 ---
 

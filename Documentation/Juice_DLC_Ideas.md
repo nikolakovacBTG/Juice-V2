@@ -28,7 +28,28 @@ High-value shader-based appearance effects that plug into the Appearance comp's 
 | **Blur** | Gaussian/box blur | 2D | High | Quality needs multi-pass or SubViewport |
 | **CRT/Scanlines** | Retro TV effect with scanlines + curvature | 2D, Screen | Medium | Multiple overlapping effects |
 | **Vignette** | Darken edges for cinematic feel | Screen | Low | Could be Appearance or Screen effect |
+Deferred Appearance Effects (Cut from V1.0)
+These effects were part of the V0 Appearance comp and were initially ported to V1, but are deferred because they fundamentally conflict with the stackable effects architecture — specifically, they monopolize a single shared resource slot (ShaderMaterial, CanvasItemMaterial, or material next_pass) and cannot be accumulated like modulate-based effects.
 
+V1 keeps: TINT, FADE, OVERBRIGHT — all modulate-based, multiplicative stacking.
+
+Deferred effects and why:
+
+Effect	Domains	Reason deferred
+OUTLINE	2D (shader), 3D (inverted hull)	Requires ShaderMaterial (2D) or next_pass StandardMaterial3D (3D) — one slot per node. Two OUTLINE effects would overwrite each other's material.
+GRAYSCALE	Control, 2D, 3D	Requires a ShaderMaterial. Replaces any existing material on the target. Non-stackable.
+DISSOLVE	Control, 2D, 3D	Requires a ShaderMaterial with noise texture. Same single-slot conflict as GRAYSCALE.
+BLEND_MODE	Control, 2D, 3D	Requires a CanvasItemMaterial / BaseMaterial3D blend mode property. Discrete (not interpolatable), non-stackable.
+EMISSION	3D only	Animates StandardMaterial3D emission_energy / emission_color. Conflicts with OVERBRIGHT on the same material.
+ROUGHNESS	3D only	Animates StandardMaterial3D roughness. Single property — two ROUGHNESS effects fight.
+METALLIC	3D only	Animates StandardMaterial3D metallic. Same.
+GROW	3D only	Animates grow_amount. Same.
+RIM / CLEARCOAT / REFRACTION	3D only	Material feature flags — toggling and animating these during stacking is unsafe.
+Target DLC: These are natural additions to the Shader Effects DLC (see below) or a dedicated Appearance Pro Pack, which can afford a different architecture — either a dedicated JuiceAppearanceNode that owns the material pipeline, or a JuiceShaderEffect base class with a managed material slot contract.
+
+Note on Control OUTLINE: The V0 Control OUTLINE used StyleBox border animation (not a shader). Whether this survives as a stackable V1 effect is an open design question — StyleBox borders can potentially use a delta model. Tracked separately.
+
+Note on ScreenOverlay: ScreenOverlayJuiceComp (V0) is NOT deferred — it is ported as a proper V1 stackable effect using domain-agnostic wrappers and the JuiceScreenOverlayProvider shared ColorRect. See the Appearance Refactor plan for architecture details.
 ---
 
 ## Other DLC Concepts

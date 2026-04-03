@@ -76,15 +76,7 @@ Review all code against established project conventions:
 
 ### 3. Architecture Pattern Compliance
 
-**Quick reference:** `@juice-architecture-contracts` one-page contracts
-
 Verify adherence to established patterns:
-
-#### Layer Contract Compliance
-- [ ] L1 (Core) has no domain-specific logic
-- [ ] L2 (Domain) filters targets correctly and writes once per frame
-- [ ] L3 (Effects) compute deltas only, never write directly
-- [ ] Data flow follows L1→L2→L3→L2 contract pattern
 
 #### Addon Boundary
 - [ ] No files modified inside `addons/juice/` (read-only subtree)

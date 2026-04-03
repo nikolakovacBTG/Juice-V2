@@ -4,6 +4,6 @@
 :: Example: run_tests.bat --suite=node_properties
 
 set GODOT="C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe"
-set PROJECT="D:\Godot projekti\juice-demo"
+set PROJECT="D:\Godot_projekti\juice-demo"
 
 %GODOT% --headless --path %PROJECT% res://tests/run_tests.tscn -- %*

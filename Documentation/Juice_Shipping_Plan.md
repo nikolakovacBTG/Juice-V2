@@ -93,7 +93,7 @@ git subtree push --prefix=addons/juice juice-standalone main
 
 ```powershell
 # In a DIFFERENT folder, clone the standalone repo
-git clone https://github.com/nikolakovacBTG/Juice.git D:\Godot projekti\Juice_Standalone_Test
+git clone https://github.com/nikolakovacBTG/Juice.git D:\Godot_projekti\Juice_Standalone_Test
 
 # Open in Godot — verified 2026-02-23 (no errors)
 # Make a test edit, commit, push when needed

@@ -1,7 +1,7 @@
 ## CharacterController2D.gd
 ## ============================================================================
-## WHAT: 2D platformer character controller with ladder climbing and health system.
-## WHY: Provides WASD movement, jumping, climbing, and damage handling for demo.
+## WHAT: 2D platformer character controller with health system.
+## WHY: Provides WASD movement, jumping, and damage handling for demo.
 ## SYSTEM: Juice Demo Character System
 ## DOES NOT: Handle animations - uses AnimatedSprite2D for direct control.
 ## ============================================================================
@@ -24,8 +24,6 @@ extends CharacterBody2D
 
 # Internal state
 var current_hp: int
-var is_on_ladder: bool = false
-var ladder_area: Area2D = null
 
 # Coyote time and jump buffering
 var coyote_timer: float = 0.0
@@ -41,8 +39,6 @@ var is_jumping: bool = false
 func _ready():
 	# Initialize health
 	current_hp = max_hp
-	
-	# CharacterBody2D doesn't have area_entered, we'll use the ladder's own signals
 
 func _physics_process(delta):
 	# Handle jump buffering
@@ -56,73 +52,38 @@ func _physics_process(delta):
 		coyote_timer -= delta
 	
 	# Check if we should be able to jump (coyote time or jump buffer)
-	var can_jump = is_on_floor() or coyote_timer > 0 or is_on_ladder
+	var can_jump = is_on_floor() or coyote_timer > 0
 	
 	# Handle jumping
 	if can_jump and jump_buffer_timer > 0:
-		if is_on_ladder:
-			# Jump off ladder
-			is_on_ladder = false
-			velocity.y = jump_velocity
-		else:
-			# Regular jump
-			velocity.y = jump_velocity
+		# Regular jump
+		velocity.y = jump_velocity
 		jump_buffer_timer = 0.0
 		is_jumping = true
 	
-	# Apply gravity (only when not on ladder)
-	if not is_on_ladder:
-		if not is_on_floor():
-			velocity.y += gravity * delta
-		else:
-			# Reset coyote timer when on ground
-			coyote_timer = coyote_time
-			is_jumping = false
-	
-	# Handle ladder climbing
-	if is_on_ladder and ladder_area:
-		var vertical_input = Input.get_axis("move_up", "move_down")
-		velocity.y = vertical_input * move_speed * 0.8  # Slower climbing speed
-		velocity.x = 0  # No horizontal movement on ladder
+	# Apply gravity
+	if not is_on_floor():
+		velocity.y += gravity * delta
 	else:
-		# Handle horizontal movement
-		var direction = Input.get_axis("move_left", "move_right")
-		velocity.x = direction * move_speed
+		# Reset coyote timer when on ground
+		coyote_timer = coyote_time
+		is_jumping = false
 	
-	# Handle ducking when not on ladder and not jumping
-	if not is_on_ladder and not is_jumping and Input.is_action_pressed("move_down"):
+	# Handle horizontal movement
+	var direction = Input.get_axis("move_left", "move_right")
+	velocity.x = direction * move_speed
+	
+	# Handle ducking when not jumping
+	if not is_jumping and Input.is_action_pressed("move_down"):
 		velocity.x = 0  # Stop movement when ducking
 	
 	move_and_slide()
-	
-	# Check for area overlaps (ladders and damage zones)
-	check_area_overlaps()
 	
 	# Handle sprite flipping based on movement direction
 	update_sprite_direction()
 	
 	# Update animations
 	update_animations()
-
-func check_area_overlaps():
-	# Simple proximity check for ladder (since CharacterBody2D can't detect areas)
-	# This is a basic implementation - for production, use an Area2D child
-	if ladder_area and global_position.distance_to(ladder_area.global_position) < 50:
-		if not is_on_ladder:
-			is_on_ladder = true
-			velocity.y = 0
-	elif is_on_ladder:
-		is_on_ladder = false
-		ladder_area = null
-
-# Simple ladder detection function to call from ladder script
-func set_ladder_area(area: Area2D):
-	ladder_area = area
-
-func clear_ladder_area():
-	if ladder_area:
-		ladder_area = null
-		is_on_ladder = false
 
 # Handle sprite flipping based on movement direction
 func update_sprite_direction():
@@ -140,21 +101,14 @@ func update_animations():
 	# Determine current state
 	var new_animation = ""
 	
-	if is_on_ladder:
-		if abs(velocity.y) > 10:
-			new_animation = "climb"
-		else:
-			new_animation = "climb"  # Use climb for idle on ladder too
-	elif not is_on_floor() and velocity.y < 0:
-		new_animation = "jump"  # You may need to add this animation
-	elif not is_on_floor() and velocity.y > 0:
-		new_animation = "front"  # Use front for falling
-	elif abs(velocity.x) > 10:
-		new_animation = "walk"  # You may need to add this animation
-	elif Input.is_action_pressed("move_down") and is_on_floor():
+	if is_jumping:
+		new_animation = "jump"
+	elif not is_jumping and Input.is_action_pressed("move_down") and is_on_floor():
 		new_animation = "duck"
+	elif abs(velocity.x) > 10 and is_on_floor():
+		new_animation = "walk"
 	else:
-		new_animation = "front"  # Use front as idle
+		new_animation = "idle"
 	
 	# Only change animation if it's different
 	if animated_sprite.animation != new_animation:

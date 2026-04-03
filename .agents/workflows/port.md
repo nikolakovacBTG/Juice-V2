@@ -27,31 +27,25 @@ It enforces batching all 3 domains together, using code templates, and auto-veri
 
 Read ALL of these before writing any code:
 
-1a. **Architecture quick reference** — understand where this fits:
-```
-Auto-invoked: @juice-architecture-contracts
-Review: One-page layer contracts + decision tree
-```
-
-1b. **Design doc section** for this effect category:
+1a. **Design doc section** for this effect category:
 ```
 Read: Documentation/JuiceStack_Design.md
 Find: the "Complete Effect Map" section for this effect type
 ```
 
-1c. **V0 source** — read ALL domain variants in parallel:
+1b. **V0 source** — read ALL domain variants in parallel:
 ```
 Read: addons/juice/Control/[Effect]ControlJuiceComp.gd
 Read: addons/juice/2D/[Effect]2DJuiceComp.gd
 Read: addons/juice/3D/[Effect]3DJuiceComp.gd
 ```
 
-1d. **Port Master Tracker** — confirm this effect isn't already ported:
+1c. **Port Master Tracker** — confirm this effect isn't already ported:
 ```
 Read: Documentation/Port_Master_Tracker.md
 ```
 
-1e. Present a summary to the user:
+1d. Present a summary to the user:
 ```
 ## Port Summary — [EffectName]
 
