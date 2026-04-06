@@ -56,16 +56,28 @@ var _base_captured: bool = false
 var _base_modulate: Color = Color.WHITE
 var _has_modulate_base: bool = false
 
+# Phase B: Per-node contribution tracking for sibling stacking
+var _own_modulate_contribution: Color = Color.WHITE
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
 
 func _ready() -> void:
 	super._ready()
+	if debug_enabled:
+		print("[DEBUG] Phase B: Juice2D _ready() called")
+		print("[DEBUG] Phase B: Mode: ", mode)
+		print("[DEBUG] Phase B: Target node: ", _target_node)
 
 
 func _exit_tree() -> void:
 	super._exit_tree()
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	if debug_enabled:
+		print("[DEBUG] Phase B: Juice2D _process() called with delta: ", delta)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -192,7 +204,15 @@ func _capture_base_values() -> void:
 ## Multiple Juice nodes on the same target can write independently without
 ## overwriting each other — each node only touches its own layer of changes.
 func _post_tick_write() -> void:
+	if debug_enabled:
+		print("[DEBUG] Phase B: _post_tick_write called")
+		print("[DEBUG] Phase B: _target_node: ", _target_node)
+		print("[DEBUG] Phase B: _base_captured: ", _base_captured)
+		print("[DEBUG] Phase B: _runtime_effects count: ", _runtime_effects.size())
+	
 	if _target_node == null or not _base_captured:
+		if debug_enabled:
+			print("[DEBUG] Phase B: Early exit - target null or base not captured")
 		return
 	var n2d := _target_node as Node2D
 
@@ -225,6 +245,7 @@ func _post_tick_write() -> void:
 	_total_scale_contribution = new_scale
 
 	# Appearance: accumulate modulate factors from Juice2DAppearanceEffect effects.
+	# Only write modulate when at least one appearance effect has a non-identity factor.
 	var combined_modulate := Color.WHITE
 	var has_appearance := false
 	for effect in _runtime_effects:
@@ -239,12 +260,59 @@ func _post_tick_write() -> void:
 		combined_modulate.a *= app_eff._modulate_factor.a
 		has_appearance = true
 
-	if has_appearance and _has_modulate_base:
-		n2d.modulate = Color(
-			_base_modulate.r * combined_modulate.r,
-			_base_modulate.g * combined_modulate.g,
-			_base_modulate.b * combined_modulate.b,
-			_base_modulate.a * combined_modulate.a)
+	# Phase B: Sibling stacking with metadata-based natural base capture
+	# Get shared natural base from target metadata (captured by first Juice2D)
+	const META_KEY := &"juice_modulate_natural"
+	var base_color: Color = n2d.modulate
+	if not n2d.has_meta(META_KEY):
+		# First Juice2D node — capture natural base and store in metadata
+		n2d.set_meta(META_KEY, n2d.modulate)
+	else:
+		# Subsequent Juice2D nodes — read natural base from metadata
+		base_color = n2d.get_meta(META_KEY)
+
+	# Scan all sibling Juice2D nodes on the same target, multiply contributions.
+	# In STACK mode, Juice nodes are children of the target — scan target's children.
+	var final_factor := Color.WHITE
+	for child in n2d.get_children():
+		var j := child as Juice2D
+		if j == null or j == self:
+			continue
+		var sibling_contrib: Color = Color.WHITE
+		if j._own_modulate_contribution != Color.WHITE:
+			sibling_contrib = j._own_modulate_contribution
+		final_factor.r *= sibling_contrib.r
+		final_factor.g *= sibling_contrib.g
+		final_factor.b *= sibling_contrib.b
+		final_factor.a *= sibling_contrib.a
+
+	# Write once: base * own_contribution * product of all sibling contributions
+	n2d.modulate = Color(
+		base_color.r * combined_modulate.r * final_factor.r,
+		base_color.g * combined_modulate.g * final_factor.g,
+		base_color.b * combined_modulate.b * final_factor.b,
+		base_color.a * combined_modulate.a * final_factor.a)
+
+	# Update own contribution tracking
+	if has_appearance:
+		_own_modulate_contribution = combined_modulate
+	else:
+		_own_modulate_contribution = Color.WHITE
+
+	# Check if all siblings are at identity (no active effects)
+	var all_siblings_idle := true
+	for child in n2d.get_children():
+		var j := child as Juice2D
+		if j == null or j == self:
+			continue
+		if j._own_modulate_contribution != Color.WHITE:
+			all_siblings_idle = false
+			break
+
+	# If all siblings idle and we're idle, remove metadata and restore natural state
+	if all_siblings_idle and not has_appearance and n2d.has_meta(META_KEY):
+		n2d.remove_meta(META_KEY)
+		n2d.modulate = base_color
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
@@ -255,8 +323,8 @@ func _temporarily_undo_visual() -> void:
 	n2d.position -= _total_pos_contribution
 	n2d.rotation -= _total_rot_contribution
 	n2d.scale -= _total_scale_contribution
-	if _has_modulate_base:
-		n2d.modulate = _base_modulate
+	# Phase B: Set own contribution to identity so sibling rescan excludes us
+	_own_modulate_contribution = Color.WHITE
 
 
 ## Re-add contributions after temporary undo.
