@@ -93,6 +93,38 @@ Maintains behavior while improving structure and compliance.
 
 ---
 
+## Context Management Strategies
+
+### For Long-Running Tasks
+
+When working on complex tasks that may span multiple sessions or require significant context:
+
+#### Phase Identification
+- **Assess task complexity** - Identify natural break points in the work
+- **Functional completeness** - Each phase should deliver complete functionality
+- **Dependency mapping** - Understand what each phase depends on
+- **Risk assessment** - Identify high-risk areas that might need isolation
+
+#### Context Preservation
+- **Commit boundaries** - Create clear git commits at phase boundaries
+- **Documentation checkpoints** - Document phase status and next steps
+- **State markers** - Use tags or branches to mark phase completion
+- **Handoff preparation** - Ensure next session can understand current state
+
+#### Headroom Management
+- **Context budgeting** - Keep active context under 4,000 tokens per session
+- **Smart loading** - Load only phase-relevant documentation
+- **Context cleanup** - Clear unused context between phases
+- **Progressive disclosure** - Start with essential, add detail as needed
+
+#### Multi-Session Coordination
+- **Session goals** - Define clear objectives for each work session
+- **State communication** - Document session end state and next session start
+- **Continuity planning** - Ensure smooth handoff between sessions
+- **Rollback preparation** - Maintain ability to return to previous phase states
+
+---
+
 ## Common Architecture Tasks
 
 ### Adding New Effects

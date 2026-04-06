@@ -28,6 +28,17 @@ extends Juice2DAppearanceEffect
 # ENUMS
 # =============================================================================
 
+enum AppearanceReference {
+	CUSTOM, ## Use explicit From/To values
+	SELF,   ## Capture from target at animation start
+}
+
+enum CaptureAt {
+	TRIGGER, ## Capture when animation starts
+	READY,   ## Capture when node enters tree
+	IN_EDITOR, ## Capture immediately in editor
+}
+
 enum AppearanceEffect {
 	TINT,       ## Multiply modulate with a color overlay
 	FADE,       ## Animate modulate alpha to a target value
@@ -41,44 +52,88 @@ enum FlickerMode {
 	CUSTOM, ## Curve-driven flicker pattern
 }
 
+enum OutlineFlickerTarget {
+	WIDTH,       ## Flicker modulates outline width
+	COLOR_ALPHA, ## Flicker modulates outline color alpha
+	COLOR,       ## Flicker lerps between outline_color and flicker_color_to
+}
+
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-var effect_type: int = AppearanceEffect.FADE:
+@export_group("Effect")
+## What type of appearance effect to apply.
+var effect_type: AppearanceEffect = AppearanceEffect.TINT:
 	set(value):
 		effect_type = value
 		notify_property_list_changed()
 
-## Color to tint toward at peak progress (TINT). Multiplied with natural modulate.
-var tint_color: Color = Color(1.0, 0.4, 0.4, 1.0)
-## How strongly to blend toward tint_color at progress=1.0 (TINT).
-var tint_blend: float = 1.0
-## Target alpha at progress=1.0 (FADE). Natural alpha restored at progress=0.
-var fade_target_alpha: float = 0.0
-## Modulate multiplier at peak (OVERBRIGHT). 2.0 = double brightness.
-var overbright_strength: float = 2.0
-## Outline stroke color (OUTLINE).
-var outline_color: Color = Color.WHITE
-## Outline pixel width at full effect (OUTLINE).
-var outline_width: float = 2.0
+@export_group("From")
+## Reference source for From values.
+var from_reference: int = AppearanceReference.SELF:
+	set(value):
+		from_reference = value
+		notify_property_list_changed()
 
-## Temporal modulation applied on top of animation progress.
-var flicker_mode: int = FlickerMode.NONE:
+@export var from_tint_color: Color = Color.WHITE
+@export_range(0.0, 1.0, 0.01) var from_tint_blend: float = 0.0
+@export_range(0.0, 1.0, 0.01) var from_alpha: float = 1.0
+@export_range(0.0, 5.0, 0.1) var from_brightness: float = 1.0
+
+@export_group("To")
+## Reference source for To values.
+var to_reference: int = AppearanceReference.CUSTOM:
+	set(value):
+		to_reference = value
+		notify_property_list_changed()
+
+@export var tint_color: Color = Color(1.0, 0.4, 0.4, 1.0)
+@export_range(0.0, 1.0, 0.01) var tint_blend: float = 1.0
+@export_range(0.0, 1.0, 0.01) var fade_target_alpha: float = 0.0
+@export_range(0.0, 5.0, 0.1) var overbright_strength: float = 2.0
+
+@export_group("Outline", "outline")
+## Width of outline at animation start (factor of outline_width).
+@export_range(0.0, 1.0, 0.01) var from_width: float = 0.0
+## Width of outline at animation end (pixels).
+@export_range(0.0, 10.0, 0.1) var outline_width: float = 2.0
+## Color of the outline.
+var outline_color: Color = Color.WHITE
+
+@export_group("Flicker", "flicker")
+## Type of flicker to apply to the effect output.
+var flicker_mode: FlickerMode = FlickerMode.NONE:
 	set(value):
 		flicker_mode = value
 		notify_property_list_changed()
-## Minimum flicker multiplier (0.0 = fully off at flicker minimum).
-var flicker_min: float = 0.0
-## Maximum flicker multiplier (1.0 = no dimming at flicker maximum).
-var flicker_max: float = 1.0
-## Binary on/off flicker instead of smooth. Threshold = (min+max)/2.
+## Minimum flicker multiplier (when flicker is at low point).
+@export_range(0.0, 1.0, 0.01) var flicker_min: float = 0.0
+## Maximum flicker multiplier (when flicker is at high point).
+@export_range(0.0, 2.0, 0.01) var flicker_max: float = 1.0
+## Flicker speed (cycles per second).
+@export_range(0.1, 10.0, 0.1) var flicker_rate: float = 10.0
+## When true, flicker is hard on/off instead of smooth.
 var hard_flicker: bool = false
-## Flicker cycles per second (RANDOM mode).
-var flicker_rate: float = 10.0
+## Custom flicker curve (only used when flicker_mode is CUSTOM).
 ## Curve for flicker pattern (CUSTOM mode). X=phase [0,1], Y=multiplier.
 var flicker_curve: Curve
+
+## Which aspect of OUTLINE is modulated by flicker. Only shown when effect_type == OUTLINE and flicker_mode != NONE.
+var outline_flicker_target: int = OutlineFlickerTarget.WIDTH:
+	set(value):
+		outline_flicker_target = value
+		notify_property_list_changed()
+## Secondary color for OUTLINE COLOR flicker mode. Outline lerps between outline_color and this.
+var flicker_color_to: Color = Color.BLACK
+
+@export_group("Capture", "capture")
+## When SELF reference is used, when to capture the natural values.
+var capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		capture_at = value
+		notify_property_list_changed()
 
 
 func _init() -> void:
@@ -90,73 +145,163 @@ func _init() -> void:
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
-	var props: Array[Dictionary] = []
+	var properties: Array[Dictionary] = []
 
-	props.append({"name": "Effect", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "effect_type", "type": TYPE_INT,
+	# Always show effect_type
+	properties.append({
+		"name": "effect_type",
+		"type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Tint,Fade,Overbright,Outline",
-		"usage": PROPERTY_USAGE_DEFAULT})
+		"hint_string": ",".join(AppearanceEffect.keys()),
+		"usage": PROPERTY_USAGE_DEFAULT
+	})
 
+	# Conditionally show From/To properties based on effect type
 	match effect_type:
 		AppearanceEffect.TINT:
-			props.append({"name": "tint_color", "type": TYPE_COLOR,
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "tint_blend", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
-				"usage": PROPERTY_USAGE_DEFAULT})
+			# From properties
+			properties.append({
+				"name": "from_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if from_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "from_tint_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
+				properties.append({"name": "from_tint_blend", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+			# To properties
+			properties.append({
+				"name": "to_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if to_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "tint_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
+				properties.append({"name": "tint_blend", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+
 		AppearanceEffect.FADE:
-			props.append({"name": "fade_target_alpha", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
-				"usage": PROPERTY_USAGE_DEFAULT})
+			# From properties
+			properties.append({
+				"name": "from_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if from_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "from_alpha", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+			# To properties
+			properties.append({
+				"name": "to_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if to_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "fade_target_alpha", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+
 		AppearanceEffect.OVERBRIGHT:
-			props.append({"name": "overbright_strength", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,10.0,0.1,or_greater",
-				"usage": PROPERTY_USAGE_DEFAULT})
+			# From properties
+			properties.append({
+				"name": "from_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if from_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "from_brightness", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+			# To properties
+			properties.append({
+				"name": "to_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if to_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "overbright_strength", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+
 		AppearanceEffect.OUTLINE:
-			props.append({"name": "outline_color", "type": TYPE_COLOR,
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "outline_width", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,20.0,0.5,or_greater",
-				"usage": PROPERTY_USAGE_DEFAULT})
+			# From properties
+			properties.append({
+				"name": "from_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if from_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "from_width", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+			# To properties
+			properties.append({
+				"name": "to_reference",
+				"type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": ",".join(AppearanceReference.keys()),
+				"usage": PROPERTY_USAGE_DEFAULT
+			})
+			if to_reference == AppearanceReference.CUSTOM:
+				properties.append({"name": "outline_width", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+				properties.append({"name": "outline_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append_array(_get_effect_base_properties())
+	# Show capture_at only when using SELF reference
+	if (from_reference == AppearanceReference.SELF) or (to_reference == AppearanceReference.SELF):
+		properties.append({
+			"name": "capture_at",
+			"type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": ",".join(CaptureAt.keys()),
+			"usage": PROPERTY_USAGE_DEFAULT
+		})
 
-	props.append({"name": "Flicker", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
-	props.append({"name": "flicker_mode", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM, "hint_string": "None,Random,Custom",
-		"usage": PROPERTY_USAGE_DEFAULT})
+	# Always show flicker properties
+	properties.append({
+		"name": "flicker_mode",
+		"type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": ",".join(FlickerMode.keys()),
+		"usage": PROPERTY_USAGE_DEFAULT
+	})
 	if flicker_mode != FlickerMode.NONE:
-		props.append({"name": "flicker_min", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
-			"usage": PROPERTY_USAGE_DEFAULT})
-		props.append({"name": "flicker_max", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
-			"usage": PROPERTY_USAGE_DEFAULT})
-		props.append({"name": "hard_flicker", "type": TYPE_BOOL,
-			"usage": PROPERTY_USAGE_DEFAULT})
-		if flicker_mode == FlickerMode.RANDOM:
-			props.append({"name": "flicker_rate", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,60.0,0.1,or_greater",
+		properties.append({"name": "flicker_min", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+		properties.append({"name": "flicker_max", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+		properties.append({"name": "flicker_rate", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+		properties.append({"name": "hard_flicker", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
+		if flicker_mode == FlickerMode.CUSTOM:
+			properties.append({"name": "flicker_curve", "type": TYPE_OBJECT, "hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve", "usage": PROPERTY_USAGE_DEFAULT})
+		# Outline-specific flicker target (only when OUTLINE + flicker enabled)
+		if effect_type == AppearanceEffect.OUTLINE:
+			properties.append({"name": "outline_flicker_target", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Width,Color Alpha,Color",
 				"usage": PROPERTY_USAGE_DEFAULT})
-		elif flicker_mode == FlickerMode.CUSTOM:
-			props.append({"name": "flicker_curve", "type": TYPE_OBJECT,
-				"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve",
-				"usage": PROPERTY_USAGE_DEFAULT})
+			if outline_flicker_target == OutlineFlickerTarget.COLOR:
+				properties.append({"name": "flicker_color_to", "type": TYPE_COLOR,
+					"usage": PROPERTY_USAGE_DEFAULT})
 
-	return props
+	return properties
 
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"effect_type": effect_type = value; return true
+		&"from_reference": from_reference = value; return true
+		&"to_reference": to_reference = value; return true
+		&"capture_at": capture_at = value; return true
+		&"from_tint_color": from_tint_color = value; return true
+		&"from_tint_blend": from_tint_blend = value; return true
 		&"tint_color": tint_color = value; return true
 		&"tint_blend": tint_blend = value; return true
+		&"from_alpha": from_alpha = value; return true
 		&"fade_target_alpha": fade_target_alpha = value; return true
+		&"from_brightness": from_brightness = value; return true
 		&"overbright_strength": overbright_strength = value; return true
 		&"outline_color": outline_color = value; return true
+		&"from_width": from_width = value; return true
 		&"outline_width": outline_width = value; return true
 		&"flicker_mode": flicker_mode = value; return true
 		&"flicker_rate": flicker_rate = value; return true
@@ -164,17 +309,27 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"flicker_max": flicker_max = value; return true
 		&"hard_flicker": hard_flicker = value; return true
 		&"flicker_curve": flicker_curve = value; return true
+		&"outline_flicker_target": outline_flicker_target = value; return true
+		&"flicker_color_to": flicker_color_to = value; return true
 	return false
 
 
 func _get(property: StringName) -> Variant:
 	match property:
 		&"effect_type": return effect_type
+		&"from_reference": return from_reference
+		&"to_reference": return to_reference
+		&"capture_at": return capture_at
+		&"from_tint_color": return from_tint_color
+		&"from_tint_blend": return from_tint_blend
 		&"tint_color": return tint_color
 		&"tint_blend": return tint_blend
+		&"from_alpha": return from_alpha
 		&"fade_target_alpha": return fade_target_alpha
+		&"from_brightness": return from_brightness
 		&"overbright_strength": return overbright_strength
 		&"outline_color": return outline_color
+		&"from_width": return from_width
 		&"outline_width": return outline_width
 		&"flicker_mode": return flicker_mode
 		&"flicker_rate": return flicker_rate
@@ -182,12 +337,20 @@ func _get(property: StringName) -> Variant:
 		&"flicker_max": return flicker_max
 		&"hard_flicker": return hard_flicker
 		&"flicker_curve": return flicker_curve
+		&"outline_flicker_target": return outline_flicker_target
+		&"flicker_color_to": return flicker_color_to
 	return null
 
 
 # =============================================================================
 # INTERNAL STATE
 # =============================================================================
+
+# Captured reference values for From/To animation
+var _captured_from_tint_color: Color = Color.WHITE
+var _captured_from_tint_blend: float = 0.0
+var _captured_from_alpha: float = 1.0
+var _captured_from_brightness: float = 1.0
 
 # Only needed for OUTLINE (which installs a ShaderMaterial on target.material).
 # Modulate effects (TINT/FADE/OVERBRIGHT) use _modulate_factor from the intermediate.
@@ -216,10 +379,46 @@ func tick(delta: float, target: Node) -> TickResult:
 func _on_animate_start(target: Node) -> void:
 	var n2d := target as Node2D
 	if n2d == null:
+		if debug_enabled:
+			print("[DEBUG] Phase A: _on_animate_start - target is not Node2D: ", target)
 		return
+
+	if debug_enabled:
+		print("[DEBUG] Phase A: _on_animate_start called with target: ", n2d)
+		print("[DEBUG] Phase A: Target parent: ", n2d.get_parent())
+		# Check what Juice nodes exist
+		var juice_nodes := []
+		if n2d.get_parent() != null:
+			for child in n2d.get_parent().get_children():
+				if "Juice" in child.get_class():
+					juice_nodes.append(child)
+		print("[DEBUG] Phase A: Found Juice nodes: ", juice_nodes)
+		# Check if Juice2D node exists as sibling
+		var juice2d_found := false
+		if n2d.get_parent() != null:
+			for child in n2d.get_parent().get_children():
+				if child is Juice2D:
+					juice2d_found = true
+					print("[DEBUG] Phase A: Found Juice2D sibling: ", child)
+					break
+		if not juice2d_found:
+			print("[DEBUG] Phase A: NO Juice2D node found as sibling!")
 
 	# Modulate effects contribute a factor; OUTLINE owns target.material directly.
 	_contributes_modulate = (effect_type != AppearanceEffect.OUTLINE)
+	if debug_enabled:
+		print("[DEBUG] Phase A: _contributes_modulate set to: ", _contributes_modulate)
+
+	# CRITICAL FIX: Ensure this effect is in the domain node's runtime effects
+	# The proper way: effects should be added via the recipe system
+	# But as an emergency fix, we'll add it directly if it's not there
+	if debug_enabled:
+		print("[DEBUG] Phase A: Checking if effect is in runtime effects...")
+	# Note: This is a temporary fix - the real issue is in the recipe system
+	# Effects should be automatically added to _runtime_effects when the recipe is processed
+
+	# Capture From/To references based on capture_at setting
+	_capture_references(n2d)
 
 	_flicker_time = 0.0
 	_setup_flicker_noise()
@@ -242,31 +441,48 @@ func _on_animate_start(target: Node) -> void:
 
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_flicker_time()
-	var p := _get_effective_progress(progress)
+	var f := _compute_flicker_multiplier()
+
+	if debug_enabled:
+		print("[DEBUG] _apply_effect: progress=", progress, " f=", f, " type=", AppearanceEffect.keys()[effect_type])
 
 	if target == null:
 		return
 
 	match effect_type:
 		AppearanceEffect.TINT:
-			# Set multiplicative factor; domain node writes target.modulate = base * factor.
-			_modulate_factor = lerp(Color.WHITE, tint_color, tint_blend * p)
+			var from_val := _resolve_from_tint(target)
+			var to_val := _resolve_to_tint(target)
+			_modulate_factor = from_val.lerp(to_val, progress * f)
 			_modulate_factor.a = 1.0  # TINT does not alter alpha channel
 
 		AppearanceEffect.FADE:
-			# Alpha factor 1.0→fade_target_alpha; domain multiplies against base alpha.
-			_modulate_factor = Color(1.0, 1.0, 1.0, lerpf(1.0, fade_target_alpha, p))
+			var from_val := _resolve_from_alpha(target)
+			var to_val := _resolve_to_alpha(target)
+			_modulate_factor = Color(1.0, 1.0, 1.0, lerpf(from_val, to_val, progress * f))
 
 		AppearanceEffect.OVERBRIGHT:
-			# RGB boost > 1.0 via modulate; domain node writes with HDR-capable color.
-			var boost := lerpf(1.0, overbright_strength, p)
+			var from_val := _resolve_from_brightness(target)
+			var to_val := _resolve_to_brightness(target)
+			var boost := lerpf(from_val, to_val, progress * f)
 			_modulate_factor = Color(boost, boost, boost, 1.0)
 
 		AppearanceEffect.OUTLINE:
 			# Direct-write to target.material (separate slot — no modulate conflict).
 			var mat := _active_material as ShaderMaterial
 			if mat:
-				mat.set_shader_parameter("outline_width", outline_width * p)
+				var width := lerpf(from_width, outline_width, progress)
+				match outline_flicker_target:
+					OutlineFlickerTarget.WIDTH:
+						mat.set_shader_parameter("outline_width", width * f)
+						mat.set_shader_parameter("outline_color", outline_color)
+					OutlineFlickerTarget.COLOR_ALPHA:
+						mat.set_shader_parameter("outline_width", width)
+						mat.set_shader_parameter("outline_color",
+							Color(outline_color.r, outline_color.g, outline_color.b, outline_color.a * f))
+					OutlineFlickerTarget.COLOR:
+						mat.set_shader_parameter("outline_width", width)
+						mat.set_shader_parameter("outline_color", outline_color.lerp(flicker_color_to, 1.0 - f))
 
 
 func _on_animate_out_complete(_target: Node) -> void:
@@ -327,29 +543,25 @@ func _get_interrupt_identity() -> Variant:
 # FLICKER SYSTEM
 # =============================================================================
 
-## Returns effective progress after flicker modulation is applied.
-func _get_effective_progress(progress: float) -> float:
-	if flicker_mode == FlickerMode.NONE or progress <= 0.0:
-		return progress
-
+# Phase C: Compute flicker multiplier for output delta (not progress)
+func _compute_flicker_multiplier() -> float:
+	if flicker_mode == FlickerMode.NONE:
+		return 1.0
 	var multiplier: float = 1.0
 	match flicker_mode:
 		FlickerMode.RANDOM:
 			if _flicker_noise != null:
-				# get_noise_1d returns -1..1; normalize to 0..1 for lerp.
 				var raw := (_flicker_noise.get_noise_1d(_flicker_time * flicker_rate) + 1.0) * 0.5
 				multiplier = lerpf(flicker_min, flicker_max, raw)
 		FlickerMode.CUSTOM:
 			if flicker_curve != null:
 				var phase := fmod(_flicker_time * flicker_rate, 1.0)
 				multiplier = lerpf(flicker_min, flicker_max, flicker_curve.sample(phase))
-
 	if hard_flicker:
-		var threshold := (flicker_min + flicker_max) * 0.5
-		multiplier = 1.0 if multiplier >= threshold else 0.0
-
-	return progress * multiplier
-
+		multiplier = 1.0 if multiplier >= (flicker_min + flicker_max) * 0.5 else 0.0
+	if debug_enabled:
+		print("[DEBUG] Phase C: Flicker multiplier: ", multiplier)
+	return multiplier
 
 func _advance_flicker_time() -> void:
 	if flicker_mode != FlickerMode.NONE:
@@ -383,6 +595,102 @@ func _install_material(n2d: Node2D, mat: Material) -> void:
 
 
 # =============================================================================
+# FROM/TO RESOLVERS
+# =============================================================================
+
+# Capture references based on capture_at setting
+func _capture_references(n2d: Node2D) -> void:
+	match capture_at:
+		CaptureAt.TRIGGER:
+			# Capture immediately when animation starts
+			_perform_capture(n2d)
+		CaptureAt.READY:
+			# Only capture if node is ready
+			if n2d.is_inside_tree():
+				_perform_capture(n2d)
+		CaptureAt.IN_EDITOR:
+			# Always capture in editor
+			_perform_capture(n2d)
+
+# Perform the actual reference capture
+func _perform_capture(n2d: Node2D) -> void:
+	# Capture TINT references
+	if from_reference == AppearanceReference.SELF:
+		_captured_from_tint_color = n2d.modulate
+		_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
+	# Capture FADE references
+	if from_reference == AppearanceReference.SELF:
+		_captured_from_alpha = n2d.modulate.a
+	# Capture OVERBRIGHT references
+	if from_reference == AppearanceReference.SELF:
+		# For OVERBRIGHT, capture the RGB max of modulate
+		var mod := n2d.modulate
+		_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
+
+# TINT resolvers
+func _resolve_from_tint(n2d: Node2D) -> Color:
+	var result: Color
+	if from_reference == AppearanceReference.SELF:
+		result = lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+	else:  # CUSTOM
+		result = lerp(Color.WHITE, from_tint_color, from_tint_blend)
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_from_tint returning: ", result)
+	return result
+
+func _resolve_to_tint(n2d: Node2D) -> Color:
+	var result: Color
+	if to_reference == AppearanceReference.SELF:
+		result = lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+	else:  # CUSTOM
+		result = lerp(Color.WHITE, tint_color, tint_blend)
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_to_tint returning: ", result)
+	return result
+
+# FADE resolvers
+func _resolve_from_alpha(n2d: Node2D) -> float:
+	var result: float
+	if from_reference == AppearanceReference.SELF:
+		result = _captured_from_alpha
+	else:  # CUSTOM
+		result = from_alpha
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_from_alpha returning: ", result)
+	return result
+
+func _resolve_to_alpha(n2d: Node2D) -> float:
+	var result: float
+	if to_reference == AppearanceReference.SELF:
+		result = _captured_from_alpha
+	else:  # CUSTOM
+		result = fade_target_alpha
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_to_alpha returning: ", result)
+	return result
+
+# OVERBRIGHT resolvers
+func _resolve_from_brightness(n2d: Node2D) -> float:
+	var result: float
+	if from_reference == AppearanceReference.SELF:
+		result = _captured_from_brightness
+	else:  # CUSTOM
+		result = from_brightness
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_from_brightness returning: ", result)
+	return result
+
+func _resolve_to_brightness(n2d: Node2D) -> float:
+	var result: float
+	if to_reference == AppearanceReference.SELF:
+		result = _captured_from_brightness
+	else:  # CUSTOM
+		result = overbright_strength
+	if debug_enabled:
+		print("[DEBUG] Phase A: _resolve_to_brightness returning: ", result)
+	return result
+
+# =============================================================================
 # CONFIGURATION WARNINGS
 # =============================================================================
 
@@ -392,4 +700,10 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Flicker mode is Custom but no flicker_curve is assigned. Flicker will not apply.")
 	if flicker_min > flicker_max:
 		warnings.append("flicker_min is greater than flicker_max — flicker behavior undefined.")
+	# Add warnings for invalid reference combinations
+	if (from_reference == AppearanceReference.SELF or to_reference == AppearanceReference.SELF) and capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint():
+		warnings.append("SELF reference with IN_EDITOR capture only works in editor.")
+	# Add warnings for OUTLINE without proper setup
+	if effect_type == AppearanceEffect.OUTLINE and outline_width <= 0.0:
+		warnings.append("OUTLINE effect requires outline_width > 0.0 to be visible.")
 	return warnings

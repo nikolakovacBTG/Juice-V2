@@ -59,6 +59,28 @@ var _appearance_natural_albedo: Color = Color.WHITE
 var _appearance_natural_alpha: float = 1.0
 var _appearance_setup: bool = false
 
+# Captured reference values for From/To animation
+var _captured_from_tint_color: Color = Color.WHITE
+var _captured_from_tint_blend: float = 0.0
+var _captured_from_alpha: float = 1.0
+var _captured_from_brightness: float = 1.0
+
+# Only needed for OUTLINE (which installs a ShaderMaterial on target.material).
+# Modulate effects (TINT/FADE/OVERBRIGHT) use _modulate_factor from the intermediate.
+var _natural_material: Material = null
+var _has_natural: bool = false
+var _active_material: Material = null
+var _tick_delta: float = 0.0
+var _flicker_time: float = 0.0
+var _flicker_noise: FastNoiseLite = null
+
+# 3D OUTLINE support
+var _outline_material: ShaderMaterial = null
+
+# Phase B: Per-node contribution tracking for sibling stacking
+var _own_albedo_contribution: Color = Color.WHITE
+var _own_alpha_contribution: float = 1.0
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -242,14 +264,90 @@ func _post_tick_write() -> void:
 		combined_alpha *= app_eff._alpha_factor
 		has_appearance = true
 
+	# Handle 3D OUTLINE via next_pass — read pre-computed values from effect
+	var outline_amount := 0.0
+	var outline_color := Color.WHITE
+	var has_outline := false
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var app_eff := effect as Appearance3DJuiceEffect
+		if app_eff == null:
+			continue
+		if app_eff.effect_type == Appearance3DJuiceEffect.AppearanceEffect.OUTLINE:
+			# Effect computes amount + color (with flicker applied)
+			outline_amount = app_eff._computed_outline_amount
+			outline_color = app_eff._computed_outline_color
+			has_outline = true
+
+	# Phase B: Sibling stacking with metadata-based natural base capture
+	# Get shared natural base from target metadata (captured by first Juice3D)
+	const META_KEY := &"juice_albedo_natural"
+	var base_albedo: Color = _appearance_natural_albedo
+	var base_alpha: float = _appearance_natural_alpha
+	var mesh_inst := _find_mesh_on(_target_node)
+	if mesh_inst != null and not mesh_inst.has_meta(META_KEY):
+		# First Juice3D node - capture natural base and store in metadata
+		mesh_inst.set_meta(META_KEY, {
+			"albedo": _appearance_natural_albedo,
+			"alpha": _appearance_natural_alpha
+		})
+	elif mesh_inst != null:
+		# Subsequent Juice3D nodes - read natural base from metadata
+		var meta = mesh_inst.get_meta(META_KEY)
+		base_albedo = meta.get("albedo", Color.WHITE)
+		base_alpha = meta.get("alpha", 1.0)
+
+	# Scan all sibling Juice3D nodes on the same target, multiply contributions.
+	# In STACK mode, Juice nodes are children of the target — scan target's children.
+	var final_albedo := Color.WHITE
+	var final_alpha := 1.0
+	for child in _target_node.get_children():
+		var j := child as Juice3D
+		if j == null or j == self:
+			continue
+		if j._own_albedo_contribution != Color.WHITE or j._own_alpha_contribution != 1.0:
+			final_albedo.r *= j._own_albedo_contribution.r
+			final_albedo.g *= j._own_albedo_contribution.g
+			final_albedo.b *= j._own_albedo_contribution.b
+			final_alpha *= j._own_alpha_contribution
+
+	# Write once: base * own_contribution * product of all sibling contributions
+	if _ensure_appearance_working_mat():
+		_appearance_working_mat.albedo_color = Color(
+			base_albedo.r * combined_albedo.r * final_albedo.r,
+			base_albedo.g * combined_albedo.g * final_albedo.g,
+			base_albedo.b * combined_albedo.b * final_albedo.b,
+			base_alpha * combined_alpha * final_alpha)
+		# Handle 3D OUTLINE next_pass
+		if has_outline and _ensure_outline_material():
+			_outline_material.set_shader_parameter("amount", outline_amount)
+			_outline_material.set_shader_parameter("outline_color", outline_color)
+			_appearance_working_mat.next_pass = _outline_material
+		else:
+			_appearance_working_mat.next_pass = null
+
+	# Update own contribution tracking
 	if has_appearance:
-		if _ensure_appearance_working_mat():
-			_appearance_working_mat.albedo_color = Color(
-				_appearance_natural_albedo.r * combined_albedo.r,
-				_appearance_natural_albedo.g * combined_albedo.g,
-				_appearance_natural_albedo.b * combined_albedo.b,
-				_appearance_natural_alpha * combined_alpha)
-	elif _appearance_setup:
+		_own_albedo_contribution = combined_albedo
+		_own_alpha_contribution = combined_alpha
+	else:
+		_own_albedo_contribution = Color.WHITE
+		_own_alpha_contribution = 1.0
+
+	# Check if all siblings are at identity (no active effects)
+	var all_siblings_idle := true
+	for child in _target_node.get_children():
+		var j := child as Juice3D
+		if j == null or j == self:
+			continue
+		if j._own_albedo_contribution != Color.WHITE or j._own_alpha_contribution != 1.0:
+			all_siblings_idle = false
+			break
+
+	# If all siblings idle and we're idle, remove metadata and restore natural state
+	if all_siblings_idle and not has_appearance and mesh_inst != null and mesh_inst.has_meta(META_KEY):
+		mesh_inst.remove_meta(META_KEY)
 		_clear_appearance_working_mat()
 
 
@@ -263,7 +361,7 @@ func _temporarily_undo_visual() -> void:
 	n3d.scale -= _total_scale_contribution
 	# Restore natural material so editor save doesn't serialise working material
 	if _appearance_setup and _appearance_mesh != null:
-		_appearance_mesh.surface_override_material = _appearance_natural_mat
+		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
 
 
 ## Re-add contributions after temporary undo.
@@ -276,7 +374,7 @@ func _temporarily_reapply_visual() -> void:
 	n3d.scale += _total_scale_contribution
 	# Re-install working material and recompute albedo
 	if _appearance_setup and _appearance_mesh != null and _appearance_working_mat != null:
-		_appearance_mesh.surface_override_material = _appearance_working_mat
+		_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
 	_post_tick_write()
 
 
@@ -309,7 +407,7 @@ func _ensure_appearance_working_mat() -> bool:
 	if std_mat == null:
 		return false
 	_appearance_working_mat = std_mat.duplicate() as StandardMaterial3D
-	_appearance_mesh.surface_override_material = _appearance_working_mat
+	_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
 	_appearance_natural_albedo = std_mat.albedo_color
 	_appearance_natural_alpha = std_mat.albedo_color.a
 	_appearance_setup = true
@@ -319,9 +417,27 @@ func _ensure_appearance_working_mat() -> bool:
 ## Restore natural material and clear working material reference.
 func _clear_appearance_working_mat() -> void:
 	if _appearance_mesh != null:
-		_appearance_mesh.surface_override_material = _appearance_natural_mat
+		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
 	_appearance_working_mat = null
 	_appearance_setup = false
+	# Clear outline material
+	if _outline_material != null:
+		_outline_material = null
+
+
+## Create and manage 3D outline material via next_pass
+func _ensure_outline_material() -> bool:
+	if _outline_material != null:
+		return true
+	if _appearance_mesh == null:
+		return false
+	# Create outline shader material
+	var shader := load("res://addons/Juice_V1/Shaders/overlay_3d.gdshader") as Shader
+	if shader == null:
+		return false
+	_outline_material = ShaderMaterial.new()
+	_outline_material.shader = shader
+	return true
 
 
 # =============================================================================

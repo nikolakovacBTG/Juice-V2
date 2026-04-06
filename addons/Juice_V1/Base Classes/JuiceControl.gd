@@ -61,6 +61,9 @@ var _has_modulate_base: bool = false
 # This flag is kept for potential future Container-specific edge cases.
 var _in_container: bool = false
 
+# Phase B: Per-node contribution tracking for sibling stacking
+var _own_modulate_contribution: Color = Color.WHITE
+
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
@@ -250,21 +253,68 @@ func _post_tick_write() -> void:
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
-		var app_eff := effect as JuiceControlAppearanceEffect
-		if app_eff == null or not app_eff._contributes_modulate:
+		var app_effect := effect as JuiceControlAppearanceEffect
+		if app_effect == null or not app_effect._contributes_modulate:
 			continue
-		combined_modulate.r *= app_eff._modulate_factor.r
-		combined_modulate.g *= app_eff._modulate_factor.g
-		combined_modulate.b *= app_eff._modulate_factor.b
-		combined_modulate.a *= app_eff._modulate_factor.a
+		combined_modulate.r *= app_effect._modulate_factor.r
+		combined_modulate.g *= app_effect._modulate_factor.g
+		combined_modulate.b *= app_effect._modulate_factor.b
+		combined_modulate.a *= app_effect._modulate_factor.a
 		has_appearance = true
 
-	if has_appearance and _has_modulate_base:
-		ctrl.modulate = Color(
-			_base_modulate.r * combined_modulate.r,
-			_base_modulate.g * combined_modulate.g,
-			_base_modulate.b * combined_modulate.b,
-			_base_modulate.a * combined_modulate.a)
+	# Phase B: Sibling stacking with metadata-based natural base capture
+	# JuiceControl writes to self_modulate, so base capture uses self_modulate.
+	const META_KEY := &"juice_modulate_natural"
+	var base_color: Color = ctrl.self_modulate
+	if not ctrl.has_meta(META_KEY):
+		# First JuiceControl node — capture natural self_modulate and store in metadata
+		ctrl.set_meta(META_KEY, ctrl.self_modulate)
+	else:
+		# Subsequent JuiceControl nodes — read natural base from metadata
+		base_color = ctrl.get_meta(META_KEY)
+
+	# Scan all sibling JuiceControl nodes on the same target, multiply contributions.
+	# In STACK mode, Juice nodes are children of the target — scan target's children.
+	var final_factor := Color.WHITE
+	for child in ctrl.get_children():
+		var j := child as JuiceControl
+		if j == null or j == self:
+			continue
+		var sibling_contrib: Color = Color.WHITE
+		if j._own_modulate_contribution != Color.WHITE:
+			sibling_contrib = j._own_modulate_contribution
+		final_factor.r *= sibling_contrib.r
+		final_factor.g *= sibling_contrib.g
+		final_factor.b *= sibling_contrib.b
+		final_factor.a *= sibling_contrib.a
+
+	# Write once: base * own_contribution * product of all sibling contributions
+	ctrl.self_modulate = Color(
+		base_color.r * combined_modulate.r * final_factor.r,
+		base_color.g * combined_modulate.g * final_factor.g,
+		base_color.b * combined_modulate.b * final_factor.b,
+		base_color.a * combined_modulate.a * final_factor.a)
+
+	# Update own contribution tracking
+	if has_appearance:
+		_own_modulate_contribution = combined_modulate
+	else:
+		_own_modulate_contribution = Color.WHITE
+
+	# Check if all siblings are at identity (no active effects)
+	var all_siblings_idle := true
+	for child in ctrl.get_children():
+		var j := child as JuiceControl
+		if j == null or j == self:
+			continue
+		if j._own_modulate_contribution != Color.WHITE:
+			all_siblings_idle = false
+			break
+
+	# If all siblings idle and we're idle, remove metadata and restore natural state
+	if all_siblings_idle and not has_appearance and ctrl.has_meta(META_KEY):
+		ctrl.remove_meta(META_KEY)
+		ctrl.self_modulate = base_color
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
@@ -276,8 +326,8 @@ func _temporarily_undo_visual() -> void:
 	ctrl.position -= _total_pos_contribution
 	ctrl.rotation -= _total_rot_contribution
 	ctrl.scale -= _total_scale_contribution
-	if _has_modulate_base:
-		ctrl.modulate = _base_modulate
+	# Phase B: Set own contribution to identity so sibling rescan excludes us
+	_own_modulate_contribution = Color.WHITE
 
 
 ## Re-add contributions after temporary undo.

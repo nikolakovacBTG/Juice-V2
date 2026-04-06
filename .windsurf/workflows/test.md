@@ -1,5 +1,5 @@
 ---
-description: Run the Juice V1 automated test suite and report results
+description: Run the Juice V1 automated test suite (Unit & Realistic) and report results
 ---
 
 You are in TEST MODE.
@@ -196,10 +196,8 @@ For REAL BUG failures, prepare a handoff:
 
 When asked to add tests (outside /test mode):
 
-1. Create `tests/suites/TestXxx.gd` extending `"res://tests/JuiceTestSuite.gd"`
-2. Implement `get_suite_name()` and `get_test_methods()`
-3. Register in `tests/JuiceTestRunner.gd` → `_register_suites()`
-4. Run full suite to confirm no regressions
+1. **Unit Tests**: Use `@unit-test-patterns` for isolated effect behavior.
+2. **Realistic Tests**: Use `/realistic-test` for complex UI scenarios, containers, stacking, and grids.
 
 ---
 
