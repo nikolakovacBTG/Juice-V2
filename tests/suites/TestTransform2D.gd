@@ -326,7 +326,7 @@ func test_autoconnect_area2d_body_entered() -> void:
 
 
 func test_autoconnect_area2d_hover() -> void:
-	# Area2D with ON_HOVER_START: mouse_entered triggers animation
+	# Area2D with ON_MOUSE_ENTERED: mouse_entered triggers animation
 	var area := Area2D.new()
 	area.position = Vector2.ZERO
 	_runner.add_child(area)
@@ -341,7 +341,7 @@ func test_autoconnect_area2d_hover() -> void:
 	effect.duration_in = 0.15
 
 	var juice := Juice2D.new()
-	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
 	juice.auto_connect_parent = true
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	var recipe := Juice2DRecipe.new()
@@ -355,7 +355,48 @@ func test_autoconnect_area2d_hover() -> void:
 	await wait_seconds(0.3)
 
 	assert_true(area.position.x > 50.0,
-		"Auto-connect Area2D ON_HOVER_START: mouse_entered should trigger animation (pos.x=%.1f)" % area.position.x)
+		"Auto-connect Area2D ON_MOUSE_ENTERED: mouse_entered should trigger animation (pos.x=%.1f)" % area.position.x)
+
+	await cleanup(area)
+
+
+func test_toggle_polarity_hover_2d() -> void:
+	# ON_MOUSE_ENTERED + Toggle on Area2D: hover enter fires animate_in, hover exit fires animate_out.
+	var area := Area2D.new()
+	area.position = Vector2.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform2DJuiceEffect.new()
+	effect.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(80, 0)
+	effect.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	area.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_true(area.position.x > 50.0,
+		"Toggle polarity hover 2D: mouse_entered should animate_in (pos.x=%.1f)" % area.position.x)
+
+	area.emit_signal("mouse_exited")
+	await wait_seconds(0.3)
+
+	assert_true(area.position.x < 20.0,
+		"Toggle polarity hover 2D: mouse_exited should animate_out back toward origin (pos.x=%.1f)" % area.position.x)
 
 	await cleanup(area)
 

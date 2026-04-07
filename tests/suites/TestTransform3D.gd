@@ -319,7 +319,7 @@ func test_autoconnect_area3d_body_entered() -> void:
 
 
 func test_autoconnect_area3d_hover() -> void:
-	# Area3D with ON_HOVER_START: mouse_entered triggers animation
+	# Area3D with ON_MOUSE_ENTERED: mouse_entered triggers animation
 	var area := Area3D.new()
 	area.position = Vector3.ZERO
 	_runner.add_child(area)
@@ -334,7 +334,7 @@ func test_autoconnect_area3d_hover() -> void:
 	effect.duration_in = 0.15
 
 	var juice := Juice3D.new()
-	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
 	juice.auto_connect_parent = true
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	var recipe := Juice3DRecipe.new()
@@ -348,6 +348,47 @@ func test_autoconnect_area3d_hover() -> void:
 	await wait_seconds(0.3)
 
 	assert_greater(area.position.x, 3.0,
-		"Auto-connect Area3D ON_HOVER_START: mouse_entered should trigger animation (pos.x=%.2f)" % area.position.x)
+		"Auto-connect Area3D ON_MOUSE_ENTERED: mouse_entered should trigger animation (pos.x=%.2f)" % area.position.x)
+
+	await cleanup(area)
+
+
+func test_toggle_polarity_hover_3d() -> void:
+	# ON_MOUSE_ENTERED + Toggle on Area3D: hover enter fires animate_in, hover exit fires animate_out.
+	var area := Area3D.new()
+	area.position = Vector3.ZERO
+	_runner.add_child(area)
+
+	var effect := Transform3DJuiceEffect.new()
+	effect.transform_target = Transform3DJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = Transform3DJuiceEffect.TransformReference.SELF
+	effect.to_reference = Transform3DJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector3(5, 0, 0)
+	effect.to_position_in = Transform3DJuiceEffect.PositionIn3D.WORLD_UNITS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := Juice3D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
+	var recipe := Juice3DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	area.add_child(juice)
+	await wait_frames(3)
+
+	area.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_greater(area.position.x, 3.0,
+		"Toggle polarity hover 3D: mouse_entered should animate_in (pos.x=%.2f)" % area.position.x)
+
+	area.emit_signal("mouse_exited")
+	await wait_seconds(0.3)
+
+	assert_true(area.position.x < 2.0,
+		"Toggle polarity hover 3D: mouse_exited should animate_out back toward origin (pos.x=%.2f)" % area.position.x)
 
 	await cleanup(area)

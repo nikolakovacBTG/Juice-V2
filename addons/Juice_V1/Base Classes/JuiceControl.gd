@@ -22,7 +22,7 @@ extends JuiceBase
 # =============================================================================
 
 ## Hint string for JuiceControl: all triggers EXCEPT body/area (which are Area-only).
-const _CONTROL_TRIGGER_HINT := "On Press:0,On Release:1,On Hover Start:2,On Hover End:3,On Focus:4,On Unfocus:5,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12"
+const _CONTROL_TRIGGER_HINT := "On Press (toggleable):0,On Release:1,On Mouse Entered (toggleable):2,On Mouse Exited:3,On Focus (toggleable):4,On Unfocus:5,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12"
 
 func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
@@ -123,17 +123,22 @@ func _auto_connect_domain_signals() -> void:
 func _connect_button_signals(button: BaseButton) -> void:
 	match trigger_on:
 		TriggerEvent.ON_PRESS:
-			if not button.button_down.is_connected(_on_trigger_momentary):
-				button.button_down.connect(_on_trigger_momentary)
+			# Wire both edges as polarity pair so Toggle can use press=in, release=out.
+			# PLAY_IN_ONLY/PLAY_IN_AND_OUT only respond to polarity_on (press edge),
+			# PLAY_OUT_ONLY responds to polarity_off (release edge) — all handled in _on_trigger_polarity.
+			if not button.button_down.is_connected(_on_trigger_polarity_on):
+				button.button_down.connect(_on_trigger_polarity_on)
+			if not button.button_up.is_connected(_on_trigger_polarity_off):
+				button.button_up.connect(_on_trigger_polarity_off)
 		TriggerEvent.ON_RELEASE:
 			if not button.button_up.is_connected(_on_trigger_momentary):
 				button.button_up.connect(_on_trigger_momentary)
-		TriggerEvent.ON_HOVER_START:
+		TriggerEvent.ON_MOUSE_ENTERED:
 			if not button.mouse_entered.is_connected(_on_trigger_polarity_on):
 				button.mouse_entered.connect(_on_trigger_polarity_on)
 			if not button.mouse_exited.is_connected(_on_trigger_polarity_off):
 				button.mouse_exited.connect(_on_trigger_polarity_off)
-		TriggerEvent.ON_HOVER_END:
+		TriggerEvent.ON_MOUSE_EXITED:
 			if not button.mouse_entered.is_connected(_on_trigger_polarity_on):
 				button.mouse_entered.connect(_on_trigger_polarity_on)
 			if not button.mouse_exited.is_connected(_on_trigger_polarity_off):
@@ -156,17 +161,18 @@ func _connect_button_signals(button: BaseButton) -> void:
 func _connect_control_signals(control: Control) -> void:
 	match trigger_on:
 		TriggerEvent.ON_PRESS:
-			if not control.gui_input.is_connected(_on_control_gui_input_press):
-				control.gui_input.connect(_on_control_gui_input_press)
+			# Polarity handler fires polarity_on on mouse-down, polarity_off on mouse-up.
+			if not control.gui_input.is_connected(_on_control_gui_input_press_polarity):
+				control.gui_input.connect(_on_control_gui_input_press_polarity)
 		TriggerEvent.ON_RELEASE:
 			if not control.gui_input.is_connected(_on_control_gui_input_release):
 				control.gui_input.connect(_on_control_gui_input_release)
-		TriggerEvent.ON_HOVER_START:
+		TriggerEvent.ON_MOUSE_ENTERED:
 			if not control.mouse_entered.is_connected(_on_trigger_polarity_on):
 				control.mouse_entered.connect(_on_trigger_polarity_on)
 			if not control.mouse_exited.is_connected(_on_trigger_polarity_off):
 				control.mouse_exited.connect(_on_trigger_polarity_off)
-		TriggerEvent.ON_HOVER_END:
+		TriggerEvent.ON_MOUSE_EXITED:
 			if not control.mouse_entered.is_connected(_on_trigger_polarity_on):
 				control.mouse_entered.connect(_on_trigger_polarity_on)
 			if not control.mouse_exited.is_connected(_on_trigger_polarity_off):

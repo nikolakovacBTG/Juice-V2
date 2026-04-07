@@ -49,7 +49,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://d0qrq7m3dhui7"
 
-[sub_resource type="Resource" id="Resource_0iv50"]
+[sub_resource type="Resource" id="Resource_6f2mv"]
 script = ExtResource("5_6f2mv")
 effect_type = 0
 trigger_behaviour = 1
@@ -58,8 +58,9 @@ crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
 from_reference = 1
+from_capture_at = 0
 to_reference = 1
-capture_at = 0
+to_capture_at = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -71,7 +72,7 @@ metadata/_custom_type_script = "uid://cytxx5icivdga"
 
 [sub_resource type="Resource" id="Resource_uaa1d"]
 script = ExtResource("5_nfb0a")
-effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx"), SubResource("Resource_0iv50")])
+effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx"), SubResource("Resource_6f2mv")])
 metadata/_custom_type_script = "uid://cnyhp6eiv4xb1"
 
 [node name="3dDemo" type="Node3D" unique_id=508674959]

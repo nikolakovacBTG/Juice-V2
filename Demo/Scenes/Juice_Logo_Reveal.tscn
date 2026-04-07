@@ -26,7 +26,10 @@
 [ext_resource type="Shader" uid="uid://c8c232hotieiq" path="res://addons/Juice_V1/Shaders/grayscale_2d.gdshader" id="23_xo1bw"]
 [ext_resource type="Shader" uid="uid://1dnkdar11gsg" path="res://addons/Juice_V1/Shaders/dissolve_2d.gdshader" id="24_avmwf"]
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="25_7x4o0"]
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="26_1d2vn"]
 [ext_resource type="Shader" uid="uid://b5phtplqic1ua" path="res://addons/Juice_V1/Shaders/overlay_2d.gdshader" id="26_rsee4"]
+[ext_resource type="Script" uid="uid://rht7dgq1jthh" path="res://addons/Juice_V1/Control/AppearanceControlJuiceEffect.gd" id="27_db6iq"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="28_3xlpj"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_iyulo"]
 radius = 24.0
@@ -41,15 +44,11 @@ trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-debug_enabled = false
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://cxgggva5j765r"
@@ -62,12 +61,15 @@ metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 [sub_resource type="Resource" id="Resource_3xlpj"]
 script = ExtResource("20_iyulo")
 effect_type = 1
-fade_target_alpha = 0.0
 trigger_behaviour = 3
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+fade_target_alpha = 0.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -75,6 +77,7 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -87,12 +90,15 @@ metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 [sub_resource type="Resource" id="Resource_k6hfx"]
 script = ExtResource("20_iyulo")
 effect_type = 2
-overbright_strength = 2.0
 trigger_behaviour = 3
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+overbright_strength = 2.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -100,6 +106,7 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -112,13 +119,15 @@ metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 [sub_resource type="Resource" id="Resource_fwe5f"]
 script = ExtResource("20_iyulo")
 effect_type = 3
-outline_color = Color(1, 1, 1, 1)
-outline_width = 2.0
 trigger_behaviour = 3
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_width = 0.0
+to_reference = 0
+outline_color = Color(1, 1, 1, 1)
+outline_width = 2.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -126,6 +135,7 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -143,6 +153,9 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -150,6 +163,7 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -167,6 +181,9 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -174,6 +191,7 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -186,16 +204,20 @@ metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 [sub_resource type="Resource" id="Resource_iyulo"]
 script = ExtResource("20_iyulo")
 effect_type = 1
-fade_target_alpha = 0.0
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+fade_target_alpha = 0.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
+chain_to = Array[ExtResource("19_cnr1h")]([])
 interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
@@ -213,6 +235,35 @@ shader_parameter/blend_amount = 0.0
 shader_parameter/blend_type = 0
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_2nye2"]
+
+[sub_resource type="Resource" id="Resource_1d2vn"]
+script = ExtResource("27_db6iq")
+effect_type = 1
+trigger_behaviour = 4
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+flicker_mode = 0
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+fade_target_alpha = 0.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("19_cnr1h")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://rht7dgq1jthh"
+
+[sub_resource type="Resource" id="Resource_52l6i"]
+script = ExtResource("28_3xlpj")
+effects = Array[ExtResource("19_cnr1h")]([SubResource("Resource_1d2vn")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_hfiu5"]
 noise_type = 2
@@ -479,6 +530,13 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_icons/icon = SubResource("PlaceholderTexture2D_2nye2")
 text = "test"
+
+[node name="JuiceControl" type="Node" parent="MarginContainer/HBoxContainer/VBoxContainer3/Button" unique_id=590482968]
+script = ExtResource("26_1d2vn")
+trigger_on = 2
+trigger_behaviour = 4
+recipe = SubResource("Resource_52l6i")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Button2" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer3" unique_id=257247698]
 material = SubResource("ShaderMaterial_g1way")

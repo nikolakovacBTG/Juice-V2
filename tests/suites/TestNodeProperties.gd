@@ -1103,7 +1103,7 @@ func test_autoconnect_button_pressed() -> void:
 
 
 func test_autoconnect_control_hover() -> void:
-	# Non-button Control with ON_HOVER_START: mouse_entered triggers animation
+	# Non-button Control with ON_MOUSE_ENTERED: mouse_entered triggers animation
 	var panel := Panel.new()
 	panel.custom_minimum_size = Vector2(120, 40)
 	panel.position = Vector2.ZERO
@@ -1119,7 +1119,7 @@ func test_autoconnect_control_hover() -> void:
 	effect.duration_in = 0.15
 
 	var juice := JuiceControl.new()
-	juice.trigger_on = JuiceBase.TriggerEvent.ON_HOVER_START
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
 	juice.auto_connect_parent = true
 	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	var recipe := JuiceControlRecipe.new()
@@ -1133,7 +1133,7 @@ func test_autoconnect_control_hover() -> void:
 	await wait_seconds(0.3)
 
 	assert_true(panel.position.x > 30.0,
-		"Auto-connect ON_HOVER_START (Control): mouse_entered should trigger animation (pos.x=%.1f)" % panel.position.x)
+		"Auto-connect ON_MOUSE_ENTERED (Control): mouse_entered should trigger animation (pos.x=%.1f)" % panel.position.x)
 
 	await cleanup(panel)
 
@@ -1294,3 +1294,182 @@ func test_autoconnect_visibility_on_show() -> void:
 		"Auto-connect ON_SHOW: making visible should trigger animation (pos.x=%.1f)" % btn.position.x)
 
 	await cleanup(btn)
+
+
+func test_toggle_polarity_hover_control() -> void:
+	# ON_MOUSE_ENTERED + Toggle: hover enter fires animate_in, hover exit fires animate_out.
+	# This is the V0 "natural hover toggle" behavior restored in V1.
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	panel.emit_signal("mouse_entered")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 40.0,
+		"Toggle polarity hover: mouse_entered should animate_in (pos.x=%.1f)" % panel.position.x)
+
+	panel.emit_signal("mouse_exited")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x < 15.0,
+		"Toggle polarity hover: mouse_exited should animate_out back toward origin (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
+
+
+func test_toggle_polarity_focus_control() -> void:
+	# ON_FOCUS + Toggle: focus_entered fires animate_in, focus_exited fires animate_out.
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	panel.focus_mode = Control.FOCUS_ALL
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_FOCUS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	panel.emit_signal("focus_entered")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 40.0,
+		"Toggle polarity focus: focus_entered should animate_in (pos.x=%.1f)" % panel.position.x)
+
+	panel.emit_signal("focus_exited")
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x < 15.0,
+		"Toggle polarity focus: focus_exited should animate_out back toward origin (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
+
+
+func test_toggle_polarity_press_control() -> void:
+	# ON_PRESS + Toggle on a non-Button Control: mouse press fires animate_in, mouse release fires animate_out.
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_PRESS
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.TOGGLE
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	var press_event := InputEventMouseButton.new()
+	press_event.button_index = MOUSE_BUTTON_LEFT
+	press_event.pressed = true
+	panel.emit_signal("gui_input", press_event)
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x > 40.0,
+		"Toggle polarity press: mouse press should animate_in (pos.x=%.1f)" % panel.position.x)
+
+	var release_event := InputEventMouseButton.new()
+	release_event.button_index = MOUSE_BUTTON_LEFT
+	release_event.pressed = false
+	panel.emit_signal("gui_input", release_event)
+	await wait_seconds(0.3)
+
+	assert_true(panel.position.x < 15.0,
+		"Toggle polarity press: mouse release should animate_out back toward origin (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
+
+
+func test_play_in_and_out_single_edge_hover_control() -> void:
+	# ON_MOUSE_ENTERED + PLAY_IN_AND_OUT is a one-shot: fires on enter, plays in then auto-reverses.
+	# The mouse_exited edge is intentionally ignored — it does not re-trigger.
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(120, 40)
+	panel.position = Vector2.ZERO
+	_runner.add_child(panel)
+
+	var effect := TransformControlJuiceEffect.new()
+	effect.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	effect.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	effect.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	effect.to_position = Vector2(60, 0)
+	effect.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	effect.duration_in = 0.15
+	effect.duration_out = 0.15
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.ON_MOUSE_ENTERED
+	juice.auto_connect_parent = true
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	panel.add_child(juice)
+	await wait_frames(3)
+
+	# Enter: plays in (0.15s) then auto-reverses out (0.15s) — wait beyond both
+	panel.emit_signal("mouse_entered")
+	await wait_seconds(0.5)
+
+	assert_true(panel.position.x < 10.0,
+		"PLAY_IN_AND_OUT + hover: should auto-reverse to origin after enter (pos.x=%.1f)" % panel.position.x)
+
+	# Exit: must be ignored — position should not change
+	panel.emit_signal("mouse_exited")
+	await wait_seconds(0.2)
+
+	assert_true(panel.position.x < 10.0,
+		"PLAY_IN_AND_OUT + hover: mouse_exited must not re-trigger (pos.x=%.1f)" % panel.position.x)
+
+	await cleanup(panel)
