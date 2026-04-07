@@ -231,10 +231,20 @@ enum TriggerSource {
 ## The recipe containing effects to play.
 @export var recipe: JuiceRecipe:
 	set(value):
+		# Disconnect from the old recipe before replacing it.
+		# Without this, a recipe removed from this node would still trigger
+		# stale warning refreshes if it continues to live elsewhere.
+		if Engine.is_editor_hint() and recipe != null:
+			if recipe.changed.is_connected(_on_recipe_changed):
+				recipe.changed.disconnect(_on_recipe_changed)
 		recipe = value
 		_invalidate_runtime_effects()
 		if Engine.is_editor_hint():
 			update_configuration_warnings()
+			# Watch for any sub-resource edits (effects added, removed, modified)
+			# so warnings refresh without requiring the user to re-assign the recipe.
+			if recipe != null and not recipe.changed.is_connected(_on_recipe_changed):
+				recipe.changed.connect(_on_recipe_changed)
 
 @export_group("Debug")
 
@@ -1564,6 +1574,14 @@ static func _seq_values_approx_equal(a: Variant, b: Variant) -> bool:
 # =============================================================================
 # CONFIGURATION WARNINGS
 # =============================================================================
+
+# Called whenever the assigned recipe resource emits changed (editor only).
+# Godot's Resource.changed fires on any property edit inside the resource,
+# including array mutations and sub-resource property changes.
+func _on_recipe_changed() -> void:
+	if Engine.is_editor_hint():
+		update_configuration_warnings()
+
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings: PackedStringArray = []

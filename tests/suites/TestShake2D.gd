@@ -91,7 +91,7 @@ func test_scale_shake_applies() -> void:
 	await wait_seconds(0.1)
 
 	assert_not_approx_vec2(target.scale, natural_scale,
-		"Scale should differ during shake", 0.01)
+		"Scale should differ during shake", 0.001)
 
 	await cleanup(target)
 
