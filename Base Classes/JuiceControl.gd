@@ -332,6 +332,11 @@ func _temporarily_undo_visual() -> void:
 	ctrl.position -= _total_pos_contribution
 	ctrl.rotation -= _total_rot_contribution
 	ctrl.scale -= _total_scale_contribution
+	# Restore self_modulate to natural so Appearance effects see the true From state
+	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
+	const META_KEY := &"juice_modulate_natural"
+	if ctrl.has_meta(META_KEY):
+		ctrl.self_modulate = ctrl.get_meta(META_KEY)
 	# Phase B: Set own contribution to identity so sibling rescan excludes us
 	_own_modulate_contribution = Color.WHITE
 

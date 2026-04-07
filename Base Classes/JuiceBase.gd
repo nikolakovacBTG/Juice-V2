@@ -411,6 +411,9 @@ var _seq_expected_after_write: Dictionary = {}
 func _notification(what: int) -> void:
 	# Forward EDITOR_PRE_SAVE to effects so they can bake editor caches
 	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		# Refresh warnings at save time — catches any recipe or config change
+		# that happened since the last recipe re-assignment.
+		update_configuration_warnings()
 		# In editor, _runtime_effects is empty (_ready returns early).
 		# Use recipe.effects directly for editor cache baking.
 		var target := _target_node

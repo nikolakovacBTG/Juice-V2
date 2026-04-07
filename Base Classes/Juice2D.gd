@@ -325,6 +325,11 @@ func _temporarily_undo_visual() -> void:
 	n2d.position -= _total_pos_contribution
 	n2d.rotation -= _total_rot_contribution
 	n2d.scale -= _total_scale_contribution
+	# Restore modulate to natural so Appearance effects see the true From state
+	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
+	const META_KEY := &"juice_modulate_natural"
+	if n2d.has_meta(META_KEY):
+		n2d.modulate = n2d.get_meta(META_KEY)
 	# Phase B: Set own contribution to identity so sibling rescan excludes us
 	_own_modulate_contribution = Color.WHITE
 
