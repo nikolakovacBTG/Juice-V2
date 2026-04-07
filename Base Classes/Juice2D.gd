@@ -22,7 +22,7 @@ extends JuiceBase
 # =============================================================================
 
 ## Hint string for Juice2D: all triggers EXCEPT focus/unfocus (which are Control-only).
-const _2D_TRIGGER_HINT := "On Press:0,On Release:1,On Hover Start:2,On Hover End:3,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12,On Body Entered:13,On Body Exited:14,On Area Entered:15,On Area Exited:16"
+const _2D_TRIGGER_HINT := "On Press (toggleable):0,On Release:1,On Mouse Entered (toggleable):2,On Mouse Exited:3,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12,On Body Entered:13,On Body Exited:14,On Area Entered:15,On Area Exited:16"
 
 func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
@@ -124,8 +124,10 @@ func _auto_connect_domain_signals() -> void:
 func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 	match trigger_on:
 		TriggerEvent.ON_PRESS:
-			if not col_obj.input_event.is_connected(_on_collision_input_press_2d):
-				col_obj.input_event.connect(_on_collision_input_press_2d)
+			# Polarity handler on input_event covers mouse press=in, release=out for Toggle.
+			# Body/area entered signals stay momentary — they have no natural release counterpart here.
+			if not col_obj.input_event.is_connected(_on_collision_input_press_polarity_2d):
+				col_obj.input_event.connect(_on_collision_input_press_polarity_2d)
 			if col_obj is Area2D:
 				if not col_obj.body_entered.is_connected(_on_area_body_entered):
 					col_obj.body_entered.connect(_on_area_body_entered)
@@ -139,12 +141,12 @@ func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 					col_obj.body_exited.connect(_on_area_body_exited)
 				if not col_obj.area_exited.is_connected(_on_area_area_exited):
 					col_obj.area_exited.connect(_on_area_area_exited)
-		TriggerEvent.ON_HOVER_START:
+		TriggerEvent.ON_MOUSE_ENTERED:
 			if not col_obj.mouse_entered.is_connected(_on_trigger_polarity_on):
 				col_obj.mouse_entered.connect(_on_trigger_polarity_on)
 			if not col_obj.mouse_exited.is_connected(_on_trigger_polarity_off):
 				col_obj.mouse_exited.connect(_on_trigger_polarity_off)
-		TriggerEvent.ON_HOVER_END:
+		TriggerEvent.ON_MOUSE_EXITED:
 			if not col_obj.mouse_entered.is_connected(_on_trigger_polarity_on):
 				col_obj.mouse_entered.connect(_on_trigger_polarity_on)
 			if not col_obj.mouse_exited.is_connected(_on_trigger_polarity_off):

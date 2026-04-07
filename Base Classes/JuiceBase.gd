@@ -80,8 +80,8 @@ enum SequenceType {
 enum TriggerEvent {
 	ON_PRESS,          ## 0 - Button down, any collision click, Area body/area entered
 	ON_RELEASE,        ## 1 - Button up, any collision click release, Area body/area exited
-	ON_HOVER_START,    ## 2 - Mouse entered (any interactive node)
-	ON_HOVER_END,      ## 3 - Mouse exited (any interactive node)
+	ON_MOUSE_ENTERED,  ## 2 - Mouse entered — start of hover pair, supports Toggle
+	ON_MOUSE_EXITED,   ## 3 - Mouse exited — end of hover pair
 	ON_FOCUS,          ## 4 - Focus entered (Control/BaseButton)
 	ON_UNFOCUS,        ## 5 - Focus exited (Control/BaseButton)
 	ON_SHOW,           ## 6 - Node became visible (CanvasItem)
@@ -146,8 +146,12 @@ enum TriggerSource {
 ## Signal name to connect to on the source node (only for MANUAL trigger).
 @export var manual_trigger_signal: String
 
-## How the trigger maps to animation direction (default for all effects in recipe).
-## Changing this in the editor also updates all effects in the recipe to match.
+## How the trigger maps to animation direction. Default for all effects in recipe;
+## individual effects can still override this after assignment.
+## Toggle is only available on triggers marked (toggleable) — polarity-capable start events
+## (On Press, On Mouse Entered, On Focus, Manual) where a natural paired counterpart exists.
+## On those triggers, Toggle uses the signal direction: enter = animate in, exit = animate out.
+## On all other triggers Toggle is hidden — it cannot be meaningfully used there.
 @export var trigger_behaviour: JuiceEffectBase.TriggerBehaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
 	set(value):
 		trigger_behaviour = value
@@ -157,6 +161,7 @@ enum TriggerSource {
 			for effect in recipe.effects:
 				if effect != null:
 					effect.trigger_behaviour = value
+		notify_property_list_changed()
 
 ## Delay before the entire recipe starts after trigger (seconds).
 @export_range(0.0, 100.0, 0.01, "or_greater") var start_delay: float = 0.0
@@ -251,6 +256,25 @@ func _validate_property(property: Dictionary) -> void:
 	# manual_trigger_signal only relevant when trigger_on is MANUAL
 	if property.name == "manual_trigger_signal" and trigger_on != TriggerEvent.MANUAL:
 		property.usage = PROPERTY_USAGE_NO_EDITOR
+
+	# --- Toggle filtering on trigger_behaviour ---
+	# Toggle only makes sense on triggers that have a natural paired counterpart:
+	# On Press (entry of press/release pair), On Mouse Entered (entry of hover pair),
+	# On Focus (entry of focus/unfocus pair), and Manual (caller may supply polarity).
+	# End-of-pair triggers (Release, Mouse Exited, Unfocus), one-shot triggers
+	# (Show, Hide, Ready, clicks, area events) have no meaningful toggle semantics.
+	if property.name == "trigger_behaviour":
+		var supports_toggle := trigger_on in [
+			TriggerEvent.ON_PRESS,
+			TriggerEvent.ON_MOUSE_ENTERED,
+			TriggerEvent.ON_FOCUS,
+			TriggerEvent.MANUAL,
+		]
+		property.hint = PROPERTY_HINT_ENUM
+		if supports_toggle:
+			property.hint_string = "Play In And Out:0,Play In Only:1,Play Out Only:2,Toggle:3,Set From Source:4"
+		else:
+			property.hint_string = "Play In And Out:0,Play In Only:1,Play Out Only:2,Set From Source:4"
 
 	# --- Loop group ---
 	# Hide loop_delay when not looping
@@ -655,8 +679,15 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY:
 			resolved_play_in = false
 		JuiceEffectBase.TriggerBehaviour.TOGGLE:
-			_toggle_state = not _toggle_state
-			resolved_play_in = _toggle_state
+			# If this call came from a polarity signal (hover/focus/press enter or exit),
+			# use the polarity direction directly — no flip-flop.
+			# If this call came from a momentary trigger (click, ready, etc.),
+			# flip-flop the toggle state as before.
+			if trigger_info.get("is_polarity", false):
+				resolved_play_in = play_in
+			else:
+				_toggle_state = not _toggle_state
+				resolved_play_in = _toggle_state
 		JuiceEffectBase.TriggerBehaviour.SET_FROM_SOURCE:
 			# SET_FROM_SOURCE doesn't use start — it uses set_external_progress
 			return
@@ -1764,13 +1795,18 @@ func _on_trigger_polarity_off() -> void:
 func _on_trigger_polarity(is_on: bool) -> void:
 	match trigger_behaviour:
 		JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT:
-			_handle_trigger({"play_in": is_on})
+			# PLAY_IN_AND_OUT is a one-shot trigger: fires on enter, plays in then
+			# auto-reverses to out. The exit edge is intentionally ignored.
+			# For paired hover behavior, use Toggle instead.
+			if is_on:
+				_handle_trigger({"play_in": true})
 		JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY:
 			if is_on: _handle_trigger({"play_in": true})
 		JuiceEffectBase.TriggerBehaviour.PLAY_OUT_ONLY:
 			if not is_on: _handle_trigger({"play_in": false})
 		JuiceEffectBase.TriggerBehaviour.TOGGLE:
-			_handle_trigger({"play_in": is_on})
+			# Pass is_polarity flag so _handle_trigger uses direction, not flip-flop.
+			_handle_trigger({"play_in": is_on, "is_polarity": true})
 		_:
 			_handle_trigger({"play_in": is_on})
 
@@ -1848,6 +1884,37 @@ func _on_control_gui_input_press(event: InputEvent) -> void:
 func _on_control_gui_input_release(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed:
 		_on_trigger_momentary()
+
+# Polarity handler for ON_PRESS on non-Button Controls.
+# Fires polarity_on on mouse-down, polarity_off on mouse-up.
+# This lets Toggle use press=animate_in, release=animate_out rather than flip-flop.
+func _on_control_gui_input_press_polarity(event: InputEvent) -> void:
+	if not event is InputEventMouseButton:
+		return
+	if event.pressed:
+		_on_trigger_polarity_on()
+	else:
+		_on_trigger_polarity_off()
+
+# Polarity handler for ON_PRESS on CollisionObject2D (input_event signal).
+# Fires polarity_on on press, polarity_off on release.
+func _on_collision_input_press_polarity_2d(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if not event is InputEventMouseButton:
+		return
+	if event.pressed:
+		_on_trigger_polarity_on()
+	else:
+		_on_trigger_polarity_off()
+
+# Polarity handler for ON_PRESS on CollisionObject3D (input_event signal).
+# Fires polarity_on on press, polarity_off on release.
+func _on_collision_input_press_polarity_3d(_camera: Node, event: InputEvent, _position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
+	if not event is InputEventMouseButton:
+		return
+	if event.pressed:
+		_on_trigger_polarity_on()
+	else:
+		_on_trigger_polarity_off()
 
 ## Filtered mouse button callback for Control gui_input (left/right/middle click).
 func _on_control_gui_input_filtered(event: InputEvent) -> void:
