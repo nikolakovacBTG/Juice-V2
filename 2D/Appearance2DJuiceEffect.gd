@@ -63,60 +63,79 @@ enum OutlineFlickerTarget {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Effect")
-## What type of appearance effect to apply.
-var effect_type: AppearanceEffect = AppearanceEffect.TINT:
+## Which appearance effect to apply (Tint, Fade, Overbright, Outline).
+var effect_type: int = AppearanceEffect.TINT:
 	set(value):
 		effect_type = value
 		notify_property_list_changed()
 
-@export_group("From")
-## Reference source for From values.
+# From/To reference infrastructure
+## Where From values come from: Custom (explicit) or Self (captured from target).
 var from_reference: int = AppearanceReference.SELF:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
-
-@export var from_tint_color: Color = Color.WHITE
-@export_range(0.0, 1.0, 0.01) var from_tint_blend: float = 0.0
-@export_range(0.0, 1.0, 0.01) var from_alpha: float = 1.0
-@export_range(0.0, 5.0, 0.1) var from_brightness: float = 1.0
-
-@export_group("To")
-## Reference source for To values.
+## Where To values come from: Custom (explicit) or Self (captured from target).
 var to_reference: int = AppearanceReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
+## When to capture natural values when using SELF reference.
+var capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		capture_at = value
+		notify_property_list_changed()
+## When to capture From values (when from_reference == SELF).
+var from_capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		from_capture_at = value
+		notify_property_list_changed()
+## When to capture To values (when to_reference == SELF).
+var to_capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		to_capture_at = value
+		notify_property_list_changed()
 
-@export var tint_color: Color = Color(1.0, 0.4, 0.4, 1.0)
-@export_range(0.0, 1.0, 0.01) var tint_blend: float = 1.0
-@export_range(0.0, 1.0, 0.01) var fade_target_alpha: float = 0.0
-@export_range(0.0, 5.0, 0.1) var overbright_strength: float = 2.0
+# Per-effect From/To fields
+## From tint color at progress=0 (TINT).
+var from_tint_color: Color = Color.WHITE
+## From tint blend strength 0=none, 1=full at progress=0 (TINT).
+var from_tint_blend: float = 0.0
+## To tint color at progress=1 (TINT).
+var tint_color: Color = Color(1.0, 0.4, 0.4, 1.0)
+## To tint blend strength 0=none, 1=full at progress=1 (TINT).
+var tint_blend: float = 1.0
 
-@export_group("Outline", "outline")
-## Width of outline at animation start (factor of outline_width).
-@export_range(0.0, 1.0, 0.01) var from_width: float = 0.0
-## Width of outline at animation end (pixels).
-@export_range(0.0, 10.0, 0.1) var outline_width: float = 2.0
-## Color of the outline.
+## From alpha at progress=0 (FADE).
+var from_alpha: float = 1.0
+## To alpha at progress=1 (FADE).
+var fade_target_alpha: float = 0.0
+
+## From brightness at progress=0 (OVERBRIGHT).
+var from_brightness: float = 1.0
+## To brightness at progress=1 (OVERBRIGHT).
+var overbright_strength: float = 2.0
+
+## Outline color (OUTLINE).
 var outline_color: Color = Color.WHITE
+## From outline width at progress=0 (OUTLINE).
+var from_width: float = 0.0
+## To outline width at progress=1 (OUTLINE).
+var outline_width: float = 2.0
 
-@export_group("Flicker", "flicker")
-## Type of flicker to apply to the effect output.
-var flicker_mode: FlickerMode = FlickerMode.NONE:
+## Flicker mode: None, Random (noise-driven), or Custom (curve-driven).
+var flicker_mode: int = FlickerMode.NONE:
 	set(value):
 		flicker_mode = value
 		notify_property_list_changed()
 ## Minimum flicker multiplier (when flicker is at low point).
-@export_range(0.0, 1.0, 0.01) var flicker_min: float = 0.0
+var flicker_min: float = 0.0
 ## Maximum flicker multiplier (when flicker is at high point).
-@export_range(0.0, 2.0, 0.01) var flicker_max: float = 1.0
-## Flicker speed (cycles per second).
-@export_range(0.1, 10.0, 0.1) var flicker_rate: float = 10.0
-## When true, flicker is hard on/off instead of smooth.
+var flicker_max: float = 1.0
+## When true, flicker snaps between min/max instead of smooth interpolation.
 var hard_flicker: bool = false
-## Custom flicker curve (only used when flicker_mode is CUSTOM).
+## Flicker speed in cycles per second (RANDOM mode).
+var flicker_rate: float = 10.0
 ## Curve for flicker pattern (CUSTOM mode). X=phase [0,1], Y=multiplier.
 var flicker_curve: Curve
 
@@ -128,13 +147,6 @@ var outline_flicker_target: int = OutlineFlickerTarget.WIDTH:
 ## Secondary color for OUTLINE COLOR flicker mode. Outline lerps between outline_color and this.
 var flicker_color_to: Color = Color.BLACK
 
-@export_group("Capture", "capture")
-## When SELF reference is used, when to capture the natural values.
-var capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		capture_at = value
-		notify_property_list_changed()
-
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
@@ -145,145 +157,123 @@ func _init() -> void:
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
-	var properties: Array[Dictionary] = []
+	var props: Array[Dictionary] = []
 
-	# Always show effect_type
-	properties.append({
-		"name": "effect_type",
-		"type": TYPE_INT,
+	# --- Step 1: Effect GROUP (main selector + base timing) ---
+	props.append({"name": "Effect", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "effect_type", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": ",".join(AppearanceEffect.keys()),
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
+		"hint_string": "Tint,Fade,Overbright,Outline",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append_array(_get_effect_base_properties())
 
-	# Conditionally show From/To properties based on effect type
-	match effect_type:
-		AppearanceEffect.TINT:
-			# From properties
-			properties.append({
-				"name": "from_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if from_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "from_tint_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
-				properties.append({"name": "from_tint_blend", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-			# To properties
-			properties.append({
-				"name": "to_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if to_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "tint_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
-				properties.append({"name": "tint_blend", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-
-		AppearanceEffect.FADE:
-			# From properties
-			properties.append({
-				"name": "from_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if from_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "from_alpha", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-			# To properties
-			properties.append({
-				"name": "to_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if to_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "fade_target_alpha", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-
-		AppearanceEffect.OVERBRIGHT:
-			# From properties
-			properties.append({
-				"name": "from_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if from_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "from_brightness", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-			# To properties
-			properties.append({
-				"name": "to_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if to_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "overbright_strength", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-
-		AppearanceEffect.OUTLINE:
-			# From properties
-			properties.append({
-				"name": "from_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if from_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "from_width", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-			# To properties
-			properties.append({
-				"name": "to_reference",
-				"type": TYPE_INT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": ",".join(AppearanceReference.keys()),
-				"usage": PROPERTY_USAGE_DEFAULT
-			})
-			if to_reference == AppearanceReference.CUSTOM:
-				properties.append({"name": "outline_width", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-				properties.append({"name": "outline_color", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
-
-	# Show capture_at only when using SELF reference
-	if (from_reference == AppearanceReference.SELF) or (to_reference == AppearanceReference.SELF):
-		properties.append({
-			"name": "capture_at",
-			"type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": ",".join(CaptureAt.keys()),
-			"usage": PROPERTY_USAGE_DEFAULT
-		})
-
-	# Always show flicker properties
-	properties.append({
-		"name": "flicker_mode",
-		"type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": ",".join(FlickerMode.keys()),
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
+	# --- Step 2: Effect-specific subgroup — Flicker ---
+	props.append({"name": "Flicker", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
+	props.append({"name": "flicker_mode", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "None,Random,Custom",
+		"usage": PROPERTY_USAGE_DEFAULT})
 	if flicker_mode != FlickerMode.NONE:
-		properties.append({"name": "flicker_min", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-		properties.append({"name": "flicker_max", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-		properties.append({"name": "flicker_rate", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
-		properties.append({"name": "hard_flicker", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
-		if flicker_mode == FlickerMode.CUSTOM:
-			properties.append({"name": "flicker_curve", "type": TYPE_OBJECT, "hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve", "usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "flicker_min", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "flicker_max", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "hard_flicker", "type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		if flicker_mode == FlickerMode.RANDOM:
+			props.append({"name": "flicker_rate", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,60.0,0.1,or_greater",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		elif flicker_mode == FlickerMode.CUSTOM:
+			props.append({"name": "flicker_curve", "type": TYPE_OBJECT,
+				"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Curve",
+				"usage": PROPERTY_USAGE_DEFAULT})
 		# Outline-specific flicker target (only when OUTLINE + flicker enabled)
 		if effect_type == AppearanceEffect.OUTLINE:
-			properties.append({"name": "outline_flicker_target", "type": TYPE_INT,
+			props.append({"name": "outline_flicker_target", "type": TYPE_INT,
 				"hint": PROPERTY_HINT_ENUM, "hint_string": "Width,Color Alpha,Color",
 				"usage": PROPERTY_USAGE_DEFAULT})
 			if outline_flicker_target == OutlineFlickerTarget.COLOR:
-				properties.append({"name": "flicker_color_to", "type": TYPE_COLOR,
+				props.append({"name": "flicker_color_to", "type": TYPE_COLOR,
 					"usage": PROPERTY_USAGE_DEFAULT})
 
-	return properties
+	# --- Step 3: From GROUP ---
+	props.append({"name": "From", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	if effect_type == AppearanceEffect.OUTLINE:
+		# OUTLINE From is always CUSTOM (width only, no reference selector)
+		props.append({"name": "from_width", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,20.0,0.5,or_greater",
+			"usage": PROPERTY_USAGE_DEFAULT})
+	else:
+		props.append({"name": "from_reference", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,Self",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		if from_reference == AppearanceReference.CUSTOM:
+			match effect_type:
+				AppearanceEffect.TINT:
+					props.append({"name": "from_tint_color", "type": TYPE_COLOR,
+						"usage": PROPERTY_USAGE_DEFAULT})
+					props.append({"name": "from_tint_blend", "type": TYPE_FLOAT,
+						"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+						"usage": PROPERTY_USAGE_DEFAULT})
+				AppearanceEffect.FADE:
+					props.append({"name": "from_alpha", "type": TYPE_FLOAT,
+						"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+						"usage": PROPERTY_USAGE_DEFAULT})
+				AppearanceEffect.OVERBRIGHT:
+					props.append({"name": "from_brightness", "type": TYPE_FLOAT,
+						"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,5.0,0.1,or_greater",
+						"usage": PROPERTY_USAGE_DEFAULT})
+		elif from_reference == AppearanceReference.SELF:
+			# Capture subgroup nested under From when SELF selected
+			props.append({"name": "Capture", "type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
+			props.append({"name": "from_capture_at", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+	# --- Step 4: To GROUP ---
+	props.append({"name": "To", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "to_reference", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,Self",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	if to_reference == AppearanceReference.CUSTOM:
+		match effect_type:
+			AppearanceEffect.TINT:
+				props.append({"name": "tint_color", "type": TYPE_COLOR,
+					"usage": PROPERTY_USAGE_DEFAULT})
+				props.append({"name": "tint_blend", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+					"usage": PROPERTY_USAGE_DEFAULT})
+			AppearanceEffect.FADE:
+				props.append({"name": "fade_target_alpha", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+					"usage": PROPERTY_USAGE_DEFAULT})
+			AppearanceEffect.OVERBRIGHT:
+				props.append({"name": "overbright_strength", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,5.0,0.1,or_greater",
+					"usage": PROPERTY_USAGE_DEFAULT})
+			AppearanceEffect.OUTLINE:
+				props.append({"name": "outline_color", "type": TYPE_COLOR,
+					"usage": PROPERTY_USAGE_DEFAULT})
+				props.append({"name": "outline_width", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.1,or_greater",
+					"usage": PROPERTY_USAGE_DEFAULT})
+	elif to_reference == AppearanceReference.SELF:
+		# Capture subgroup nested under To when SELF selected
+		props.append({"name": "Capture", "type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
+		props.append({"name": "to_capture_at", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
+			"usage": PROPERTY_USAGE_DEFAULT})
+
+	# Steps 5-9 (Animate In/Out, Chaining, Debug, Resource) handled by base class
+	return props
 
 
 func _set(property: StringName, value: Variant) -> bool:
@@ -292,6 +282,8 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
 		&"capture_at": capture_at = value; return true
+		&"from_capture_at": from_capture_at = value; return true
+		&"to_capture_at": to_capture_at = value; return true
 		&"from_tint_color": from_tint_color = value; return true
 		&"from_tint_blend": from_tint_blend = value; return true
 		&"tint_color": tint_color = value; return true
@@ -320,6 +312,8 @@ func _get(property: StringName) -> Variant:
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
 		&"capture_at": return capture_at
+		&"from_capture_at": return from_capture_at
+		&"to_capture_at": return to_capture_at
 		&"from_tint_color": return from_tint_color
 		&"from_tint_blend": return from_tint_blend
 		&"tint_color": return tint_color
