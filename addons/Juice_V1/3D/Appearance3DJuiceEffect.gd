@@ -230,9 +230,7 @@ func _get_property_list() -> Array[Dictionary]:
 						"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,10.0,0.1,or_greater",
 						"usage": PROPERTY_USAGE_DEFAULT})
 		elif from_reference == AppearanceReference.SELF:
-			# Capture subgroup nested under From when SELF selected
-			props.append({"name": "Capture", "type": TYPE_NIL,
-				"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
+			# Capture property directly under From when SELF selected
 			props.append({"name": "from_capture_at", "type": TYPE_INT,
 				"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
 				"usage": PROPERTY_USAGE_DEFAULT})
@@ -266,9 +264,7 @@ func _get_property_list() -> Array[Dictionary]:
 					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
 					"usage": PROPERTY_USAGE_DEFAULT})
 	elif to_reference == AppearanceReference.SELF:
-		# Capture subgroup nested under To when SELF selected
-		props.append({"name": "Capture", "type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
+		# Capture property directly under To when SELF selected
 		props.append({"name": "to_capture_at", "type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
 			"usage": PROPERTY_USAGE_DEFAULT})
