@@ -1832,8 +1832,40 @@ func _connect_manual_signal() -> void:
 			push_warning("[%s] Manual trigger source not found" % name)
 		return
 	if source.has_signal(manual_trigger_signal):
-		if not source.is_connected(manual_trigger_signal, _on_trigger_momentary):
-			source.connect(manual_trigger_signal, _on_trigger_momentary)
+		var target := _make_manual_callable(source, manual_trigger_signal)
+		if not source.is_connected(manual_trigger_signal, target):
+			source.connect(manual_trigger_signal, target)
+
+
+## Inspect a signal's argument list and return the right Callable target.
+##
+## Routing rules:
+##  - 0 args         → _on_trigger_momentary()        (momentary, no args needed)
+##  - 1 float arg    → set_external_progress(float)   (continuous progress drive)
+##  - N other args   → _on_trigger_momentary.unbind(N) (strip args, treat as momentary)
+##
+## This makes "Manual" universally safe — any signal from any source works,
+## including SoftTrigger.progress_changed(float), without crashing.
+func _make_manual_callable(source: Object, sig_name: StringName) -> Callable:
+	var sig_args: Array = []
+	for sig in source.get_signal_list():
+		if sig["name"] == sig_name:
+			sig_args = sig.get("args", [])
+			break
+
+	# Case 1: zero-arg signal → standard momentary trigger
+	if sig_args.is_empty():
+		return _on_trigger_momentary
+
+	# Case 2: single float arg → drive external progress directly
+	# The signal value (0-1) maps straight to set_external_progress().
+	# Example: SoftTrigger.progress_changed(value: float)
+	if sig_args.size() == 1 and sig_args[0].get("type", -1) == TYPE_FLOAT:
+		return set_external_progress
+
+	# Case 3: any other signature → strip all args, treat as momentary
+	# Callable.unbind(n) discards the last n args the signal passes — safe and clean.
+	return _on_trigger_momentary.unbind(sig_args.size())
 
 # =============================================================================
 # SIGNAL CALLBACKS
