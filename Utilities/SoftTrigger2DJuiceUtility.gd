@@ -1,8 +1,9 @@
 ## Proximity-driven continuous progress driver for the 2D domain.
 ##
-## Extends Area2D to detect mouse/body entry, then calculates a 0–1 progress value
+## Extends Area2D to detect mouse/body/area entry, then calculates a 0–1 progress value
 ## based on how deep inside the collision shape the tracked entity is.
 ## Drives sibling JuiceBase nodes each frame via set_external_progress().
+## Multiple detection modes can be active simultaneously (e.g. bodies + areas).
 
 # ============================================================================
 # WHAT: Proximity-driven continuous progress driver for the 2D domain.
@@ -55,12 +56,15 @@ signal proximity_exited
 
 @export_group("Detection")
 
-## What to track for proximity calculation.
-## MOUSE: track cursor position (Balatro-style hover).
-## BODY: track physics body position (player walk-near).
-enum TrackSource { MOUSE, BODY }
+## Track mouse cursor position for proximity calculation (Balatro-style hover).
+@export var detect_mouse: bool = false
 
-@export var track_source: TrackSource = TrackSource.MOUSE
+## Track PhysicsBody2D nodes (CharacterBody2D, RigidBody2D, etc.) entering the zone.
+@export var detect_bodies: bool = true
+
+## Track Area2D nodes entering the zone.
+## Enable when the tracked entity carries an Area2D (not just a physics body).
+@export var detect_areas: bool = false
 
 ## Normalized fraction of the detection zone used as the falloff gradient (0.0–1.0).
 ## 0.0 = no gradient (instant full progress on entry).
@@ -101,7 +105,8 @@ var progress: float = 0.0
 # =============================================================================
 
 var _is_inside: bool = false
-var _tracked_body: Node2D = null
+# Unified tracked node — works for both PhysicsBody2D and Area2D.
+var _tracked_node: Node2D = null
 
 var _juice_siblings: Array[JuiceBase] = []
 var _juice_siblings_dirty: bool = true
@@ -110,6 +115,18 @@ var _juice_siblings_dirty: bool = true
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
+
+func _init() -> void:
+	# Pre-populate falloff_curve with Godot's Smoothstep preset:
+	# two points at (0,0) and (1,1), both TANGENT_FREE with tangent=0.
+	# This gives an S-curve identical to the editor Presets > Smoothstep pick.
+	# Users can replace or clear it via the inspector at any time.
+	if falloff_curve == null:
+		var c := Curve.new()
+		c.add_point(Vector2(0.0, 0.0), 0.0, 0.0, Curve.TANGENT_FREE, Curve.TANGENT_FREE)
+		c.add_point(Vector2(1.0, 1.0), 0.0, 0.0, Curve.TANGENT_FREE, Curve.TANGENT_FREE)
+		falloff_curve = c
+
 
 func _ready() -> void:
 	# Enable input picking so Godot's mouse system can detect this Area2D
@@ -122,13 +139,16 @@ func _ready() -> void:
 
 	_ensure_collision_shape()
 
-	# Connect signals based on track source
-	if track_source == TrackSource.MOUSE:
+	# Connect signals based on enabled detection flags
+	if detect_mouse:
 		mouse_entered.connect(_on_mouse_entered)
 		mouse_exited.connect(_on_mouse_exited)
-	else:
-		body_entered.connect(_on_body_entered)
-		body_exited.connect(_on_body_exited)
+	if detect_bodies:
+		body_entered.connect(_on_object_entered)
+		body_exited.connect(_on_object_exited)
+	if detect_areas:
+		area_entered.connect(_on_object_entered)
+		area_exited.connect(_on_object_exited)
 
 	set_process(false)
 
@@ -137,19 +157,24 @@ func _ready() -> void:
 		get_parent().child_order_changed.connect(_mark_siblings_dirty)
 
 	if debug_enabled:
-		print("[%s] SoftTrigger2D ready. Track: %s" % [name, TrackSource.keys()[track_source]])
+		var modes := []
+		if detect_mouse: modes.append("Mouse")
+		if detect_bodies: modes.append("Bodies")
+		if detect_areas: modes.append("Areas")
+		print("[%s] SoftTrigger2D ready. Detecting: %s" % [name, ", ".join(modes) if not modes.is_empty() else "nothing"])
 
 
 func _process(_delta: float) -> void:
 	if not _is_inside:
 		return
 
-	# Get tracked position in local coordinates
+	# Get tracked position in local coordinates.
+	# Physics/Area tracked node takes priority over mouse.
 	var local_pos: Vector2
-	if track_source == TrackSource.MOUSE:
+	if _tracked_node != null and is_instance_valid(_tracked_node):
+		local_pos = to_local(_tracked_node.global_position)
+	elif detect_mouse:
 		local_pos = to_local(get_global_mouse_position())
-	elif _tracked_body != null and is_instance_valid(_tracked_body):
-		local_pos = to_local(_tracked_body.global_position)
 	else:
 		return
 
@@ -188,23 +213,23 @@ func _on_mouse_exited() -> void:
 		print("[%s] Mouse exited" % name)
 
 
-func _on_body_entered(body: Node2D) -> void:
-	# Track the first body that enters (or closest — simplified to first)
-	if _tracked_body == null:
-		_tracked_body = body
+func _on_object_entered(object: Node2D) -> void:
+	# Track the first body/area that enters (first-in wins).
+	if _tracked_node == null:
+		_tracked_node = object
 		_is_inside = true
 		set_process(true)
 		proximity_entered.emit()
 		if debug_enabled:
-			print("[%s] Body entered: %s" % [name, body.name])
+			print("[%s] Object entered: %s" % [name, object.name])
 
 
-func _on_body_exited(body: Node2D) -> void:
-	if body == _tracked_body:
-		_tracked_body = null
+func _on_object_exited(object: Node2D) -> void:
+	if object == _tracked_node:
+		_tracked_node = null
 		_release_all()
 		if debug_enabled:
-			print("[%s] Body exited: %s" % [name, body.name])
+			print("[%s] Object exited: %s" % [name, object.name])
 
 
 func _release_all() -> void:

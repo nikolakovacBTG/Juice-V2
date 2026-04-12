@@ -62,7 +62,7 @@ signal proximity_exited
 @export_range(0.0, 1.0) var falloff_zone: float = 0.3
 
 ## Optional non-linear falloff curve. Applied to the raw linear progress.
-## If null, falloff is linear (which usually feels natural for spatial proximity).
+## Defaults to Smoothstep — replace or clear via the inspector if needed.
 @export var falloff_curve: Curve
 
 @export_group("Debug")
@@ -96,6 +96,18 @@ var _juice_siblings_dirty: bool = true
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
+
+func _init() -> void:
+	# Pre-populate falloff_curve with Godot's Smoothstep preset:
+	# two points at (0,0) and (1,1), both TANGENT_FREE with tangent=0.
+	# This gives an S-curve identical to the editor Presets > Smoothstep pick.
+	# Users can replace or clear it via the inspector at any time.
+	if falloff_curve == null:
+		var c := Curve.new()
+		c.add_point(Vector2(0.0, 0.0), 0.0, 0.0, Curve.TANGENT_FREE, Curve.TANGENT_FREE)
+		c.add_point(Vector2(1.0, 1.0), 0.0, 0.0, Curve.TANGENT_FREE, Curve.TANGENT_FREE)
+		falloff_curve = c
+
 
 func _ready() -> void:
 	# Invisible at runtime — this Control only exists as a detection zone.
