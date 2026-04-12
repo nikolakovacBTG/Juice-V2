@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Juice2DRecipe" format=3 uid="uid://c4hbl86fvu802"]
+
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="1_agchf"]
+[ext_resource type="Script" uid="uid://qwwny63s3kn3" path="res://addons/Juice_V1/Meta/Time2DJuiceEffect.gd" id="2_le8tb"]
+[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="3_326ic"]
+
+[sub_resource type="Resource" id="Resource_bwtx2"]
+script = ExtResource("2_le8tb")
+time_mode = 1
+use_external_coordinator = false
+target_scale = 0.2
+smooth_transition = true
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("1_agchf")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[resource]
+script = ExtResource("3_326ic")
+effects = Array[ExtResource("1_agchf")]([SubResource("Resource_bwtx2")])

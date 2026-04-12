@@ -1,34 +1,32 @@
 ## Proximity-driven continuous progress driver for the Control domain.
 ##
-## Calculates a 0–1 progress value based on how deep the mouse cursor is inside this Control's rect, and drives sibling JuiceCompBase nodes each frame via set_external_progress().
+## based on how deep the mouse cursor is inside this Control's rect, 
+## and drives sibling JuiceBase nodes each frame via set_external_progress().
 
 # ============================================================================
 # WHAT: Proximity-driven continuous progress driver for the Control domain.
-#       Calculates a 0–1 progress value based on how deep the mouse cursor is
-#       inside this Control's rect, and drives sibling JuiceCompBase nodes
-#       each frame via set_external_progress().
 # WHY: Enables Balatro-style hover effects where juice intensity is proportional
 #      to spatial proximity, not just binary enter/exit. The spatial falloff
 #      IS the easing — no timing system needed.
-# SYSTEM: Juicing System (addons/Juice_V1/) - Control Domain
+# SYSTEM: Juice System (addons/Juice_V1/) - Control Domain
 #
-## DOES NOT:
-## - Apply any visual effect itself (it's a sensor/driver, not an effect)
-## - Handle directional tilt (see future TiltTowardCursorComp)
-## - Track physics bodies (Control domain is mouse-only)
-##
-## CONNECTIONS:
-## - Sibling JuiceBase nodes: discovered via type-safe `is` traversal,
-##   driven each frame via set_external_progress()
-## - Signals: progress_changed for custom scripts, proximity_entered/exited
-##   for polarity-based listeners
-##
-## USAGE:
-## 1. Add as sibling of a visual Control (Button, TextureRect, etc.)
-## 2. Size this Control's rect to define the detection zone (can be larger)
-## 3. Add JuiceBase children/siblings — they'll be driven automatically
-## 4. Set falloff_zone to control the gradient zone width
-## ============================================================================
+# DOES NOT:
+# - Apply any visual effect itself (it's a sensor/driver, not an effect)
+# - Handle directional tilt (see future TiltTowardCursorComp)
+# - Track physics bodies (Control domain is mouse-only)
+#
+# CONNECTIONS:
+# - Sibling JuiceBase nodes: discovered via type-safe `is` traversal,
+#   driven each frame via set_external_progress()
+# - Signals: progress_changed for custom scripts, proximity_entered/exited
+#   for polarity-based listeners
+#
+# USAGE:
+# 1. Add as sibling of a visual Control (Button, TextureRect, etc.)
+# 2. Size this Control's rect to define the detection zone (can be larger)
+# 3. Add JuiceBase children/siblings — they'll be driven automatically
+# 4. Set falloff_zone to control the gradient zone width
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityTriggerControl.svg")
@@ -231,7 +229,7 @@ func _calculate_rect_progress(local_pos: Vector2, rect_size: Vector2) -> float:
 # SIBLING DISCOVERY
 # =============================================================================
 
-## Find all sibling JuiceCompBase nodes (type-safe discovery).
+## Find all sibling JuiceBase nodes (type-safe discovery).
 ## Called lazily — only rebuilds when _juice_siblings_dirty is true.
 func _ensure_juice_siblings() -> void:
 	if not _juice_siblings_dirty:
@@ -263,13 +261,13 @@ func _mark_siblings_dirty() -> void:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 
-	# Check that we have at least one JuiceCompBase sibling
+	# Check that we have at least one JuiceBase sibling
 	if not Engine.is_editor_hint():
 		return warnings
 
 	var parent := get_parent()
 	if parent == null:
-		warnings.append("SoftTriggerControlJuiceUtility needs a parent node with JuiceCompBase siblings to drive.")
+		warnings.append("SoftTriggerControlJuiceUtility needs a parent node with JuiceBase siblings to drive.")
 		return warnings
 
 	var has_juice_sibling := false

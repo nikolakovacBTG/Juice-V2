@@ -4,6 +4,8 @@ description: Comprehensive code review against project standards, architecture p
 
 You are in REVIEW MODE.
 
+**Parent workflow:** `/architecture` - See `/architecture` for Juice V1 architecture context
+
 ---
 
 ## Authorization Gate (MANDATORY)
@@ -76,7 +78,15 @@ Review all code against established project conventions:
 
 ### 3. Architecture Pattern Compliance
 
+**Quick reference:** `@juice-architecture-contracts` one-page contracts
+
 Verify adherence to established patterns:
+
+#### Layer Contract Compliance
+- [ ] L1 (Core) has no domain-specific logic
+- [ ] L2 (Domain) filters targets correctly and writes once per frame
+- [ ] L3 (Effects) compute deltas only, never write directly
+- [ ] Data flow follows L1→L2→L3→L2 contract pattern
 
 #### Addon Boundary
 - [ ] No files modified inside `addons/juice/` (read-only subtree)
@@ -168,7 +178,22 @@ If a design document exists:
 
 ---
 
-### 7. Findings Report Format
+## Step 4: Visual Inspector Audit (MANDATORY)
+
+Code consistency isn't just about syntax; it's about the UX in the Godot Inspector.
+
+1. Create a temporary scene with a `Juice` node (Control, 2D, or 3D).
+2. Attach the effect under review to a Recipe on that node.
+3. Use `mcp_get_editor_screenshot` to capture the Inspector view of the effect.
+4. **Audit**:
+    - Are `@export` names readable?
+    - Are groups (`_get_property_list`) correctly separated?
+    - Are tooltips (`##` comments) showing correctly?
+5. Include the screenshot in the review report.
+
+---
+
+## Step 5: Report Results
 
 Structure all findings as follows:
 

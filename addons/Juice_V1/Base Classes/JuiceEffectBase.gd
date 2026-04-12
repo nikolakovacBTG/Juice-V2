@@ -10,7 +10,7 @@
 #      concrete effects only implement their specific visual/audio behavior.
 #      Effects are Resources (not Nodes) — they hold config + math + state
 #      but have no scene tree lifecycle. A host node (JuiceControl etc.) ticks them.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement any visual/audio effect — subclasses do that.
 # DOES NOT: Auto-connect signals or manage triggers — the host node does that.
 # DOES NOT: Store persistent references to Nodes — target is always passed in.
@@ -42,7 +42,11 @@ enum OffsetUnit { PIXELS, OWN_SIZE, PARENT_SIZE, VIEWPORT_SIZE }
 enum RotationUnit { DEGREES, RADIANS }
 
 ## Result returned by tick() each frame
-enum TickResult { PLAYING, COMPLETED }
+enum TickResult {
+	PLAYING,           ## Effect is still running.
+	COMPLETED,         ## Effect finished — host should clean up.
+	RESTART_REVERSED,  ## Accumulation effect hit REVERSE_EASED bound — restart from beginning (direction already flipped).
+}
 
 # =============================================================================
 # CONFIGURATION
@@ -371,7 +375,7 @@ var _current_loop: int = 0
 var _is_one_shot_return: bool = false
 var _will_auto_reverse: bool = false
 
-# Tick-based delay states (replaces coroutine-based await in JuiceCompBase)
+# Tick-based delay states (replaces coroutine-based await in JuiceBase)
 var _in_start_delay: bool = false
 var _start_delay_duration: float = 0.0
 var _delay_elapsed: float = 0.0

@@ -28,7 +28,7 @@ Verified by: test_suite_name::test_method_name — PASS
 ### Option B: Run the test suite NOW
 // turbo
 ```powershell
-& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+& "[GODOT_EXE]" --headless --path "[PROJECT_ROOT]" [TEST_SCENE]
 ```
 
 Then read `tests/results/summary.log` and cite specific results.

@@ -105,7 +105,7 @@ Wait for user approval before proceeding.
 
 2e. **Run Test Suite**:
 ```powershell
-cmd /c "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 ```
 Wait for tests to pass. If failures occur, fix them before moving to Step 3.
 
@@ -126,7 +126,7 @@ Wait for tests to pass. If failures occur, fix them before moving to Step 3.
 
 3e. **Run Test Suite**:
 ```powershell
-cmd /c "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 ```
 Must pass before proceeding.
 
@@ -147,7 +147,7 @@ Must pass before proceeding.
 
 4e. **Run Test Suite**:
 ```powershell
-cmd /c "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 ```
 Must pass before proceeding.
 
@@ -163,7 +163,7 @@ This verifies the effect works in real-world scenarios (stacking, containers, se
 ## Step 6: Commit + Update Tracker
 
 ```powershell
-cd "D:\Godot projekti\juice-demo"; git add -A; git commit -m "Port [EffectName] effect to V1 — all domains + tests"
+cd "D:\Godot_projekti\juice-demo"; git add -A; git commit -m "Port [EffectName] effect to V1 — all domains + tests"
 ```
 
 Update `Documentation/Port_Master_Tracker.md`:

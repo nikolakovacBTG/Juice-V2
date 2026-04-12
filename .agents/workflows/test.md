@@ -1,5 +1,5 @@
 ---
-description: Run the Juice V1 automated test suite and report results
+description: Run the Juice V1 automated test suite (Unit & Realistic) and report results
 ---
 
 You are in TEST MODE.
@@ -37,34 +37,24 @@ Do NOT propose fixes to production code. Do NOT make system changes outside test
 
 ---
 
-## Step 1: Run Full Automated Suite (MCP — preferred, no user approval needed)
+### Step 1: Run Full Automated Suite (MCP — MANDATORY)
 
 1. Open the test scene:
-   - `mcp0_open_scene` → `res://tests/run_tests.tscn`
+   - `mcp_open_scene` → `res://tests/run_tests.tscn`
 2. Play the scene:
-   - `mcp0_play_scene` → `current`
-3. Wait ~10 seconds for tests to complete (all suites take ~8s total)
-4. Read summary results via editor script:
-   - `mcp0_execute_editor_script` with code that reads `res://tests/results/summary.log`
-5. Stop the scene:
-   - `mcp0_stop_running_scene`
+   - `mcp_play_scene` → `current`
+3. Wait ~10 seconds for tests to complete.
+4. **Visual Verification**: Use `mcp_get_running_scene_screenshot`. If the test runner UI shows red, capture it for the report.
+5. Read summary results via editor script:
+   - `mcp_execute_editor_script` with code that reads `res://tests/results/summary.log`
+6. Stop the scene:
+   - `mcp_stop_running_scene`
 
-**Fallback (shell command):** If MCP is unavailable or Godot editor isn't running:
+**Fallback (Headless shell command):** Use only if the engine or MCP fails:
 // turbo
 ```powershell
-& "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+& "[GODOT_EXE]" --headless --path "[PROJECT_ROOT]" [TEST_SCENE]
 ```
-
-**Alternative fallback (if .bat not available):**
-// turbo
-```powershell
-& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
-```
-
-**If Godot fails to start** (script parse errors, import errors):
-1. Run an import pass first: `& "..." --headless --import --path "D:\Godot projekti\juice-demo"`
-2. Ignore errors from `addons/juice/` (V0, .gdignored) — they are expected.
-3. Retry the test run.
 
 ---
 
@@ -83,7 +73,7 @@ func run():
 For shell runs, read directly:
 // turbo
 ```powershell
-Get-Content "D:\Godot projekti\juice-demo\tests\results\summary.log"
+Get-Content "[LOG_SUMMARY]"
 ```
 
 Then read each suite log:
@@ -196,10 +186,8 @@ For REAL BUG failures, prepare a handoff:
 
 When asked to add tests (outside /test mode):
 
-1. Create `tests/suites/TestXxx.gd` extending `"res://tests/JuiceTestSuite.gd"`
-2. Implement `get_suite_name()` and `get_test_methods()`
-3. Register in `tests/JuiceTestRunner.gd` → `_register_suites()`
-4. Run full suite to confirm no regressions
+1. **Unit Tests**: Use `@unit-test-patterns` for isolated effect behavior.
+2. **Realistic Tests**: Use `/realistic-test` for complex UI scenarios, containers, stacking, and grids.
 
 ---
 

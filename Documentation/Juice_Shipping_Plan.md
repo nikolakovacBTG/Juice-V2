@@ -61,7 +61,7 @@ Moved from `Components/Component Nodes/Juice/` to addon format:
 ```
 addons/
   juice/
-    JuiceCompBase.gd
+    JuiceBase.gd
     2D/
     3D/
     Camera/
@@ -140,7 +140,7 @@ A table in `Documentation/Juice_Component_Inventory.md`:
 
 | # | Class Name | Finished | Demoed | Documented | Presets | Notes |
 |---|------------|:---:|:---:|:---:|:---:|-------|
-| 1 | `JuiceCompBase` | | | | — | Abstract base |
+| 1 | `JuiceBase` | | | | — | Abstract base |
 | 2 | `TransformControlJuiceComp` | | | | | |
 | ... | ... | ... | ... | ... | ... | ... |
 

@@ -8,7 +8,7 @@
 # WHY: Juice recipes are domain-typed. This thin subclass registers the effect
 #      in Juice3DRecipe._CONCRETE_EFFECTS so it appears in the inspector dropdown
 #      on Juice3D nodes. All logic lives in ScreenOverlayJuiceEffectBase.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement any behavior — see ScreenOverlayJuiceEffectBase.
 # ============================================================================
 

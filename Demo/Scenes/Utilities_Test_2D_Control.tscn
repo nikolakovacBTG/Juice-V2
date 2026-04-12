@@ -1,0 +1,128 @@
+[gd_scene format=3 uid="uid://dj8noxwh0wmop"]
+
+[ext_resource type="Script" uid="uid://bvd3y7wgqsun2" path="res://Demo/Scripts/UtilityTester.gd" id="1_otmkk"]
+[ext_resource type="Texture2D" uid="uid://hcejqces41qn" path="res://icon.svg" id="2_e4141"]
+[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="3_7yy7b"]
+[ext_resource type="Resource" uid="uid://bru5tblpa2gdt" path="res://Demo/Scenes/TestRecipe.tres" id="4_a15rd"]
+[ext_resource type="Script" uid="uid://cb333pkpm68kx" path="res://addons/Juice_V1/Utilities/SoftTrigger2DJuiceUtility.gd" id="4_vdpuh"]
+[ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
+[ext_resource type="Script" uid="uid://bfbfxvt6cexsc" path="res://addons/Juice_V1/Utilities/CallMethodJuiceUtility.gd" id="7_0kkbv"]
+[ext_resource type="Script" uid="uid://btg8ksw813yde" path="res://addons/Juice_V1/Utilities/SignalEmitJuiceUtility.gd" id="8_a33c3"]
+[ext_resource type="Script" uid="uid://bs2ebgkk22m07" path="res://addons/Juice_V1/Utilities/SceneActionJuiceUtility.gd" id="9_8tq88"]
+[ext_resource type="PackedScene" uid="uid://lfr1duh1e655" path="res://Demo/Scenes/MultipleChaining_Review.tscn" id="10_qm7d2"]
+[ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="11_lcm6r"]
+[ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V1/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
+[ext_resource type="Resource" uid="uid://c4hbl86fvu802" path="res://Demo/Scenes/TimeTestRecipe.tres" id="13_4jv1n"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qph6c"]
+size = Vector2(126, 125)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_lcm6r"]
+radius = 24.0
+
+[node name="UtilitiesTest2dControl" type="Node2D" unique_id=1307771118]
+script = ExtResource("1_otmkk")
+
+[node name="SoftTriggerTestObj" type="Node2D" parent="." unique_id=1914850636]
+position = Vector2(200, 200)
+
+[node name="SoftTriggerTestSprite" type="Sprite2D" parent="SoftTriggerTestObj" unique_id=2037791440]
+texture = ExtResource("2_e4141")
+
+[node name="Juice2D" type="Node2D" parent="SoftTriggerTestObj" unique_id=672850767]
+script = ExtResource("3_7yy7b")
+trigger_on = 9
+recipe = ExtResource("4_a15rd")
+
+[node name="SoftTrigger2D" type="Area2D" parent="SoftTriggerTestObj" unique_id=1606911008]
+script = ExtResource("4_vdpuh")
+detection_size = Vector2(64, 64)
+
+[node name="BodyEntryTestObj" type="Node2D" parent="." unique_id=709848790]
+position = Vector2(400, 200)
+
+[node name="Sprite2D" type="Sprite2D" parent="BodyEntryTestObj" unique_id=914727381]
+modulate = Color(0.2, 0.8, 0.2, 1)
+texture = ExtResource("2_e4141")
+
+[node name="Interaction2D" type="Area2D" parent="BodyEntryTestObj" unique_id=659348874]
+script = ExtResource("6_6bkf5")
+mode = 0
+detect_bodies = true
+detect_areas = true
+filter_group = ""
+trigger_on_enter = true
+trigger_on_exit = true
+one_shot = false
+debug_enabled = false
+
+[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="BodyEntryTestObj/Interaction2D" unique_id=1161123129]
+position = Vector2(-1, -0.5)
+shape = SubResource("RectangleShape2D_qph6c")
+
+[node name="MethodSignalTest" type="Node2D" parent="." unique_id=1684810152]
+position = Vector2(600, 200)
+
+[node name="Sprite2D" type="Sprite2D" parent="MethodSignalTest" unique_id=635685591]
+modulate = Color(0.2, 0.2, 0.8, 1)
+texture = ExtResource("2_e4141")
+
+[node name="Interaction2D" type="Area2D" parent="MethodSignalTest" unique_id=1515122959]
+script = ExtResource("6_6bkf5")
+mode = 1
+action_count = 1
+action_0_preset = 1
+check_presence_in_trigger_zone = false
+debug_enabled = false
+
+[node name="Juice2D" type="Node2D" parent="MethodSignalTest" unique_id=366643053]
+script = ExtResource("3_7yy7b")
+trigger_on = 10
+
+[node name="CallMethodJuiceUtility" type="Node" parent="MethodSignalTest" unique_id=1668262117]
+script = ExtResource("7_0kkbv")
+target_node_path = NodePath(".")
+method_name = "on_method_called"
+
+[node name="SignalEmitJuiceUtility" type="Node" parent="MethodSignalTest" unique_id=1298566515]
+script = ExtResource("8_a33c3")
+payload = "Test payload from SignalEmitJuiceUtility!"
+
+[node name="SceneActionTestButton" type="Button" parent="." unique_id=338664966]
+offset_left = 800.0
+offset_top = 200.0
+offset_right = 944.0
+offset_bottom = 231.0
+text = "Test Scene Action"
+
+[node name="SceneActionJuiceUtility" type="Node" parent="SceneActionTestButton" unique_id=1956702671]
+script = ExtResource("9_8tq88")
+to = ExtResource("10_qm7d2")
+overlay_type = 3
+transition_scene = ExtResource("11_lcm6r")
+
+[node name="TimeCoordinatorJuiceUtility" type="Node" parent="." unique_id=2098764954]
+script = ExtResource("12_lcm6r")
+
+[node name="TimeEffectTest" type="Node2D" parent="." unique_id=506428255]
+position = Vector2(800, 400)
+
+[node name="Sprite2D" type="Sprite2D" parent="TimeEffectTest" unique_id=1985938562]
+modulate = Color(0.8, 0.8, 0.2, 1)
+texture = ExtResource("2_e4141")
+
+[node name="Interaction2D" type="Area2D" parent="TimeEffectTest" unique_id=107767263]
+script = ExtResource("6_6bkf5")
+mode = 1
+action_count = 1
+action_0_preset = 1
+check_presence_in_trigger_zone = false
+debug_enabled = false
+
+[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="TimeEffectTest/Interaction2D" unique_id=1784584979]
+shape = SubResource("CircleShape2D_lcm6r")
+
+[node name="Juice2D" type="Node2D" parent="TimeEffectTest" unique_id=2109465282]
+script = ExtResource("3_7yy7b")
+trigger_on = 10
+recipe = ExtResource("13_4jv1n")

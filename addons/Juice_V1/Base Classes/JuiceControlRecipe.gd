@@ -1,11 +1,15 @@
-## JuiceControlRecipe.gd
-## ============================================================================
-## WHAT: Recipe for Control-domain juice effects.
-## WHY: Narrows the effects array type hint so the inspector dropdown only
-##      shows JuiceControlEffectBase subclasses (not 2D/3D effects).
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
-## ============================================================================
+## Resource recipe for Control-domain juice effects.
+##
+## Narrows the effects array type hint so the inspector dropdown only
+## shows JuiceControlEffectBase subclasses (not 2D/3D effects).
+
+# ============================================================================
+# WHAT: Recipe for Control-domain juice effects.
+# WHY: Narrows the effects array type hint so the inspector dropdown only
+#      shows JuiceControlEffectBase subclasses (not 2D/3D effects).
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
+# ============================================================================
 
 @tool
 class_name JuiceControlRecipe
@@ -18,7 +22,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete Control-domain effect class names.
 ## Update this list when adding new Control effects.
-const _CONCRETE_EFFECTS := "AppearanceControlJuiceEffect,CallMethodControlJuiceEffect,NoiseControlJuiceEffect,ScreenOverlayControlJuiceEffect,ShakeControlJuiceEffect,SignalEmitControlJuiceEffect,SquashStretchControlJuiceEffect,TimeControlJuiceEffect,TransformControlJuiceEffect"
+const _CONCRETE_EFFECTS := "AppearanceControlJuiceEffect,CallMethodControlJuiceEffect,NoiseControlJuiceEffect,ProgressControlJuiceEffect,ProgressPropertyControlJuiceEffect,ScreenOverlayControlJuiceEffect,ShakeControlJuiceEffect,SignalEmitControlJuiceEffect,SquashStretchControlJuiceEffect,TimeControlJuiceEffect,TransformControlJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides JuiceControlEffectBase from the inspector dropdown.

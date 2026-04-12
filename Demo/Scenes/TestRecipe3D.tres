@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="Juice3DRecipe" format=3 uid="uid://cmhjh1jrag6an"]
+
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="1_8mp3t"]
+[ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="2_qwlea"]
+[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/Base Classes/Juice3DRecipe.gd" id="3_jar3f"]
+
+[sub_resource type="Resource" id="Resource_xrw5q"]
+script = ExtResource("2_qwlea")
+transform_target = 2
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector3(2, 2, 2)
+scale_pivot_mode = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("1_8mp3t")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[resource]
+script = ExtResource("3_jar3f")
+effects = Array[ExtResource("1_8mp3t")]([SubResource("Resource_xrw5q")])

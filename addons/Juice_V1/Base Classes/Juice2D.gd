@@ -8,7 +8,7 @@
 # WHAT: Juice node for Node2D targets (Sprite2D, CharacterBody2D, etc.).
 # WHY: Validates parent is Node2D, connects Area2D/CollisionObject2D signals,
 #      handles pivot compensation for rotation/scale (Node2D has no pivot_offset).
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
@@ -49,6 +49,13 @@ var _total_scale_contribution: Vector2 = Vector2.ZERO
 
 # Whether base values have been captured at least once
 var _base_captured: bool = false
+
+# Expected values after our last write — for external-move detection (pre-tick).
+# If the actual value differs from expected next frame, something external moved
+# the target and we update _base_*.
+var _expected_position: Vector2 = Vector2.INF
+var _expected_rotation: float = INF
+var _expected_scale: Vector2 = Vector2.INF
 
 # Modulate base — captured at _capture_base_values for appearance accumulation.
 # Juice2DAppearanceEffect effects contribute _modulate_factor multiplicatively;
@@ -200,6 +207,52 @@ func _capture_base_values() -> void:
 	_total_pos_contribution = Vector2.ZERO
 	_total_rot_contribution = 0.0
 	_total_scale_contribution = Vector2.ZERO
+	# Initialise expected values so pre-tick can detect external moves
+	_expected_position = n2d.position
+	_expected_rotation = n2d.rotation
+	_expected_scale = n2d.scale
+
+## Detect external displacement of the target (game logic, tweens, etc.).
+## Runs once per frame, before effects tick. When displacement is detected,
+## updates _base_* so delta computations use the correct natural state.
+func _pre_tick() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n2d := _target_node as Node2D
+	var any_displaced := false
+
+	# Position
+	if _expected_position != Vector2.INF:
+		if not n2d.position.is_equal_approx(_expected_position):
+			var displacement := n2d.position - _expected_position
+			_base_position += displacement
+			_expected_position = n2d.position
+			any_displaced = true
+			if debug_enabled:
+				print("[%s] External displacement (position): %s → new base: %s" % [
+					name, displacement, _base_position])
+
+	# Rotation
+	if _expected_rotation != INF:
+		if not is_equal_approx(n2d.rotation, _expected_rotation):
+			var displacement := n2d.rotation - _expected_rotation
+			_base_rotation += displacement
+			_expected_rotation = n2d.rotation
+			any_displaced = true
+
+	# Scale
+	if _expected_scale != Vector2.INF:
+		if not n2d.scale.is_equal_approx(_expected_scale):
+			var displacement := n2d.scale - _expected_scale
+			_base_scale += displacement
+			_expected_scale = n2d.scale
+			any_displaced = true
+
+	# Invalidate effect base caches so they re-capture on next animation start
+	if any_displaced:
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._invalidate_base_cache()
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -240,6 +293,11 @@ func _post_tick_write() -> void:
 	n2d.position = n2d.position - _total_pos_contribution + new_pos
 	n2d.rotation = n2d.rotation - _total_rot_contribution + new_rot
 	n2d.scale = n2d.scale - _total_scale_contribution + new_scale
+
+	# Track expected values (for external-displacement detection next frame)
+	_expected_position = n2d.position
+	_expected_rotation = n2d.rotation
+	_expected_scale = n2d.scale
 
 	# Update tracked contribution (for undo/reapply and next frame's subtraction)
 	_total_pos_contribution = new_pos

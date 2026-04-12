@@ -8,7 +8,7 @@
 # WHAT: Unified base node that drives JuiceEffectBase resources via a recipe.
 # WHY: Replaces per-effect Node architecture with a single node per target.
 #      Manages triggers, animation lifecycle, chaining, and looping.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Know about domain specifics — subclasses (JuiceControl, Juice2D,
 #           Juice3D) handle target type validation and domain auto-connect.
 # ============================================================================
@@ -122,6 +122,52 @@ enum TriggerSource {
 		mode = value
 		notify_property_list_changed()
 
+@export_subgroup("Sequencer Options")
+
+## Where this sequencer sources its animations (SEQUENCER mode only).
+@export var juice_source: JuiceSource = JuiceSource.RECIPE:
+	set(value):
+		juice_source = value
+		notify_property_list_changed()
+
+## Which nodes to target for animation (SEQUENCER mode only).
+@export var target_scope: TargetScope = TargetScope.SIBLINGS:
+	set(value):
+		target_scope = value
+		notify_property_list_changed()
+
+## Manually authored list of target nodes (visible when target_scope == CUSTOM).
+@export var seq_custom_targets: Array[NodePath] = []
+
+## Name of the container node holding juice on each target
+## (visible when juice_source == TARGETS_STACK).
+@export var seq_stack_name: String = ""
+
+## Order and timing strategy for the sequence.
+@export var sequence_type: SequenceType = SequenceType.STAGGER_FORWARD:
+	set(value):
+		sequence_type = value
+		notify_property_list_changed()
+
+## Time delay between targets (stagger delay). Hidden for ALL_AT_ONCE.
+@export_range(0.0, 100.0, 0.01, "or_greater") var seq_stagger_delay: float = 0.1
+
+## Mirror the stagger direction when playing the exit animation.
+## Example: Stagger Forward on entry → Stagger Reverse on exit.
+@export var seq_mirror_stagger_on_exit: bool = true
+
+## Skip targets that are not visible.
+@export var seq_skip_invisible: bool = true
+
+## Skip self when targeting siblings (almost always true).
+@export var seq_skip_self: bool = true
+
+## Skip targets that are JuiceBase nodes (don't animate our own juice siblings).
+@export var seq_skip_juice_nodes: bool = true
+
+## When the exit animation completes, hide the parent node.
+@export var seq_hide_parent_on_reverse_complete: bool = false
+
 @export_group("Trigger")
 
 ## Where trigger signals come from: PARENT uses the parent node, NODE uses a
@@ -168,52 +214,6 @@ enum TriggerSource {
 
 ## How to handle re-triggers while playing.
 @export var retrigger_policy: RetriggerPolicy = RetriggerPolicy.RESTART
-
-@export_group("Sequencer")
-
-## Where this sequencer sources its animations (SEQUENCER mode only).
-@export var juice_source: JuiceSource = JuiceSource.RECIPE:
-	set(value):
-		juice_source = value
-		notify_property_list_changed()
-
-## Which nodes to target for animation (SEQUENCER mode only).
-@export var target_scope: TargetScope = TargetScope.SIBLINGS:
-	set(value):
-		target_scope = value
-		notify_property_list_changed()
-
-## Manually authored list of target nodes (visible when target_scope == CUSTOM).
-@export var seq_custom_targets: Array[NodePath] = []
-
-## Name of the container node holding juice on each target
-## (visible when juice_source == TARGETS_STACK).
-@export var seq_stack_name: String = ""
-
-## Order and timing strategy for the sequence.
-@export var sequence_type: SequenceType = SequenceType.STAGGER_FORWARD:
-	set(value):
-		sequence_type = value
-		notify_property_list_changed()
-
-## Time delay between targets (stagger delay). Hidden for ALL_AT_ONCE.
-@export_range(0.0, 100.0, 0.01, "or_greater") var seq_stagger_delay: float = 0.1
-
-## Mirror the stagger direction when playing the exit animation.
-## Example: Stagger Forward on entry → Stagger Reverse on exit.
-@export var seq_mirror_stagger_on_exit: bool = true
-
-## Skip targets that are not visible.
-@export var seq_skip_invisible: bool = true
-
-## Skip self when targeting siblings (almost always true).
-@export var seq_skip_self: bool = true
-
-## Skip targets that are JuiceBase nodes (don't animate our own juice siblings).
-@export var seq_skip_juice_nodes: bool = true
-
-## When the exit animation completes, hide the parent node.
-@export var seq_hide_parent_on_reverse_complete: bool = false
 
 @export_group("Loop")
 
@@ -553,6 +553,9 @@ func _process(delta: float) -> void:
 		var result := effect.tick(delta, _target_node)
 		if result == JuiceEffectBase.TickResult.COMPLETED:
 			newly_completed.append(idx)
+		elif result == JuiceEffectBase.TickResult.RESTART_REVERSED:
+			# REVERSE_EASED accumulation: direction already flipped — restart easing from 0
+			effect.start(_target_node, true, false, self)
 
 	# --- Chained preroll: start chained effects early for overlap ---
 	for idx in _active_effect_indices:
@@ -809,6 +812,9 @@ func _start_effects(play_in: bool) -> void:
 	# Find root effects (those not chained from another)
 	var root_indices := _get_root_effect_indices()
 
+	# JIT sync: Detect external moves (Container layout shifts) that happened while idle
+	_pre_tick()
+
 	# Temporarily undo visuals so effects can capture natural state
 	# in their _on_animate_start() callbacks
 	_temporarily_undo_visual()
@@ -823,10 +829,18 @@ func _start_effects(play_in: bool) -> void:
 	# Reapply visuals after effects have captured their From/To references
 	_temporarily_reapply_visual()
 
+	if debug_enabled and _target_node is Control:
+		var c := _target_node as Control
+		print("[FROMTO_DBG] %s._start_effects: AFTER reapply: ctrl.pos=%s" % [name, c.position])
+
 	# Write immediately so first-frame state is correct. With contribution
 	# tracking this applies: target = target - old(0) + new(first_delta),
 	# ensuring the target is at the correct position before the first _process.
 	_post_tick_write()
+
+	if debug_enabled and _target_node is Control:
+		var c := _target_node as Control
+		print("[FROMTO_DBG] %s._start_effects: AFTER post_tick_write: ctrl.pos=%s" % [name, c.position])
 
 	set_process(true)
 
@@ -1286,6 +1300,9 @@ func _seq_process_tick(delta: float) -> void:
 			var result := effect.tick(delta, target)
 			if result == JuiceEffectBase.TickResult.COMPLETED:
 				newly_completed.append(idx)
+			elif result == JuiceEffectBase.TickResult.RESTART_REVERSED:
+				# REVERSE_EASED accumulation: direction already flipped — restart easing from 0
+				effect.start(target, true, false, self)
 
 		# Chained preroll: start chained effects early for overlap
 		for idx_variant2: Variant in active_indices:

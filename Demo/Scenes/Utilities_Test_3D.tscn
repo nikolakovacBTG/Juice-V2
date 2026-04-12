@@ -1,0 +1,105 @@
+[gd_scene format=3 uid="uid://cdjlivq4ti142"]
+
+[ext_resource type="Script" uid="uid://bvd3y7wgqsun2" path="res://Demo/Scripts/UtilityTester.gd" id="1_48pno"]
+[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/Base Classes/Juice3D.gd" id="2_60rrg"]
+[ext_resource type="Resource" uid="uid://cmhjh1jrag6an" path="res://Demo/Scenes/TestRecipe3D.tres" id="3_n7frd"]
+[ext_resource type="Script" uid="uid://c27wfpddhgwpp" path="res://addons/Juice_V1/Utilities/Interaction3DJuiceUtility.gd" id="4_jjlsl"]
+[ext_resource type="Script" uid="uid://bfbfxvt6cexsc" path="res://addons/Juice_V1/Utilities/CallMethodJuiceUtility.gd" id="5_18hhb"]
+[ext_resource type="Script" uid="uid://btg8ksw813yde" path="res://addons/Juice_V1/Utilities/SignalEmitJuiceUtility.gd" id="6_fyk60"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_48pno"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3i5f5"]
+albedo_color = Color(0.2, 0.8, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_18hhb"]
+material = SubResource("StandardMaterial3D_3i5f5")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_fyk60"]
+radius = 3.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ljrfg"]
+albedo_color = Color(0.2, 0.2, 0.8, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_w4odw"]
+material = SubResource("StandardMaterial3D_ljrfg")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_djlx8"]
+radius = 1.0
+
+[node name="UtilitiesTest3d" type="Node3D" unique_id=316477775]
+script = ExtResource("1_48pno")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1328505355]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 8)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=353096296]
+
+[node name="SoftTriggerTest3D" type="Node3D" parent="." unique_id=82847945]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SoftTriggerTest3D" unique_id=1424770181]
+mesh = SubResource("BoxMesh_48pno")
+
+[node name="Juice3D" type="Node3D" parent="SoftTriggerTest3D" unique_id=2144992663]
+script = ExtResource("2_60rrg")
+trigger_on = 9
+recipe = ExtResource("3_n7frd")
+
+[node name="SoftTrigger3DJuiceUtility" type="Node" parent="SoftTriggerTest3D" unique_id=891102787]
+
+[node name="BodyEntryTest3D" type="Node3D" parent="." unique_id=1557968063]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="BodyEntryTest3D" unique_id=409337897]
+mesh = SubResource("SphereMesh_18hhb")
+
+[node name="Interaction3D" type="Area3D" parent="BodyEntryTest3D" unique_id=1317434180]
+script = ExtResource("4_jjlsl")
+mode = 0
+detect_bodies = true
+detect_areas = true
+filter_group = ""
+trigger_on_enter = true
+trigger_on_exit = true
+one_shot = false
+debug_enabled = false
+
+[node name="Juice_CollisionShape3D" type="CollisionShape3D" parent="BodyEntryTest3D/Interaction3D" unique_id=44456341]
+shape = SubResource("SphereShape3D_fyk60")
+
+[node name="Juice3D" type="Node3D" parent="BodyEntryTest3D" unique_id=701704279]
+script = ExtResource("2_60rrg")
+trigger_on = 7
+
+[node name="MethodSignalTest3D" type="Node3D" parent="." unique_id=1391292232]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MethodSignalTest3D" unique_id=26956535]
+mesh = SubResource("SphereMesh_w4odw")
+
+[node name="Interaction3D" type="Area3D" parent="MethodSignalTest3D" unique_id=849206112]
+script = ExtResource("4_jjlsl")
+mode = 1
+action_count = 1
+action_0_preset = 1
+check_presence_in_trigger_zone = false
+debug_enabled = false
+
+[node name="Juice_CollisionShape3D" type="CollisionShape3D" parent="MethodSignalTest3D/Interaction3D" unique_id=1786500866]
+shape = SubResource("SphereShape3D_djlx8")
+
+[node name="Juice3D" type="Node3D" parent="MethodSignalTest3D" unique_id=834566465]
+script = ExtResource("2_60rrg")
+
+[node name="CallMethodJuiceUtility" type="Node" parent="MethodSignalTest3D" unique_id=759801203]
+script = ExtResource("5_18hhb")
+target_node_path = NodePath(".")
+method_name = "on_method_called"
+
+[node name="SignalEmitJuiceUtility" type="Node" parent="MethodSignalTest3D" unique_id=1313829055]
+script = ExtResource("6_fyk60")
+payload = "Test payload from 3D SignalEmitJuiceUtility!"
+
+[node name="TimeEffectTest3D" type="Node3D" parent="." unique_id=1915374826]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)

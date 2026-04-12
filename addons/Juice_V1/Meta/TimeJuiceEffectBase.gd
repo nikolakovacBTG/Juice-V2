@@ -7,7 +7,7 @@
 # WHAT: Base class for time manipulation effects in the JuiceStack system.
 # WHY:  Ports V0 TimeJuiceComp to V1 Resource architecture. Being an effect
 #       allows time manipulation to be stacked, chained, and sequenced inside
-#       a JuiceBase recipe — the same chainability V0 had via JuiceCompBase.
+#       a JuiceBase recipe — the same chainability V0 had via JuiceBase.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Animate target node properties — this is a meta effect.
 # DOES NOT: Manage audio pitch — use TimeCoordinatorJuiceUtility for that.

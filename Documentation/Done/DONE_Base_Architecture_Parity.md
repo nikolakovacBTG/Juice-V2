@@ -17,8 +17,8 @@
 
 | V0 Signal | V0 Location | V1 Location | Status | Test |
 |-----------|-------------|-------------|--------|------|
-| `started` | JuiceCompBase:41 | `animate_in_started` + `animate_out_started` on JuiceBase:38-41 | 🔄 More granular in V1 | — |
-| `completed` | JuiceCompBase:44 | JuiceBase:35 | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
+| `started` | JuiceBase:41 | `animate_in_started` + `animate_out_started` on JuiceBase:38-41 | 🔄 More granular in V1 | — |
+| `completed` | JuiceBase:44 | JuiceBase:35 | ✅ Fixed (commit 246aecd) | `test_loop_count_two_replays` ✅ |
 
 ---
 
@@ -211,16 +211,16 @@
 
 | Feature | V0 Reference | V1 Reference | Status | Test |
 |---------|-------------|-------------|--------|------|
-| `_enter_editor_preview` | `JuiceCompBase:1017` | **NOT PRESENT** on JuiceBase | ❓ May live elsewhere or not yet ported | — |
-| `_exit_editor_preview` | `JuiceCompBase:1035` | **NOT PRESENT** | ❓ | — |
-| `_editor_preview_active` flag | `JuiceCompBase:523` | **NOT PRESENT** | ❓ | — |
-| `get_progress_at_time` | `JuiceCompBase:1053` | `JuiceEffectBase:777` | ✅ | — |
-| `get_total_preview_duration` | `JuiceCompBase:1090` | `JuiceEffectBase:795` | ✅ | — |
-| `set_progress` (scrub) | `JuiceCompBase:1103` | `JuiceEffectBase:489` | ✅ | — |
-| `apply_easing_for_direction` | `JuiceCompBase:1114` | `JuiceEffectBase:635` | ✅ | — |
-| `_temporarily_undo_visual` | `JuiceCompBase:2102` | JuiceBase:624 + JuiceEffectBase:855 | ✅ | — |
-| `_temporarily_reapply_visual` | `JuiceCompBase:2106` | JuiceBase:629 + JuiceEffectBase:858 | ✅ | — |
-| `_supports_editor_preview` | `JuiceCompBase:2093` | `JuiceEffectBase:871` | ✅ | — |
+| `_enter_editor_preview` | `JuiceBase:1017` | **NOT PRESENT** on JuiceBase | ❓ May live elsewhere or not yet ported | — |
+| `_exit_editor_preview` | `JuiceBase:1035` | **NOT PRESENT** | ❓ | — |
+| `_editor_preview_active` flag | `JuiceBase:523` | **NOT PRESENT** | ❓ | — |
+| `get_progress_at_time` | `JuiceBase:1053` | `JuiceEffectBase:777` | ✅ | — |
+| `get_total_preview_duration` | `JuiceBase:1090` | `JuiceEffectBase:795` | ✅ | — |
+| `set_progress` (scrub) | `JuiceBase:1103` | `JuiceEffectBase:489` | ✅ | — |
+| `apply_easing_for_direction` | `JuiceBase:1114` | `JuiceEffectBase:635` | ✅ | — |
+| `_temporarily_undo_visual` | `JuiceBase:2102` | JuiceBase:624 + JuiceEffectBase:855 | ✅ | — |
+| `_temporarily_reapply_visual` | `JuiceBase:2106` | JuiceBase:629 + JuiceEffectBase:858 | ✅ | — |
+| `_supports_editor_preview` | `JuiceBase:2093` | `JuiceEffectBase:871` | ✅ | — |
 
 ---
 
@@ -244,7 +244,7 @@
 
 | Change | V0 | V1 | Rationale |
 |--------|-----|-----|-----------|
-| Node vs Resource | JuiceCompBase extends Node | JuiceEffectBase extends Resource + JuiceBase extends Node | Recipes as Resources, stacking via single node |
+| Node vs Resource | JuiceBase extends Node | JuiceEffectBase extends Resource + JuiceBase extends Node | Recipes as Resources, stacking via single node |
 | retrigger_policy scope | Per-comp (each comp has own policy) | Per-node (all effects share one policy) | Recipe = unified behavior |
 | `is_one_shot_return` | Threaded as parameter to `_animate_to` | Internal flag on effect, set by `_start_animate_out_internal` | Cleaner: effect manages own IN→OUT cycle |
 | `_is_recipe_clone` | Flag on comp for Sequencer clones | N/A — effects are Resources, cloned via `duplicate()` | Architectural simplification |

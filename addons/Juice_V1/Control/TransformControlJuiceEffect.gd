@@ -1,25 +1,25 @@
 ## Animate position, rotation, or scale of a [Control] (UI) with tween-based easing and From/To configuration.
+##
+## Select a transform target (Position, Rotation, or Scale) and configure animations
+## using CUSTOM values, SELF snapshots, or live TARGET_NODE references.
+
 # ============================================================================
-## WHAT: Animate position, rotation, or scale of a Control with tween-based easing.
-## WHY: Replaces 3 separate scripts with one unified component. Select a
-##      transform_target (Position, Rotation, or Scale) and configure a From/To
-##      animation using CUSTOM values, SELF snapshots, or live TARGET_NODE refs.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Node2D or Node3D targets — use Transform2D/3DJuiceEffect.
-## DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
-# ============================================================================
-##
-## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
-##   contribution: node.property += (desired - _my_contribution). This enables
-##   stacking with other effects and preserves external changes to the node.
-##
-## FROM/TO MODEL:
-## All transform types use a "From [source] To [destination]" model.
-## Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
-##
-## CONDITIONAL EXPORTS:
-## Uses _get_property_list() to conditionally show/hide parameters based on
-## transform_target and from/to reference selections.
+# WHAT: Animate position, rotation, or scale of a Control with tween-based easing.
+# WHY: Replaces 3 separate scripts with one unified component.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Node2D or Node3D targets — use Transform2D/3DJuiceEffect.
+# DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
+# WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
+#   contribution: node.property += (desired - _my_contribution). This enables
+#   stacking with other effects and preserves external changes to the node.
+#
+# FROM/TO MODEL:
+# All transform types use a "From [source] To [destination]" model.
+# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
+#
+# CONDITIONAL EXPORTS:
+# Uses _get_property_list() to conditionally show/hide parameters based on
+# transform_target and from/to reference selections.
 # ============================================================================
 
 @tool
@@ -481,6 +481,14 @@ var _has_self_scale_snapshot: bool = false
 
 func _on_host_ready(target: Node, host: Node) -> void:
 	_host_node = host
+	if debug_enabled:
+		var ctrl := target as Control
+		print("[FROMTO_DBG] TransformCtrl._on_host_ready: target=%s target.pos=%s from_ref=%s to_ref=%s capture_at=%s" % [
+			ctrl.name if ctrl else "null",
+			ctrl.position if ctrl else "null",
+			TransformReference.keys()[from_reference],
+			TransformReference.keys()[to_reference],
+			CaptureAt.keys()[capture_at]])
 	_capture_base(target)
 
 	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
@@ -489,6 +497,8 @@ func _on_host_ready(target: Node, host: Node) -> void:
 
 	# IN_EDITOR: value is already baked — nothing to capture at runtime.
 	if capture_at == CaptureAt.IN_EDITOR:
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._on_host_ready: IN_EDITOR → using cached pos=%s" % [_editor_cached_position])
 		return
 
 	if capture_at == CaptureAt.READY:
@@ -506,6 +516,10 @@ func _on_editor_pre_save(target: Node) -> void:
 
 
 func _on_animate_start(target: Node) -> void:
+	var ctrl := target as Control
+	if debug_enabled:
+		print("[FROMTO_DBG] TransformCtrl._on_animate_start: target.pos=%s _has_base=%s _base_pos=%s" % [
+			ctrl.position if ctrl else "null", _has_base, _base_position])
 	if not _has_base:
 		_capture_base(target)
 
@@ -519,6 +533,9 @@ func _on_animate_start(target: Node) -> void:
 	# Capture Self snapshot if needed
 	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
 	if uses_self and (capture_at == CaptureAt.TRIGGER or capture_at == CaptureAt.IN_EDITOR):
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._on_animate_start: capturing self snapshot (has_snap=%s, capture_at=%s)" % [
+				_has_self_position_snapshot, CaptureAt.keys()[capture_at]])
 		match transform_target:
 			TransformTarget.POSITION:
 				_capture_self_position_snapshot(target)
@@ -533,7 +550,8 @@ func _on_animate_start(target: Node) -> void:
 		_pivot_applied = true
 
 	if debug_enabled:
-		print("[TransformCtrl] Start: %s" % TransformTarget.keys()[transform_target])
+		print("[FROMTO_DBG] TransformCtrl._on_animate_start DONE: _base_pos=%s _self_snap=%s _has_snap=%s" % [
+			_base_position, _self_position_snapshot, _has_self_position_snapshot])
 
 
 func _apply_effect(progress: float, target: Node) -> void:
@@ -584,6 +602,9 @@ func _apply_position_effect(progress: float, target: Control) -> void:
 
 	# Store delta from natural state — node aggregates and writes
 	_pos_delta = desired_absolute - _base_position
+	if debug_enabled and (progress < 0.01 or progress > 0.99):
+		print("[FROMTO_DBG] TransformCtrl._apply_position_effect: p=%.3f from=%s to=%s desired=%s _base=%s => _pos_delta=%s" % [
+			progress, from_value, to_value, desired_absolute, _base_position, _pos_delta])
 
 
 func _resolve_from_position(ctrl: Control) -> Vector2:
@@ -756,16 +777,20 @@ func _resolve_from_to_refs() -> void:
 
 func _capture_self_position_snapshot(target: Node) -> void:
 	if _has_self_position_snapshot:
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._capture_self_position: SKIPPED (already has snap=%s)" % [_self_position_snapshot])
 		return
 	if capture_at == CaptureAt.IN_EDITOR:
 		_self_position_snapshot = _editor_cached_position
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._capture_self_position: IN_EDITOR → cached=%s" % [_editor_cached_position])
 	else:
 		var ctrl := target as Control
 		_self_position_snapshot = ctrl.position if ctrl else Vector2.ZERO
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._capture_self_position: %s → ctrl.pos=%s" % [
+				CaptureAt.keys()[capture_at], _self_position_snapshot])
 	_has_self_position_snapshot = true
-	if debug_enabled:
-		print("[TransformCtrl] Self position snapshot: %s (mode=%s)" % [
-			_self_position_snapshot, CaptureAt.keys()[capture_at]])
 
 
 func _capture_self_rotation_snapshot(target: Node) -> void:
@@ -829,6 +854,8 @@ func _update_editor_cache(target: Node = null) -> void:
 
 func _capture_base(target: Node) -> void:
 	if _has_base:
+		if debug_enabled:
+			print("[FROMTO_DBG] TransformCtrl._capture_base: SKIPPED (already has _base_pos=%s)" % [_base_position])
 		return
 	var ctrl := target as Control
 	if ctrl == null:
@@ -838,7 +865,7 @@ func _capture_base(target: Node) -> void:
 	_base_scale = ctrl.scale
 	_has_base = true
 	if debug_enabled:
-		print("[TransformCtrl] Base captured: pos=%s, rot=%.1f°, scale=%s" % [
+		print("[FROMTO_DBG] TransformCtrl._capture_base: pos=%s, rot=%.1f°, scale=%s" % [
 			_base_position, rad_to_deg(_base_rotation_radians), _base_scale])
 
 

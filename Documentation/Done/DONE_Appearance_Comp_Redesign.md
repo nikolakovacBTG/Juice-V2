@@ -31,9 +31,9 @@ This redesign consolidates all per-node appearance effects into one enum-driven 
 
 ### Assumptions
 
-- `JuiceCompBase` provides timing, triggering, looping, curves, `_apply_effect(progress)` lifecycle
-- `_target_node` is resolved by `JuiceCompBase` (parent or configured node)
-- `hold_at_peak` is available in `JuiceCompBase` for flash-style effects
+- `JuiceBase` provides timing, triggering, looping, curves, `_apply_effect(progress)` lifecycle
+- `_target_node` is resolved by `JuiceBase` (parent or configured node)
+- `hold_at_peak` is available in `JuiceBase` for flash-style effects
 - `@tool` is used for editor preview compatibility
 - Godot 4.x API (typed GDScript, `_get_property_list`, `_validate_property`)
 
@@ -45,8 +45,8 @@ This redesign consolidates all per-node appearance effects into one enum-driven 
 
 | Input | Source | Description |
 |-------|--------|-------------|
-| `progress` (0.0–1.0) | `JuiceCompBase` | Animation timeline position |
-| `_target_node` | `JuiceCompBase` | The node whose appearance is being modified |
+| `progress` (0.0–1.0) | `JuiceBase` | Animation timeline position |
+| `_target_node` | `JuiceBase` | The node whose appearance is being modified |
 | `delta` | `_process` / `_physics_process` | Frame time for flicker temporal modulation |
 | Inspector configuration | User / scene file | Effect type, colors, sizes, flicker settings |
 
@@ -80,8 +80,8 @@ All `@export` and `_get_property_list` backed variables:
 
 ### Data the system reads but does NOT own
 
-- `_target_node` — owned by `JuiceCompBase`
-- `progress` — owned by `JuiceCompBase` animation system
+- `_target_node` — owned by `JuiceBase`
+- `progress` — owned by `JuiceBase` animation system
 - Target node's current `modulate`, material, StyleBox, etc. — owned by the target node
 
 ### Transient state (runtime only — NOT serialized)
@@ -113,10 +113,10 @@ All `@export` and `_get_property_list` backed variables:
 
 ## 4. Composition Model
 
-### Architecture: 3 per-domain scripts, no shared base beyond JuiceCompBase
+### Architecture: 3 per-domain scripts, no shared base beyond JuiceBase
 
 ```
-JuiceCompBase
+JuiceBase
   ├── Appearance2DJuiceComp        (CanvasItem / Node2D targets)
   ├── AppearanceControlJuiceComp   (Control targets)
   └── Appearance3DJuiceComp        (Node3D / GeometryInstance3D targets)
@@ -396,13 +396,13 @@ func _get_effective_progress(progress: float, delta: float) -> float:
 2. **User selects** `appearance_effect = TINT` in inspector
 3. **Inspector shows** TINT-specific params (`color_from`, `color_to`, `animate_alpha`, `affect_children`)
 4. **User optionally enables** flicker group (`use_flicker = true`)
-5. **Trigger fires** (ON_PRESS, ON_HOVER_START, etc.) → `JuiceCompBase` calls `_on_animate_start()`
+5. **Trigger fires** (ON_PRESS, ON_HOVER_START, etc.) → `JuiceBase` calls `_on_animate_start()`
 6. **`_on_animate_start()`**: Capture base values from target. Set up materials/shaders if needed for the selected effect.
-7. **Each frame**: `JuiceCompBase` calls `_apply_effect(progress)`
+7. **Each frame**: `JuiceBase` calls `_apply_effect(progress)`
    - a. Compute `effective_progress = _get_effective_progress(progress, delta)`
    - b. Match on `appearance_effect`
    - c. Apply the selected effect using `effective_progress`
-8. **Animation completes**: `JuiceCompBase` calls `_on_animate_out_complete()`
+8. **Animation completes**: `JuiceBase` calls `_on_animate_out_complete()`
    - a. Restore all base values
    - b. Clean up created materials/shaders/StyleBoxes
    - c. Reset transient state
@@ -439,7 +439,7 @@ func _get_effective_progress(progress: float, delta: float) -> float:
 ### Edge cases
 
 #### Retrigger during animation
-`JuiceCompBase` handles retrigger via `retrigger_policy` (RESTART, IGNORE, QUEUE). The Appearance comp's `_on_animate_start()` will re-capture base values only if `_has_base_captured == false`. On RESTART, `_invalidate_base_cache()` is called first, forcing re-capture.
+`JuiceBase` handles retrigger via `retrigger_policy` (RESTART, IGNORE, QUEUE). The Appearance comp's `_on_animate_start()` will re-capture base values only if `_has_base_captured == false`. On RESTART, `_invalidate_base_cache()` is called first, forcing re-capture.
 
 #### Target node has no material (3D)
 For effects that need a `StandardMaterial3D` (TINT/OVERBRIGHT/3D-exclusive), if none is found:
@@ -457,7 +457,7 @@ If the target already has a ShaderMaterial (user's custom shader), we cannot rep
 - Add a configuration warning: "Target already has a ShaderMaterial. GRAYSCALE/DISSOLVE will temporarily replace it during animation."
 
 #### Multiple Appearance comps on same target
-Supported — each comp manages its own base values and restores them independently. However, two comps modifying the same property (e.g., two TINT comps) will fight. This is the user's responsibility. JuiceCompBase's delta-first write pattern helps mitigate, but color effects use absolute writes (not deltas). Add a note in documentation.
+Supported — each comp manages its own base values and restores them independently. However, two comps modifying the same property (e.g., two TINT comps) will fight. This is the user's responsibility. JuiceBase's delta-first write pattern helps mitigate, but color effects use absolute writes (not deltas). Add a note in documentation.
 
 #### Flicker with loop_count = -1 (infinite loop)
 Works correctly. Flicker oscillates within each animation cycle. The base class handles looping; flicker just modulates within each cycle's progress.
@@ -483,7 +483,7 @@ Works correctly. Flicker oscillates within each animation cycle. The base class 
 
 ### Game loop
 
-- Plugs in via `JuiceCompBase._process()` / `_physics_process()` → `_apply_effect(progress)`
+- Plugs in via `JuiceBase._process()` / `_physics_process()` → `_apply_effect(progress)`
 - Flicker uses `delta` from the process callback for time accumulation
 - No additional game loop hooks needed
 
@@ -510,7 +510,7 @@ Flicker
 ├── flicker_max: [1.0]                  # Only when RANDOM
 ├── flicker_curve: [Curve ▼]            # Only when CUSTOM
 │
-Timing                                   # From JuiceCompBase
+Timing                                   # From JuiceBase
 ├── duration: [0.3]
 ├── curve: [Curve ▼]
 ├── ...
@@ -536,7 +536,7 @@ Properties that must NOT leak into .tscn:
 
 ### Contracts
 
-- Extends `JuiceCompBase` — must implement: `_on_animate_start()`, `_apply_effect(progress)`, `_on_animate_out_complete()`, `_invalidate_base_cache()`
+- Extends `JuiceBase` — must implement: `_on_animate_start()`, `_apply_effect(progress)`, `_on_animate_out_complete()`, `_invalidate_base_cache()`
 - Optionally implements: `_on_animate_in_complete()`, `_get_configuration_warnings()`
 - Uses `_target_node` from base class
 - Calls `notify_property_list_changed()` when `appearance_effect` or `flicker_mode` changes
@@ -657,7 +657,7 @@ All backing vars use `_get_property_list()` + `_get()` + `_set()` pattern (prove
 
 ### Prerequisites (must exist before coding)
 
-1. **`JuiceCompBase`** — already exists, provides all needed lifecycle hooks ✅
+1. **`JuiceBase`** — already exists, provides all needed lifecycle hooks ✅
 2. **`outline_2d.gdshader`** — already exists in `addons/juice/Shaders/` ✅
 3. **Grayscale shader** — needs to be created (trivial, ~5 lines) ⚠️
 4. **Dissolve shader (2D)** — needs to be created (~15 lines) ⚠️

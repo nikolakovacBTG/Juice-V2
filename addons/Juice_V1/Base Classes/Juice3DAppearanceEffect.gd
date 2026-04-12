@@ -8,7 +8,7 @@
 # WHY: Separates appearance accumulation from domain filtering. Effects that
 #      animate albedo/alpha via material slots extend this. Non-appearance effects
 #      (Transform) extend Juice3DEffectBase directly.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement any effect behavior — concrete subclasses do that.
 # DOES NOT: Manage MeshInstance3D or working materials — that is Juice3D's job.
 # ============================================================================

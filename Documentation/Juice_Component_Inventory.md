@@ -19,7 +19,7 @@
 
 | # | Class Name | Finished | Demoed | Documented | Presets | Notes |
 |---|------------|:---:|:---:|:---:|:---:|-------|
-| 1 | `JuiceCompBase` | | | | — | Abstract base class. hold_at_peak, retrigger, loop, ping-pong. |
+| 1 | `JuiceBase` | | | | — | Abstract base class. hold_at_peak, retrigger, loop, ping-pong. |
 
 ## Control Domain
 

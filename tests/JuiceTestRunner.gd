@@ -92,6 +92,10 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestTimeEffect.gd").new())
 	_suites.append(load("res://tests/suites/TestMetaEffects.gd").new())
 	_suites.append(load("res://tests/suites/TestMultipleChaining.gd").new())
+	_suites.append(load("res://tests/suites/TestProgress2D.gd").new())
+	_suites.append(load("res://tests/suites/TestProgressControl.gd").new())
+	_suites.append(load("res://tests/suites/TestProgress3D.gd").new())
+	_suites.append(load("res://tests/suites/TestProgressProperty.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

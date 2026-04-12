@@ -7,7 +7,7 @@
 # ============================================================================
 # WHAT: Juice node for Node3D targets (MeshInstance3D, CharacterBody3D, etc.).
 # WHY: Validates parent is Node3D, connects Area3D/CollisionObject3D signals.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
@@ -48,6 +48,13 @@ var _total_scale_contribution: Vector3 = Vector3.ZERO
 
 # Whether base values have been captured at least once
 var _base_captured: bool = false
+
+# Expected values after our last write — for external-move detection (pre-tick).
+# If the actual value differs from expected next frame, something external moved
+# the target and we update _base_*.
+var _expected_position: Vector3 = Vector3.INF
+var _expected_rotation: Vector3 = Vector3.INF
+var _expected_scale: Vector3 = Vector3.INF
 
 # 3D Appearance — domain node owns the single working material to prevent multiple
 # Juice3DAppearanceEffect instances fighting over the surface_override_material slot.
@@ -211,6 +218,52 @@ func _capture_base_values() -> void:
 	_total_pos_contribution = Vector3.ZERO
 	_total_rot_contribution = Vector3.ZERO
 	_total_scale_contribution = Vector3.ZERO
+	# Initialise expected values so pre-tick can detect external moves
+	_expected_position = n3d.position
+	_expected_rotation = n3d.rotation
+	_expected_scale = n3d.scale
+
+## Detect external displacement of the target (game logic, tweens, etc.).
+## Runs once per frame, before effects tick. When displacement is detected,
+## updates _base_* so delta computations use the correct natural state.
+func _pre_tick() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var n3d := _target_node as Node3D
+	var any_displaced := false
+
+	# Position
+	if _expected_position != Vector3.INF:
+		if not n3d.position.is_equal_approx(_expected_position):
+			var displacement := n3d.position - _expected_position
+			_base_position += displacement
+			_expected_position = n3d.position
+			any_displaced = true
+			if debug_enabled:
+				print("[%s] External displacement (position): %s → new base: %s" % [
+					name, displacement, _base_position])
+
+	# Rotation
+	if _expected_rotation != Vector3.INF:
+		if not n3d.rotation.is_equal_approx(_expected_rotation):
+			var displacement := n3d.rotation - _expected_rotation
+			_base_rotation += displacement
+			_expected_rotation = n3d.rotation
+			any_displaced = true
+
+	# Scale
+	if _expected_scale != Vector3.INF:
+		if not n3d.scale.is_equal_approx(_expected_scale):
+			var displacement := n3d.scale - _expected_scale
+			_base_scale += displacement
+			_expected_scale = n3d.scale
+			any_displaced = true
+
+	# Invalidate effect base caches so they re-capture on next animation start
+	if any_displaced:
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._invalidate_base_cache()
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -243,6 +296,11 @@ func _post_tick_write() -> void:
 	n3d.position = n3d.position - _total_pos_contribution + new_pos
 	n3d.rotation = n3d.rotation - _total_rot_contribution + new_rot
 	n3d.scale = n3d.scale - _total_scale_contribution + new_scale
+
+	# Track expected values (for external-displacement detection next frame)
+	_expected_position = n3d.position
+	_expected_rotation = n3d.rotation
+	_expected_scale = n3d.scale
 
 	# Track total contribution (for undo/reapply and next frame's subtraction)
 	_total_pos_contribution = new_pos

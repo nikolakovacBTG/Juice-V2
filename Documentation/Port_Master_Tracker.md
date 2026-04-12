@@ -11,7 +11,7 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `JuiceCompBase` | `JuiceBase` + `JuiceEffectBase` | 🔧 Foundation bugs (B1, B2, D1-D3) | `TestNodeProperties` | 2026-03-21 |
+| `JuiceBase` | `JuiceBase` + `JuiceEffectBase` | 🔧 Foundation bugs (B1, B2, D1-D3) | `TestNodeProperties` | 2026-03-21 |
 
 ## Domain Nodes
 

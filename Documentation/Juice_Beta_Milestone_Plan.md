@@ -56,7 +56,7 @@ Remove all leftover stale, outdated, or misleading comments from every Juice scr
 5. Git commit: `chore: remove stale comments from Juice scripts`
 
 ### Scripts to Audit
-- JuiceCompBase.gd
+- JuiceBase.gd
 - All subclass comp scripts (Scale, Rotate, Position, Color, Flash, Flicker, etc.)
 - Camera comps (Camera3D, Camera2D, ScreenMotion)
 - Property comps (Tween, Shake, Noise, Spring)
@@ -106,7 +106,7 @@ Add clear, helpful tooltip comments to all `@export` properties across all Juice
 ### Icon Family Design
 | Icon File | Used By | Symbol |
 |-----------|---------|--------|
-| JuiceBase.svg | JuiceCompBase (inherited by all) | J |
+| JuiceBase.svg | JuiceBase (inherited by all) | J |
 | JuiceBase2D.svg | All 2D domain comps | J (2D variant) |
 | JuiceBase3D.svg | All 3D domain comps | J (3D variant) |
 | JuiceBaseControl.svg | All Control domain comps | J (Control variant) |

@@ -50,7 +50,7 @@ You must implement tests covering the following real-world categories for the ta
 2.  Register the suite.
 3.  Run the tests using MCP0 or the bat file:
     ```powershell
-    cmd /c "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+    cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
     ```
 4.  If tests fail, diagnose whether it's a bug in the effect or the test setup, fix it, and re-run.
 

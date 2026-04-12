@@ -1,30 +1,29 @@
 ## Emits a custom signal when triggered, allowing game systems to react to juice events.
 ##
-## Decouples juice animations from game logic. Designers can wire "when this juice completes → emit signal X" purely in inspector.
+## Decouples juice animations from game logic. Designers can wire "when
+## this juice completes → emit signal X" purely in inspector.
 
 # ============================================================================
 # WHAT: Emits a custom signal when triggered, allowing game systems to react
 #       to juice events without tight coupling.
-# WHY: Decouples juice animations from game logic. Designers can wire "when
-#       this juice completes → emit signal X" purely in inspector.
-# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
+# WHY: Decouples juice animations from game logic.
+# SYSTEM: Juice System (addons/Juice_V1/Utilities/)
 # DOES NOT: Create any visual effect. This is a control/flow utility only.
+#
+# LIFECYCLE:
+#   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that
+#   node fires animate_in_started or completed, this utility emits juice_signal.
+#
+# USAGE:
+# - Add as sibling of a JuiceBase node
+# - Set observe_juice to point at the JuiceBase node
+# - Connect other nodes to this utility's `juice_signal` signal
+# - Configure when to emit (on start, on complete, or both)
+#
+# EXAMPLES:
+# - Notify game system when a JuiceControl animation completes
+# - Standalone: emit a signal when any juice effect triggers
 # ============================================================================
-##
-## LIFECYCLE:
-##   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that
-##   node fires animate_in_started or completed, this utility emits juice_signal.
-##
-## USAGE:
-## - Add as sibling of a JuiceBase node
-## - Set observe_juice to point at the JuiceBase node
-## - Connect other nodes to this utility's `juice_signal` signal
-## - Configure when to emit (on start, on complete, or both)
-##
-## EXAMPLES:
-## - Notify game system when a JuiceControl animation completes
-## - Standalone: emit a signal when any juice effect triggers
-## ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilitySignals.svg")

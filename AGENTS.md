@@ -166,6 +166,7 @@ Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
 4. **Write-once-per-frame** — `target.property = base + sum(deltas)`, applied after all effects tick
 5. **`_temporarily_undo/reapply_visual()`** — subtract/add total contribution for editor save pipeline
 6. **Container hold pattern** (Control only) — re-apply every frame to beat deferred `_sort_children()`
+7. **JIT `_pre_tick()` in `_start_effects()`** — called before `_temporarily_undo_visual()` to catch layout shifts while idle. All 5 L2 virtual methods (`_capture_base_values`, `_pre_tick`, `_post_tick_write`, `_temporarily_undo_visual`, `_temporarily_reapply_visual`) MUST have stubs in `JuiceBase` — without them, domain overrides are silently dead. See `CONTRACTS/l2-domain.md § Protected Invariants`.
 
 ### All Three Domains — Always
 

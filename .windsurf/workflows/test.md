@@ -52,17 +52,17 @@ Do NOT propose fixes to production code. Do NOT make system changes outside test
 **Fallback (shell command):** If MCP is unavailable or Godot editor isn't running:
 // turbo
 ```powershell
-& "D:\Godot projekti\juice-demo\tests\run_tests.bat"
+& "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 ```
 
 **Alternative fallback (if .bat not available):**
 // turbo
 ```powershell
-& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot_projekti\juice-demo" res://tests/run_tests.tscn
 ```
 
 **If Godot fails to start** (script parse errors, import errors):
-1. Run an import pass first: `& "..." --headless --import --path "D:\Godot projekti\juice-demo"`
+1. Run an import pass first: `& "..." --headless --import --path "D:\Godot_projekti\juice-demo"`
 2. Ignore errors from `addons/juice/` (V0, .gdignored) — they are expected.
 3. Retry the test run.
 
@@ -83,7 +83,7 @@ func run():
 For shell runs, read directly:
 // turbo
 ```powershell
-Get-Content "D:\Godot projekti\juice-demo\tests\results\summary.log"
+Get-Content "D:\Godot_projekti\juice-demo\tests\results\summary.log"
 ```
 
 Then read each suite log:

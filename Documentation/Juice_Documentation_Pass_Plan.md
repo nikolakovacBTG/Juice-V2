@@ -27,12 +27,12 @@ Godot uses `##` (double-hash) as **documentation comments** — these surface in
 ### The Problem (Before)
 
 ```gdscript
-## JuiceCompBase.gd
+## JuiceBase.gd
 ## ============================================================================
-## WHAT: Base class for all juice/feedback components in the Juicing System.
+## WHAT: Base class for all juice/feedback components in the Juice System.
 ## WHY: Provides shared timing, easing, auto-connect, and chaining logic so
 ##      concrete components only implement their specific effect.
-## SYSTEM: Juicing System (addons/juice/)
+## SYSTEM: Juice System (addons/juice/)
 ## DOES NOT: Implement any visual/audio effect - subclasses do that.
 ## ============================================================================
 ##
@@ -40,7 +40,7 @@ Godot uses `##` (double-hash) as **documentation comments** — these surface in
 ## ...30 more lines...
 
 @tool
-class_name JuiceCompBase
+class_name JuiceBase
 extends Node
 ```
 
@@ -69,7 +69,7 @@ This entire block becomes the Add Child Node tooltip — unreadable.
 
 @tool
 @icon("res://addons/juice/Icons/JuiceBase.svg")
-class_name JuiceCompBase
+class_name JuiceBase
 extends Node
 ```
 
@@ -131,7 +131,7 @@ Structure:
 4. **@experimental / @deprecated** — stability tag
 
 Cross-reference other classes and members:
-- `[JuiceCompBase]` — links to class
+- `[JuiceBase]` — links to class
 - `[method animate_in]` — links to method
 - `[member duration_in]` — links to property
 - `[signal animation_started]` — links to signal
@@ -227,7 +227,7 @@ Progress is tracked per-script. Mark each column as the script passes through th
 
 | # | Script | Demoed | Reviewed (B1) | Cleaned (B2) | Documented (B3) | Committed |
 |---|--------|:---:|:---:|:---:|:---:|:---:|
-| 1 | JuiceCompBase | | | | | |
+| 1 | JuiceBase | | | | | |
 | 2 | TransformControlJuiceComp | | | | | |
 | 3 | Transform2DJuiceComp | | | | | |
 | 4 | Transform3DJuiceComp | | | | | |
@@ -267,7 +267,7 @@ Progress is tracked per-script. Mark each column as the script passes through th
 | 38 | JuicePreviewDirector | | | | | |
 | 39 | juice_plugin.gd | | | | | |
 
-> **Note:** Add rows for any new scripts created during the pass. JuiceCompBase should be done first since all other scripts reference it.
+> **Note:** Add rows for any new scripts created during the pass. JuiceBase should be done first since all other scripts reference it.
 
 ---
 

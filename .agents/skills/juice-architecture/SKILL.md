@@ -1,36 +1,33 @@
 ---
 name: juice-architecture
-description: Core architecture rules and code templates for the Juice V1 addon. Auto-invoke when reading or writing any file in addons/Juice_V1/. Contains delta-first write model, effect-as-Resource contract, domain parity rules, and GDScript templates for effects and tests.
+description: Juice V1 architecture contracts and patterns. Auto-invoke for addons/Juice_V1/ changes.
 ---
 
-# Juice V1 Architecture Skill
+# Juice V1 Architecture
 
-**When to use:** Any time you read, write, or modify files in `addons/Juice_V1/`.
+## Quick Reference
+- **L1 Core**: [CONTRACTS/l1-core.md](CONTRACTS/l1-core.md)
+- **L2 Domain**: [CONTRACTS/l2-domain.md](CONTRACTS/l2-domain.md)  
+- **L3 Effects**: [CONTRACTS/l3-effects.md](CONTRACTS/l3-effects.md)
+- **Domain Parity**: [domain-parity.md](domain-parity.md)
 
-## Before ANY Code Change
+## Decision Tree
+```
+Core system? → L1
+Coordination? → L2
+Specific effect? → L3
+```
 
-1. **Read the relevant section** of `Documentation/JuiceStack_Design.md`
-2. **Read `architecture-rules.md`** in this skill folder — it contains the condensed non-negotiable rules
-3. **Check `Documentation/Port_Master_Tracker.md`** for current port status
-4. If porting a new effect, use the templates in this folder as structural starting points
+## Validation
+Use [VALIDATION/architecture-checklist.md](VALIDATION/architecture-checklist.md) before declaring "done". Use MCP0 for scene validation.
 
-## Templates Available
+## Source of Truth
+The master sources for all V1 architecture are the `@ARCHITECTURE_BIG_PICTURE`, `@L1-3_CONTRACT_MATRIX`, and `@JuiceStack_Design` documents located in this folder. 
+**Note:** Do not read these full design docs for daily tasks as they consume too much token budget. Rely on the focused support docs and contracts listed above instead.
 
-| Template | Use when... |
-|----------|-------------|
-| `effect-template-control.gd` | Creating a new Control-domain effect |
-| `test-template.gd` | Creating a new test suite for any effect |
+## External Skills
+Effect creation: Use `@juice-inspector-layout` skill
+Test design: Use `@test-design-for-effects` skill
 
-For 2D and 3D effects, adapt the Control template by:
-- Changing `extends JuiceControlTransformEffect` → `extends Juice2DTransformEffect` / `extends Juice3DTransformEffect`
-- Changing `Vector2` → `Vector2` (2D) or `Vector3` (3D) for position/scale
-- Changing `Control` → `Node2D` / `Node3D` for target type
-- Changing `JuiceControl` → `Juice2D` / `Juice3D` for host node
-
-## Quality Gate
-
-Before declaring any V1 code change "done":
-1. Run `/test` — full suite must pass
-2. Cite specific test names that verify the change
-3. If no test exists for this feature, write one first
-4. Invoke `@verify-claims` before any "done" statement
+## MCP Integration
+Use MCP0 for Godot operations, MCP1 for documentation verification.

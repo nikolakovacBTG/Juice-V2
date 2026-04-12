@@ -190,10 +190,13 @@ After implementing, do NOT test yourself. Proceed to Step 7 for automated verifi
 ## Step 7: Verification (`@verify-claims` enforced)
 
 // turbo
-Run the full test suite:
-
 ```powershell
-& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+& "[GODOT_EXE]" --headless --path "[PROJECT_ROOT]" [TEST_SCENE]
+```
+
+// turbo
+```powershell
+Get-Content "[LOG_SUMMARY]"
 ```
 
 **Success criteria:**
@@ -208,14 +211,22 @@ Run the full test suite:
 
 ---
 
-## Step 8: Close the Cycle
+## Step 4: Port the Fix (Regression Testing)
 
-After all scoped failures pass with no regressions:
+1. Apply the fix to ALL 3 domains (even if logic slightly differs).
+2. Run full suite again:
+// turbo
+```powershell
+& "[TEST_BAT]"
+```
+
+---
+
+## Step 5: Commit
 
 // turbo
-Commit:
 ```powershell
-cd "D:\Godot projekti\juice-demo"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
+cd "[PROJECT_ROOT]"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
 ```
 
 1. Update TODO.md and `Documentation/V0_V1_Feature_Parity_Matrix.md` if any matrix items changed status

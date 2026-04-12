@@ -1,12 +1,13 @@
-## Juice3DTransformEffect.gd
-## ============================================================================
-## WHAT: Intermediate base for 3D-domain effects that produce transform deltas.
-## WHY: Separates transform delta storage from domain filtering. Effects that
-##      manipulate position/rotation/scale extend this. Non-transform effects
-##      (Appearance, VFX, etc.) extend Juice3DEffectBase directly.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Implement any effect behavior — concrete subclasses do that.
-## ============================================================================
+## Intermediate base for 3D-domain effects that produce transform deltas.
+
+# ============================================================================
+# WHAT: Intermediate base for 3D-domain effects that produce transform deltas.
+# WHY: Separates transform delta storage from domain filtering. Effects that
+#      manipulate position/rotation/scale extend this. Non-transform effects
+#      (Appearance, VFX, etc.) extend Juice3DEffectBase directly.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Implement any effect behavior — concrete subclasses do that.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")

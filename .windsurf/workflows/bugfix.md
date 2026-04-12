@@ -193,7 +193,7 @@ After implementing, do NOT test yourself. Proceed to Step 7 for automated verifi
 Run the full test suite:
 
 ```powershell
-& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot projekti\juice-demo" res://tests/run_tests.tscn
+& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot_projekti\juice-demo" res://tests/run_tests.tscn
 ```
 
 **Success criteria:**
@@ -215,7 +215,7 @@ After all scoped failures pass with no regressions:
 // turbo
 Commit:
 ```powershell
-cd "D:\Godot projekti\juice-demo"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
+cd "D:\Godot_projekti\juice-demo"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
 ```
 
 1. Update TODO.md and `Documentation/V0_V1_Feature_Parity_Matrix.md` if any matrix items changed status

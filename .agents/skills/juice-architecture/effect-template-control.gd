@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: [One-line description of what this effect does].
 ## WHY: [Why this effect exists / what user need it serves].
-## SYSTEM: Juicing System (addons/Juice_V1/)
+## SYSTEM: Juice System (addons/Juice_V1/)
 ## DOES NOT: Handle Node2D or Node3D targets — use [EffectName]2D/3DJuiceEffect.
 ## ============================================================================
 ##
