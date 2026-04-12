@@ -15,7 +15,7 @@
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V1/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
 [ext_resource type="Resource" uid="uid://c4hbl86fvu802" path="res://Demo/Scenes/TimeTestRecipe.tres" id="13_4jv1n"]
 
-[sub_resource type="Curve" id="Curve_trt1j"]
+[sub_resource type="Curve" id="Curve_qph6c"]
 _data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
 point_count = 2
 
@@ -77,10 +77,12 @@ position = Vector2(185, 474)
 texture = ExtResource("2_e4141")
 
 [node name="SoftTrigger2D" type="Area2D" parent="SoftTriggerTestObj" unique_id=1606911008]
-collision_mask = 2
 script = ExtResource("4_vdpuh")
-falloff_curve = SubResource("Curve_trt1j")
+detect_bodies = false
+detect_areas = true
+falloff_curve = SubResource("Curve_qph6c")
 detection_size = Vector2(64, 64)
+debug_enabled = true
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="SoftTriggerTestObj/SoftTrigger2D" unique_id=1658529777]
 position = Vector2(0, -2)
@@ -90,9 +92,11 @@ shape = SubResource("RectangleShape2D_6ksaf")
 script = ExtResource("3_7yy7b")
 trigger_source = 1
 trigger_source_path = NodePath("../SoftTrigger2D")
-trigger_on = 15
+trigger_on = 9
+manual_trigger_signal = "progress_changed"
 trigger_behaviour = 4
 recipe = ExtResource("4_a15rd")
+debug_enabled = true
 
 [node name="BodyEntryTestObj" type="Node2D" parent="." unique_id=709848790]
 position = Vector2(184, 153)
@@ -156,8 +160,6 @@ trigger_source_path = NodePath("../Area2D")
 recipe = SubResource("Resource_b0p5q")
 
 [node name="Area2D" type="Area2D" parent="Progress2DTest" unique_id=2073526055]
-collision_layer = 2
-collision_mask = 2
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="Progress2DTest/Area2D" unique_id=511603751]
 position = Vector2(-0.5, 2.5)
