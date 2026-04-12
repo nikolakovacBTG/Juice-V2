@@ -35,6 +35,15 @@ var _rot_delta: float = 0.0
 var _scale_delta: Vector2 = Vector2.ZERO
 
 
+## How to interpret custom position values (Control). Available to all Control transform effects.
+enum PositionIn {
+	PIXELS,           ## Position in absolute pixels
+	OWN_SIZE,     ## Position as multiple of Control's own size
+	PARENT_SIZE,  ## Position as multiple of parent's size
+	VIEWPORT_SIZE ## Position as multiple of viewport size
+}
+
+
 ## Reset all deltas to zero. Called by domain node when effect stops.
 func _clear_deltas() -> void:
 	_pos_delta = Vector2.ZERO
@@ -54,3 +63,23 @@ func _get_seq_contribution() -> Dictionary:
 	if _contributes_scale:
 		d["scale"] = _scale_delta
 	return d
+
+
+# =============================================================================
+# SIZE INFERENCE HELPERS (Available to all Control transform effects)
+# =============================================================================
+
+func _convert_to_pixels(position: Vector2, position_in: int, ctrl: Control) -> Vector2:
+	match position_in:
+		PositionIn.PIXELS:
+			return position
+		PositionIn.OWN_SIZE:
+			var size := ctrl.size
+			return Vector2(position.x * size.x, position.y * size.y)
+		PositionIn.PARENT_SIZE:
+			var size := _get_parent_size(ctrl)
+			return Vector2(position.x * size.x, position.y * size.y)
+		PositionIn.VIEWPORT_SIZE:
+			var size := _get_viewport_size(ctrl)
+			return Vector2(position.x * size.x, position.y * size.y)
+	return position

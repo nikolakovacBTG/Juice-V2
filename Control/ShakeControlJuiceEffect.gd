@@ -54,6 +54,10 @@ var shake_frequency: float = 20.0
 
 # --- Position ---
 var position_strength: Vector2 = Vector2(5.0, 5.0)
+var position_unit: int = PositionIn.PIXELS:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
 var position_randomness: float = 0.5
 
 # --- Rotation ---
@@ -97,6 +101,9 @@ func _get_property_list() -> Array[Dictionary]:
 
 	if is_pos:
 		props.append({"name": "position_strength", "type": TYPE_VECTOR2,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "position_unit", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "position_randomness", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
@@ -180,7 +187,9 @@ func tick(delta: float, target: Node) -> TickResult:
 	var result := super.tick(delta, target)
 	if _in_hold_at_peak and _is_playing:
 		_shake_time += delta
-		_compute_shake_deltas(1.0)
+		var ctrl := target as Control
+		if ctrl:
+			_compute_shake_deltas(1.0, ctrl)
 	return result
 
 
@@ -211,9 +220,11 @@ func _on_animate_start(target: Node) -> void:
 			TransformTarget.keys()[transform_target], shake_frequency])
 
 
-func _apply_effect(progress: float, _target: Node) -> void:
+func _apply_effect(progress: float, target: Node) -> void:
 	_shake_time += _tick_delta
-	_compute_shake_deltas(progress)
+	var ctrl := target as Control
+	if ctrl:
+		_compute_shake_deltas(progress, ctrl)
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -242,7 +253,7 @@ func _get_interrupt_identity() -> Variant:
 # SHAKE CORE
 # =============================================================================
 
-func _compute_shake_deltas(intensity: float) -> void:
+func _compute_shake_deltas(intensity: float, target: Control) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector2.ZERO
 		_rot_delta = 0.0
@@ -256,9 +267,10 @@ func _compute_shake_deltas(intensity: float) -> void:
 			var sy := sin(freq * 1.3 + _shake_seed + 100.0)
 			var rx := randf_range(-1.0, 1.0)
 			var ry := randf_range(-1.0, 1.0)
-			_pos_delta = Vector2(
+			var raw_offset = Vector2(
 				lerpf(sx, rx, position_randomness) * position_strength.x * intensity,
 				lerpf(sy, ry, position_randomness) * position_strength.y * intensity)
+			_pos_delta = _convert_to_pixels(raw_offset, position_unit, target)
 
 		TransformTarget.ROTATION:
 			var sine_val := sin(_shake_time * shake_frequency * TAU)
