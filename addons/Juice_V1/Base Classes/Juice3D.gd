@@ -20,13 +20,17 @@ extends JuiceBase
 # CONDITIONAL EXPORT SYSTEM (Override)
 # =============================================================================
 
-## Hint string for Juice3D: all triggers EXCEPT focus/unfocus (which are Control-only).
-const _3D_TRIGGER_HINT := "On Press (toggleable):0,On Release:1,On Mouse Entered (toggleable):2,On Mouse Exited:3,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12,On Body Entered:13,On Body Exited:14,On Area Entered:15,On Area Exited:16"
+## Hint string for Juice3D: fallback when no trigger source node is resolvable.
+## Body/Area Entered are marked (toggleable) because they wire both enter+exit
+## as a polarity pair — entered fires polarity_on, exited fires polarity_off.
+const _3D_TRIGGER_HINT := "On Press (toggleable):0,On Release:1,On Mouse Entered (toggleable):2,On Mouse Exited:3,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12,On Body Entered (toggleable):13,On Body Exited:14,On Area Entered (toggleable):15,On Area Exited:16"
 
 func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
 	if property.name == "trigger_on":
-		property.hint_string = _3D_TRIGGER_HINT
+		# Dynamically filter to only valid options for the current trigger source.
+		var source: Node = _resolve_hint_source_node()
+		property.hint_string = TriggerHintBuilder.build_hint(source, &"3D")
 	# Narrow recipe type so inspector only offers Juice3DRecipe
 	if property.name == "recipe":
 		property.hint_string = "Juice3DRecipe"

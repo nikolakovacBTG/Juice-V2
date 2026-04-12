@@ -1656,6 +1656,27 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
+## Resolve the source node for trigger_on hint building in _validate_property.
+## Returns null if not in editor, or when the source can't yet be resolved
+## (e.g. during initial scene load before get_node is reliable).
+## Called only from _validate_property — never at runtime.
+func _resolve_hint_source_node() -> Node:
+	if not Engine.is_editor_hint():
+		return null
+	match trigger_source:
+		TriggerSource.PARENT:
+			return get_parent()
+		TriggerSource.NODE:
+			if trigger_source_path.is_empty():
+				return null
+			# Guard: get_tree may be null during early scene load.
+			var tree := get_tree()
+			if tree == null or tree.edited_scene_root == null:
+				return null
+			return get_node_or_null(trigger_source_path)
+	return null
+
+
 ## Resolve the target node based on mode.
 ## Subclasses override to validate domain (Control, Node2D, Node3D).
 func _resolve_target() -> Node:

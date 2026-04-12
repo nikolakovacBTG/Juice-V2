@@ -6,17 +6,18 @@
 [ext_resource type="Resource" uid="uid://bru5tblpa2gdt" path="res://Demo/Scenes/TestRecipe.tres" id="4_a15rd"]
 [ext_resource type="Script" uid="uid://cb333pkpm68kx" path="res://addons/Juice_V1/Utilities/SoftTrigger2DJuiceUtility.gd" id="4_vdpuh"]
 [ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
-[ext_resource type="Script" uid="uid://bfbfxvt6cexsc" path="res://addons/Juice_V1/Utilities/CallMethodJuiceUtility.gd" id="7_0kkbv"]
-[ext_resource type="Script" uid="uid://btg8ksw813yde" path="res://addons/Juice_V1/Utilities/SignalEmitJuiceUtility.gd" id="8_a33c3"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="9_8ai6r"]
 [ext_resource type="Script" uid="uid://bs2ebgkk22m07" path="res://addons/Juice_V1/Utilities/SceneActionJuiceUtility.gd" id="9_8tq88"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
 [ext_resource type="PackedScene" uid="uid://lfr1duh1e655" path="res://Demo/Scenes/MultipleChaining_Review.tscn" id="10_qm7d2"]
-[ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="11_hw176"]
 [ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="11_lcm6r"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="12_hvqsx"]
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V1/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
 [ext_resource type="Resource" uid="uid://c4hbl86fvu802" path="res://Demo/Scenes/TimeTestRecipe.tres" id="13_4jv1n"]
+
+[sub_resource type="Curve" id="Curve_trt1j"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_6ksaf"]
 size = Vector2(298, 280)
@@ -29,6 +30,23 @@ size = Vector2(127, 129)
 
 [sub_resource type="Resource" id="Resource_tf6rc"]
 script = ExtResource("10_agm7c")
+transform_target = 0
+position_unit = 1
+position_amplitude = Vector2(2, 2)
+noise_speed = 1.0
+noise_direction = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+noise_type = 1
+noise_frequency = 1.0
+noise_seed = 0
+fractal_type = 0
+domain_warp_enabled = false
+position_axis_speed = Vector2(1, 1)
+clamp_min = -1.0
+clamp_max = 1.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -38,21 +56,13 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://s2n3dgutlx06"
 
-[sub_resource type="Resource" id="Resource_uhtl6"]
-script = ExtResource("11_hw176")
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://davl33rdi1jg7"
-
 [sub_resource type="Resource" id="Resource_b0p5q"]
 script = ExtResource("12_hvqsx")
-effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_tf6rc"), SubResource("Resource_uhtl6")])
+effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_tf6rc")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_trt1j"]
+size = Vector2(127, 129)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pmn3f"]
 size = Vector2(128, 129)
@@ -66,18 +76,23 @@ position = Vector2(185, 474)
 [node name="SoftTriggerTestSprite" type="Sprite2D" parent="SoftTriggerTestObj" unique_id=2037791440]
 texture = ExtResource("2_e4141")
 
-[node name="Juice2D" type="Node2D" parent="SoftTriggerTestObj" unique_id=672850767]
-script = ExtResource("3_7yy7b")
-trigger_on = 9
-recipe = ExtResource("4_a15rd")
-
 [node name="SoftTrigger2D" type="Area2D" parent="SoftTriggerTestObj" unique_id=1606911008]
+collision_mask = 2
 script = ExtResource("4_vdpuh")
+falloff_curve = SubResource("Curve_trt1j")
 detection_size = Vector2(64, 64)
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="SoftTriggerTestObj/SoftTrigger2D" unique_id=1658529777]
 position = Vector2(0, -2)
 shape = SubResource("RectangleShape2D_6ksaf")
+
+[node name="Juice2D" type="Node2D" parent="SoftTriggerTestObj" unique_id=672850767]
+script = ExtResource("3_7yy7b")
+trigger_source = 1
+trigger_source_path = NodePath("../SoftTrigger2D")
+trigger_on = 15
+trigger_behaviour = 4
+recipe = ExtResource("4_a15rd")
 
 [node name="BodyEntryTestObj" type="Node2D" parent="." unique_id=709848790]
 position = Vector2(184, 153)
@@ -110,10 +125,13 @@ texture = ExtResource("2_e4141")
 
 [node name="Interaction2D" type="Area2D" parent="MethodSignalTest" unique_id=1515122959]
 script = ExtResource("6_6bkf5")
-mode = 1
-action_count = 1
-action_0_preset = 1
-check_presence_in_trigger_zone = false
+mode = 0
+detect_bodies = true
+detect_areas = true
+filter_group = ""
+trigger_on_enter = true
+trigger_on_exit = true
+one_shot = false
 debug_enabled = false
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="MethodSignalTest/Interaction2D" unique_id=2037554079]
@@ -124,15 +142,6 @@ shape = SubResource("RectangleShape2D_5p8ic")
 script = ExtResource("3_7yy7b")
 trigger_on = 10
 
-[node name="CallMethodJuiceUtility" type="Node" parent="MethodSignalTest" unique_id=1668262117]
-script = ExtResource("7_0kkbv")
-target_node_path = NodePath(".")
-method_name = "on_method_called"
-
-[node name="SignalEmitJuiceUtility" type="Node" parent="MethodSignalTest" unique_id=1298566515]
-script = ExtResource("8_a33c3")
-payload = "Test payload from SignalEmitJuiceUtility!"
-
 [node name="Progress2DTest" type="Node2D" parent="." unique_id=998465023]
 position = Vector2(452, 464)
 
@@ -140,22 +149,19 @@ position = Vector2(452, 464)
 modulate = Color(0.2, 0.2, 0.8, 1)
 texture = ExtResource("2_e4141")
 
-[node name="Interaction2D" type="Area2D" parent="Progress2DTest" unique_id=2136967869]
-script = ExtResource("6_6bkf5")
-mode = 1
-action_count = 1
-action_0_preset = 1
-check_presence_in_trigger_zone = false
-debug_enabled = false
-
-[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="Progress2DTest/Interaction2D" unique_id=342324955]
-position = Vector2(-0.5, -1.5)
-shape = SubResource("RectangleShape2D_5p8ic")
-
 [node name="Juice2D" type="Node2D" parent="Progress2DTest" unique_id=749891205]
 script = ExtResource("3_7yy7b")
-trigger_on = 10
+trigger_source = 1
+trigger_source_path = NodePath("../Area2D")
 recipe = SubResource("Resource_b0p5q")
+
+[node name="Area2D" type="Area2D" parent="Progress2DTest" unique_id=2073526055]
+collision_layer = 2
+collision_mask = 2
+
+[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="Progress2DTest/Area2D" unique_id=511603751]
+position = Vector2(-0.5, 2.5)
+shape = SubResource("RectangleShape2D_trt1j")
 
 [node name="SceneActionTestButton" type="Button" parent="." unique_id=338664966]
 offset_left = 800.0
@@ -194,5 +200,11 @@ shape = SubResource("RectangleShape2D_pmn3f")
 
 [node name="Juice2D" type="Node2D" parent="TimeEffectTest" unique_id=2109465282]
 script = ExtResource("3_7yy7b")
-trigger_on = 10
+trigger_on = 7
 recipe = ExtResource("13_4jv1n")
+
+[node name="Juice2D2" type="Node" parent="TimeEffectTest" unique_id=1029061870]
+script = ExtResource("3_7yy7b")
+trigger_on = 6
+start_delay = 8.75
+metadata/_custom_type_script = "uid://b3ddpavrr7xwp"

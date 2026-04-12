@@ -6,6 +6,16 @@
 
 [sub_resource type="Resource" id="Resource_xrw5q"]
 script = ExtResource("2_qwlea")
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_position_in = 1
+to_position = Vector3(0, 0, 0)
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
