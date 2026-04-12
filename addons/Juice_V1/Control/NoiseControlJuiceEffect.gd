@@ -133,10 +133,10 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	if is_pos:
-		props.append({"name": "position_amplitude", "type": TYPE_VECTOR2,
-			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "position_unit", "type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM, "hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "position_amplitude", "type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_DEFAULT})
 	elif is_rot:
 		props.append({"name": "rotation_amplitude", "type": TYPE_FLOAT,

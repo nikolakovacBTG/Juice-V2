@@ -151,10 +151,10 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "Rate", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	match transform_target:
 		TransformTarget.POSITION:
-			props.append({"name": "position_rate", "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_DEFAULT})
 			props.append({"name": "position_unit", "type": TYPE_INT,
 				"hint": PROPERTY_HINT_ENUM, "hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
 				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "position_rate", "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.ROTATION:
 			props.append({"name": "rotation_rate", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.SCALE:
