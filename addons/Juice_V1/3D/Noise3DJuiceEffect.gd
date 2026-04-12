@@ -56,6 +56,10 @@ var transform_target: int = TransformTarget.POSITION:
 		notify_property_list_changed()
 
 var position_amplitude: Vector3 = Vector3(0.5, 0.5, 0.5)
+var position_unit: int = PositionIn3D.WORLD_UNITS:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
 var rotation_amplitude: Vector3 = Vector3(0.0, 5.0, 0.0)
 var scale_amplitude: Vector3 = Vector3(0.1, 0.1, 0.1)
 var noise_speed: float = 1.0
@@ -115,6 +119,9 @@ func _get_property_list() -> Array[Dictionary]:
 
 	if is_pos:
 		props.append({"name": "position_amplitude", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "position_unit", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "World Units,Own Size,Parent Size",
 			"usage": PROPERTY_USAGE_DEFAULT})
 	elif is_rot:
 		props.append({"name": "rotation_amplitude", "type": TYPE_VECTOR3,
@@ -273,7 +280,9 @@ func tick(delta: float, target: Node) -> TickResult:
 	var result := super.tick(delta, target)
 	if _in_hold_at_peak and _is_playing:
 		_advance_noise_time(delta)
-		_compute_noise_deltas(1.0)
+		var n3d := target as Node3D
+		if n3d:
+			_compute_noise_deltas(1.0, n3d)
 	return result
 
 
@@ -306,9 +315,11 @@ func _on_animate_start(target: Node) -> void:
 			TransformTarget.keys()[transform_target], noise_speed])
 
 
-func _apply_effect(progress: float, _target: Node) -> void:
+func _apply_effect(progress: float, target: Node) -> void:
 	_advance_noise_time(_tick_delta)
-	_compute_noise_deltas(progress)
+	var n3d := target as Node3D
+	if n3d:
+		_compute_noise_deltas(progress, n3d)
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -342,7 +353,7 @@ func _advance_noise_time(delta: float) -> void:
 		_noise_time += delta
 
 
-func _compute_noise_deltas(intensity: float) -> void:
+func _compute_noise_deltas(intensity: float, target: Node3D) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector3.ZERO
 		_rot_delta = Vector3.ZERO
@@ -354,10 +365,11 @@ func _compute_noise_deltas(intensity: float) -> void:
 			var sx := _sample_noise(0.0, position_axis_speed.x)
 			var sy := _sample_noise(100.0, position_axis_speed.y)
 			var sz := _sample_noise(200.0, position_axis_speed.z)
-			_pos_delta = Vector3(
+			var raw_offset = Vector3(
 				position_amplitude.x * sx * intensity,
 				position_amplitude.y * sy * intensity,
 				position_amplitude.z * sz * intensity)
+			_pos_delta = _convert_to_world_units(raw_offset, position_unit, target)
 
 		TransformTarget.ROTATION:
 			var sx := _sample_noise(0.0, rotation_axis_speed.x)

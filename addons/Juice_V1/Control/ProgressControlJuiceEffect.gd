@@ -74,6 +74,10 @@ var hold_on_stop: bool = true
 
 # --- Rate vars ---
 var position_rate: Vector2 = Vector2(50.0, 0.0)
+var position_unit: int = PositionIn.PIXELS:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
 var rotation_rate: float = 90.0
 var scale_rate: Vector2 = Vector2(0.1, 0.1)
 
@@ -118,6 +122,9 @@ func _get_property_list() -> Array[Dictionary]:
 	match transform_target:
 		TransformTarget.POSITION:
 			props.append({"name": "position_rate", "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "position_unit", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Pixels,Own Size,Parent Size,Viewport Size",
+				"usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.ROTATION:
 			props.append({"name": "rotation_rate", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.SCALE:
@@ -277,7 +284,7 @@ func _apply_effect(progress: float, target: Node) -> void:
 	match transform_target:
 		TransformTarget.POSITION:
 			_accumulated_position += position_rate * delta * progress * _current_direction
-			_pos_delta = _accumulated_position
+			_pos_delta = _convert_to_pixels(_accumulated_position, position_unit, ctrl)
 
 		TransformTarget.ROTATION:
 			var speed_rad := deg_to_rad(rotation_rate) * progress * _current_direction

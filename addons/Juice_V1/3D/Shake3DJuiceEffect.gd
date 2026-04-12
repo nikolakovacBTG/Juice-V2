@@ -50,6 +50,10 @@ var transform_target: int = TransformTarget.POSITION:
 var shake_frequency: float = 20.0
 
 var position_strength: Vector3 = Vector3(0.2, 0.2, 0.2)
+var position_unit: int = PositionIn3D.WORLD_UNITS:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
 var position_randomness: float = 0.5
 
 var rotation_amplitude: Vector3 = Vector3(10.0, 10.0, 0.0)
@@ -90,6 +94,9 @@ func _get_property_list() -> Array[Dictionary]:
 
 	if is_pos:
 		props.append({"name": "position_strength", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "position_unit", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "World Units,Own Size,Parent Size",
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "position_randomness", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
@@ -176,7 +183,9 @@ func tick(delta: float, target: Node) -> TickResult:
 	var result := super.tick(delta, target)
 	if _in_hold_at_peak and _is_playing:
 		_shake_time += delta
-		_compute_shake_deltas(1.0)
+		var n3d := target as Node3D
+		if n3d:
+			_compute_shake_deltas(1.0, n3d)
 	return result
 
 
@@ -209,9 +218,11 @@ func _on_animate_start(target: Node) -> void:
 			TransformTarget.keys()[transform_target], shake_frequency])
 
 
-func _apply_effect(progress: float, _target: Node) -> void:
+func _apply_effect(progress: float, target: Node) -> void:
 	_shake_time += _tick_delta
-	_compute_shake_deltas(progress)
+	var n3d := target as Node3D
+	if n3d:
+		_compute_shake_deltas(progress, n3d)
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -240,7 +251,7 @@ func _get_interrupt_identity() -> Variant:
 # SHAKE CORE
 # =============================================================================
 
-func _compute_shake_deltas(intensity: float) -> void:
+func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector3.ZERO
 		_rot_delta = Vector3.ZERO
@@ -256,10 +267,11 @@ func _compute_shake_deltas(intensity: float) -> void:
 			var rx := randf_range(-1.0, 1.0)
 			var ry := randf_range(-1.0, 1.0)
 			var rz := randf_range(-1.0, 1.0)
-			_pos_delta = Vector3(
+			var raw_offset = Vector3(
 				lerpf(sx, rx, position_randomness) * position_strength.x * intensity,
 				lerpf(sy, ry, position_randomness) * position_strength.y * intensity,
 				lerpf(sz, rz, position_randomness) * position_strength.z * intensity)
+			_pos_delta = _convert_to_world_units(raw_offset, position_unit, target)
 
 		TransformTarget.ROTATION:
 			var freq_base := _shake_time * shake_frequency * TAU

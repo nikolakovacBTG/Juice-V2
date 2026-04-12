@@ -53,13 +53,7 @@ enum TransformReference {
 	TARGET_NODE   ## Another object's value (tracked live every frame)
 }
 
-## How to interpret custom position values (Control)
-enum PositionIn {
-	PIXELS,           ## Position in absolute pixels
-	OWN_SIZE,     ## Position as multiple of Control's own size
-	PARENT_SIZE,  ## Position as multiple of parent's size
-	VIEWPORT_SIZE ## Position as multiple of viewport size
-}
+
 
 ## When to capture Self's transform value
 enum CaptureAt {
@@ -632,21 +626,6 @@ func _resolve_to_position(ctrl: Control) -> Vector2:
 			return _base_position
 	return _base_position
 
-
-func _convert_to_pixels(position: Vector2, position_in: int, ctrl: Control) -> Vector2:
-	match position_in:
-		PositionIn.PIXELS:
-			return position
-		PositionIn.OWN_SIZE:
-			var size := ctrl.size
-			return Vector2(position.x * size.x, position.y * size.y)
-		PositionIn.PARENT_SIZE:
-			var size := _get_parent_size(ctrl)
-			return Vector2(position.x * size.x, position.y * size.y)
-		PositionIn.VIEWPORT_SIZE:
-			var size := _get_viewport_size(ctrl)
-			return Vector2(position.x * size.x, position.y * size.y)
-	return position
 
 
 func _get_ref_local_position(ref: Control, animated: Control) -> Vector2:

@@ -77,6 +77,10 @@ var hold_on_stop: bool = true
 # --- Rate vars ---
 ## Position drift in local units per second.
 var position_rate: Vector3 = Vector3(0.0, 0.0, 1.0)
+var position_unit: int = PositionIn3D.WORLD_UNITS:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
 ## Rotation in degrees per second per axis.
 var rotation_rate: Vector3 = Vector3(0.0, 90.0, 0.0)
 ## Scale growth per second per axis.
@@ -123,6 +127,9 @@ func _get_property_list() -> Array[Dictionary]:
 	match transform_target:
 		TransformTarget.POSITION:
 			props.append({"name": "position_rate", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "position_unit", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "World Units,Own Size,Parent Size",
+				"usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.ROTATION:
 			props.append({"name": "rotation_rate", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT})
 		TransformTarget.SCALE:
@@ -272,7 +279,7 @@ func _apply_effect(progress: float, target: Node) -> void:
 	match transform_target:
 		TransformTarget.POSITION:
 			_accumulated_position += position_rate * _last_delta * progress * _current_direction
-			_pos_delta = _accumulated_position
+			_pos_delta = _convert_to_world_units(_accumulated_position, position_unit, n3d)
 
 		TransformTarget.ROTATION:
 			var rate_rad := Vector3(

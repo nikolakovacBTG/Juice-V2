@@ -3,7 +3,7 @@
 > **Purpose:** Single-glance status of every V0 component's V1 port.
 > Updated after every `/port` cycle. Dates prove recency.
 >
-> **Legend:** ✅ Ported + tested | 🔧 In progress | ❌ Not started | ➖ Absorbed/Legacy
+> **Legend:** ✅ Ported + Verified | 🧪 Ported (Pending UX verify) | 🔧 In progress | ❌ Not started | ➖ Absorbed/Legacy
 
 ---
 
@@ -11,15 +11,15 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `JuiceBase` | `JuiceBase` + `JuiceEffectBase` | 🔧 Foundation bugs (B1, B2, D1-D3) | `TestNodeProperties` | 2026-03-21 |
+| `JuiceBase` | `JuiceBase` + `JuiceEffectBase` | ✅ | `TestNodeProperties` | 2026-04-12 |
 
 ## Domain Nodes
 
 | V0 (implicit in comps) | V1 Class | Status | Tests | Last Verified |
 |------------------------|----------|--------|-------|---------------|
-| — | `JuiceControl` | 🔧 Working, Container hold untested | `TestTransformControl` | 2026-03-21 |
-| — | `Juice2D` | 🔧 Working | `TestTransform2D` | 2026-03-21 |
-| — | `Juice3D` | 🔧 Working | `TestTransform3D` | 2026-03-21 |
+| — | `JuiceControl` | ✅ | `TestTransformControl` | 2026-04-12 |
+| — | `Juice2D` | ✅ | `TestTransform2D` | 2026-04-12 |
+| — | `Juice3D` | ✅ | `TestTransform3D` | 2026-03-21 |
 
 ## Transform (3 effects)
 
@@ -73,10 +73,10 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ProgressControlJuiceComp` | `ProgressControlJuiceEffect` | ❌ | — | — |
-| `Progress2DJuiceComp` | `Progress2DJuiceEffect` | ❌ | — | — |
-| `Progress3DJuiceComp` | `Progress3DJuiceEffect` | ❌ | — | — |
-| `ProgressPropertyJuiceComp` | `ProgressPropertyJuiceEffect` | ❌ | — | — |
+| `ProgressControlJuiceComp` | `ProgressControlJuiceEffect` | 🧪 | `TestProgressControl` | — |
+| `Progress2DJuiceComp` | `Progress2DJuiceEffect` | 🧪 | `TestProgress2D` | — |
+| `Progress3DJuiceComp` | `Progress3DJuiceEffect` | 🧪 | `TestProgress3D` | — |
+| `ProgressPropertyJuiceComp` | `ProgressPropertyJuiceEffect` | 🧪 | `TestProgressProperty` | — |
 
 ## Outline (3 effects — Legacy, absorbed by Appearance)
 
@@ -98,7 +98,7 @@
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
 | `ScreenMotionJuiceComp` | `ScreenMotionJuiceEffect` | ❌ | — | — |
-| `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | ❌ | — | — |
+| `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | 🧪 | `TestScreenOverlay` | — |
 
 ## Property (4 effects)
 
@@ -109,7 +109,7 @@
 | `SpringPropertyJuiceComp` | `SpringPropertyJuiceEffect` | ❌ | — | — |
 | `ShaderPropertyJuiceComp` | `ShaderPropertyJuiceEffect` | ❌ | — | — |
 
-## Visibility (1 effect — Legacy)
+## Visibility (1 effect — Legacy, absorbed by Appearance)
 
 | V0 Class | V1 Class | Status | Notes |
 |----------|----------|--------|-------|
@@ -119,39 +119,42 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `VFXJuiceComp` | `VFXJuiceEffect` | | — | — |
-| `TrailJuiceComp` | `TrailJuiceEffect` | | — | — |
+| `VFXJuiceComp` | `VFXJuiceEffect` | ❌ | — | — |
+| `TrailJuiceComp` | `TrailJuiceEffect` | ❌ | — | — |
+
+## Events & Flow (Legacy, absorbed by JuiceBase)
+
+| V0 Class | V1 Class | Status | Notes |
+|----------|----------|--------|-------|
+| `SequencerJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Mode.SEQUENCER` |
+| `LooperJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Loop` group |
+| `RandomJuiceComp` | `JuiceBase` | ➖ | Absorbed into `SequenceType.RANDOM` |
+| `PauseJuiceComp` | `PauseJuiceEffect` | ❌ | Port pending |
+| NEW | `TriggerStackJuiceEffect` | ➖ | Native logic in `Mode.STACK` |
+| NEW | `TriggerSequencerJuiceEffect` | ➖ | Native logic in `Mode.SEQUENCER` |
 
 ## Meta Effects (4 — includes 2 NEW)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|-----------|
-| `PauseJuiceComp` | `PauseJuiceEffect` | ❌ | — | — |
 | `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\|3D}JuiceEffect` | ✅ | `TestTimeEffect` | 2026-03-30 |
-| NEW | `TriggerStackJuiceEffect` | ❌ | — | — |
-| NEW | `TriggerSequencerJuiceEffect` | ❌ | — | — |
-
-## Utility-Comps That Become Effects (2)
-
-| V0 Class | V1 Class | Status | Tests | Last Verified |
-|----------|----------|--------|-------|-----------|
 | `SignalEmitJuiceUtility` | `SignalEmitJuiceEffectBase` + `SignalEmit{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
 | `CallMethodJuiceUtility` | `CallMethodJuiceEffectBase` + `CallMethod{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
 
-## Utilities (Some stay as Nodes)
+## Utilities (Nodes & Helpers)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `Interaction3DJuiceUtility` | Same (no change needed) | ❌ | — | — |
-| `Interaction2DJuiceUtility` | Same (no change needed) | ❌ | — | — |
-| `SoftTrigger3DJuiceUtility` | Same | ❌ | — | — |
-| `SoftTrigger2DJuiceUtility` | Same | ❌ | — | — |
-| `SoftTriggerControlJuiceUtility` | Same | ❌ | — | — |
-| `SignalRelayJuiceUtility` | Same | ❌ | — | — |
-| `SceneActionJuiceUtility` | Same (time delegated to `TimeJuiceEffectBase`) | ✅ | `TestTimeEffect` (time), `TestMetaEffects` | 2026-03-30 |
+| `Interaction3DJuiceUtility` | Same | 🧪 | `TestInteraction3D` | — |
+| `Interaction2DJuiceUtility` | Same | 🧪 | `TestInteraction2D` | — |
+| `SoftTrigger3DJuiceUtility` | Same | 🧪 | `TestSoftTrigger3D` | — |
+| `SoftTrigger2DJuiceUtility` | Same | 🧪 | `TestSoftTrigger2D` | — |
+| `SoftTriggerControlJuiceUtility` | Same | 🧪 | `TestSoftTriggerControl` | — |
+| `SignalRelayJuiceUtility` | Same | 🧪 | `TestSignalRelay` | — |
+| `SceneActionJuiceUtility` | Same | ✅ | `TestSceneAction` | 2026-04-12 |
 | `CameraJuiceUtility` | Same | ❌ | — | — |
 | `ScreenJuiceUtility` | Same | ❌ | — | — |
-| `TimeCoordinatorJuiceUtility` | NEW | ❌ | — | — |
+| `TimeCoordinatorJuiceUtility` | Same | 🧪 | — | — |
 
 ## Editor Tooling
 
@@ -166,7 +169,7 @@
 
 | Category | Total | Ported | In Progress | Not Started | Legacy |
 |----------|-------|--------|-------------|-------------|--------|
-| Effects | ~40 | 9 | 0 | ~27 | 4 |
-| Utilities | ~10 | 1 | 0 | ~9 | 0 |
-| Infrastructure | 4 | 0 | 4 | 0 | 0 |
-| **Total** | **~54** | **10** | **4** | **~36** | **4** |
+| Effects | ~43 | 34 | 0 | 9 | 4 |
+| Utilities | ~10 | 8 | 0 | 2 | 0 |
+| Infrastructure | 4 | 4 | 0 | 0 | 0 |
+| **Total** | **~57** | **46** | **0** | **11** | **4** |
