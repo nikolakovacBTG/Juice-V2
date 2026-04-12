@@ -1,45 +1,43 @@
-
 ## Optional Time Scale Manager — coordinates Engine.time_scale requests from multiple effects.
 ##
-## Prevents conflicts when several TimeJuiceComp instances manipulate gameplay speed simultaneously. Handles priority resolution and audio pitch sync.
+## Prevents conflicts when several TimeJuiceComp instances (or other systems) manipulate
+## gameplay speed simultaneously. Handles priority resolution (slowest slow-mo wins)
+## and audio pitch sync with time scale.
+##
+## This script is OPTIONAL. Add it when you need priority resolution or audio pitch sync.
 
 # ============================================================================
-# WHAT: Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances
-#       (and any other system) to prevent conflicts when several effects manipulate
-#       gameplay speed simultaneously.
-# WHY: Prevents time scale conflicts when multiple effects run simultaneously.
-#       Provides priority resolution (slowest slow-mo wins, fastest speed-up wins)
-#       and audio pitch sync with time scale.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# WHAT: Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances.
+# WHY:  Prevents time scale conflicts when multiple effects run simultaneously.
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Replace individual TimeJuiceComp instances — it coordinates them.
-# USAGE: This script is OPTIONAL. TimeJuiceComp works without it (built-in static
-#        fallback handles simple cases). Add this when you need priority resolution
-#        or audio pitch sync.
-##   - A central place for other systems to also request time changes
-##   - The time_scale_changed signal for UI or gameplay reactions
-##
-## SETUP:
-##   1. Add as an Autoload (Project → Project Settings → Autoload)
-##   2. Or add as a child of any persistent node in your scene
-##   3. TimeJuiceComp discovers it automatically — no wiring needed
-##
-## DISCOVERY:
-## Uses a static instance pattern. TimeJuiceComp checks
-## TimeCoordinatorJuiceUtility.instance on _ready(). If found, all time requests
-## go through the coordinator. If not found, TimeJuiceComp falls back to
-## its built-in static request system.
-##
-## RESOLUTION LOGIC:
-##   - Multiple slow-mo requests: minimum scale wins (slowest dominates)
-##   - Multiple speed-up requests: maximum scale wins (fastest dominates)
-##   - Mixed: slow-mo takes priority (scale < 1.0 overrides scale > 1.0)
-##   - No requests: returns to 1.0
-##
-## DOES NOT HANDLE:
-##   - World/day-night time (game-specific, not juice)
-##   - Per-object time scaling (Godot limitation)
-##   - Juice timing or triggering (TimeJuiceComp handles that)
-## ============================================================================
+# ============================================================================
+#
+#   - A central place for other systems to also request time changes
+#   - The time_scale_changed signal for UI or gameplay reactions
+#
+# SETUP:
+#   1. Add as an Autoload (Project → Project Settings → Autoload)
+#   2. Or add as a child of any persistent node in your scene
+#   3. TimeJuiceComp discovers it automatically — no wiring needed
+#
+# DISCOVERY:
+# Uses a static instance pattern. TimeJuiceComp checks
+# TimeCoordinatorJuiceUtility.instance on _ready(). If found, all time requests
+# go through the coordinator. If not found, TimeJuiceComp falls back to
+# its built-in static request system.
+#
+# RESOLUTION LOGIC:
+#   - Multiple slow-mo requests: minimum scale wins (slowest dominates)
+#   - Multiple speed-up requests: maximum scale wins (fastest dominates)
+#   - Mixed: slow-mo takes priority (scale < 1.0 overrides scale > 1.0)
+#   - No requests: returns to 1.0
+#
+# DOES NOT HANDLE:
+#   - World/day-night time (game-specific, not juice)
+#   - Per-object time scaling (Godot limitation)
+#   - Juice timing or triggering (TimeJuiceComp handles that)
+# ======================================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityTimeCoord.svg")

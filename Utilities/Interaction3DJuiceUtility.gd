@@ -1,41 +1,38 @@
-## Convenience upgrade for Area3D that adds structural and gating value for interactive 3D game objects.
+## Convenience upgrade for [Area3D] that adds structural and gating value for interactive 3D game objects.
 ##
-## Auto-creates collision shapes, manages trigger zone gating, and relays custom input actions as dynamically named signals. Area3D already provides all needed native signals; this utility adds value ON TOP of that.
+## Auto-creates collision shapes, manages trigger zone gating, and relays custom input actions
+## as dynamically named signals.
 
 # ============================================================================
 # WHAT: Convenience upgrade for Area3D that adds structural and gating value
-#       for interactive 3D game objects. Auto-creates collision shapes,
-#       manages trigger zone gating, and relays custom input actions as
-#       dynamically named signals.
+#       for interactive 3D game objects.
 # WHY: Area3D already provides all needed native signals (mouse_entered,
 #       mouse_exited, input_event, body_entered, etc.). This utility adds
-#       value ON TOP of that: auto-shape creation, zone-gated interaction
-#       (disable mouse picking when trigger zone is empty), and input action
-#       relay (emit named signals for configured InputMap actions or common
-#       mouse button presets not available as discrete Area3D signals).
+#       value ON TOP of that: auto-shape creation, zone-gated interaction,
+#       and input action relay.
 # SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
-##
-## DOES NOT:
-## - Wrap or replace native Area3D signals — they flow through unchanged
-## - Provide continuous 0-1 progress (see SoftTrigger3DJuiceUtility)
-## - Implement game-specific interaction logic (radial menus, dialogue, etc.)
-## - Handle visual effects directly (JuiceBase nodes handle effects)
-##
-## CONNECTIONS:
-## - JuiceBase children/siblings: auto-connect to native Area3D signals
-##   via their built-in trigger wiring. No wrapper signals needed.
-## - Game scripts: connect to dynamic action signals (e.g., "right_click",
-##   "interact") in the Node tab's signal list.
-## - Child trigger zone (Area3D): auto-created when INTERACTABLE mode needs
-##   zone gating. In TRIGGER_ZONE mode, root Area3D handles detection.
-##
-## USAGE:
-## 1. Add as sibling of a visual Node3D (MeshInstance3D, etc.)
-## 2. Add JuiceCompBase children — they auto-connect to native signals
-## 3. Pick mode: INTERACTABLE or TRIGGER_ZONE
-## 4. Optionally add input action entries for named signal relay
-## 5. Optionally enable check_presence_in_trigger_zone for gated interaction
-## ============================================================================
+#
+# DOES NOT:
+# - Wrap or replace native Area3D signals — they flow through unchanged
+# - Provide continuous 0-1 progress (see SoftTrigger3DJuiceUtility)
+# - Implement game-specific interaction logic (radial menus, dialogue, etc.)
+# - Handle visual effects directly (JuiceBase nodes handle effects)
+#
+# CONNECTIONS:
+# - JuiceBase children/siblings: auto-connect to native Area3D signals
+#   via their built-in trigger wiring. No wrapper signals needed.
+# - Game scripts: connect to dynamic action signals (e.g., "right_click",
+#   "interact") in the Node tab's signal list.
+# - Child trigger zone (Area3D): auto-created when INTERACTABLE mode needs
+#   zone gating. In TRIGGER_ZONE mode, root Area3D handles detection.
+#
+# USAGE:
+# 1. Add as sibling of a visual Node3D (MeshInstance3D, etc.)
+# 2. Add JuiceBase children — they auto-connect to native signals
+# 3. Pick mode: INTERACTABLE or TRIGGER_ZONE
+# 4. Optionally add input action entries for named signal relay
+# 5. Optionally enable check_presence_in_trigger_zone for gated interaction
+# ================================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityArea3D.svg")

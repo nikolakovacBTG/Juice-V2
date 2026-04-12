@@ -1,32 +1,33 @@
 ## Animate position, rotation, or scale of a [Node2D] with tween-based easing and From/To configuration.
+##
+## Select a transform target (Position, Rotation, or Scale) and configure animations
+## using CUSTOM values, SELF snapshots, or live TARGET_NODE references.
+
 # ============================================================================
-## WHAT: Animate position, rotation, or scale of a Node2D with tween-based easing.
-## WHY: Replaces 3 separate scripts with one unified component. Select a
-##      transform_target (Position, Rotation, or Scale) and configure a From/To
-##      animation using CUSTOM values, SELF snapshots, or live TARGET_NODE refs.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Control or Node3D targets — use TransformControl/3DJuiceEffect.
-## DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
-# ============================================================================
-##
-## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
-##   contribution: node.property += (desired - _my_contribution). This enables
-##   stacking with other effects and preserves external changes to the node.
-##
-## FROM/TO MODEL:
-## All transform types use a "From [source] To [destination]" model.
-## Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
-##
-## PIVOT (ROTATION and SCALE):
-## Node2D lacks native pivot_offset, so pivot is achieved by position compensation:
-##   Rotation: fixed_pivot = base_pos + pivot.rotated(base_rot),
-##             new_pos = fixed_pivot - pivot.rotated(new_rot)
-##   Scale:    pos += pivot * (ONE - scale_ratio)
-## AUTO_CENTER infers visual center from Sprite2D/CollisionShape2D/Polygon2D etc.
-##
-## CONDITIONAL EXPORTS:
-## Uses _get_property_list() to conditionally show/hide parameters based on
-## transform_target and from/to reference selections.
+# WHAT: Animate position, rotation, or scale of a Node2D with tween-based easing.
+# WHY: Replaces 3 separate scripts with one unified component.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Control or Node3D targets — use TransformControl/3DJuiceEffect.
+# DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
+#
+# WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
+#   contribution: node.property += (desired - _my_contribution). This enables
+#   stacking with other effects and preserves external changes to the node.
+#
+# FROM/TO MODEL:
+# All transform types use a "From [source] To [destination]" model.
+# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
+#
+# PIVOT (ROTATION and SCALE):
+# Node2D lacks native pivot_offset, so pivot is achieved by position compensation:
+#   Rotation: fixed_pivot = base_pos + pivot.rotated(base_rot),
+#             new_pos = fixed_pivot - pivot.rotated(new_rot)
+#   Scale:    pos += pivot * (ONE - scale_ratio)
+# AUTO_CENTER infers visual center from Sprite2D/CollisionShape2D/Polygon2D etc.
+#
+# CONDITIONAL EXPORTS:
+# Uses _get_property_list() to conditionally show/hide parameters based on
+# transform_target and from/to reference selections.
 # ============================================================================
 
 @tool

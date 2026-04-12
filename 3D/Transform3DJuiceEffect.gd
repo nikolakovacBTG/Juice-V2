@@ -1,34 +1,34 @@
 ## Animate position, rotation, or scale of a [Node3D] with tween-based easing and From/To configuration.
+##
+## Select a transform target (Position, Rotation, or Scale) and configure animations
+## using CUSTOM values, SELF snapshots, or live TARGET_NODE references.
+## Rotation uses quaternion slerp for smooth interpolation (no gimbal lock).
+
 # ============================================================================
-## WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
-## WHY: Replaces 3 separate scripts with one unified component. Select a
-##      transform_target (Position, Rotation, or Scale) and configure a From/To
-##      animation using CUSTOM values, SELF snapshots, or live TARGET_NODE refs.
-##      Rotation uses quaternion slerp for smooth interpolation (no gimbal lock).
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Control or Node2D targets — use TransformControl/2DJuiceEffect.
-## DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
-# ============================================================================
-##
-## WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
-##   contribution: node.property += (desired - _my_contribution). This enables
-##   stacking with other effects and preserves external changes to the node.
-##
-## FROM/TO MODEL:
-## All transform types use a "From [source] To [destination]" model.
-## Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
-## Rotation uses quaternion slerp for correct interpolation.
-##
-## PIVOT:
-## - ROTATION: Uses rotation_pivot_offset (Vector3) from node origin. The pivot
-##   point is fixed in parent space at animation start. Useful for doors, levers, lids.
-## - SCALE: Uses scale_pivot_mode (AUTO_CENTER/INHERIT/CUSTOM) with position
-##   compensation: pos += pivot * (ONE - scale_ratio).
-##
-## CONDITIONAL EXPORTS:
-## Uses _get_property_list() to conditionally show/hide parameters based on
-## transform_target and from/to reference selections.
-# ============================================================================
+# WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
+# WHY: Replaces 3 separate scripts with one unified component.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Control or Node2D targets — use TransformControl/2DJuiceEffect.
+# DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
+#
+# WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
+#   contribution: node.property += (desired - _my_contribution). This enables
+#   stacking with other effects and preserves external changes to the node.
+#
+# FROM/TO MODEL:
+# All transform types use a "From [source] To [destination]" model.
+# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
+# Rotation uses quaternion slerp for correct interpolation.
+#
+# PIVOT:
+# - ROTATION: Uses rotation_pivot_offset (Vector3) from node origin. The pivot
+#   point is fixed in parent space at animation start. Useful for doors, levers, lids.
+# - SCALE: No dedicated pivot property — scale always from node origin.
+#
+# CONDITIONAL EXPORTS:
+# Uses _get_property_list() to conditionally show/hide parameters based on
+# transform_target and from/to reference selections.
+# ===============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")

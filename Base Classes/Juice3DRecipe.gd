@@ -1,11 +1,15 @@
-## Juice3DRecipe.gd
-## ============================================================================
-## WHAT: Recipe for 3D-domain juice effects.
-## WHY: Narrows the effects array type hint so the inspector dropdown only
-##      shows Juice3DEffectBase subclasses (not Control/2D effects).
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
-## ============================================================================
+## Resource recipe for 3D-domain juice effects.
+##
+## Narrows the effects array type hint so the inspector dropdown only
+## shows Juice3DEffectBase subclasses (not Control/2D effects).
+
+# ============================================================================
+# WHAT: Recipe for 3D-domain juice effects.
+# WHY: Narrows the effects array type hint so the inspector dropdown only
+#      shows Juice3DEffectBase subclasses (not Control/2D effects).
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
+# ============================================================================
 
 @tool
 class_name Juice3DRecipe
@@ -18,7 +22,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete 3D-domain effect class names.
 ## Update this list when adding new 3D effects.
-const _CONCRETE_EFFECTS := "Appearance3DJuiceEffect,CallMethod3DJuiceEffect,Noise3DJuiceEffect,ScreenOverlay3DJuiceEffect,Shake3DJuiceEffect,SignalEmit3DJuiceEffect,SquashStretch3DJuiceEffect,Time3DJuiceEffect,Transform3DJuiceEffect"
+const _CONCRETE_EFFECTS := "Appearance3DJuiceEffect,CallMethod3DJuiceEffect,Noise3DJuiceEffect,Progress3DJuiceEffect,ProgressProperty3DJuiceEffect,ScreenOverlay3DJuiceEffect,Shake3DJuiceEffect,SignalEmit3DJuiceEffect,SquashStretch3DJuiceEffect,Time3DJuiceEffect,Transform3DJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides Juice3DEffectBase from the inspector dropdown.

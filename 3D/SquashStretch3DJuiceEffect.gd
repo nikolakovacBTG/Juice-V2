@@ -1,26 +1,28 @@
 ## Classic 3D squash and stretch for [Node3D] targets with optional volume preservation.
+##
+## Provides organic deformation feedback for 3D objects (bounces, impacts,
+## breathing motion) while maintaining volume.
+
 # ============================================================================
-## WHAT: Classic 3D squash and stretch with optional volume preservation.
-## WHY: Provides organic deformation feedback for 3D objects (bounces, impacts,
-##      breathing motion) while maintaining volume.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Control or Node2D targets — use SquashStretchControl/2DJuiceEffect.
-# ============================================================================
-##
-## ARCHITECTURE:
-## - Effects are Resources (not Nodes). The host Juice3D node ticks them.
-## - Uses sin(progress * PI) curve — peaks at progress=0.5.
-## - At progress=0.0 and 1.0: natural scale (no deformation).
-## - At progress=0.5: maximum squash.
-## - If preserve_volume=true, perpendicular axes expand as primary compresses.
-##
-## VOLUME PRESERVATION (3D):
-## - When primary axis shrinks by factor F, the other two axes each grow by sqrt(1/F).
-## - This maintains approximate volume: X * Y * Z remains constant.
-##
-## TYPICAL USAGE:
-## - Landing impact: squash_axis = Y, squash_amount = 0.3, duration = 0.15
-## - Breathing: loop = true, squash_amount = 0.05
+# WHAT: Classic 3D squash and stretch with optional volume preservation.
+# WHY: Provides organic deformation feedback for 3D objects.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Control or Node2D targets — use SquashStretchControl/2DJuiceEffect.
+#
+# ARCHITECTURE:
+# - Effects are Resources (not Nodes). The host Juice3D node ticks them.
+# - Uses sin(progress * PI) curve — peaks at progress=0.5.
+# - At progress=0.0 and 1.0: natural scale (no deformation).
+# - At progress=0.5: maximum squash.
+# - If preserve_volume=true, perpendicular axes expand as primary compresses.
+#
+# VOLUME PRESERVATION (3D):
+# - When primary axis shrinks by factor F, the other two axes each grow by sqrt(1/F).
+# - This maintains approximate volume: X * Y * Z remains constant.
+#
+# TYPICAL USAGE:
+# - Landing impact: squash_axis = Y, squash_amount = 0.3, duration = 0.15
+# - Breathing: loop = true, squash_amount = 0.05
 # ============================================================================
 
 @tool

@@ -8,7 +8,6 @@
 #       optional visual transitions and time manipulation — all inspector-driven.
 # WHY:  Allows artists and designers to build complete game flow without code.
 #       Combined with existing Juice components, enables a full interactive demo.
-# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
 # SYSTEM: Juice System (addons/Juice_V1/Utilities/)
 # DOES NOT HANDLE:
 #   - Loading progress bars (async loading is internal only)
@@ -87,38 +86,38 @@ signal time_scale_requested(scale: float)
 
 ## Which scene management action to perform when triggered.
 enum SceneAction {
-	SWITCH_SCENE,    ## Replace current scene with target (irreversible)
-	OVERLAY_SCENE,   ## Add target scene on top of current (reversible, toggle-friendly)
-	RELOAD_SCENE,    ## Reload current scene from disk
-	QUIT_GAME,       ## Quit the application
+	SWITCH_SCENE, ## Replace current scene with target (irreversible)
+	OVERLAY_SCENE, ## Add target scene on top of current (reversible, toggle-friendly)
+	RELOAD_SCENE, ## Reload current scene from disk
+	QUIT_GAME, ## Quit the application
 }
 
 ## Visual transition type played before/after the scene action.
 enum TransitionOverlay {
-	NONE,            ## Instant cut — no visual transition
-	SOLID_COLOR,     ## Fade through solid color (uses ScreenOverlayJuiceEffectBase)
-	IMAGE,           ## Fade through image/texture (uses ScreenOverlayJuiceEffectBase)
-	SCENE,           ## Custom animated transition scene (user-provided PackedScene)
+	NONE, ## Instant cut — no visual transition
+	SOLID_COLOR, ## Fade through solid color (uses ScreenOverlayJuiceEffectBase)
+	IMAGE, ## Fade through image/texture (uses ScreenOverlayJuiceEffectBase)
+	SCENE, ## Custom animated transition scene (user-provided PackedScene)
 }
 
 ## Where to switch from when action is SWITCH_SCENE.
 enum SwitchFrom {
-	THIS_SCENE,              ## Replaces the entire current scene tree (full scene change)
-	SCENE_IN_TREE,           ## Swaps a specific scene node in the tree with the To scene
-	FIRST_SCENE_IN_CONTAINER,## Swaps the first child of a parent container with the To scene
+	THIS_SCENE, ## Replaces the entire current scene tree (full scene change)
+	SCENE_IN_TREE, ## Swaps a specific scene node in the tree with the To scene
+	FIRST_SCENE_IN_CONTAINER, ## Swaps the first child of a parent container with the To scene
 }
 
 ## What happens to the old scene after the switch.
 ## Applies to Scene In Tree and First Scene In Container modes.
 enum OldScenePostSwitchAction {
-	FREE,            ## Permanently destroys the old scene. Cannot be recovered.
-	HIDE,            ## Keeps the old scene in the tree but invisible and paused. Useful for quick tab-switching.
-	REMOVE_FROM_TREE,## Detaches the old scene from the tree. The utility holds a reference; the scene can be re-added later.
+	FREE, ## Permanently destroys the old scene. Cannot be recovered.
+	HIDE, ## Keeps the old scene in the tree but invisible and paused. Useful for quick tab-switching.
+	REMOVE_FROM_TREE, ## Detaches the old scene from the tree. The utility holds a reference; the scene can be re-added later.
 }
 
 
 # =============================================================================
-# CONFIGURATION — Timing (was inherited from JuiceCompBase in V0)
+# CONFIGURATION — Timing (was inherited from JuiceBase in V0)
 # =============================================================================
 
 @export_group("Timing")
@@ -129,17 +128,17 @@ enum OldScenePostSwitchAction {
 ## Duration of the cover transition (screen hides before action).
 @export_range(0.0, 10.0, 0.05, "or_greater", "suffix:s") var duration_in: float = 0.4
 ## Tween transition type for the cover phase.
-@export_enum("Linear","Sine","Quint","Quart","Quad","Expo","Elastic","Cubic","Circ","Bounce","Back","Spring") var transition_in: int = Tween.TRANS_QUAD
+@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Cubic", "Circ", "Bounce", "Back", "Spring") var transition_in: int = Tween.TRANS_QUAD
 ## Ease type for the cover phase.
-@export_enum("Ease In","Ease Out","Ease In Out","Ease Out In") var ease_in: int = Tween.EASE_OUT
+@export_enum("Ease In", "Ease Out", "Ease In Out", "Ease Out In") var ease_in: int = Tween.EASE_OUT
 ## Optional custom curve for cover (overrides transition/ease).
 @export var custom_curve_in: Curve = null
 ## Duration of the reveal transition (screen shows new content).
 @export_range(0.0, 10.0, 0.05, "or_greater", "suffix:s") var duration_out: float = 0.4
 ## Tween transition type for the reveal phase.
-@export_enum("Linear","Sine","Quint","Quart","Quad","Expo","Elastic","Cubic","Circ","Bounce","Back","Spring") var transition_out: int = Tween.TRANS_QUAD
+@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Cubic", "Circ", "Bounce", "Back", "Spring") var transition_out: int = Tween.TRANS_QUAD
 ## Ease type for the reveal phase.
-@export_enum("Ease In","Ease Out","Ease In Out","Ease Out In") var ease_out: int = Tween.EASE_IN
+@export_enum("Ease In", "Ease Out", "Ease In Out", "Ease Out In") var ease_out: int = Tween.EASE_IN
 ## Optional custom curve for reveal (overrides transition/ease).
 @export var custom_curve_out: Curve = null
 
@@ -296,7 +295,6 @@ enum OldScenePostSwitchAction {
 static var _active_overlay_utility: SceneActionJuiceUtility = null
 
 
-
 # =============================================================================
 # INTERNAL STATE (runtime-only, not saved)
 # =============================================================================
@@ -338,7 +336,7 @@ var _removed_nodes: Dictionary = {}
 # =============================================================================
 
 func _ready() -> void:
-	pass  # V1: self-contained Node, no base class setup needed
+	pass # V1: self-contained Node, no base class setup needed
 
 
 func _process(delta: float) -> void:
@@ -348,7 +346,7 @@ func _process(delta: float) -> void:
 			_overlay_animation_completed.emit()
 
 	if _time_effect != null and _time_effect.is_playing():
-		_time_effect.tick(delta, self)
+		_time_effect.tick(delta, self )
 
 
 # =============================================================================
@@ -378,7 +376,7 @@ func animate_in() -> void:
 
 	_is_transitioning = true
 	_is_playing = true
-	started.emit()  # Emitted here — connect game logic to this signal
+	started.emit() # Emitted here — connect game logic to this signal
 
 	if debug_enabled:
 		print("[%s] animate_in() — action=%s, overlay=%s" % [
@@ -428,7 +426,6 @@ func stop() -> void:
 	# Note: this does NOT re-add or free them — they become truly orphaned.
 	# A full scene manager would handle re-insertion; this utility does not.
 	_removed_nodes.clear()
-
 
 
 # =============================================================================
@@ -491,8 +488,8 @@ func _execute_destructive_action() -> void:
 	handler.reveal_curve = custom_curve_out
 
 	# Wire callbacks so handler can emit our signals even after scene dies
-	handler.action_executed_callback = Callable(self, "_on_handler_action_executed")
-	handler.completed_callback = Callable(self, "_on_handler_completed")
+	handler.action_executed_callback = Callable(self , "_on_handler_action_executed")
+	handler.completed_callback = Callable(self , "_on_handler_completed")
 
 	get_tree().root.add_child(handler)
 
@@ -570,7 +567,7 @@ func _execute_child_swap() -> void:
 		from_scene = container_node.get_child(0)
 
 	# Safety: swapping an ancestor of this utility would destroy us
-	if from_scene.is_ancestor_of(self):
+	if from_scene.is_ancestor_of(self ):
 		push_error("[%s] Cannot swap — target '%s' is an ancestor of this utility" % [name, from_scene.name])
 		_is_transitioning = false
 		_is_playing = false
@@ -858,7 +855,7 @@ func _create_time_effect() -> TimeJuiceEffectBase:
 
 func _apply_time_effect() -> void:
 	_time_effect = _create_time_effect()
-	_time_effect.start(self, true, false, self)
+	_time_effect.start(self , true, false, self )
 	if debug_enabled:
 		var scale_label := "0.0 (freeze)" if time_mode == 0 else "%.2f" % time_target_scale
 		print("[%s] Time effect started: mode=%d scale=%s smooth=%s" % [
@@ -875,9 +872,9 @@ func _restore_time_effect() -> void:
 	# Smooth restore: start(false) plays animate_out direction → lerps back to 1.0.
 	# Instant restore: stop() releases the request immediately.
 	if time_mode != TimeJuiceEffectBase.TimeMode.FREEZE and time_smooth_transition:
-		_time_effect.start(self, false, false)
+		_time_effect.start(self , false, false)
 	else:
-		_time_effect.stop(self)
+		_time_effect.stop(self )
 		_time_effect = null
 	if debug_enabled:
 		print("[%s] Time effect restoring (smooth=%s)" % [name, time_smooth_transition])
@@ -890,7 +887,7 @@ func _restore_time_effect() -> void:
 func _cleanup_overlay() -> void:
 	# Force-stop time effect immediately (no smooth restore during cleanup).
 	if _time_effect != null:
-		_time_effect.stop(self)
+		_time_effect.stop(self )
 		_time_effect = null
 	_cleanup_transition_resources()
 	if is_instance_valid(_active_overlay_instance):
@@ -1011,7 +1008,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 		else:
 			# Check if switch_from is an ancestor of this utility (would destroy us)
 			var from_scene := get_node_or_null(switch_from)
-			if from_scene != null and from_scene.is_ancestor_of(self):
+			if from_scene != null and from_scene.is_ancestor_of(self ):
 				warnings.append("Switch From '%s' is an ancestor of this utility. Swapping it would destroy this node." % switch_from)
 
 	# FIRST_SCENE_IN_CONTAINER mode: container must be set
@@ -1020,7 +1017,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 			warnings.append("First Scene In Container mode requires Container to be set. Drag a parent node from the Scene panel.")
 		else:
 			var container_node := get_node_or_null(container)
-			if container_node != null and container_node.is_ancestor_of(self):
+			if container_node != null and container_node.is_ancestor_of(self ):
 				warnings.append("Container '%s' is an ancestor of this utility. Swapping its child could destroy this node." % container)
 
 	# Transition scene required for SCENE overlay type

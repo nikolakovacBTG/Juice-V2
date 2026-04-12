@@ -7,28 +7,26 @@
 # WHAT: Calls any method on any node when triggered, enabling designer-driven
 #       function calls without writing custom scripts.
 # WHY: Allows wiring "when juice triggers → call method X" in inspector.
-#      Useful for playing sounds, spawning effects, or any simple action.
-# SYSTEM: Juicing System (addons/Juice_V1/Utilities/)
+# SYSTEM: Juice System (addons/Juice_V1/Utilities/)
 # DOES NOT: Create any visual effect. This is a control/flow utility only.
 #           Does NOT handle return values from called methods.
+#
+# LIFECYCLE:
+#   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that
+#   node fires animate_in_started or completed, this utility calls the method.
+#
+# USAGE:
+# - Add as sibling of a JuiceBase node
+# - Set observe_juice to point at the JuiceBase node
+# - Set target_node_path to the node containing the method
+# - Set method_name to the method to call
+# - Optionally add arguments to pass
+#
+# EXAMPLES:
+# - Call AudioManager.play_sound("click") on button press
+# - Call enemy.take_damage(10) when attack animation completes
+# - Call particle_system.emit() when effect triggers
 # ============================================================================
-##
-## LIFECYCLE:
-##   Observes a sibling JuiceBase node (JuiceControl/Juice2D/Juice3D). When that
-##   node fires animate_in_started or completed, this utility calls the method.
-##
-## USAGE:
-## - Add as sibling of a JuiceBase node
-## - Set observe_juice to point at the JuiceBase node
-## - Set target_node_path to the node containing the method
-## - Set method_name to the method to call
-## - Optionally add arguments to pass
-##
-## EXAMPLES:
-## - Call AudioManager.play_sound("click") on button press
-## - Call enemy.take_damage(10) when attack animation completes
-## - Call particle_system.emit() when effect triggers
-## ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")

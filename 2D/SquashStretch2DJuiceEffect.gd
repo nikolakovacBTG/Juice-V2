@@ -1,22 +1,24 @@
 ## Classic squash & stretch scaling for [Node2D] targets with optional volume preservation.
-# ============================================================================
-## WHAT: Classic squash & stretch scaling for Node2D targets with volume preservation.
-## WHY: Provides organic, lively deformation feedback that follows the classic
-##      animation principle of squash and stretch.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Control or Node3D targets — use SquashStretchControl/3DJuiceEffect.
-# ============================================================================
 ##
-## ARCHITECTURE:
-## - Effects are Resources (not Nodes). The host Juice2D node ticks them.
-## - Uses sin(progress * PI) curve — peaks at progress=0.5.
-## - At progress=0.0 and 1.0: natural scale (no deformation).
-## - At progress=0.5: maximum squash.
-## - If preserve_volume=true, perpendicular axis expands as primary compresses.
-##
-## TYPICAL USAGE:
-## - Landing impact: squash_axis = VERTICAL, squash_amount = 0.3, duration = 0.15
-## - Bounce: squash_axis = VERTICAL, squash_amount = 0.2
+## Provides organic, lively deformation feedback that follows the classic
+## animation principle of squash and stretch.
+
+# ============================================================================
+# WHAT: Classic squash & stretch scaling for Node2D targets with volume preservation.
+# WHY: Provides organic, lively deformation feedback.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Control or Node3D targets — use SquashStretchControl/3DJuiceEffect.
+#
+# ARCHITECTURE:
+# - Effects are Resources (not Nodes). The host Juice2D node ticks them.
+# - Uses sin(progress * PI) curve — peaks at progress=0.5.
+# - At progress=0.0 and 1.0: natural scale (no deformation).
+# - At progress=0.5: maximum squash.
+# - If preserve_volume=true, perpendicular axis expands as primary compresses.
+#
+# TYPICAL USAGE:
+# - Landing impact: squash_axis = VERTICAL, squash_amount = 0.3, duration = 0.15
+# - Bounce: squash_axis = VERTICAL, squash_amount = 0.2
 # ============================================================================
 
 @tool

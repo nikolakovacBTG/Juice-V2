@@ -1,14 +1,15 @@
 ## Animates visual appearance properties (tint, fade, overbright, outline) of [Control] (UI) targets.
+##
+## Modulate effects (TINT, FADE, OVERBRIGHT) are stackable. OUTLINE installs
+## a ShaderMaterial on the target.
+
 # ============================================================================
-## WHAT: Animates visual appearance properties of Control (UI) node targets.
-##       Modulate effects (TINT, FADE, OVERBRIGHT) contribute a multiplicative
-##       _modulate_factor; JuiceControl accumulates all factors and writes once.
-##       OUTLINE installs a ShaderMaterial on target.material (separate slot).
-## WHY: Correct V1 stackable architecture — effects do not write to target
-##      directly; the domain node owns the single write per channel per frame.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Node2D or Node3D targets — use Appearance2D/3DJuiceEffect.
-## DOES NOT: Animate position/rotation/scale — use TransformControlJuiceEffect.
+# WHAT: Animates visual appearance properties of Control (UI) node targets.
+# WHY: Correct V1 stackable architecture — effects do not write to target
+#      directly; the domain node owns the single write per channel per frame.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Node2D or Node3D targets — use Appearance2D/3DJuiceEffect.
+# DOES NOT: Animate position/rotation/scale — use TransformControlJuiceEffect.
 # ============================================================================
 #
 # SHADER PARAMETER NAMES:

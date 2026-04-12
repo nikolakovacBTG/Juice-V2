@@ -1,22 +1,18 @@
 ## Internal runtime helper for scene transition lifecycle management.
 ##
-## Manages cover → action → reveal → cleanup for scene transitions that destroy the triggering scene. Lives on SceneTree root so it persists across scene changes.
+## Manages the full cover → action → reveal → cleanup lifecycle for scene actions.
+## Lives on the SceneTree root so it survives during scene switching or reloading.
+##
+## WHY THIS EXISTS:
+## When switching/reloading scenes, the SceneActionJuiceUtility that triggered
+## the transition gets destroyed along with its scene. This handler is added
+## to the tree root BEFORE the scene change so it survives and can manage
+## the full transition lifecycle (cover animation → scene action → reveal).
 
 # ============================================================================
 # JUICE TRANSITION HANDLER — Internal Runtime Helper
 # ============================================================================
-# Manages the full cover → action → reveal → cleanup lifecycle for scene
-# actions that destroy the triggering scene (SWITCH_SCENE, RELOAD_SCENE,
-# QUIT_GAME). Lives on SceneTree root so it persists across scene changes.
-#
 # SYSTEM: Juice System (addons/Juice_V1/Utilities/)
-#
-# WHY THIS EXISTS:
-# When switching/reloading scenes, the SceneActionJuiceUtility that triggered
-# the transition gets destroyed along with its scene. This handler is added
-# to the tree root BEFORE the scene change so it survives and can manage
-# the full transition lifecycle (cover animation → scene action → reveal).
-#
 # DOES NOT HANDLE:
 # - OVERLAY_SCENE (the utility survives for that, no handler needed)
 # - Inspector configuration (all config is copied from the utility at creation)
@@ -72,7 +68,7 @@ var use_scene_timing: bool = true
 var fallback_cover_duration: float = 0.5
 var fallback_reveal_duration: float = 0.5
 
-# Timing (from JuiceCompBase Animate In/Out groups)
+# Timing (from JuiceBase Animate In/Out groups)
 var cover_duration: float = 0.4
 var cover_transition: int = Tween.TRANS_QUAD
 var cover_ease: int = Tween.EASE_OUT

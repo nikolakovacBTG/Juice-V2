@@ -1,24 +1,23 @@
 ## Lightweight relay that listens for local signals and re-emits them on a global signal bus.
 ##
-## Bridges the gap between local triggers and remote juice components that listen on a signal bus. Essential for signal relay patterns where juice comps live in different scenes than triggers.
+## Bridges the gap between local triggers (clicks, collisions) and remote juice components
+## that listen on a signal bus. Essential for the signal relay pattern where juice comps live
+## in a different scene than the trigger.
 
 # ============================================================================
 # WHAT: Lightweight relay that listens for a signal on a local node and
 #       re-emits a named signal on a global signal bus autoload.
-# WHY: Bridges the gap between local triggers (clicks, collisions) and
-#      remote juice components that listen on a signal bus. Essential for the
-#      signal relay pattern where juice comps live on a persistent camera
-#      rig or screen receiver in a different scene than the trigger.
-# SYSTEM: Juicing System (addons/Juice_V1/) - Utility
+# WHY: Bridges the gap between local triggers and remote juice components.
+# SYSTEM: Juice System (addons/Juice_V1/) - Utility
 # DOES NOT: Produce any visual effect. This is a pure signal-routing node.
-##
-## USAGE:
-## 1. Add as child of a node that emits a signal (Clickable3DComp, Button, etc.)
-## 2. Set listen_signal to the local signal name (e.g., "left_clicked", "pressed")
-## 3. Set emit_signal_name to the signal bus signal (e.g., "camera_shake_test_requested")
-## 4. The remote juice comp uses manual_trigger_signal + trigger_source_path
-##    pointed at your signal bus autoload to receive the relayed signal.
-## ============================================================================
+#
+# USAGE:
+# 1. Add as child of a node that emits a signal (Clickable3DComp, Button, etc.)
+# 2. Set listen_signal to the local signal name (e.g., "left_clicked", "pressed")
+# 3. Set emit_signal_name to the signal bus signal (e.g., "camera_shake_test_requested")
+# 4. The remote juice comp uses manual_trigger_signal + trigger_source_path
+#    pointed at your signal bus autoload to receive the relayed signal.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilitySignals.svg")

@@ -1,16 +1,16 @@
 ## Animates visual appearance properties (tint, fade, overbright, outline) of [Node3D] targets.
+##
+## Modulate-equivalent effects (TINT, FADE, OVERBRIGHT) are stackable. OUTLINE
+## installs a ShaderMaterial as a next_pass on the target's material.
+
 # ============================================================================
-## WHAT: Animates visual appearance properties of Node3D targets.
-##       Modulate-equivalent effects (TINT, FADE, OVERBRIGHT) contribute
-##       multiplicative albedo/alpha factors; Juice3D owns one working material
-##       and writes once per frame.
-## WHY: Correct V1 stackable architecture — effects do not write to the mesh
-##      material directly; the domain node (Juice3D) owns the working material
-##      and the single write per frame. Multiple stacked effects stack cleanly.
-## SYSTEM: Juicing System (addons/Juice_V1/)
-## DOES NOT: Handle Control or Node2D targets — use AppearanceControl/2DJuiceEffect.
-## DOES NOT: Animate position/rotation/scale — use Transform3DJuiceEffect.
-## DOES NOT: Manage MeshInstance3D or surface materials — Juice3D does that.
+# WHAT: Animates visual appearance properties of Node3D targets.
+# WHY: Correct V1 stackable architecture — effects do not write to the mesh
+#      material directly; the domain node (Juice3D) owns the working material.
+# SYSTEM: Juice System (addons/Juice_V1/)
+# DOES NOT: Handle Control or Node2D targets — use AppearanceControl/2DJuiceEffect.
+# DOES NOT: Animate position/rotation/scale — use Transform3DJuiceEffect.
+# DOES NOT: Manage MeshInstance3D or surface materials — Juice3D does that.
 # ============================================================================
 #
 # OVERBRIGHT NOTE: Uses albedo_color with RGB > 1.0 (HDR-compatible path).

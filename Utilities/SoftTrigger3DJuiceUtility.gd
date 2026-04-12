@@ -1,45 +1,43 @@
 ## Proximity-driven continuous progress driver for the 3D domain.
 ##
-## Extends Area3D to detect mouse/body entry, then calculates a 0–1 progress value based on how deep inside the collision shape the tracked entity is. Drives sibling JuiceCompBase nodes each frame via set_external_progress().
+## Extends Area3D to detect mouse/body entry, then calculates a 0–1 progress value
+## based on how deep inside the collision shape the tracked entity is.
+## Drives sibling JuiceBase nodes each frame via set_external_progress().
 
 # ============================================================================
 # WHAT: Proximity-driven continuous progress driver for the 3D domain.
-#       Extends Area3D to detect mouse/body entry, then calculates a 0–1
-#       progress value based on how deep inside the collision shape the
-#       tracked entity is. Drives sibling JuiceCompBase nodes each frame
-#       via set_external_progress().
 # WHY: Enables Balatro-style hover effects where juice intensity is proportional
 #      to spatial proximity, not just binary enter/exit. The spatial falloff
 #      IS the easing — no timing system needed.
-# SYSTEM: Juicing System (addons/Juice_V1/) - 3D Domain
+# SYSTEM: Juice System (addons/Juice_V1/) - 3D Domain
 #
-## DOES NOT:
-## - Apply any visual effect itself (it's a sensor/driver, not an effect)
-## - Handle directional tilt (see future TiltTowardCursorComp)
-## - Work with 2D/Control scenes (see SoftTrigger2DJuiceComp / Control variant)
-##
-## CONNECTIONS:
-## - Sibling JuiceBase nodes: discovered via type-safe `is` traversal,
-##   driven each frame via set_external_progress()
-## - CollisionShape3D child: required for detection zone. Auto-created as
-##   @tool feature if auto_create_shape is true and none exists.
-##
-## MOUSE TRACKING (3D):
-## Uses the collision point from Area3D._input_event(). Because the hit
-## is always ON the shape surface (never inside), the calculation uses
-## surface-projection instead of volumetric distance:
-## - SphereShape3D: dot product of surface normal vs view direction
-##   (1 at visible center, 0 at visible edge)
-## - BoxShape3D: project hit onto face plane, use 2D rectangular falloff
-##   on the two parallel axes (ignore the perpendicular/surface axis)
-## BODY mode uses volumetric distance (the body IS inside the volume).
-##
-## USAGE:
-## 1. Add as sibling of a visual Node3D (MeshInstance3D, etc.)
-## 2. Add or auto-create a CollisionShape3D child to define the detection zone
-## 3. Add JuiceBase siblings — they'll be driven automatically
-## 4. Set falloff_zone to control the gradient zone width
-## ============================================================================
+# DOES NOT:
+# - Apply any visual effect itself (it's a sensor/driver, not an effect)
+# - Handle directional tilt (see future TiltTowardCursorComp)
+# - Work with 2D/Control scenes (see SoftTrigger2DJuiceComp / Control variant)
+#
+# CONNECTIONS:
+# - Sibling JuiceBase nodes: discovered via type-safe `is` traversal,
+#   driven each frame via set_external_progress()
+# - CollisionShape3D child: required for detection zone. Auto-created as
+#   @tool feature if auto_create_shape is true and none exists.
+#
+# MOUSE TRACKING (3D):
+# Uses the collision point from Area3D._input_event(). Because the hit
+# is always ON the shape surface (never inside), the calculation uses
+# surface-projection instead of volumetric distance:
+# - SphereShape3D: dot product of surface normal vs view direction
+#   (1 at visible center, 0 at visible edge)
+# - BoxShape3D: project hit onto face plane, use 2D rectangular falloff
+#   on the two parallel axes (ignore the perpendicular/surface axis)
+# BODY mode uses volumetric distance (the body IS inside the volume).
+#
+# USAGE:
+# 1. Add as sibling of a visual Node3D (MeshInstance3D, etc.)
+# 2. Add or auto-create a CollisionShape3D child to define the detection zone
+# 3. Add JuiceBase siblings — they'll be driven automatically
+# 4. Set falloff_zone to control the gradient zone width
+# ====================================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityArea3D.svg")

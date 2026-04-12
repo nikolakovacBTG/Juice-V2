@@ -8,7 +8,7 @@
 # WHAT: Juice node for Control targets (Button, Label, Panel, etc.).
 # WHY: Validates parent is Control, connects Control/Button-specific signals,
 #      handles Container-aware external-move detection.
-# SYSTEM: Juicing System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
@@ -49,6 +49,13 @@ var _total_scale_contribution: Vector2 = Vector2.ZERO
 
 # Whether base values have been captured at least once
 var _base_captured: bool = false
+
+# Expected values after our last write — for external-move detection (pre-tick).
+# If the actual value differs from expected next frame, something external moved
+# the target (Container re-sort, game logic, tween, etc.) and we update _base_*.
+var _expected_position: Vector2 = Vector2.INF
+var _expected_rotation: float = INF
+var _expected_scale: Vector2 = Vector2.INF
 
 # Modulate base — captured at _capture_base_values for appearance accumulation.
 # JuiceControlAppearanceEffect effects contribute _modulate_factor multiplicatively;
@@ -153,6 +160,9 @@ func _connect_button_signals(button: BaseButton) -> void:
 				button.focus_entered.connect(_on_trigger_polarity_on)
 			if not button.focus_exited.is_connected(_on_trigger_polarity_off):
 				button.focus_exited.connect(_on_trigger_polarity_off)
+		TriggerEvent.ON_LEFT_CLICK, TriggerEvent.ON_RIGHT_CLICK, TriggerEvent.ON_MIDDLE_CLICK:
+			if not button.gui_input.is_connected(_on_control_gui_input_filtered):
+				button.gui_input.connect(_on_control_gui_input_filtered)
 	if debug_enabled:
 		print("[%s] Auto-connected to Button '%s' on %s" % [
 			name, button.name, TriggerEvent.keys()[trigger_on]])
@@ -214,6 +224,56 @@ func _capture_base_values() -> void:
 	_total_pos_contribution = Vector2.ZERO
 	_total_rot_contribution = 0.0
 	_total_scale_contribution = Vector2.ZERO
+	# Initialise expected values so pre-tick can detect external moves
+	_expected_position = ctrl.position
+	_expected_rotation = ctrl.rotation
+	_expected_scale = ctrl.scale
+	if debug_enabled:
+		print("[%s] JuiceControl._capture_base_values: ctrl.pos=%s ctrl.rot=%.2f ctrl.scale=%s" % [
+			name, ctrl.position, ctrl.rotation, ctrl.scale])
+
+
+## Detect external displacement of the target (Container re-sort, game logic, tweens).
+## Runs once per frame, before effects tick. When displacement is detected,
+## updates _base_* so delta computations use the correct natural state.
+func _pre_tick() -> void:
+	if _target_node == null or not _base_captured:
+		return
+	var ctrl := _target_node as Control
+	var any_displaced := false
+
+	# Position
+	if _expected_position != Vector2.INF:
+		if not ctrl.position.is_equal_approx(_expected_position):
+			var displacement := ctrl.position - _expected_position
+			_base_position += displacement
+			_expected_position = ctrl.position
+			any_displaced = true
+			if debug_enabled:
+				print("[%s] External displacement (position): %s → new base: %s" % [
+					name, displacement, _base_position])
+
+	# Rotation
+	if _expected_rotation != INF:
+		if not is_equal_approx(ctrl.rotation, _expected_rotation):
+			var displacement := ctrl.rotation - _expected_rotation
+			_base_rotation += displacement
+			_expected_rotation = ctrl.rotation
+			any_displaced = true
+
+	# Scale
+	if _expected_scale != Vector2.INF:
+		if not ctrl.scale.is_equal_approx(_expected_scale):
+			var displacement := ctrl.scale - _expected_scale
+			_base_scale += displacement
+			_expected_scale = ctrl.scale
+			any_displaced = true
+
+	# Invalidate effect base caches so they re-capture on next animation start
+	if any_displaced:
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._invalidate_base_cache()
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -242,10 +302,20 @@ func _post_tick_write() -> void:
 		if ctrl_effect._contributes_scale:
 			new_scale += ctrl_effect._scale_delta
 
+	if debug_enabled:
+		print("[FROMTO_DBG] %s._post_tick_write: ctrl.pos_BEFORE=%s old_contrib=%s new_delta=%s => result=%s" % [
+			name, ctrl.position, _total_pos_contribution, new_pos,
+			ctrl.position - _total_pos_contribution + new_pos])
+
 	# Contribution tracking: subtract what we added last frame, add what we want now
 	ctrl.position = ctrl.position - _total_pos_contribution + new_pos
 	ctrl.rotation = ctrl.rotation - _total_rot_contribution + new_rot
 	ctrl.scale = ctrl.scale - _total_scale_contribution + new_scale
+
+	# Track expected values (for external-displacement detection next frame)
+	_expected_position = ctrl.position
+	_expected_rotation = ctrl.rotation
+	_expected_scale = ctrl.scale
 
 	# Update tracked contribution (for undo/reapply and next frame's subtraction)
 	_total_pos_contribution = new_pos
@@ -329,6 +399,10 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	if debug_enabled:
+		print("[FROMTO_DBG] %s._temporarily_undo_visual: ctrl.pos_BEFORE=%s _total_pos_contrib=%s => undone_pos=%s" % [
+			name, ctrl.position, _total_pos_contribution,
+			ctrl.position - _total_pos_contribution])
 	ctrl.position -= _total_pos_contribution
 	ctrl.rotation -= _total_rot_contribution
 	ctrl.scale -= _total_scale_contribution
@@ -346,6 +420,10 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	if debug_enabled:
+		print("[FROMTO_DBG] %s._temporarily_reapply_visual: ctrl.pos_BEFORE=%s _total_pos_contrib=%s => reapplied_pos=%s" % [
+			name, ctrl.position, _total_pos_contribution,
+			ctrl.position + _total_pos_contribution])
 	ctrl.position += _total_pos_contribution
 	ctrl.rotation += _total_rot_contribution
 	ctrl.scale += _total_scale_contribution

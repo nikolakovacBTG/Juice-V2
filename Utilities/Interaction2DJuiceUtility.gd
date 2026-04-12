@@ -1,40 +1,32 @@
-## Convenience upgrade for Area2D that adds structural and gating value for interactive 2D game objects.
+## Convenience upgrade for [Area2D] that adds structural and gating value for interactive 2D game objects.
 ##
-## Auto-creates collision shapes, manages trigger zone gating, and relays custom input actions as dynamically named signals. Area2D already provides all needed native signals; this utility adds value ON TOP of that.
+## Auto-creates collision shapes, manages trigger zone gating, and relays custom input actions
+## as dynamically named signals.
 
 # ============================================================================
-# WHAT: Convenience upgrade for Area2D that adds structural and gating value
-#       for interactive 2D game objects. Auto-creates collision shapes,
-#       manages trigger zone gating, and relays custom input actions as
-#       dynamically named signals.
-# WHY: Area2D already provides all needed native signals (mouse_entered,
-#       mouse_exited, input_event, body_entered, etc.). This utility adds
-#       value ON TOP of that: auto-shape creation, zone-gated interaction,
-#       and input action relay (emit named signals for InputMap actions or
-#       common mouse button presets not available as discrete Area2D signals).
 # SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
 #
-## DOES NOT:
-## - Wrap or replace native Area2D signals — they flow through unchanged
-## - Provide continuous 0-1 progress (see SoftTrigger2DJuiceUtility)
-## - Implement game-specific interaction logic
-## - Handle visual effects directly (JuiceBase nodes handle effects)
-##
-## CONNECTIONS:
-## - JuiceBase children/siblings: auto-connect to native Area2D signals
-##   via their built-in trigger wiring. No wrapper signals needed.
-## - Game scripts: connect to dynamic action signals (e.g., "left_click",
-##   "interact") in the Node tab's signal list.
-## - Child trigger zone (Area2D): auto-created when INTERACTABLE mode needs
-##   zone gating. In TRIGGER_ZONE mode, root Area2D handles detection.
-##
-## USAGE:
-## 1. Add as sibling of a visual Node2D (Sprite2D, etc.)
-## 2. Add JuiceBase children — they auto-connect to native signals
-## 3. Pick mode: INTERACTABLE or TRIGGER_ZONE
-## 4. Optionally add input action entries for named signal relay
-## 5. Optionally enable check_presence_in_trigger_zone for gated interaction
-## ============================================================================
+# DOES NOT:
+# - Wrap or replace native Area2D signals — they flow through unchanged
+# - Provide continuous 0-1 progress (see SoftTrigger2DJuiceUtility)
+# - Implement game-specific interaction logic
+# - Handle visual effects directly (JuiceBase nodes handle effects)
+#
+# CONNECTIONS:
+# - JuiceBase children/siblings: auto-connect to native Area2D signals
+#   via their built-in trigger wiring. No wrapper signals needed.
+# - Game scripts: connect to dynamic action signals (e.g., "left_click",
+#   "interact") in the Node tab's signal list.
+# - Child trigger zone (Area2D): auto-created when INTERACTABLE mode needs
+#   zone gating. In TRIGGER_ZONE mode, root Area2D handles detection.
+#
+# USAGE:
+# 1. Add as sibling of a visual Node2D (Sprite2D, etc.)
+# 2. Add JuiceBase children — they auto-connect to native signals
+# 3. Pick mode: INTERACTABLE or TRIGGER_ZONE
+# 4. Optionally add input action entries for named signal relay
+# 5. Optionally enable check_presence_in_trigger_zone for gated interaction
+# ================================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityArea2D.svg")
