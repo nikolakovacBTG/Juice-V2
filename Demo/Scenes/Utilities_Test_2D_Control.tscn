@@ -8,10 +8,7 @@
 [ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
 [ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="8_5u77v"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="9_8ai6r"]
-[ext_resource type="Script" uid="uid://bs2ebgkk22m07" path="res://addons/Juice_V1/Utilities/SceneActionJuiceUtility.gd" id="9_8tq88"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
-[ext_resource type="PackedScene" uid="uid://lfr1duh1e655" path="res://Demo/Scenes/MultipleChaining_Review.tscn" id="10_qm7d2"]
-[ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="11_lcm6r"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="12_hvqsx"]
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V1/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
 [ext_resource type="Resource" uid="uid://c4hbl86fvu802" path="res://Demo/Scenes/TimeTestRecipe.tres" id="13_4jv1n"]
@@ -206,12 +203,6 @@ offset_top = 200.0
 offset_right = 944.0
 offset_bottom = 231.0
 text = "Test Scene Action"
-
-[node name="SceneActionJuiceUtility" type="Node" parent="SceneActionTestButton" unique_id=1956702671]
-script = ExtResource("9_8tq88")
-to = ExtResource("10_qm7d2")
-overlay_type = 3
-transition_scene = ExtResource("11_lcm6r")
 
 [node name="TimeCoordinatorJuiceUtility" type="Node" parent="." unique_id=2098764954]
 script = ExtResource("12_lcm6r")
