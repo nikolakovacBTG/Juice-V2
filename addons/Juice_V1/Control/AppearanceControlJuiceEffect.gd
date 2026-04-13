@@ -80,11 +80,7 @@ var to_reference: int = AppearanceReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
-## When to capture natural values when using SELF reference.
-var capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		capture_at = value
-		notify_property_list_changed()
+
 ## When to capture From values (when from_reference == SELF).
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
@@ -277,9 +273,9 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"effect_type": effect_type = value; return true
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
-		&"capture_at": capture_at = value; return true
 		&"from_capture_at": from_capture_at = value; return true
 		&"to_capture_at": to_capture_at = value; return true
+
 		&"from_tint_color": from_tint_color = value; return true
 		&"from_tint_blend": from_tint_blend = value; return true
 		&"tint_color": tint_color = value; return true
@@ -307,9 +303,9 @@ func _get(property: StringName) -> Variant:
 		&"effect_type": return effect_type
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
-		&"capture_at": return capture_at
 		&"from_capture_at": return from_capture_at
 		&"to_capture_at": return to_capture_at
+
 		&"from_tint_color": return from_tint_color
 		&"from_tint_blend": return from_tint_blend
 		&"tint_color": return tint_color
@@ -336,11 +332,20 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-# Captured reference values for From/To animation
+# Captured reference values for From animation
 var _captured_from_tint_color: Color = Color.WHITE
 var _captured_from_tint_blend: float = 0.0
 var _captured_from_alpha: float = 1.0
 var _captured_from_brightness: float = 1.0
+
+# Captured reference values for To animation
+var _captured_to_tint_color: Color = Color.WHITE
+var _captured_to_tint_blend: float = 0.0
+var _captured_to_alpha: float = 1.0
+var _captured_to_brightness: float = 1.0
+
+var _has_from_self_snapshot: bool = false
+var _has_to_self_snapshot: bool = false
 
 # Only needed for OUTLINE (which installs a ShaderMaterial on target.material).
 # Modulate effects (TINT/FADE/OVERBRIGHT) use _modulate_factor from the intermediate.
@@ -365,6 +370,19 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+func _on_host_ready(target: Node, host: Node) -> void:
+	_host_node = host
+	var ctrl := target as Control
+	if ctrl == null:
+		return
+
+	if from_reference == AppearanceReference.SELF and from_capture_at == CaptureAt.READY:
+		_perform_from_capture(ctrl)
+
+	if to_reference == AppearanceReference.SELF and to_capture_at == CaptureAt.READY:
+		_perform_to_capture(ctrl)
+
+
 func _on_animate_start(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
@@ -374,7 +392,11 @@ func _on_animate_start(target: Node) -> void:
 	_contributes_modulate = (effect_type != AppearanceEffect.OUTLINE)
 
 	# Capture From/To references based on capture_at setting
-	_capture_references(ctrl)
+	if from_reference == AppearanceReference.SELF and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
+		_perform_from_capture(ctrl)
+
+	if to_reference == AppearanceReference.SELF and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
+		_perform_to_capture(ctrl)
 
 	_flicker_time = 0.0
 	_setup_flicker_noise()
@@ -461,6 +483,8 @@ func _restore_to_natural(target: Node) -> void:
 func _invalidate_base_cache() -> void:
 	_has_natural = false
 	_active_material = null
+	_has_from_self_snapshot = false
+	_has_to_self_snapshot = false
 
 
 func _temporarily_undo_visual(target: Node) -> void:
@@ -490,34 +514,33 @@ func _get_interrupt_identity() -> Variant:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Capture references based on capture_at setting
-func _capture_references(ctrl: Control) -> void:
-	match capture_at:
-		CaptureAt.TRIGGER:
-			# Capture immediately when animation starts
-			_perform_capture(ctrl)
-		CaptureAt.READY:
-			# Only capture if node is ready
-			if ctrl.is_inside_tree():
-				_perform_capture(ctrl)
-		CaptureAt.IN_EDITOR:
-			# Always capture in editor
-			_perform_capture(ctrl)
-
-# Perform the actual reference capture
-func _perform_capture(ctrl: Control) -> void:
+# Perform the actual From reference capture
+func _perform_from_capture(ctrl: Control) -> void:
+	if _has_from_self_snapshot:
+		return
 	# Capture TINT references
-	if from_reference == AppearanceReference.SELF:
-		_captured_from_tint_color = ctrl.self_modulate
-		_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
+	_captured_from_tint_color = ctrl.self_modulate
+	_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
 	# Capture FADE references
-	if from_reference == AppearanceReference.SELF:
-		_captured_from_alpha = ctrl.self_modulate.a
+	_captured_from_alpha = ctrl.self_modulate.a
 	# Capture OVERBRIGHT references
-	if from_reference == AppearanceReference.SELF:
-		# For OVERBRIGHT, capture the RGB max of self_modulate
-		var mod := ctrl.self_modulate
-		_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
+	var mod := ctrl.self_modulate
+	_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
+	_has_from_self_snapshot = true
+
+# Perform the actual To reference capture
+func _perform_to_capture(ctrl: Control) -> void:
+	if _has_to_self_snapshot:
+		return
+	# Capture TINT references
+	_captured_to_tint_color = ctrl.self_modulate
+	_captured_to_tint_blend = 0.0
+	# Capture FADE references
+	_captured_to_alpha = ctrl.self_modulate.a
+	# Capture OVERBRIGHT references
+	var mod := ctrl.self_modulate
+	_captured_to_brightness = max(mod.r, max(mod.g, mod.b))
+	_has_to_self_snapshot = true
 
 # TINT resolvers
 func _resolve_from_tint(_ctrl: Control) -> Color:
@@ -528,7 +551,7 @@ func _resolve_from_tint(_ctrl: Control) -> Color:
 
 func _resolve_to_tint(_ctrl: Control) -> Color:
 	if to_reference == AppearanceReference.SELF:
-		return lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+		return lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
 	else:  # CUSTOM
 		return lerp(Color.WHITE, tint_color, tint_blend)
 
@@ -541,7 +564,7 @@ func _resolve_from_alpha(_ctrl: Control) -> float:
 
 func _resolve_to_alpha(_ctrl: Control) -> float:
 	if to_reference == AppearanceReference.SELF:
-		return _captured_from_alpha
+		return _captured_to_alpha
 	else:  # CUSTOM
 		return fade_target_alpha
 
@@ -554,7 +577,7 @@ func _resolve_from_brightness(_ctrl: Control) -> float:
 
 func _resolve_to_brightness(_ctrl: Control) -> float:
 	if to_reference == AppearanceReference.SELF:
-		return _captured_from_brightness
+		return _captured_to_brightness
 	else:  # CUSTOM
 		return overbright_strength
 

@@ -112,13 +112,23 @@ var to_reference: int = TransformReference.CUSTOM:
 		notify_property_list_changed()
 var from_target_node: NodePath
 var to_target_node: NodePath
-var capture_at: int = CaptureAt.TRIGGER:
+var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
-		capture_at = value
+		from_capture_at = value
 		if value != CaptureAt.IN_EDITOR:
-			_editor_cached_position = Vector3.ZERO
-			_editor_cached_rotation = Vector3.ZERO
-			_editor_cached_scale = Vector3.ONE
+			_from_editor_cached_position = Vector3.ZERO
+			_from_editor_cached_rotation = Vector3.ZERO
+			_from_editor_cached_scale = Vector3.ONE
+		elif Engine.is_editor_hint():
+			_update_editor_cache()
+		notify_property_list_changed()
+var to_capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		to_capture_at = value
+		if value != CaptureAt.IN_EDITOR:
+			_to_editor_cached_position = Vector3.ZERO
+			_to_editor_cached_rotation = Vector3.ZERO
+			_to_editor_cached_scale = Vector3.ONE
 		elif Engine.is_editor_hint():
 			_update_editor_cache()
 		notify_property_list_changed()
@@ -135,9 +145,12 @@ var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
 var scale_custom_pivot: Vector3 = Vector3.ZERO
 
 # --- EDITOR CACHE (serialized only when capture_at == IN_EDITOR) ---
-var _editor_cached_position: Vector3 = Vector3.ZERO
-var _editor_cached_rotation: Vector3 = Vector3.ZERO
-var _editor_cached_scale: Vector3 = Vector3.ONE
+var _from_editor_cached_position: Vector3 = Vector3.ZERO
+var _from_editor_cached_rotation: Vector3 = Vector3.ZERO
+var _from_editor_cached_scale: Vector3 = Vector3.ONE
+var _to_editor_cached_position: Vector3 = Vector3.ZERO
+var _to_editor_cached_rotation: Vector3 = Vector3.ZERO
+var _to_editor_cached_scale: Vector3 = Vector3.ONE
 
 
 # =============================================================================
@@ -164,13 +177,20 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append_array(_get_scale_from_to_properties())
 			props.append_array(_get_scale_pivot_properties())
 
-	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if uses_self and capture_at == CaptureAt.IN_EDITOR:
-		props.append({"name": "_editor_cached_position", "type": TYPE_VECTOR3,
+	if from_reference == TransformReference.SELF and from_capture_at == CaptureAt.IN_EDITOR:
+		props.append({"name": "_from_editor_cached_position", "type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_editor_cached_rotation", "type": TYPE_VECTOR3,
+		props.append({"name": "_from_editor_cached_rotation", "type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_editor_cached_scale", "type": TYPE_VECTOR3,
+		props.append({"name": "_from_editor_cached_scale", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_STORAGE})
+
+	if to_reference == TransformReference.SELF and to_capture_at == CaptureAt.IN_EDITOR:
+		props.append({"name": "_to_editor_cached_position", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_STORAGE})
+		props.append({"name": "_to_editor_cached_rotation", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_STORAGE})
+		props.append({"name": "_to_editor_cached_scale", "type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_STORAGE})
 
 	return props
@@ -199,7 +219,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		})
 	elif from_reference == TransformReference.SELF:
 		pos_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "from_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -232,7 +252,7 @@ func _get_position_from_to_properties() -> Array[Dictionary]:
 		})
 	elif to_reference == TransformReference.SELF:
 		pos_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "to_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -270,7 +290,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 		})
 	elif from_reference == TransformReference.SELF:
 		rot_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "from_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -305,7 +325,7 @@ func _get_rotation_from_to_properties() -> Array[Dictionary]:
 			})
 	elif to_reference == TransformReference.SELF:
 		rot_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "to_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -345,7 +365,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 		})
 	elif from_reference == TransformReference.SELF:
 		scale_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "from_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -372,7 +392,7 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 		})
 	elif to_reference == TransformReference.SELF:
 		scale_props.append({
-			"name": "capture_at", "type": TYPE_INT,
+			"name": "to_capture_at", "type": TYPE_INT,
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_ENUM,
 			"hint_string": "Trigger,Ready,In Editor",
@@ -418,14 +438,18 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"to_reference": to_reference = value; return true
 		&"from_target_node": from_target_node = value; return true
 		&"to_target_node": to_target_node = value; return true
-		&"capture_at": capture_at = value; return true
+		&"from_capture_at": from_capture_at = value; return true
+		&"to_capture_at": to_capture_at = value; return true
 		&"from_scale": from_scale = value; return true
 		&"to_scale": to_scale = value; return true
 		&"scale_pivot_mode": scale_pivot_mode = value; return true
 		&"scale_custom_pivot": scale_custom_pivot = value; return true
-		&"_editor_cached_position": _editor_cached_position = value; return true
-		&"_editor_cached_rotation": _editor_cached_rotation = value; return true
-		&"_editor_cached_scale": _editor_cached_scale = value; return true
+		&"_from_editor_cached_position": _from_editor_cached_position = value; return true
+		&"_from_editor_cached_rotation": _from_editor_cached_rotation = value; return true
+		&"_from_editor_cached_scale": _from_editor_cached_scale = value; return true
+		&"_to_editor_cached_position": _to_editor_cached_position = value; return true
+		&"_to_editor_cached_rotation": _to_editor_cached_rotation = value; return true
+		&"_to_editor_cached_scale": _to_editor_cached_scale = value; return true
 	return false
 
 
@@ -444,14 +468,18 @@ func _get(property: StringName) -> Variant:
 		&"to_reference": return to_reference
 		&"from_target_node": return from_target_node
 		&"to_target_node": return to_target_node
-		&"capture_at": return capture_at
+		&"from_capture_at": return from_capture_at
+		&"to_capture_at": return to_capture_at
 		&"from_scale": return from_scale
 		&"to_scale": return to_scale
 		&"scale_pivot_mode": return scale_pivot_mode
 		&"scale_custom_pivot": return scale_custom_pivot
-		&"_editor_cached_position": return _editor_cached_position
-		&"_editor_cached_rotation": return _editor_cached_rotation
-		&"_editor_cached_scale": return _editor_cached_scale
+		&"_from_editor_cached_position": return _from_editor_cached_position
+		&"_from_editor_cached_rotation": return _from_editor_cached_rotation
+		&"_from_editor_cached_scale": return _from_editor_cached_scale
+		&"_to_editor_cached_position": return _to_editor_cached_position
+		&"_to_editor_cached_rotation": return _to_editor_cached_rotation
+		&"_to_editor_cached_scale": return _to_editor_cached_scale
 	return null
 
 
@@ -480,12 +508,19 @@ var _from_ref: Node3D = null
 var _to_ref: Node3D = null
 
 # Self snapshots
-var _self_position_snapshot: Vector3 = Vector3.ZERO
-var _has_self_position_snapshot: bool = false
-var _self_rotation_snapshot: Vector3 = Vector3.ZERO
-var _has_self_rotation_snapshot: bool = false
-var _self_scale_snapshot: Vector3 = Vector3.ONE
-var _has_self_scale_snapshot: bool = false
+var _from_self_position_snapshot: Vector3 = Vector3.ZERO
+var _has_from_self_position_snapshot: bool = false
+var _from_self_rotation_snapshot: Vector3 = Vector3.ZERO
+var _has_from_self_rotation_snapshot: bool = false
+var _from_self_scale_snapshot: Vector3 = Vector3.ONE
+var _has_from_self_scale_snapshot: bool = false
+
+var _to_self_position_snapshot: Vector3 = Vector3.ZERO
+var _has_to_self_position_snapshot: bool = false
+var _to_self_rotation_snapshot: Vector3 = Vector3.ZERO
+var _has_to_self_rotation_snapshot: bool = false
+var _to_self_scale_snapshot: Vector3 = Vector3.ONE
+var _has_to_self_scale_snapshot: bool = false
 
 
 # =============================================================================
@@ -496,19 +531,28 @@ func _on_host_ready(target: Node, host: Node) -> void:
 	_host_node = host
 	_capture_base(target)
 
-	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if not uses_self:
-		return
-	if capture_at == CaptureAt.IN_EDITOR:
-		return
-	if capture_at == CaptureAt.READY:
-		match transform_target:
-			TransformTarget.POSITION:
-				_capture_self_position_snapshot(target)
-			TransformTarget.ROTATION:
-				_capture_self_rotation_snapshot(target)
-			TransformTarget.SCALE:
-				_capture_self_scale_snapshot(target)
+	var uses_from_self := from_reference == TransformReference.SELF
+	var uses_to_self := to_reference == TransformReference.SELF
+
+	if uses_from_self:
+		if from_capture_at == CaptureAt.READY:
+			match transform_target:
+				TransformTarget.POSITION:
+					_capture_from_self_position_snapshot(target)
+				TransformTarget.ROTATION:
+					_capture_from_self_rotation_snapshot(target)
+				TransformTarget.SCALE:
+					_capture_from_self_scale_snapshot(target)
+
+	if uses_to_self:
+		if to_capture_at == CaptureAt.READY:
+			match transform_target:
+				TransformTarget.POSITION:
+					_capture_to_self_position_snapshot(target)
+				TransformTarget.ROTATION:
+					_capture_to_self_rotation_snapshot(target)
+				TransformTarget.SCALE:
+					_capture_to_self_scale_snapshot(target)
 
 
 func _on_editor_pre_save(target: Node) -> void:
@@ -531,15 +575,26 @@ func _on_animate_start(target: Node) -> void:
 
 	_resolve_from_to_refs()
 
-	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if uses_self and (capture_at == CaptureAt.TRIGGER or capture_at == CaptureAt.IN_EDITOR):
+	var uses_from_self := from_reference == TransformReference.SELF
+	var uses_to_self := to_reference == TransformReference.SELF
+
+	if uses_from_self and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
 		match transform_target:
 			TransformTarget.POSITION:
-				_capture_self_position_snapshot(target)
+				_capture_from_self_position_snapshot(target)
 			TransformTarget.ROTATION:
-				_capture_self_rotation_snapshot(target)
+				_capture_from_self_rotation_snapshot(target)
 			TransformTarget.SCALE:
-				_capture_self_scale_snapshot(target)
+				_capture_from_self_scale_snapshot(target)
+
+	if uses_to_self and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
+		match transform_target:
+			TransformTarget.POSITION:
+				_capture_to_self_position_snapshot(target)
+			TransformTarget.ROTATION:
+				_capture_to_self_rotation_snapshot(target)
+			TransformTarget.SCALE:
+				_capture_to_self_scale_snapshot(target)
 
 	# Resolve scale pivot if needed
 	if transform_target == TransformTarget.SCALE and not _scale_pivot_resolved:
@@ -574,9 +629,12 @@ func _invalidate_base_cache() -> void:
 	_scale_pivot_resolved = false
 	_from_ref = null
 	_to_ref = null
-	_has_self_position_snapshot = false
-	_has_self_rotation_snapshot = false
-	_has_self_scale_snapshot = false
+	_has_from_self_position_snapshot = false
+	_has_from_self_rotation_snapshot = false
+	_has_from_self_scale_snapshot = false
+	_has_to_self_position_snapshot = false
+	_has_to_self_rotation_snapshot = false
+	_has_to_self_scale_snapshot = false
 	_clear_deltas()
 
 
@@ -603,7 +661,7 @@ func _resolve_from_position(animated: Node3D) -> Vector3:
 		TransformReference.CUSTOM:
 			return _base_position + _convert_to_world_units(from_position, from_position_in, animated)
 		TransformReference.SELF:
-			return _self_position_snapshot
+			return _from_self_position_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_position(_from_ref, animated)
@@ -616,7 +674,7 @@ func _resolve_to_position(animated: Node3D) -> Vector3:
 		TransformReference.CUSTOM:
 			return _base_position + _convert_to_world_units(to_position, to_position_in, animated)
 		TransformReference.SELF:
-			return _self_position_snapshot
+			return _to_self_position_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_position(_to_ref, animated)
@@ -661,7 +719,7 @@ func _resolve_from_rotation_quat(animated: Node3D) -> Quaternion:
 			var offset_rad := _rotation_to_radians(from_rotation)
 			return _base_quat * Quaternion.from_euler(offset_rad)
 		TransformReference.SELF:
-			return Quaternion.from_euler(_self_rotation_snapshot)
+			return Quaternion.from_euler(_from_self_rotation_snapshot)
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_rotation_quat(_from_ref, animated)
@@ -675,7 +733,7 @@ func _resolve_to_rotation_quat(animated: Node3D) -> Quaternion:
 			var offset_rad := _rotation_to_radians(to_rotation)
 			return _base_quat * Quaternion.from_euler(offset_rad)
 		TransformReference.SELF:
-			return Quaternion.from_euler(_self_rotation_snapshot)
+			return Quaternion.from_euler(_to_self_rotation_snapshot)
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_rotation_quat(_to_ref, animated)
@@ -723,7 +781,7 @@ func _resolve_from_scale(n3d: Node3D) -> Vector3:
 		TransformReference.CUSTOM:
 			return from_scale
 		TransformReference.SELF:
-			return _self_scale_snapshot
+			return _from_self_scale_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_scale(_from_ref, n3d)
@@ -736,7 +794,7 @@ func _resolve_to_scale(n3d: Node3D) -> Vector3:
 		TransformReference.CUSTOM:
 			return to_scale
 		TransformReference.SELF:
-			return _self_scale_snapshot
+			return _to_self_scale_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_scale(_to_ref, n3d)
@@ -767,49 +825,94 @@ func _resolve_from_to_refs() -> void:
 
 
 # =============================================================================
-# SELF SNAPSHOT CAPTURE
+# FROM SELF SNAPSHOT CAPTURE
 # =============================================================================
 
-func _capture_self_position_snapshot(target: Node) -> void:
-	if _has_self_position_snapshot:
+func _capture_from_self_position_snapshot(target: Node) -> void:
+	if _has_from_self_position_snapshot:
 		return
-	if capture_at == CaptureAt.IN_EDITOR:
-		_self_position_snapshot = _editor_cached_position
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_position_snapshot = _from_editor_cached_position
 	else:
 		var n3d := target as Node3D
-		_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
-	_has_self_position_snapshot = true
+		_from_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+	_has_from_self_position_snapshot = true
 	if debug_enabled:
-		print("[Transform3D] Self position snapshot: %s (mode=%s)" % [
-			_self_position_snapshot, CaptureAt.keys()[capture_at]])
+		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
+			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]])
 
 
-func _capture_self_rotation_snapshot(target: Node) -> void:
-	if _has_self_rotation_snapshot:
+func _capture_from_self_rotation_snapshot(target: Node) -> void:
+	if _has_from_self_rotation_snapshot:
 		return
-	if capture_at == CaptureAt.IN_EDITOR:
-		_self_rotation_snapshot = _editor_cached_rotation
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_rotation_snapshot = _from_editor_cached_rotation
 	else:
 		var n3d := target as Node3D
-		_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
-	_has_self_rotation_snapshot = true
+		_from_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+	_has_from_self_rotation_snapshot = true
 	if debug_enabled:
-		print("[Transform3D] Self rotation snapshot: %s (mode=%s)" % [
-			_self_rotation_snapshot, CaptureAt.keys()[capture_at]])
+		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
+			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
 
 
-func _capture_self_scale_snapshot(target: Node) -> void:
-	if _has_self_scale_snapshot:
+func _capture_from_self_scale_snapshot(target: Node) -> void:
+	if _has_from_self_scale_snapshot:
 		return
-	if capture_at == CaptureAt.IN_EDITOR:
-		_self_scale_snapshot = _editor_cached_scale
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_scale_snapshot = _from_editor_cached_scale
 	else:
 		var n3d := target as Node3D
-		_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
-	_has_self_scale_snapshot = true
+		_from_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+	_has_from_self_scale_snapshot = true
 	if debug_enabled:
-		print("[Transform3D] Self scale snapshot: %s (mode=%s)" % [
-			_self_scale_snapshot, CaptureAt.keys()[capture_at]])
+		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
+			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
+
+# =============================================================================
+# TO SELF SNAPSHOT CAPTURE
+# =============================================================================
+
+func _capture_to_self_position_snapshot(target: Node) -> void:
+	if _has_to_self_position_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_position_snapshot = _to_editor_cached_position
+	else:
+		var n3d := target as Node3D
+		_to_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+	_has_to_self_position_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
+			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]])
+
+
+func _capture_to_self_rotation_snapshot(target: Node) -> void:
+	if _has_to_self_rotation_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_rotation_snapshot = _to_editor_cached_rotation
+	else:
+		var n3d := target as Node3D
+		_to_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+	_has_to_self_rotation_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
+			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
+
+
+func _capture_to_self_scale_snapshot(target: Node) -> void:
+	if _has_to_self_scale_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_scale_snapshot = _to_editor_cached_scale
+	else:
+		var n3d := target as Node3D
+		_to_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+	_has_to_self_scale_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
+			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
 
 
 # =============================================================================
@@ -819,23 +922,23 @@ func _capture_self_scale_snapshot(target: Node) -> void:
 func _update_editor_cache(target: Node = null) -> void:
 	if not Engine.is_editor_hint():
 		return
-	if capture_at != CaptureAt.IN_EDITOR:
-		return
-	var uses_self := (from_reference == TransformReference.SELF or to_reference == TransformReference.SELF)
-	if not uses_self:
-		return
-
 	var n3d := target as Node3D
 	if n3d == null:
 		return
 
-	_editor_cached_position = n3d.position
-	_editor_cached_rotation = n3d.rotation
-	_editor_cached_scale = n3d.scale
+	if from_reference == TransformReference.SELF and from_capture_at == CaptureAt.IN_EDITOR:
+		_from_editor_cached_position = n3d.position
+		_from_editor_cached_rotation = n3d.rotation
+		_from_editor_cached_scale = n3d.scale
+
+	if to_reference == TransformReference.SELF and to_capture_at == CaptureAt.IN_EDITOR:
+		_to_editor_cached_position = n3d.position
+		_to_editor_cached_rotation = n3d.rotation
+		_to_editor_cached_scale = n3d.scale
 
 	if debug_enabled:
 		print("[Transform3D] Editor cache updated: pos=%s, rot=%s, scale=%s" % [
-			_editor_cached_position, _editor_cached_rotation, _editor_cached_scale])
+			n3d.position, n3d.rotation, n3d.scale])
 
 
 # =============================================================================

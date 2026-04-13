@@ -7,7 +7,10 @@
 [ext_resource type="Script" uid="uid://bh4tgf0c85bbh" path="res://addons/Juice_V1/Meta/SceneActionControlJuiceUtility.gd" id="5_008jw"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="5_lfgkc"]
 [ext_resource type="PackedScene" uid="uid://droed4gs2ot0i" path="res://Demo/Scenes/Control_Demo.tscn" id="6_3p8n2"]
+[ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="8_3p8n2"]
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
+[ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
+[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -18,14 +21,16 @@ gradient = SubResource("Gradient_008jw")
 fill = 1
 fill_from = Vector2(0.52136755, 0.48290598)
 
-[sub_resource type="Resource" id="Resource_ntvx2"]
+[sub_resource type="Resource" id="Resource_y5dc2"]
 script = ExtResource("5_008jw")
+action = 0
+from = 0
 to = ExtResource("6_3p8n2")
-overlay_type = 1
 trigger_behaviour = 0
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
+overlay_type = 0
 loop_count = 1
 ping_pong = false
 loop_delay = 0.0
@@ -46,7 +51,139 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
 
-[sub_resource type="Resource" id="Resource_008jw"]
+[sub_resource type="Resource" id="Resource_hbpc2"]
+script = ExtResource("5_lfgkc")
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_y5dc2")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="Resource" id="Resource_vfjyb"]
+script = ExtResource("5_008jw")
+action = 0
+from = 0
+to = ExtResource("8_3p8n2")
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+overlay_type = 0
+loop_count = 1
+ping_pong = false
+loop_delay = 0.0
+loop_phase_offset = 0.0
+crossfade_time = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+chained_preroll = 0.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
+
+[sub_resource type="Resource" id="Resource_yto47"]
+script = ExtResource("5_lfgkc")
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_vfjyb")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="Resource" id="Resource_6mvn5"]
+script = ExtResource("5_008jw")
+action = 0
+from = 0
+to = ExtResource("9_ntvx2")
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+overlay_type = 0
+loop_count = 1
+ping_pong = false
+loop_delay = 0.0
+loop_phase_offset = 0.0
+crossfade_time = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+chained_preroll = 0.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
+
+[sub_resource type="Resource" id="Resource_gd4to"]
+script = ExtResource("5_lfgkc")
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_6mvn5")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="Resource" id="Resource_w3iwx"]
+script = ExtResource("5_008jw")
+action = 3
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+overlay_type = 0
+loop_count = 1
+ping_pong = false
+loop_delay = 0.0
+loop_phase_offset = 0.0
+crossfade_time = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+chained_preroll = 0.0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
+
+[sub_resource type="Resource" id="Resource_8wggb"]
+script = ExtResource("5_lfgkc")
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_w3iwx")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="Resource" id="Resource_ntvx2"]
+script = ExtResource("10_ntvx2")
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 0
+from_position_in = 3
+from_position = Vector2(-1, 0)
+to_reference = 1
+to_capture_at = 2
+_to_editor_cached_position = Vector2(0, 0)
+_to_editor_cached_rotation = 0.0
+_to_editor_cached_scale = Vector2(1, 1)
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bf43e3idc17tt"
+
+[sub_resource type="Resource" id="Resource_n7dmy"]
 script = ExtResource("5_lfgkc")
 effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ntvx2")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
@@ -92,27 +229,49 @@ alignment = 1
 layout_mode = 2
 text = "Control Demo"
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo" unique_id=457078231]
+[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo" unique_id=1387513701]
 script = ExtResource("3_fay60")
 trigger_on = 0
-recipe = SubResource("Resource_008jw")
+recipe = SubResource("Resource_hbpc2")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="2D Demo" parent="MarginContainer/CenterContainer/Menu" unique_id=2058207870 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "2D demo"
 
+[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/2D Demo" unique_id=1613150336]
+script = ExtResource("3_fay60")
+trigger_on = 0
+recipe = SubResource("Resource_yto47")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
+
 [node name="3D Demo" parent="MarginContainer/CenterContainer/Menu" unique_id=690507037 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "3D demo"
+
+[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/3D Demo" unique_id=1350848518]
+script = ExtResource("3_fay60")
+trigger_on = 0
+recipe = SubResource("Resource_gd4to")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Quit" parent="MarginContainer/CenterContainer/Menu" unique_id=1803873405 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "Quit"
 
-[node name="Control Demo2" parent="MarginContainer/CenterContainer" unique_id=936003902 instance=ExtResource("2_bhrb6")]
-layout_mode = 2
-text = "Control Demo"
+[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit" unique_id=732351268]
+script = ExtResource("3_fay60")
+trigger_on = 0
+recipe = SubResource("Resource_8wggb")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
+
+[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu" unique_id=1241854014]
+script = ExtResource("3_fay60")
+mode = 1
+seq_stagger_delay = 0.3
+start_delay = 0.68
+recipe = SubResource("Resource_n7dmy")
+metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Scene Container" type="Node" parent="." unique_id=467602694]
 

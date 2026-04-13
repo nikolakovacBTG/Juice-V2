@@ -81,11 +81,7 @@ var to_reference: int = AppearanceReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
-## When to capture natural values when using SELF reference.
-var capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		capture_at = value
-		notify_property_list_changed()
+
 ## When to capture From values (when from_reference == SELF).
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
@@ -278,7 +274,6 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"effect_type": effect_type = value; return true
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
-		&"capture_at": capture_at = value; return true
 		&"from_capture_at": from_capture_at = value; return true
 		&"to_capture_at": to_capture_at = value; return true
 		&"from_tint_color": from_tint_color = value; return true
@@ -308,7 +303,6 @@ func _get(property: StringName) -> Variant:
 		&"effect_type": return effect_type
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
-		&"capture_at": return capture_at
 		&"from_capture_at": return from_capture_at
 		&"to_capture_at": return to_capture_at
 		&"from_tint_color": return from_tint_color
@@ -337,11 +331,20 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-# Captured reference values for From/To animation
+# Captured reference values for From animation
 var _captured_from_tint_color: Color = Color.WHITE
 var _captured_from_tint_blend: float = 0.0
 var _captured_from_alpha: float = 1.0
 var _captured_from_brightness: float = 1.0
+
+# Captured reference values for To animation
+var _captured_to_tint_color: Color = Color.WHITE
+var _captured_to_tint_blend: float = 0.0
+var _captured_to_alpha: float = 1.0
+var _captured_to_brightness: float = 1.0
+
+var _has_from_self_snapshot: bool = false
+var _has_to_self_snapshot: bool = false
 
 # Only needed for OUTLINE (which installs a ShaderMaterial on target.material).
 # Modulate effects (TINT/FADE/OVERBRIGHT) use _modulate_factor from the intermediate.
@@ -366,6 +369,19 @@ func tick(delta: float, target: Node) -> TickResult:
 # =============================================================================
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
+
+func _on_host_ready(target: Node, host: Node) -> void:
+	_host_node = host
+	var n2d := target as Node2D
+	if n2d == null:
+		return
+
+	if from_reference == AppearanceReference.SELF and from_capture_at == CaptureAt.READY:
+		_perform_from_capture(n2d)
+
+	if to_reference == AppearanceReference.SELF and to_capture_at == CaptureAt.READY:
+		_perform_to_capture(n2d)
+
 
 func _on_animate_start(target: Node) -> void:
 	var n2d := target as Node2D
@@ -409,7 +425,11 @@ func _on_animate_start(target: Node) -> void:
 	# Effects should be automatically added to _runtime_effects when the recipe is processed
 
 	# Capture From/To references based on capture_at setting
-	_capture_references(n2d)
+	if from_reference == AppearanceReference.SELF and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
+		_perform_from_capture(n2d)
+
+	if to_reference == AppearanceReference.SELF and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
+		_perform_to_capture(n2d)
 
 	_flicker_time = 0.0
 	_setup_flicker_noise()
@@ -504,6 +524,8 @@ func _restore_to_natural(target: Node) -> void:
 func _invalidate_base_cache() -> void:
 	_has_natural = false
 	_active_material = null
+	_has_from_self_snapshot = false
+	_has_to_self_snapshot = false
 
 
 func _temporarily_undo_visual(target: Node) -> void:
@@ -589,37 +611,36 @@ func _install_material(n2d: Node2D, mat: Material) -> void:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Capture references based on capture_at setting
-func _capture_references(n2d: Node2D) -> void:
-	match capture_at:
-		CaptureAt.TRIGGER:
-			# Capture immediately when animation starts
-			_perform_capture(n2d)
-		CaptureAt.READY:
-			# Only capture if node is ready
-			if n2d.is_inside_tree():
-				_perform_capture(n2d)
-		CaptureAt.IN_EDITOR:
-			# Always capture in editor
-			_perform_capture(n2d)
-
-# Perform the actual reference capture
-func _perform_capture(n2d: Node2D) -> void:
+# Perform the actual From reference capture
+func _perform_from_capture(n2d: Node2D) -> void:
+	if _has_from_self_snapshot:
+		return
 	# Capture TINT references
-	if from_reference == AppearanceReference.SELF:
-		_captured_from_tint_color = n2d.modulate
-		_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
+	_captured_from_tint_color = n2d.modulate
+	_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
 	# Capture FADE references
-	if from_reference == AppearanceReference.SELF:
-		_captured_from_alpha = n2d.modulate.a
+	_captured_from_alpha = n2d.modulate.a
 	# Capture OVERBRIGHT references
-	if from_reference == AppearanceReference.SELF:
-		# For OVERBRIGHT, capture the RGB max of modulate
-		var mod := n2d.modulate
-		_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
+	var mod := n2d.modulate
+	_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
+	_has_from_self_snapshot = true
+
+# Perform the actual To reference capture
+func _perform_to_capture(n2d: Node2D) -> void:
+	if _has_to_self_snapshot:
+		return
+	# Capture TINT references
+	_captured_to_tint_color = n2d.modulate
+	_captured_to_tint_blend = 0.0
+	# Capture FADE references
+	_captured_to_alpha = n2d.modulate.a
+	# Capture OVERBRIGHT references
+	var mod := n2d.modulate
+	_captured_to_brightness = max(mod.r, max(mod.g, mod.b))
+	_has_to_self_snapshot = true
 
 # TINT resolvers
-func _resolve_from_tint(n2d: Node2D) -> Color:
+func _resolve_from_tint(_n2d: Node2D) -> Color:
 	var result: Color
 	if from_reference == AppearanceReference.SELF:
 		result = lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
@@ -629,10 +650,10 @@ func _resolve_from_tint(n2d: Node2D) -> Color:
 		print("[DEBUG] Phase A: _resolve_from_tint returning: ", result)
 	return result
 
-func _resolve_to_tint(n2d: Node2D) -> Color:
+func _resolve_to_tint(_n2d: Node2D) -> Color:
 	var result: Color
 	if to_reference == AppearanceReference.SELF:
-		result = lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+		result = lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
 	else:  # CUSTOM
 		result = lerp(Color.WHITE, tint_color, tint_blend)
 	if debug_enabled:
@@ -640,7 +661,7 @@ func _resolve_to_tint(n2d: Node2D) -> Color:
 	return result
 
 # FADE resolvers
-func _resolve_from_alpha(n2d: Node2D) -> float:
+func _resolve_from_alpha(_n2d: Node2D) -> float:
 	var result: float
 	if from_reference == AppearanceReference.SELF:
 		result = _captured_from_alpha
@@ -650,10 +671,10 @@ func _resolve_from_alpha(n2d: Node2D) -> float:
 		print("[DEBUG] Phase A: _resolve_from_alpha returning: ", result)
 	return result
 
-func _resolve_to_alpha(n2d: Node2D) -> float:
+func _resolve_to_alpha(_n2d: Node2D) -> float:
 	var result: float
 	if to_reference == AppearanceReference.SELF:
-		result = _captured_from_alpha
+		result = _captured_to_alpha
 	else:  # CUSTOM
 		result = fade_target_alpha
 	if debug_enabled:
@@ -661,7 +682,7 @@ func _resolve_to_alpha(n2d: Node2D) -> float:
 	return result
 
 # OVERBRIGHT resolvers
-func _resolve_from_brightness(n2d: Node2D) -> float:
+func _resolve_from_brightness(_n2d: Node2D) -> float:
 	var result: float
 	if from_reference == AppearanceReference.SELF:
 		result = _captured_from_brightness
@@ -671,10 +692,10 @@ func _resolve_from_brightness(n2d: Node2D) -> float:
 		print("[DEBUG] Phase A: _resolve_from_brightness returning: ", result)
 	return result
 
-func _resolve_to_brightness(n2d: Node2D) -> float:
+func _resolve_to_brightness(_n2d: Node2D) -> float:
 	var result: float
 	if to_reference == AppearanceReference.SELF:
-		result = _captured_from_brightness
+		result = _captured_to_brightness
 	else:  # CUSTOM
 		result = overbright_strength
 	if debug_enabled:
@@ -692,7 +713,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if flicker_min > flicker_max:
 		warnings.append("flicker_min is greater than flicker_max — flicker behavior undefined.")
 	# Add warnings for invalid reference combinations
-	if (from_reference == AppearanceReference.SELF or to_reference == AppearanceReference.SELF) and capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint():
+	if (from_reference == AppearanceReference.SELF and from_capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint()) or \
+	   (to_reference == AppearanceReference.SELF and to_capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint()):
 		warnings.append("SELF reference with IN_EDITOR capture only works in editor.")
 	# Add warnings for OUTLINE without proper setup
 	if effect_type == AppearanceEffect.OUTLINE and outline_width <= 0.0:
