@@ -81,11 +81,7 @@ var to_reference: int = AppearanceReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
-## When to capture natural values when using SELF reference.
-var capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		capture_at = value
-		notify_property_list_changed()
+
 ## When to capture From values (when from_reference == SELF).
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
@@ -278,9 +274,9 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"effect_type": effect_type = value; return true
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
-		&"capture_at": capture_at = value; return true
 		&"from_capture_at": from_capture_at = value; return true
 		&"to_capture_at": to_capture_at = value; return true
+
 		&"from_tint_color": from_tint_color = value; return true
 		&"from_tint_blend": from_tint_blend = value; return true
 		&"tint_color": tint_color = value; return true
@@ -308,9 +304,9 @@ func _get(property: StringName) -> Variant:
 		&"effect_type": return effect_type
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
-		&"capture_at": return capture_at
 		&"from_capture_at": return from_capture_at
 		&"to_capture_at": return to_capture_at
+
 		&"from_tint_color": return from_tint_color
 		&"from_tint_blend": return from_tint_blend
 		&"tint_color": return tint_color
@@ -337,11 +333,20 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-# Captured reference values for From/To animation
+# Captured reference values for From animation
 var _captured_from_tint_color: Color = Color.WHITE
 var _captured_from_tint_blend: float = 0.0
 var _captured_from_alpha: float = 1.0
 var _captured_from_brightness: float = 1.0
+
+# Captured reference values for To animation
+var _captured_to_tint_color: Color = Color.WHITE
+var _captured_to_tint_blend: float = 0.0
+var _captured_to_alpha: float = 1.0
+var _captured_to_brightness: float = 1.0
+
+var _has_from_self_snapshot: bool = false
+var _has_to_self_snapshot: bool = false
 
 # No mesh/material state here — Juice3D domain node owns the working material.
 # This effect only computes _albedo_factor and _alpha_factor for the domain to use.
@@ -368,13 +373,29 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+func _on_host_ready(target: Node, host: Node) -> void:
+	_host_node = host
+	if target == null:
+		return
+
+	if from_reference == AppearanceReference.SELF and from_capture_at == CaptureAt.READY:
+		_perform_from_capture(target)
+
+	if to_reference == AppearanceReference.SELF and to_capture_at == CaptureAt.READY:
+		_perform_to_capture(target)
+
+
 func _on_animate_start(target: Node) -> void:
 	# All TINT/FADE/OVERBRIGHT effects contribute albedo/alpha factors.
 	# The domain node (Juice3D) owns the working material and writes albedo_color.
 	_contributes_appearance = true
 
 	# Capture From/To references based on capture_at setting
-	_capture_references(target)
+	if from_reference == AppearanceReference.SELF and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
+		_perform_from_capture(target)
+
+	if to_reference == AppearanceReference.SELF and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
+		_perform_to_capture(target)
 
 	_flicker_time = 0.0
 	_setup_flicker_noise()
@@ -441,6 +462,8 @@ func _restore_to_natural(_target: Node) -> void:
 func _invalidate_base_cache() -> void:
 	_clear_appearance()
 	_contributes_appearance = false
+	_has_from_self_snapshot = false
+	_has_to_self_snapshot = false
 
 
 func _temporarily_undo_visual(_target: Node) -> void:
@@ -496,22 +519,10 @@ func _setup_flicker_noise() -> void:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Capture references based on capture_at setting
-func _capture_references(target: Node) -> void:
-	match capture_at:
-		CaptureAt.TRIGGER:
-			# Capture immediately when animation starts
-			_perform_capture(target)
-		CaptureAt.READY:
-			# Only capture if node is ready
-			if target.is_inside_tree():
-				_perform_capture(target)
-		CaptureAt.IN_EDITOR:
-			# Always capture in editor
-			_perform_capture(target)
-
-# Perform the actual reference capture
-func _perform_capture(target: Node) -> void:
+# Perform the actual From reference capture
+func _perform_from_capture(target: Node) -> void:
+	if _has_from_self_snapshot:
+		return
 	# For 3D, capture from the domain node's working material albedo
 	# This is more complex than 2D/Control because 3D uses a shared working material
 	# We'll capture from the target's current material state if available
@@ -520,16 +531,30 @@ func _perform_capture(target: Node) -> void:
 		var mat := mesh_inst.get_active_material(0) as StandardMaterial3D
 		if mat != null:
 			# Capture TINT references
-			if from_reference == AppearanceReference.SELF:
-				_captured_from_tint_color = mat.albedo_color
-				_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
+			_captured_from_tint_color = mat.albedo_color
+			_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
 			# Capture FADE references
-			if from_reference == AppearanceReference.SELF:
-				_captured_from_alpha = mat.albedo_color.a
+			_captured_from_alpha = mat.albedo_color.a
 			# Capture OVERBRIGHT references
-			if from_reference == AppearanceReference.SELF:
-				# For OVERBRIGHT, capture the RGB max of albedo
-				_captured_from_brightness = max(mat.albedo_color.r, max(mat.albedo_color.g, mat.albedo_color.b))
+			_captured_from_brightness = max(mat.albedo_color.r, max(mat.albedo_color.g, mat.albedo_color.b))
+	_has_from_self_snapshot = true
+
+# Perform the actual To reference capture
+func _perform_to_capture(target: Node) -> void:
+	if _has_to_self_snapshot:
+		return
+	var mesh_inst := target as MeshInstance3D
+	if mesh_inst != null and mesh_inst.get_active_material(0) != null:
+		var mat := mesh_inst.get_active_material(0) as StandardMaterial3D
+		if mat != null:
+			# Capture TINT references
+			_captured_to_tint_color = mat.albedo_color
+			_captured_to_tint_blend = 0.0
+			# Capture FADE references
+			_captured_to_alpha = mat.albedo_color.a
+			# Capture OVERBRIGHT references
+			_captured_to_brightness = max(mat.albedo_color.r, max(mat.albedo_color.g, mat.albedo_color.b))
+	_has_to_self_snapshot = true
 
 # TINT resolvers
 func _resolve_from_tint(target: Node) -> Color:
@@ -540,7 +565,7 @@ func _resolve_from_tint(target: Node) -> Color:
 
 func _resolve_to_tint(target: Node) -> Color:
 	if to_reference == AppearanceReference.SELF:
-		return lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+		return lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
 	else:  # CUSTOM
 		return lerp(Color.WHITE, tint_color, tint_blend)
 
@@ -553,7 +578,7 @@ func _resolve_from_alpha(target: Node) -> float:
 
 func _resolve_to_alpha(target: Node) -> float:
 	if to_reference == AppearanceReference.SELF:
-		return _captured_from_alpha
+		return _captured_to_alpha
 	else:  # CUSTOM
 		return fade_target_alpha
 
@@ -566,7 +591,7 @@ func _resolve_from_brightness(target: Node) -> float:
 
 func _resolve_to_brightness(target: Node) -> float:
 	if to_reference == AppearanceReference.SELF:
-		return _captured_from_brightness
+		return _captured_to_brightness
 	else:  # CUSTOM
 		return overbright_strength
 
