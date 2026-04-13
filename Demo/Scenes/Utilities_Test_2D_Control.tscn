@@ -6,6 +6,7 @@
 [ext_resource type="Resource" uid="uid://bru5tblpa2gdt" path="res://Demo/Scenes/TestRecipe.tres" id="4_a15rd"]
 [ext_resource type="Script" uid="uid://cb333pkpm68kx" path="res://addons/Juice_V1/Utilities/SoftTrigger2DJuiceUtility.gd" id="4_vdpuh"]
 [ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
+[ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="8_5u77v"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="9_8ai6r"]
 [ext_resource type="Script" uid="uid://bs2ebgkk22m07" path="res://addons/Juice_V1/Utilities/SceneActionJuiceUtility.gd" id="9_8tq88"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
@@ -23,10 +24,39 @@ point_count = 2
 size = Vector2(298, 280)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qph6c"]
-size = Vector2(270, 267)
+size = Vector2(440, 274)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_5p8ic"]
 size = Vector2(127, 129)
+
+[sub_resource type="Resource" id="Resource_trt1j"]
+script = ExtResource("8_5u77v")
+transform_target = 2
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+capture_at = 0
+to_reference = 0
+to_scale = Vector2(1.5, 1.5)
+pivot_mode = 0
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://davl33rdi1jg7"
+
+[sub_resource type="Resource" id="Resource_8ai6r"]
+script = ExtResource("12_hvqsx")
+effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_trt1j")])
+metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="Resource" id="Resource_tf6rc"]
 script = ExtResource("10_agm7c")
@@ -35,7 +65,7 @@ position_unit = 1
 position_amplitude = Vector2(2, 2)
 noise_speed = 1.0
 noise_direction = 0
-trigger_behaviour = 1
+trigger_behaviour = 4
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
@@ -51,6 +81,9 @@ duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
 chain_to = Array[ExtResource("9_8ai6r")]([])
 interrupt_siblings = false
 debug_enabled = false
@@ -80,9 +113,9 @@ texture = ExtResource("2_e4141")
 script = ExtResource("4_vdpuh")
 detect_bodies = false
 detect_areas = true
+falloff_zone = 1.0
 falloff_curve = SubResource("Curve_qph6c")
-detection_size = Vector2(64, 64)
-debug_enabled = true
+detection_size = Vector2(600, 300)
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="SoftTriggerTestObj/SoftTrigger2D" unique_id=1658529777]
 position = Vector2(0, -2)
@@ -96,7 +129,6 @@ trigger_on = 9
 manual_trigger_signal = "progress_changed"
 trigger_behaviour = 4
 recipe = ExtResource("4_a15rd")
-debug_enabled = true
 
 [node name="BodyEntryTestObj" type="Node2D" parent="." unique_id=709848790]
 position = Vector2(184, 153)
@@ -108,16 +140,16 @@ texture = ExtResource("2_e4141")
 [node name="Interaction2D" type="Area2D" parent="BodyEntryTestObj" unique_id=659348874]
 script = ExtResource("6_6bkf5")
 mode = 0
-detect_bodies = true
+detect_bodies = false
 detect_areas = true
 filter_group = ""
 trigger_on_enter = true
-trigger_on_exit = true
+trigger_on_exit = false
 one_shot = false
 debug_enabled = false
 
 [node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="BodyEntryTestObj/Interaction2D" unique_id=1161123129]
-position = Vector2(2, 2.5)
+position = Vector2(87, 6)
 shape = SubResource("RectangleShape2D_qph6c")
 
 [node name="MethodSignalTest" type="Node2D" parent="." unique_id=1684810152]
@@ -144,7 +176,11 @@ shape = SubResource("RectangleShape2D_5p8ic")
 
 [node name="Juice2D" type="Node2D" parent="MethodSignalTest" unique_id=366643053]
 script = ExtResource("3_7yy7b")
-trigger_on = 10
+trigger_source = 1
+trigger_source_path = NodePath("../../BodyEntryTestObj/Interaction2D")
+trigger_on = 15
+trigger_behaviour = 0
+recipe = SubResource("Resource_8ai6r")
 
 [node name="Progress2DTest" type="Node2D" parent="." unique_id=998465023]
 position = Vector2(452, 464)
@@ -155,7 +191,6 @@ texture = ExtResource("2_e4141")
 
 [node name="Juice2D" type="Node2D" parent="Progress2DTest" unique_id=749891205]
 script = ExtResource("3_7yy7b")
-trigger_source = 1
 trigger_source_path = NodePath("../Area2D")
 recipe = SubResource("Resource_b0p5q")
 

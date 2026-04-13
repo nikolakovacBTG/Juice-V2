@@ -169,27 +169,43 @@ func _process(_delta: float) -> void:
 		return
 
 	# Get tracked position in local coordinates.
-	# Physics/Area tracked node takes priority over mouse.
+	# For physics nodes, use the closest point on the tracked shape to our center.
+	# This handles cases where the tracked node's origin is outside our zone but
+	# its collision shape overlaps. Using the origin alone would yield progress=0.
 	var local_pos: Vector2
 	if _tracked_node != null and is_instance_valid(_tracked_node):
-		local_pos = to_local(_tracked_node.global_position)
+		local_pos = _get_tracked_local_pos(_tracked_node)
+		if debug_enabled:
+			print("[%s] Tracking node '%s' | local_pos=%s (origin=%s)" % [
+				name, _tracked_node.name, local_pos,
+				to_local(_tracked_node.global_position)])
 	elif detect_mouse:
 		local_pos = to_local(get_global_mouse_position())
 	else:
+		if debug_enabled:
+			print("[%s] _process: no tracked node and detect_mouse=false — skipping" % name)
 		return
 
 	# Calculate progress from the collision shape
-	var new_progress := _calculate_shape_progress(local_pos)
+	var raw_progress := _calculate_shape_progress(local_pos)
+	var new_progress := raw_progress
 
 	# Apply optional falloff curve
 	if falloff_curve != null and new_progress > 0.0 and new_progress < 1.0:
 		new_progress = falloff_curve.sample(new_progress)
+
+	if debug_enabled:
+		print("[%s] raw_progress=%.3f | after_curve=%.3f | falloff_zone=%.2f | curve=%s" % [
+			name, raw_progress, new_progress, falloff_zone,
+			"yes" if falloff_curve != null else "none"])
 
 	progress = new_progress
 	progress_changed.emit(progress)
 
 	# Drive all discovered juice siblings
 	_ensure_juice_siblings()
+	if debug_enabled and not _juice_siblings.is_empty():
+		print("[%s] Driving %d sibling(s) with progress=%.3f" % [name, _juice_siblings.size(), progress])
 	for juice in _juice_siblings:
 		if is_instance_valid(juice):
 			juice.set_external_progress(progress)
@@ -268,6 +284,72 @@ func _calculate_shape_progress(local_pos: Vector2) -> float:
 		if debug_enabled:
 			push_warning("[%s] Unsupported shape type '%s', using circle fallback" % [name, shape.get_class()])
 		return _progress_circle(local_pos, 64.0)
+
+
+## Get the local-space position to use for a tracked node.
+## If the tracked node is an Area2D or PhysicsBody2D with a CollisionShape2D child,
+## use the closest point on its collision boundary to our center.
+## Falls back to the node's raw origin.
+func _get_tracked_local_pos(tracked: Node2D) -> Vector2:
+	# Try to find a collision shape on the tracked node
+	var tracked_shape: Shape2D = null
+	var tracked_col: CollisionShape2D = null
+	for child in tracked.get_children():
+		if child is CollisionShape2D and (child as CollisionShape2D).shape != null:
+			tracked_col = child as CollisionShape2D
+			tracked_shape = tracked_col.shape
+			break
+
+	if tracked_shape == null:
+		# No shape found — fall back to raw origin
+		return to_local(tracked.global_position)
+
+	# Compute the tracked shape's center in global space
+	# (the CollisionShape2D may have a local offset from its parent)
+	var shape_center_global: Vector2 = tracked.global_transform * tracked_col.position
+
+	# Our center in global space
+	var our_center_global: Vector2 = global_position
+
+	# Direction from tracked shape center to our center
+	var dir_to_us: Vector2 = our_center_global - shape_center_global
+
+	if dir_to_us.length_squared() < 0.001:
+		# Essentially overlapping — return our center (will yield progress=1)
+		return Vector2.ZERO
+
+	# Compute the closest point on the tracked shape boundary toward our center.
+	# For RectangleShape2D: clamp the direction to the rect boundary.
+	# For CircleShape2D: scale the direction to radius.
+	var closest_global: Vector2
+	var dir_norm := dir_to_us.normalized()
+
+	if tracked_shape is RectangleShape2D:
+		var half := (tracked_shape as RectangleShape2D).size * 0.5
+		# Point on the rect boundary in the direction toward us (local to tracked node)
+		var local_dir := tracked.global_transform.basis_xform_inv(dir_norm)
+		# Find the scale factor to reach the rect boundary
+		var scale_x := absf(half.x / local_dir.x) if absf(local_dir.x) > 0.001 else INF
+		var scale_y := absf(half.y / local_dir.y) if absf(local_dir.y) > 0.001 else INF
+		var boundary_scale := minf(scale_x, scale_y)
+		var boundary_local := local_dir * boundary_scale + tracked_col.position
+		closest_global = tracked.global_transform * boundary_local
+	elif tracked_shape is CircleShape2D:
+		var radius := (tracked_shape as CircleShape2D).radius
+		closest_global = shape_center_global + dir_norm * radius
+	else:
+		# Unknown shape — just use origin
+		return to_local(tracked.global_position)
+
+	return to_local(closest_global)
+
+
+## Clamp a local-space point to within rect bounds.
+## Entities whose origin is outside the zone but whose shape overlaps
+## are treated as sitting at the zone edge — progress=0 at boundary, rising to center.
+func _clamp_to_rect(local_pos: Vector2, rect_size: Vector2) -> Vector2:
+	var half := rect_size * 0.5
+	return Vector2(clampf(local_pos.x, -half.x, half.x), clampf(local_pos.y, -half.y, half.y))
 
 
 ## Progress for RectangleShape2D — same math as Control variant.
@@ -351,10 +433,8 @@ func _ensure_collision_shape() -> void:
 		print("[%s] Auto-created CollisionShape2D with size %s" % [name, detection_size])
 
 
-## Update the auto-created shape's size when detection_size changes in editor.
+## Update the auto-created shape's size when detection_size changes.
 func _update_auto_shape_size() -> void:
-	if not Engine.is_editor_hint():
-		return
 	for child in get_children():
 		if child is CollisionShape2D and child.shape is RectangleShape2D:
 			(child.shape as RectangleShape2D).size = detection_size
