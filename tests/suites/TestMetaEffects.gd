@@ -1,5 +1,5 @@
 ## TestMetaEffects.gd
-## Tests for SignalEmitJuiceEffectBase and CallMethodJuiceEffectBase.
+## Tests for SignalEmitJuiceUtilityBase and CallMethodJuiceUtilityBase.
 extends JuiceTestSuite
 
 
@@ -30,7 +30,7 @@ func _create_signal_emit_rig(
 ) -> Array:
 	var target := create_control_target("SigEmitBtn")
 
-	var effect := SignalEmitControlJuiceEffect.new()
+	var effect := SignalEmitControlJuiceUtility.new()
 	effect.emit_on = timing
 	effect.payload = p_payload
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
@@ -56,7 +56,7 @@ func _create_call_method_rig(
 ) -> Array:
 	var target := create_control_target("CallMethodBtn")
 
-	var effect := CallMethodControlJuiceEffect.new()
+	var effect := CallMethodControlJuiceUtility.new()
 	effect.call_on = timing
 	effect.target_node_path = path
 	effect.method_name = m_name
@@ -81,11 +81,11 @@ func _create_call_method_rig(
 # =============================================================================
 
 func test_signal_emit_on_start_fires_at_animate_start() -> void:
-	var rig := await _create_signal_emit_rig(SignalEmitJuiceEffectBase.EmitTiming.ON_START)
+	var rig := await _create_signal_emit_rig(SignalEmitJuiceUtilityBase.EmitTiming.ON_START)
 	var target: Button = rig[0]
 	var juice: JuiceControl = rig[1]
 
-	var runtime_effect: SignalEmitJuiceEffectBase = juice._runtime_effects[0]
+	var runtime_effect: SignalEmitJuiceUtilityBase = juice._runtime_effects[0]
 	var count := [0]
 	runtime_effect.juice_signal.connect(func(_p): count[0] += 1)
 
@@ -99,11 +99,11 @@ func test_signal_emit_on_start_fires_at_animate_start() -> void:
 
 
 func test_signal_emit_on_complete_fires_at_peak() -> void:
-	var rig := await _create_signal_emit_rig(SignalEmitJuiceEffectBase.EmitTiming.ON_COMPLETE)
+	var rig := await _create_signal_emit_rig(SignalEmitJuiceUtilityBase.EmitTiming.ON_COMPLETE)
 	var target: Button = rig[0]
 	var juice: JuiceControl = rig[1]
 
-	var runtime_effect: SignalEmitJuiceEffectBase = juice._runtime_effects[0]
+	var runtime_effect: SignalEmitJuiceUtilityBase = juice._runtime_effects[0]
 	var count := [0]
 	runtime_effect.juice_signal.connect(func(_p): count[0] += 1)
 
@@ -122,11 +122,11 @@ func test_signal_emit_on_complete_fires_at_peak() -> void:
 
 
 func test_signal_emit_on_both_fires_twice() -> void:
-	var rig := await _create_signal_emit_rig(SignalEmitJuiceEffectBase.EmitTiming.ON_BOTH)
+	var rig := await _create_signal_emit_rig(SignalEmitJuiceUtilityBase.EmitTiming.ON_BOTH)
 	var target: Button = rig[0]
 	var juice: JuiceControl = rig[1]
 
-	var runtime_effect: SignalEmitJuiceEffectBase = juice._runtime_effects[0]
+	var runtime_effect: SignalEmitJuiceUtilityBase = juice._runtime_effects[0]
 	var count := [0]
 	runtime_effect.juice_signal.connect(func(_p): count[0] += 1)
 
@@ -141,11 +141,11 @@ func test_signal_emit_on_both_fires_twice() -> void:
 
 func test_signal_emit_payload_passed_correctly() -> void:
 	var rig := await _create_signal_emit_rig(
-		SignalEmitJuiceEffectBase.EmitTiming.ON_START, "test_payload_42")
+		SignalEmitJuiceUtilityBase.EmitTiming.ON_START, "test_payload_42")
 	var target: Button = rig[0]
 	var juice: JuiceControl = rig[1]
 
-	var runtime_effect: SignalEmitJuiceEffectBase = juice._runtime_effects[0]
+	var runtime_effect: SignalEmitJuiceUtilityBase = juice._runtime_effects[0]
 	var received_payload := ["NONE"]
 	runtime_effect.juice_signal.connect(
 		func(p: Variant) -> void:
@@ -163,11 +163,11 @@ func test_signal_emit_payload_passed_correctly() -> void:
 
 func test_signal_emit_null_payload_passes() -> void:
 	var rig := await _create_signal_emit_rig(
-		SignalEmitJuiceEffectBase.EmitTiming.ON_START, null)
+		SignalEmitJuiceUtilityBase.EmitTiming.ON_START, null)
 	var target: Button = rig[0]
 	var juice: JuiceControl = rig[1]
 
-	var runtime_effect: SignalEmitJuiceEffectBase = juice._runtime_effects[0]
+	var runtime_effect: SignalEmitJuiceUtilityBase = juice._runtime_effects[0]
 	var received := [false]
 	runtime_effect.juice_signal.connect(
 		func(_p: Variant) -> void:
@@ -195,8 +195,8 @@ func test_call_method_on_start_calls_at_animate_start() -> void:
 	helper.set_script(null)
 	target.add_child(helper)
 
-	var effect := CallMethodControlJuiceEffect.new()
-	effect.call_on = CallMethodJuiceEffectBase.CallTiming.ON_START
+	var effect := CallMethodControlJuiceUtility.new()
+	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
 	effect.target_node_path = NodePath("")  # empty = use juiced target
 	effect.method_name = "set_meta"
 	effect.arguments = ["call_count", 1]
@@ -224,8 +224,8 @@ func test_call_method_on_start_calls_at_animate_start() -> void:
 func test_call_method_with_arguments() -> void:
 	var target := create_control_target("CallArgsBtn")
 
-	var effect := CallMethodControlJuiceEffect.new()
-	effect.call_on = CallMethodJuiceEffectBase.CallTiming.ON_START
+	var effect := CallMethodControlJuiceUtility.new()
+	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
 	effect.target_node_path = NodePath("")
 	effect.method_name = "set_meta"
 	effect.arguments = ["injected_value", 99]
@@ -253,8 +253,8 @@ func test_call_method_with_arguments() -> void:
 func test_call_method_graceful_on_empty_method_name() -> void:
 	var target := create_control_target("CallEmptyBtn")
 
-	var effect := CallMethodControlJuiceEffect.new()
-	effect.call_on = CallMethodJuiceEffectBase.CallTiming.ON_START
+	var effect := CallMethodControlJuiceUtility.new()
+	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
 	effect.target_node_path = NodePath("")
 	effect.method_name = ""  # Intentionally empty
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY

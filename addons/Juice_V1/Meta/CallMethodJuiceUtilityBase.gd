@@ -1,4 +1,4 @@
-## Base class for method-call effects.
+## Base class for method-call utilities.
 ##
 ## Calls a named method on a target node at the configured timing.
 ## Domain-agnostic — no visual output.
@@ -21,7 +21,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
-class_name CallMethodJuiceEffectBase
+class_name CallMethodJuiceUtilityBase
 extends JuiceEffectBase
 
 
@@ -43,6 +43,18 @@ enum CallTiming {
 
 @export_group("Method Call")
 
+
+# =============================================================================
+# CONDITIONAL EXPORT SYSTEM
+# =============================================================================
+
+func _get_property_list() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+	props.append({"name": "Utility", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append_array(_get_effect_base_properties())
+	return props
+
 ## Path to the node containing the method. Resolved relative to the host
 ## JuiceBase node. Leave empty to call on the juiced target node itself.
 @export_node_path("Node") var target_node_path: NodePath
@@ -63,6 +75,10 @@ enum CallTiming {
 
 ## Cached target node reference. Resolved in _on_animate_start.
 var _method_target: Node = null
+
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
 
 
 # =============================================================================
