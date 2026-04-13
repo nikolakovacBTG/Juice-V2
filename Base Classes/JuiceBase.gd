@@ -324,6 +324,10 @@ func _validate_property(property: Dictionary) -> void:
 ## Runtime-cloned effects from the recipe (independent state per node).
 var _runtime_effects: Array[JuiceEffectBase] = []
 
+## True after set_external_progress has initialised effects for the first time.
+var _external_progress_initialized: bool = false
+
+
 ## Which effects are currently active (being ticked).
 var _active_effect_indices: Array[int] = []
 
@@ -673,10 +677,34 @@ func toggle() -> void:
 
 
 ## Set external progress on all effects (for SET_FROM_SOURCE).
+## Mirrors V0's direct-apply pattern: initialises effects on first call, then
+## sets progress and writes deltas to the target node directly each call.
+## Does NOT rely on _process (which self-terminates when no effects are playing).
 func set_external_progress(value: float) -> void:
+	if _target_node == null:
+		return
+	if value < 0.0:
+		# Release: clear external driving, restore natural state
+		if _external_progress_initialized:
+			_external_progress_initialized = false
+			for effect in _runtime_effects:
+				if effect != null:
+					effect._restore_to_natural(_target_node)
+			_post_tick_write()
+		return
+	# First call: initialise all effects so From/To snapshots and contribution flags are set.
+	if not _external_progress_initialized:
+		_external_progress_initialized = true
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._on_animate_start(_target_node)
+	# Set progress on all effects (computes deltas)
 	for effect in _runtime_effects:
 		if effect != null:
 			effect.set_progress(value, _target_node)
+	# Write deltas to target node directly — no _process dependency
+	_pre_tick()
+	_post_tick_write()
 
 # =============================================================================
 # TRIGGER HANDLING
@@ -1853,18 +1881,23 @@ func _make_manual_callable(source: Object, sig_name: StringName) -> Callable:
 			sig_args = sig.get("args", [])
 			break
 
+	if debug_enabled:
+		print("[%s] _make_manual_callable: signal='%s' | arg_count=%d | types=%s" % [
+			name, sig_name, sig_args.size(),
+			sig_args.map(func(a): return type_string(a.get("type", TYPE_NIL)))])
+
 	# Case 1: zero-arg signal → standard momentary trigger
 	if sig_args.is_empty():
+		if debug_enabled: print("[%s]   → routing to _on_trigger_momentary (0 args)" % name)
 		return _on_trigger_momentary
 
 	# Case 2: single float arg → drive external progress directly
-	# The signal value (0-1) maps straight to set_external_progress().
-	# Example: SoftTrigger.progress_changed(value: float)
 	if sig_args.size() == 1 and sig_args[0].get("type", -1) == TYPE_FLOAT:
+		if debug_enabled: print("[%s]   → routing to set_external_progress (float arg)" % name)
 		return set_external_progress
 
 	# Case 3: any other signature → strip all args, treat as momentary
-	# Callable.unbind(n) discards the last n args the signal passes — safe and clean.
+	if debug_enabled: print("[%s]   → routing to _on_trigger_momentary.unbind(%d)" % [name, sig_args.size()])
 	return _on_trigger_momentary.unbind(sig_args.size())
 
 # =============================================================================
