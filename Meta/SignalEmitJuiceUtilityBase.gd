@@ -1,4 +1,4 @@
-## Base class for signal emission effects.
+## Base class for signal emission utilities.
 ##
 ## Emits juice_signal(payload) at the configured timing relative to the
 ## animation lifecycle. Domain-agnostic — no visual output.
@@ -22,7 +22,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceUtilitySignals.svg")
-class_name SignalEmitJuiceEffectBase
+class_name SignalEmitJuiceUtilityBase
 extends JuiceEffectBase
 
 
@@ -52,6 +52,22 @@ enum EmitTiming {
 # =============================================================================
 
 @export_group("Signal Emission")
+
+
+# =============================================================================
+# CONDITIONAL EXPORT SYSTEM
+# =============================================================================
+
+func _get_property_list() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+	props.append({"name": "Utility", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append_array(_get_effect_base_properties())
+	return props
+
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
 
 ## Human-readable description of this signal (for documentation/debugging only).
 ## The actual emitted signal is always juice_signal.
