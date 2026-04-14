@@ -38,26 +38,16 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Natural state — captured once at _ready. Read-only reference after capture;
-# contribution tracking does not modify these.
-var _base_position: Vector2 = Vector2.ZERO
-var _base_rotation: float = 0.0
-var _base_scale: Vector2 = Vector2.ONE
-
-# Sum of all effect deltas currently applied — used by undo/reapply
-var _total_pos_contribution: Vector2 = Vector2.ZERO
-var _total_rot_contribution: float = 0.0
-var _total_scale_contribution: Vector2 = Vector2.ZERO
+# Phase B: Per-node contribution tracking for sibling stacking (Modulate)
+# Transform properties use the shared Metadata Ledger.
+var _own_modulate_contribution: Color = Color.WHITE
 
 # Whether base values have been captured at least once
 var _base_captured: bool = false
 
 # Expected values after our last write — for external-move detection (pre-tick).
-# If the actual value differs from expected next frame, something external moved
-# the target (Container re-sort, game logic, tween, etc.) and we update _base_*.
-var _expected_position: Vector2 = Vector2.INF
-var _expected_rotation: float = INF
-var _expected_scale: Vector2 = Vector2.INF
+# Kept for modulate, as transform uses the ledger.
+var _expected_modulate: Color = Color.WHITE
 
 # Modulate base — captured at _capture_base_values for appearance accumulation.
 # JuiceControlAppearanceEffect effects contribute _modulate_factor multiplicatively;
@@ -69,9 +59,6 @@ var _has_modulate_base: bool = false
 # _post_tick_write() inherently beats Container re-sorts each frame.
 # This flag is kept for potential future Container-specific edge cases.
 var _in_container: bool = false
-
-# Phase B: Per-node contribution tracking for sibling stacking
-var _own_modulate_contribution: Color = Color.WHITE
 
 # =============================================================================
 # LIFECYCLE
@@ -87,6 +74,8 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	super._exit_tree()
+	if _target_node != null and is_instance_valid(_target_node):
+		_ledger_cleanup_source(_target_node, self)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -211,71 +200,26 @@ func _connect_control_signals(control: Control) -> void:
 # =============================================================================
 
 ## Capture target's natural position/rotation/scale.
-## Base values are a read-only reference; contribution tracking handles writes.
+## Transforms use the Shared Target Ledger; Modulate uses the dedicated META_KEY.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Control:
 		return
 	var ctrl := _target_node as Control
-	_base_position = ctrl.position
-	_base_rotation = ctrl.rotation
-	_base_scale = ctrl.scale
+	
+	_ledger_ensure_initialized(ctrl, ["position", "rotation", "scale"])
+	
 	_base_modulate = ctrl.modulate
 	_has_modulate_base = true
 	_base_captured = true
-	# Reset contribution tracking
-	_total_pos_contribution = Vector2.ZERO
-	_total_rot_contribution = 0.0
-	_total_scale_contribution = Vector2.ZERO
-	# Initialise expected values so pre-tick can detect external moves
-	_expected_position = ctrl.position
-	_expected_rotation = ctrl.rotation
-	_expected_scale = ctrl.scale
-	if debug_enabled:
-		print("[%s] JuiceControl._capture_base_values: ctrl.pos=%s ctrl.rot=%.2f ctrl.scale=%s" % [
-			name, ctrl.position, ctrl.rotation, ctrl.scale])
-
 
 ## Detect external displacement of the target (Container re-sort, game logic, tweens).
-## Runs once per frame, before effects tick. When displacement is detected,
-## updates _base_* so delta computations use the correct natural state.
+## Updates the Shared Target Ledger baseline so animation deltas ride cleanly.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	var any_displaced := false
-
-	# Position
-	if _expected_position != Vector2.INF:
-		if not ctrl.position.is_equal_approx(_expected_position):
-			var displacement := ctrl.position - _expected_position
-			_base_position += displacement
-			_expected_position = ctrl.position
-			any_displaced = true
-			if debug_enabled:
-				print("[%s] External displacement (position): %s → new base: %s" % [
-					name, displacement, _base_position])
-
-	# Rotation
-	if _expected_rotation != INF:
-		if not is_equal_approx(ctrl.rotation, _expected_rotation):
-			var displacement := ctrl.rotation - _expected_rotation
-			_base_rotation += displacement
-			_expected_rotation = ctrl.rotation
-			any_displaced = true
-
-	# Scale
-	if _expected_scale != Vector2.INF:
-		if not ctrl.scale.is_equal_approx(_expected_scale):
-			var displacement := ctrl.scale - _expected_scale
-			_base_scale += displacement
-			_expected_scale = ctrl.scale
-			any_displaced = true
-
-	# Invalidate effect base caches so they re-capture on next animation start
-	if any_displaced:
-		for effect in _runtime_effects:
-			if effect != null:
-				effect._invalidate_base_cache()
+	
+	_ledger_update_external_displacement(ctrl, ["position", "rotation", "scale"])
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -304,25 +248,27 @@ func _post_tick_write() -> void:
 		if ctrl_effect._contributes_scale:
 			new_scale += ctrl_effect._scale_delta
 
+	# Register our deltas into the Target's ledger
+	_ledger_set_delta(ctrl, self, "position", new_pos)
+	_ledger_set_delta(ctrl, self, "rotation", new_rot)
+	_ledger_set_delta(ctrl, self, "scale", new_scale)
+
+	# Fetch the unified natural base and the total sums of all Juice nodes modifying this target
+	var base_pos: Vector2 = _ledger_get_base_value(ctrl, "position", ctrl.position)
+	var base_rot: float = _ledger_get_base_value(ctrl, "rotation", ctrl.rotation)
+	var base_scale: Vector2 = _ledger_get_base_value(ctrl, "scale", ctrl.scale)
+
+	var total_pos: Vector2 = _ledger_get_total(ctrl, "position", Vector2.ZERO)
+	var total_rot: float = _ledger_get_total(ctrl, "rotation", 0.0)
+	var total_scale: Vector2 = _ledger_get_total(ctrl, "scale", Vector2.ZERO)
+
+	# Absolute write — natively beats container eager snapping without drifting
+	ctrl.position = base_pos + total_pos
+	ctrl.rotation = base_rot + total_rot
+	ctrl.scale = base_scale + total_scale
+	
 	if debug_enabled:
-		print("[FROMTO_DBG] %s._post_tick_write: ctrl.pos_BEFORE=%s old_contrib=%s new_delta=%s => result=%s" % [
-			name, ctrl.position, _total_pos_contribution, new_pos,
-			ctrl.position - _total_pos_contribution + new_pos])
-
-	# Contribution tracking: subtract what we added last frame, add what we want now
-	ctrl.position = ctrl.position - _total_pos_contribution + new_pos
-	ctrl.rotation = ctrl.rotation - _total_rot_contribution + new_rot
-	ctrl.scale = ctrl.scale - _total_scale_contribution + new_scale
-
-	# Track expected values (for external-displacement detection next frame)
-	_expected_position = ctrl.position
-	_expected_rotation = ctrl.rotation
-	_expected_scale = ctrl.scale
-
-	# Update tracked contribution (for undo/reapply and next frame's subtraction)
-	_total_pos_contribution = new_pos
-	_total_rot_contribution = new_rot
-	_total_scale_contribution = new_scale
+		print("[%s] POST_TICK base_pos=%s, new_pos_delta=%s, total_pos_ledger=%s, ctrl_now=%s" % [name, base_pos, new_pos, total_pos, ctrl.position])
 
 	# Appearance: accumulate modulate factors from JuiceControlAppearanceEffect effects.
 	# Only write modulate when at least one appearance effect has a non-identity factor.
@@ -401,13 +347,15 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	if debug_enabled:
-		print("[FROMTO_DBG] %s._temporarily_undo_visual: ctrl.pos_BEFORE=%s _total_pos_contrib=%s => undone_pos=%s" % [
-			name, ctrl.position, _total_pos_contribution,
-			ctrl.position - _total_pos_contribution])
-	ctrl.position -= _total_pos_contribution
-	ctrl.rotation -= _total_rot_contribution
-	ctrl.scale -= _total_scale_contribution
+	
+	# Strip our deltas from the ledger temporarily without destroying it
+	_ledger_cleanup_source(ctrl, self, false)
+	
+	# Apply absolute baseline position + sibling remaining deltas
+	ctrl.position = _ledger_get_base_value(ctrl, "position", ctrl.position) + _ledger_get_total(ctrl, "position", Vector2.ZERO)
+	ctrl.rotation = _ledger_get_base_value(ctrl, "rotation", ctrl.rotation) + _ledger_get_total(ctrl, "rotation", 0.0)
+	ctrl.scale = _ledger_get_base_value(ctrl, "scale", ctrl.scale) + _ledger_get_total(ctrl, "scale", Vector2.ZERO)
+
 	# Restore self_modulate to natural so Appearance effects see the true From state
 	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
 	const META_KEY := &"juice_modulate_natural"
@@ -422,13 +370,8 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	if debug_enabled:
-		print("[FROMTO_DBG] %s._temporarily_reapply_visual: ctrl.pos_BEFORE=%s _total_pos_contrib=%s => reapplied_pos=%s" % [
-			name, ctrl.position, _total_pos_contribution,
-			ctrl.position + _total_pos_contribution])
-	ctrl.position += _total_pos_contribution
-	ctrl.rotation += _total_rot_contribution
-	ctrl.scale += _total_scale_contribution
+	# Re-apply transform deltas by flushing a fresh post-tick write
+	# This restores our deltas to the ledger and recalculates absolute bounds.
 	# Re-apply modulate by flushing a fresh post-tick write
 	_post_tick_write()
 

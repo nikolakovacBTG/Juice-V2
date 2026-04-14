@@ -36,6 +36,7 @@ func test_impact_ensemble_multiple_chains() -> void:
 	punch.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	punch.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	punch.to_position = Vector2(80, 0)
+	punch.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	punch.duration_in = 0.15
 	punch.duration_out = 0.3
 	punch.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -75,9 +76,6 @@ func test_impact_ensemble_multiple_chains() -> void:
 	await wait_frames(2)
 	
 	# Start the impact ensemble
-	juice.animate_in()
-	
-	# Initially only punch should affect position
 	juice.animate_in()
 	await wait_frames(2)
 	
@@ -135,6 +133,7 @@ func test_transition_cascade_preroll() -> void:
 	slide.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	slide.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	slide.to_position = Vector2(-300, 0)
+	slide.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	slide.duration_in = 0.5
 	slide.duration_out = 0.4
 	slide.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -168,9 +167,6 @@ func test_transition_cascade_preroll() -> void:
 	target.add_child(juice)
 	
 	await wait_frames(2)
-	
-	# Start transition
-	juice.animate_in()
 	
 	# Start transition
 	juice.animate_in()
@@ -232,6 +228,7 @@ func test_empty_array_no_chaining() -> void:
 	effect1.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect1.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect1.to_position = Vector2(50, 0)
+	effect1.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	effect1.duration_in = 0.2
 	effect1.chain_to = []  # Empty array
 	effect1.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -240,6 +237,7 @@ func test_empty_array_no_chaining() -> void:
 	effect2.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect2.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect2.to_position = Vector2(0, 50)
+	effect2.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	effect2.duration_in = 0.2
 	effect2.chain_to = []  # Empty array
 	effect2.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -312,6 +310,7 @@ func test_sequencer_mode_multiple_chains() -> void:
 	primary.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	primary.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	primary.to_position = Vector2(20, 0)
+	primary.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	primary.duration_in = 0.2
 	primary.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	
@@ -342,9 +341,6 @@ func test_sequencer_mode_multiple_chains() -> void:
 	parent.add_child(juice)
 	
 	await wait_frames(2)
-	
-	# Start sequence
-	juice.animate_in()
 	
 	# Start sequence
 	juice.animate_in()

@@ -1010,7 +1010,6 @@ func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -
 
 	_seq_start_sequence(is_reverse, is_one_shot_return)
 
-
 ## Stop all sequencer animations cleanly.
 func _seq_stop() -> void:
 	_seq_generation += 1  # Abort any in-flight coroutines
@@ -1020,6 +1019,19 @@ func _seq_stop() -> void:
 	_seq_pp_forward = true
 	_seq_pp_current_cycle = 0
 	_seq_current_loop = 0
+	
+	# Sequencer memory leak fix: ensure we wipe our active ledgers natively
+	# before clearing the target tracking dictionaries.
+	if juice_source == JuiceSource.RECIPE:
+		for target_variant: Variant in _seq_target_active_indices.keys():
+			var target := target_variant as Node
+			if is_instance_valid(target):
+				_seq_restore_target_natural(target)
+		for entry in _seq_held_entries:
+			var target := entry.get("target") as Node
+			if is_instance_valid(target) and not _seq_target_active_indices.has(target):
+				_seq_restore_target_natural(target)
+
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
 	_seq_target_contributions.clear()
@@ -1521,31 +1533,16 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	pass
 
-
 ## Sequencer: undo warmup contribution on a target, restoring it to its natural
 ## (Container-managed / editor) state. Called before effects re-capture base for
 ## the real animation, preventing warmup contributions from polluting the base.
-## Generic — works for any property channel effects report via _get_seq_contribution().
 func _seq_restore_target_natural(target: Node) -> void:
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	var expected: Dictionary = _seq_expected_after_write.get(target, {})
-	for prop_name: String in contrib:
-		var actual: Variant = target.get(prop_name)
-		# External-reset detection: if actual differs from what we wrote last,
-		# an external system reset this property. Our contribution is no longer
-		# baked into the current value — skip subtraction (value is already natural).
-		if prop_name in expected and not _seq_values_approx_equal(actual, expected[prop_name]):
-			continue
-		target.set(prop_name, actual - contrib[prop_name])
-	_seq_target_contributions.erase(target)
-	_seq_expected_after_write.erase(target)
+	_ledger_cleanup_source(target, self)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
-## Generic — effects report their contributions via _get_seq_contribution()
-## keyed by Godot property names. Domain nodes do NOT need to override this.
-## Uses contribution-tracking pattern so Container re-sorts are automatically
-## absorbed — same principle as STACK mode's external-move detection.
+## Uses the Centralized Metadata Ledger to sum outputs across cross-stacking nodes
+## safely avoiding Container layout suppressions.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	# Aggregate all effect contributions keyed by property name
 	var total := {}
@@ -1555,52 +1552,56 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 		var contrib: Dictionary = eff._get_seq_contribution()
 		for key: String in contrib:
 			if key in total:
-				total[key] = total[key] + contrib[key]
+				if typeof(total[key]) == TYPE_COLOR and typeof(contrib[key]) == TYPE_COLOR:
+					var c_tot := total[key] as Color
+					var c_con := contrib[key] as Color
+					total[key] = Color(c_tot.r * c_con.r, c_tot.g * c_con.g, c_tot.b * c_con.b, c_tot.a * c_con.a)
+				else:
+					total[key] = total[key] + contrib[key]
 			else:
 				total[key] = contrib[key]
 
-	# Retrieve our last contribution for this target
+	var tracked_props: Array[String] = []
+	for k in total.keys():
+		tracked_props.append(k)
+
+	_ledger_ensure_initialized(target, tracked_props)
+	_ledger_update_external_displacement(target, tracked_props)
+
+	# Write current property offsets
+	for prop in tracked_props:
+		var delta: Variant = total[prop]
+		_ledger_set_delta(target, self, prop, delta)
+		
+		var base_val: Variant = _ledger_get_base_value(target, prop, target.get(prop))
+		var total_delta: Variant = _ledger_get_total(target, prop, _seq_zero_for(base_val))
+
+		if typeof(total_delta) == TYPE_COLOR:
+			var base_col := base_val as Color
+			var tot_col := total_delta as Color
+			target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
+		else:
+			target.set(prop, base_val + total_delta)
+
+	# Zero out any properties we contributed to last frame but no longer do
 	var prev: Dictionary = _seq_target_contributions.get(target, {})
-
-	# External-reset detection: if the current value differs from what we wrote
-	# last frame, an external system changed the property. Our stored contribution
-	# is stale — clear it so we derive natural correctly from the reset value.
-	var expected: Dictionary = _seq_expected_after_write.get(target, {})
-	for key: String in prev:
-		if key in expected:
-			var actual: Variant = target.get(key)
-			if not _seq_values_approx_equal(actual, expected[key]):
-				prev.erase(key)
-
-	# For each property we're contributing to now: derive natural, then write
-	for key: String in total:
-		var prev_val: Variant = prev.get(key, _seq_zero_for(total[key]))
-		var natural: Variant = target.get(key) - prev_val
-		target.set(key, natural + total[key])
-
-	# Restore any properties we contributed to last frame but no longer do
-	for key: String in prev:
-		if key not in total:
-			target.set(key, target.get(key) - prev[key])
+	for prop: String in prev.keys():
+		if not total.has(prop):
+			_ledger_set_delta(target, self, prop, _seq_zero_for(prev[prop]))
+			var base_val: Variant = _ledger_get_base_value(target, prop, target.get(prop))
+			var total_delta: Variant = _ledger_get_total(target, prop, _seq_zero_for(base_val))
+			
+			if typeof(total_delta) == TYPE_COLOR:
+				var base_col := base_val as Color
+				var tot_col := total_delta as Color
+				target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
+			else:
+				target.set(prop, base_val + total_delta)
 
 	_seq_target_contributions[target] = total
 
-	# Store expected values after write for next frame's external-reset detection
-	var new_expected := {}
-	for key: String in total:
-		new_expected[key] = target.get(key)
-	_seq_expected_after_write[target] = new_expected
 
 
-## Return the zero value for the same type as the given Variant.
-## Used by contribution-tracking when no previous contribution exists.
-static func _seq_zero_for(val: Variant) -> Variant:
-	match typeof(val):
-		TYPE_FLOAT: return 0.0
-		TYPE_VECTOR2: return Vector2.ZERO
-		TYPE_VECTOR3: return Vector3.ZERO
-		TYPE_COLOR: return Color(0, 0, 0, 0)
-	return val - val  # fallback for other numeric types
 
 
 ## Compare two Variant values with approximate equality.
@@ -2056,3 +2057,122 @@ func _on_control_gui_input_filtered(event: InputEvent) -> void:
 func _on_animation_finished(_anim_name: StringName) -> void:
 	_on_trigger_momentary()
 
+
+const LEDGER_KEY := &"juice_active_ledger"
+
+static func _seq_zero_for(value: Variant) -> Variant:
+	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT: return 0.0
+	if typeof(value) == TYPE_VECTOR2: return Vector2.ZERO
+	if typeof(value) == TYPE_VECTOR3: return Vector3.ZERO
+	if typeof(value) == TYPE_COLOR: return Color.WHITE
+	return null
+
+static func _ledger_ensure_initialized(target: Node, expected_props: Array[String]) -> Dictionary:
+	var ledger: Dictionary
+	if not target.has_meta(LEDGER_KEY):
+		ledger = { "base": {}, "deltas": {} }
+		target.set_meta(LEDGER_KEY, ledger)
+	else:
+		ledger = target.get_meta(LEDGER_KEY)
+		
+	for prop in expected_props:
+		if not ledger["base"].has(prop):
+			ledger["base"][prop] = target.get(prop)
+	return ledger
+
+static func _ledger_update_external_displacement(target: Node, expected_props: Array[String]) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	
+	var skip_frame: int = ledger.get("skip_drift_frame", -1)
+	if skip_frame == Engine.get_process_frames() or skip_frame == Engine.get_process_frames() - 1:
+		return
+		
+	for prop in expected_props:
+		if not ledger["base"].has(prop): continue
+		var base_val: Variant = ledger["base"][prop]
+		var total_delta: Variant = _seq_zero_for(base_val)
+		if ledger["deltas"].has(prop):
+			for delta_val: Variant in ledger["deltas"][prop].values():
+				if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+					# Modulate factors are multiplied, not added
+					var c_tot := total_delta as Color
+					var c_del := delta_val as Color
+					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+				else:
+					total_delta += delta_val
+				
+		var expected_val: Variant = base_val
+		if typeof(total_delta) == TYPE_COLOR:
+			var base_col := base_val as Color
+			var tot_col := total_delta as Color
+			expected_val = Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a)
+		else:
+			expected_val = base_val + total_delta
+
+		var current_val: Variant = target.get(prop)
+		
+		var displaced := false
+		var offset: Variant = _seq_zero_for(base_val)
+		
+		if typeof(current_val) == TYPE_FLOAT:
+			if not is_equal_approx(current_val as float, expected_val as float):
+				displaced = true
+				offset = (current_val as float) - (expected_val as float)
+		elif typeof(current_val) == TYPE_VECTOR2:
+			if not (current_val as Vector2).is_equal_approx(expected_val as Vector2):
+				displaced = true
+				offset = (current_val as Vector2) - (expected_val as Vector2)
+		elif typeof(current_val) == TYPE_VECTOR3:
+			if not (current_val as Vector3).is_equal_approx(expected_val as Vector3):
+				displaced = true
+				offset = (current_val as Vector3) - (expected_val as Vector3)
+		elif typeof(current_val) == TYPE_COLOR:
+			pass # We typically do not track external drift on modulate yet
+				
+		if displaced:
+			ledger["base"][prop] += offset
+
+static func _ledger_set_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	if not ledger["deltas"].has(prop):
+		ledger["deltas"][prop] = {}
+	var source_id := source.get_instance_id()
+	ledger["deltas"][prop][source_id] = delta
+
+static func _ledger_get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
+	if not target.has_meta(LEDGER_KEY): return zero_val
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	if not ledger["deltas"].has(prop): return zero_val
+	var total: Variant = zero_val
+	for delta_val: Variant in ledger["deltas"][prop].values():
+		if typeof(total) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+			var c_tot := total as Color
+			var c_del := delta_val as Color
+			total = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+		else:
+			total += delta_val
+	return total
+
+static func _ledger_get_base_value(target: Node, prop: String, fallback: Variant) -> Variant:
+	if not target.has_meta(LEDGER_KEY): return fallback
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	return ledger["base"].get(prop, fallback)
+
+static func _ledger_cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	var source_id := source.get_instance_id()
+	
+	var any_remaining := false
+	for prop: String in ledger["deltas"].keys():
+		var sources: Dictionary = ledger["deltas"][prop]
+		sources.erase(source_id)
+		if not sources.is_empty():
+			any_remaining = true
+			
+	if permanently and not any_remaining:
+		for prop: String in ledger["base"].keys():
+			target.set(prop, ledger["base"][prop])
+		target.remove_meta(LEDGER_KEY)

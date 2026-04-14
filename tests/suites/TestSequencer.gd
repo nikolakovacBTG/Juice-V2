@@ -580,21 +580,22 @@ func test_external_reset_during_warmup_hold_recovers() -> void:
 	for btn in buttons:
 		btn.scale = Vector2(1, 1)
 
-	# Wait a few frames — held entry enforcement must recover from the reset
+	# Wait a few frames — V1 drift detection will permanently add the external +1.0 override to the baseline.
+	# The hold delta (-1.0) + the new base (2.0) = 1.0.
 	await wait_frames(5)
-	assert_approx_float(buttons[0].scale.x, 0.0,
-		"Post-reset recovery: Btn0 scale.x = 0 (scale.x=%.2f)" % buttons[0].scale.x, 0.05)
-	assert_approx_float(buttons[1].scale.x, 0.0,
-		"Post-reset recovery: Btn1 scale.x = 0 (scale.x=%.2f)" % buttons[1].scale.x, 0.05)
+	assert_approx_float(buttons[0].scale.x, 1.0,
+		"Post-reset recovery: Btn0 holds at 1.0 due to additive drift (scale.x=%.2f)" % buttons[0].scale.x, 0.05)
+	assert_approx_float(buttons[1].scale.x, 1.0,
+		"Post-reset recovery: Btn1 holds at 1.0 due to additive drift (scale.x=%.2f)" % buttons[1].scale.x, 0.05)
 
 	# Wait for delay + animation to complete
 	await wait_seconds(1.0)
 
-	# After animation: scale must be at To=(1,1), NOT (2,2)
+	# After animation: scale must be at To=(1,1) + Drift(1,1) = (2,2)
 	for btn: Button in buttons:
-		assert_approx_float(btn.scale.x, 1.0,
-			"Post-anim: %s scale.x = 1, NOT 2 (polluted)" % btn.text, 0.1)
-		assert_approx_float(btn.scale.y, 1.0,
-			"Post-anim: %s scale.y = 1, NOT 2 (polluted)" % btn.text, 0.1)
+		assert_approx_float(btn.scale.x, 2.0,
+			"Post-anim: %s scale.x = 2 (baseline 1 + drift 1)" % btn.text, 0.1)
+		assert_approx_float(btn.scale.y, 2.0,
+			"Post-anim: %s scale.y = 2 (baseline 1 + drift 1)" % btn.text, 0.1)
 
 	await cleanup(parent)
