@@ -454,7 +454,7 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 	# true natural position (pre-all-Juice) rather than a dirty target.position
 	# that may include active deltas from other Juice sources (sequencer, stacked nodes).
 	# JuiceBase._ledger_get_base_dict returns {} if the target has no ledger — safe fallback.
-	_ledger_base_snapshot = JuiceBase._ledger_get_base_dict(target)
+	_ledger_base_snapshot = JuiceLedger.get_base_dict(target)
 
 	_on_animate_start(target)
 

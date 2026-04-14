@@ -87,7 +87,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	super._exit_tree()
 	if _target_node != null and is_instance_valid(_target_node):
-		_ledger_cleanup_source(_target_node, self)
+		JuiceLedger.cleanup_source(_target_node, self)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -200,7 +200,7 @@ func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node3D:
 		return
 	var n3d := _target_node as Node3D
-	_ledger_ensure_initialized(n3d, ["position", "rotation", "scale"])
+	JuiceLedger.ensure(n3d, ["position", "rotation", "scale"])
 	_base_captured = true
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
@@ -209,7 +209,7 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	_ledger_update_external_displacement(n3d, ["position", "rotation", "scale"])
+	JuiceLedger.sync_base_if_moved(n3d, ["position", "rotation", "scale"])
 
 
 ## Contribution-tracking write: register this node's deltas into the shared target ledger,
@@ -239,18 +239,18 @@ func _post_tick_write() -> void:
 			new_scale += eff_3d._scale_delta
 
 	# Register our deltas into the Target's ledger
-	_ledger_set_delta(n3d, self, "position", new_pos)
-	_ledger_set_delta(n3d, self, "rotation", new_rot)
-	_ledger_set_delta(n3d, self, "scale", new_scale)
+	JuiceLedger.register_delta(n3d, self, "position", new_pos)
+	JuiceLedger.register_delta(n3d, self, "rotation", new_rot)
+	JuiceLedger.register_delta(n3d, self, "scale", new_scale)
 
 	# Fetch the unified natural base and total sums of all Juice nodes modifying this target
-	var base_pos: Vector3 = _ledger_get_base_value(n3d, "position", n3d.position)
-	var base_rot: Vector3 = _ledger_get_base_value(n3d, "rotation", n3d.rotation)
-	var base_scale: Vector3 = _ledger_get_base_value(n3d, "scale", n3d.scale)
+	var base_pos: Vector3 = JuiceLedger.get_base(n3d, "position", n3d.position)
+	var base_rot: Vector3 = JuiceLedger.get_base(n3d, "rotation", n3d.rotation)
+	var base_scale: Vector3 = JuiceLedger.get_base(n3d, "scale", n3d.scale)
 
-	var total_pos: Vector3 = _ledger_get_total(n3d, "position", Vector3.ZERO)
-	var total_rot: Vector3 = _ledger_get_total(n3d, "rotation", Vector3.ZERO)
-	var total_scale: Vector3 = _ledger_get_total(n3d, "scale", Vector3.ZERO)
+	var total_pos: Vector3 = JuiceLedger.get_total(n3d, "position", Vector3.ZERO)
+	var total_rot: Vector3 = JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO)
+	var total_scale: Vector3 = JuiceLedger.get_total(n3d, "scale", Vector3.ZERO)
 
 	# Absolute write
 	n3d.position = base_pos + total_pos
@@ -369,12 +369,12 @@ func _temporarily_undo_visual() -> void:
 	var n3d := _target_node as Node3D
 	
 	# Strip our transform deltas from the ledger temporarily without destroying it
-	_ledger_cleanup_source(n3d, self, false)
+	JuiceLedger.cleanup_source(n3d, self, false)
 	
 	# Apply absolute baseline position + sibling remaining deltas
-	n3d.position = _ledger_get_base_value(n3d, "position", n3d.position) + _ledger_get_total(n3d, "position", Vector3.ZERO)
-	n3d.rotation = _ledger_get_base_value(n3d, "rotation", n3d.rotation) + _ledger_get_total(n3d, "rotation", Vector3.ZERO)
-	n3d.scale = _ledger_get_base_value(n3d, "scale", n3d.scale) + _ledger_get_total(n3d, "scale", Vector3.ZERO)
+	n3d.position = JuiceLedger.get_base(n3d, "position", n3d.position) + JuiceLedger.get_total(n3d, "position", Vector3.ZERO)
+	n3d.rotation = JuiceLedger.get_base(n3d, "rotation", n3d.rotation) + JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO)
+	n3d.scale = JuiceLedger.get_base(n3d, "scale", n3d.scale) + JuiceLedger.get_total(n3d, "scale", Vector3.ZERO)
 
 	# Restore natural material so editor save doesn't serialise working material
 	if _appearance_setup and _appearance_mesh != null:

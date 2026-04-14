@@ -925,9 +925,9 @@ func _capture_base(target: Node) -> void:
 		return
 		
 	# Read from the ledger so we get the natural state even if other Juice nodes are active.
-	_base_position = JuiceBase._ledger_get_base_value(n2d, "position", n2d.position)
-	_base_rotation_radians = JuiceBase._ledger_get_base_value(n2d, "rotation", n2d.rotation)
-	_base_scale = JuiceBase._ledger_get_base_value(n2d, "scale", n2d.scale)
+	_base_position = JuiceLedger.get_base(n2d, "position", n2d.position)
+	_base_rotation_radians = JuiceLedger.get_base(n2d, "rotation", n2d.rotation)
+	_base_scale = JuiceLedger.get_base(n2d, "scale", n2d.scale)
 	
 	_has_base = true
 	if debug_enabled:

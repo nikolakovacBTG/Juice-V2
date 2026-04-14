@@ -962,9 +962,9 @@ func _capture_base(target: Node) -> void:
 
 	# Read from the ledger so we capture the natural state even if other Juice nodes
 	# are active on the same target (e.g. nested packed prefab compositing scenario).
-	_base_position = JuiceBase._ledger_get_base_value(n3d, "position", n3d.position)
-	var base_rotation: Vector3 = JuiceBase._ledger_get_base_value(n3d, "rotation", n3d.rotation)
-	_base_scale = JuiceBase._ledger_get_base_value(n3d, "scale", n3d.scale)
+	_base_position = JuiceLedger.get_base(n3d, "position", n3d.position)
+	var base_rotation: Vector3 = JuiceLedger.get_base(n3d, "rotation", n3d.rotation)
+	_base_scale = JuiceLedger.get_base(n3d, "scale", n3d.scale)
 	_base_transform = Transform3D(Basis.from_euler(base_rotation).scaled(_base_scale), _base_position)
 	var ortho_basis := _base_transform.basis.orthonormalized()
 	_base_euler = ortho_basis.get_euler()
