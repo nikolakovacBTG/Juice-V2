@@ -2,7 +2,6 @@
 ##
 ## Select a transform target (Position, Rotation, or Scale) and configure animations
 ## using CUSTOM values, SELF snapshots, or live TARGET_NODE references.
-## Rotation uses quaternion slerp for smooth interpolation (no gimbal lock).
 
 # ============================================================================
 # WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
@@ -12,23 +11,31 @@
 # DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
 #
 # WRITE PATTERN: Delta-first. Each frame writes only the CHANGE in this effect's
-#   contribution: node.property += (desired - _my_contribution). This enables
-#   stacking with other effects and preserves external changes to the node.
+#   contribution. Enables stacking with other effects and preserves external changes.
 #
 # FROM/TO MODEL:
 # All transform types use a "From [source] To [destination]" model.
-# Sources can be CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
-# Rotation uses quaternion slerp for correct interpolation.
+# Sources: CUSTOM (explicit value), SELF (snapshot), or TARGET_NODE (live).
 #
-# PIVOT:
-# - ROTATION: Uses rotation_pivot_offset (Vector3) from node origin. The pivot
-#   point is fixed in parent space at animation start. Useful for doors, levers, lids.
-# - SCALE: No dedicated pivot property — scale always from node origin.
+# PIVOT (ROTATION):
+# 3D rotation pivot is achieved by position compensation:
+#   fixed_pivot = base_pos + base_basis * rotation_pivot_offset
+#   new_pos = fixed_pivot - new_basis * rotation_pivot_offset
+# rotation_pivot_offset is defined in local space at rest pose.
 #
-# CONDITIONAL EXPORTS:
-# Uses _get_property_list() to conditionally show/hide parameters based on
-# transform_target and from/to reference selections.
-# ===============================================================================
+# PIVOT (SCALE):
+# Scale pivot uses a LOCAL AABB center (AUTO_CENTER) or custom point.
+# scale_pivot compensation: pos += pivot * (ONE - scale_ratio)
+#
+# ROTATION INTERPOLATION:
+# Uses Quaternion slerp for smooth 3D rotation without gimbal lock.
+# from_rotation and to_rotation are Vector3 Euler angles (degrees by default).
+#
+# SHARED FRAMEWORK:
+# Enums, config vars (including rotation_pivot_offset, scale_custom_pivot),
+# property list skeleton, and lifecycle live in Juice3DTransformEffect (domain base).
+# This class provides only typed behavior.
+# ============================================================================
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
@@ -37,112 +44,23 @@ extends Juice3DTransformEffect
 
 
 # =============================================================================
-# ENUMS
+# CONFIGURATION — typed vars (Vector3 types, only these live in concrete)
 # =============================================================================
 
-## Which transform property to animate
-enum TransformTarget {
-	POSITION,  ## Animate Node3D.position with offset + unit
-	ROTATION,  ## Animate Node3D rotation (3-axis, Quaternion slerp)
-	SCALE      ## Animate Node3D.scale with offset
-}
+# Note: rotation_pivot_offset and scale_custom_pivot are in the domain base
+# as Vector3 — Juice3DTransformEffect is 3D-only so that's safe.
 
-## Determines how the pivot point is calculated for scaling
-enum PivotMode {
-	AUTO_CENTER,  ## Infer center from AABB and compensate position
-	INHERIT,      ## Scale from node origin (no compensation)
-	CUSTOM        ## Scale from custom_pivot (local-space world units)
-}
-
-## Reference type for From/To axes (shared by Position, Rotation, and Scale)
-enum TransformReference {
-	CUSTOM,       ## Explicit value supplied by the user
-	SELF,         ## This object's current value (captured at capture_at moment)
-	TARGET_NODE   ## Another object's value (tracked live every frame)
-}
-
-
-
-## When to capture Self's transform value
-enum CaptureAt {
-	TRIGGER,    ## Capture when animation starts (default)
-	READY,      ## Capture when scene loads / _ready()
-	IN_EDITOR   ## WYSIWYG — bake editor-time value into the scene file
-}
-
-
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
-
-var transform_target: int = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
-
-func _init() -> void:
-	_subclass_owns_effect_group = true
-
-
-# =============================================================================
-# CONDITIONAL BACKING VARIABLES
-# These are NOT @export — they are shown/hidden via _get_property_list()
-# =============================================================================
-
-# --- POSITION (From/To model) ---
+# --- POSITION ---
 var from_position: Vector3 = Vector3.ZERO
-var from_position_in: int = PositionIn3D.OWN_SIZE
 var to_position: Vector3 = Vector3.ZERO
-var to_position_in: int = PositionIn3D.OWN_SIZE
 
-# --- ROTATION (From/To model) ---
+# --- ROTATION (From/To: Vector3 Euler angles) ---
 var from_rotation: Vector3 = Vector3.ZERO
 var to_rotation: Vector3 = Vector3(0, 90, 0)
-var rotation_unit: int = RotationUnit.DEGREES
-var rotation_pivot_offset: Vector3 = Vector3.ZERO
 
-# --- SHARED FROM/TO (used by all transform types) ---
-var from_reference: int = TransformReference.SELF:
-	set(value):
-		from_reference = value
-		notify_property_list_changed()
-var to_reference: int = TransformReference.CUSTOM:
-	set(value):
-		to_reference = value
-		notify_property_list_changed()
-var from_target_node: NodePath
-var to_target_node: NodePath
-var from_capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		from_capture_at = value
-		if value != CaptureAt.IN_EDITOR:
-			_from_editor_cached_position = Vector3.ZERO
-			_from_editor_cached_rotation = Vector3.ZERO
-			_from_editor_cached_scale = Vector3.ONE
-		elif Engine.is_editor_hint():
-			_update_editor_cache()
-		notify_property_list_changed()
-var to_capture_at: int = CaptureAt.TRIGGER:
-	set(value):
-		to_capture_at = value
-		if value != CaptureAt.IN_EDITOR:
-			_to_editor_cached_position = Vector3.ZERO
-			_to_editor_cached_rotation = Vector3.ZERO
-			_to_editor_cached_scale = Vector3.ONE
-		elif Engine.is_editor_hint():
-			_update_editor_cache()
-		notify_property_list_changed()
-
-# --- SCALE (From/To model) ---
+# --- SCALE ---
 var from_scale: Vector3 = Vector3.ZERO
 var to_scale: Vector3 = Vector3.ONE
-
-# --- SCALE PIVOT ---
-var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		scale_pivot_mode = value
-		notify_property_list_changed()
-var scale_custom_pivot: Vector3 = Vector3.ZERO
 
 # --- EDITOR CACHE (serialized only when capture_at == IN_EDITOR) ---
 var _from_editor_cached_position: Vector3 = Vector3.ZERO
@@ -154,531 +72,359 @@ var _to_editor_cached_scale: Vector3 = Vector3.ONE
 
 
 # =============================================================================
-# CONDITIONAL EXPORT SYSTEM
+# CONDITIONAL EXPORT SYSTEM — typed property descriptors only
+# Note: _get_rotation_from_to_properties() and _get_scale_pivot_properties()
+# are OVERRIDDEN here to match original 3D inspector layout (rotation_unit
+# inline, pivot appended at end of rotation section).
 # =============================================================================
 
-func _get_property_list() -> Array[Dictionary]:
-	var props: Array[Dictionary] = []
+func _get_from_position_property() -> Array[Dictionary]:
+	return [{"name": "from_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
-	# --- Effect group: subclass selector + base effect properties ---
-	props.append({"name": "Effect", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "transform_target", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append_array(_get_effect_base_properties())
+func _get_to_position_property() -> Array[Dictionary]:
+	return [{"name": "to_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
-	match transform_target:
-		TransformTarget.POSITION:
-			props.append_array(_get_position_from_to_properties())
-		TransformTarget.ROTATION:
-			props.append_array(_get_rotation_from_to_properties())
-		TransformTarget.SCALE:
-			props.append_array(_get_scale_from_to_properties())
-			props.append_array(_get_scale_pivot_properties())
+func _get_from_rotation_property() -> Array[Dictionary]:
+	var arr: Array[Dictionary] = [{"name": "from_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	arr.append({"name": "rotation_unit", "type": TYPE_INT, "usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Degrees,Radians"})
+	return arr
 
-	if from_reference == TransformReference.SELF and from_capture_at == CaptureAt.IN_EDITOR:
-		props.append({"name": "_from_editor_cached_position", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_from_editor_cached_rotation", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_from_editor_cached_scale", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
+func _get_to_rotation_property() -> Array[Dictionary]:
+	var arr: Array[Dictionary] = [{"name": "to_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	# Only show rotation_unit once — if from is CUSTOM it shows it already
+	if from_reference != TransformReference.CUSTOM:
+		arr.append({"name": "rotation_unit", "type": TYPE_INT, "usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Degrees,Radians"})
+	return arr
 
-	if to_reference == TransformReference.SELF and to_capture_at == CaptureAt.IN_EDITOR:
-		props.append({"name": "_to_editor_cached_position", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_to_editor_cached_rotation", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
-		props.append({"name": "_to_editor_cached_scale", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_STORAGE})
+func _get_from_scale_property() -> Array[Dictionary]:
+	return [{"name": "from_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
-	return props
+func _get_to_scale_property() -> Array[Dictionary]:
+	return [{"name": "to_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
+func _get_from_editor_cache_storage_properties() -> Array[Dictionary]:
+	return [
+		{"name": "_from_editor_cached_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_from_editor_cached_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_from_editor_cached_scale",    "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+	]
 
-func _get_position_from_to_properties() -> Array[Dictionary]:
-	var pos_props: Array[Dictionary] = []
-
-	pos_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	pos_props.append({
-		"name": "from_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if from_reference == TransformReference.CUSTOM:
-		pos_props.append({
-			"name": "from_position_in", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "World Units,Own Size,Parent Size",
-		})
-		pos_props.append({
-			"name": "from_position", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-	elif from_reference == TransformReference.SELF:
-		pos_props.append({
-			"name": "from_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif from_reference == TransformReference.TARGET_NODE:
-		pos_props.append({
-			"name": "from_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-
-	pos_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	pos_props.append({
-		"name": "to_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if to_reference == TransformReference.CUSTOM:
-		pos_props.append({
-			"name": "to_position_in", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "World Units,Own Size,Parent Size",
-		})
-		pos_props.append({
-			"name": "to_position", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-	elif to_reference == TransformReference.SELF:
-		pos_props.append({
-			"name": "to_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif to_reference == TransformReference.TARGET_NODE:
-		pos_props.append({
-			"name": "to_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-	return pos_props
-
-
-func _get_rotation_from_to_properties() -> Array[Dictionary]:
-	var rot_props: Array[Dictionary] = []
-
-	rot_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	rot_props.append({
-		"name": "from_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if from_reference == TransformReference.CUSTOM:
-		rot_props.append({
-			"name": "from_rotation", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		rot_props.append({
-			"name": "rotation_unit", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Degrees,Radians",
-		})
-	elif from_reference == TransformReference.SELF:
-		rot_props.append({
-			"name": "from_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif from_reference == TransformReference.TARGET_NODE:
-		rot_props.append({
-			"name": "from_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-
-	rot_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	rot_props.append({
-		"name": "to_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if to_reference == TransformReference.CUSTOM:
-		rot_props.append({
-			"name": "to_rotation", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-		# Only show rotation_unit once (shared between From/To custom)
-		if from_reference != TransformReference.CUSTOM:
-			rot_props.append({
-				"name": "rotation_unit", "type": TYPE_INT,
-				"usage": PROPERTY_USAGE_DEFAULT,
-				"hint": PROPERTY_HINT_ENUM,
-				"hint_string": "Degrees,Radians",
-			})
-	elif to_reference == TransformReference.SELF:
-		rot_props.append({
-			"name": "to_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif to_reference == TransformReference.TARGET_NODE:
-		rot_props.append({
-			"name": "to_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-
-	# Rotation pivot (always shown for rotation)
-	rot_props.append({"name": "Pivot", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	rot_props.append({
-		"name": "rotation_pivot_offset", "type": TYPE_VECTOR3,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_NONE,
-	})
-	return rot_props
-
-
-func _get_scale_from_to_properties() -> Array[Dictionary]:
-	var scale_props: Array[Dictionary] = []
-
-	scale_props.append({"name": "From", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	scale_props.append({
-		"name": "from_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if from_reference == TransformReference.CUSTOM:
-		scale_props.append({
-			"name": "from_scale", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-	elif from_reference == TransformReference.SELF:
-		scale_props.append({
-			"name": "from_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif from_reference == TransformReference.TARGET_NODE:
-		scale_props.append({
-			"name": "from_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-
-	scale_props.append({"name": "To", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP})
-	scale_props.append({
-		"name": "to_reference", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Custom,Self,Target Node",
-	})
-	if to_reference == TransformReference.CUSTOM:
-		scale_props.append({
-			"name": "to_scale", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-		})
-	elif to_reference == TransformReference.SELF:
-		scale_props.append({
-			"name": "to_capture_at", "type": TYPE_INT,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Trigger,Ready,In Editor",
-		})
-	elif to_reference == TransformReference.TARGET_NODE:
-		scale_props.append({
-			"name": "to_target_node", "type": TYPE_NODE_PATH,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES,
-			"hint_string": "Node3D",
-		})
-	return scale_props
-
-
-func _get_scale_pivot_properties() -> Array[Dictionary]:
-	var pivot_props: Array[Dictionary] = [{
-		"name": "scale_pivot_mode", "type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_ENUM,
-		"hint_string": "Auto Center,Inherit,Custom",
-	}]
-	if scale_pivot_mode == PivotMode.CUSTOM:
-		pivot_props.append({
-			"name": "scale_custom_pivot", "type": TYPE_VECTOR3,
-			"usage": PROPERTY_USAGE_DEFAULT,
-			"hint": PROPERTY_HINT_NONE,
-		})
-	return pivot_props
+func _get_to_editor_cache_storage_properties() -> Array[Dictionary]:
+	return [
+		{"name": "_to_editor_cached_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_to_editor_cached_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_to_editor_cached_scale",    "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+	]
 
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"transform_target": transform_target = value; return true
-		&"from_position": from_position = value; return true
-		&"from_position_in": from_position_in = value; return true
-		&"to_position": to_position = value; return true
-		&"to_position_in": to_position_in = value; return true
-		&"from_rotation": from_rotation = value; return true
-		&"to_rotation": to_rotation = value; return true
-		&"rotation_unit": rotation_unit = value; return true
-		&"rotation_pivot_offset": rotation_pivot_offset = value; return true
-		&"from_reference": from_reference = value; return true
-		&"to_reference": to_reference = value; return true
-		&"from_target_node": from_target_node = value; return true
-		&"to_target_node": to_target_node = value; return true
-		&"from_capture_at": from_capture_at = value; return true
-		&"to_capture_at": to_capture_at = value; return true
-		&"from_scale": from_scale = value; return true
-		&"to_scale": to_scale = value; return true
-		&"scale_pivot_mode": scale_pivot_mode = value; return true
-		&"scale_custom_pivot": scale_custom_pivot = value; return true
+		&"from_position":                from_position = value;                return true
+		&"to_position":                  to_position = value;                  return true
+		&"from_rotation":                from_rotation = value;                return true
+		&"to_rotation":                  to_rotation = value;                  return true
+		&"from_scale":                   from_scale = value;                   return true
+		&"to_scale":                     to_scale = value;                     return true
 		&"_from_editor_cached_position": _from_editor_cached_position = value; return true
 		&"_from_editor_cached_rotation": _from_editor_cached_rotation = value; return true
-		&"_from_editor_cached_scale": _from_editor_cached_scale = value; return true
-		&"_to_editor_cached_position": _to_editor_cached_position = value; return true
-		&"_to_editor_cached_rotation": _to_editor_cached_rotation = value; return true
-		&"_to_editor_cached_scale": _to_editor_cached_scale = value; return true
-	return false
+		&"_from_editor_cached_scale":    _from_editor_cached_scale = value;    return true
+		&"_to_editor_cached_position":   _to_editor_cached_position = value;   return true
+		&"_to_editor_cached_rotation":   _to_editor_cached_rotation = value;   return true
+		&"_to_editor_cached_scale":      _to_editor_cached_scale = value;      return true
+	return super._set(property, value)
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		&"transform_target": return transform_target
-		&"from_position": return from_position
-		&"from_position_in": return from_position_in
-		&"to_position": return to_position
-		&"to_position_in": return to_position_in
-		&"from_rotation": return from_rotation
-		&"to_rotation": return to_rotation
-		&"rotation_unit": return rotation_unit
-		&"rotation_pivot_offset": return rotation_pivot_offset
-		&"from_reference": return from_reference
-		&"to_reference": return to_reference
-		&"from_target_node": return from_target_node
-		&"to_target_node": return to_target_node
-		&"from_capture_at": return from_capture_at
-		&"to_capture_at": return to_capture_at
-		&"from_scale": return from_scale
-		&"to_scale": return to_scale
-		&"scale_pivot_mode": return scale_pivot_mode
-		&"scale_custom_pivot": return scale_custom_pivot
+		&"from_position":                return from_position
+		&"to_position":                  return to_position
+		&"from_rotation":                return from_rotation
+		&"to_rotation":                  return to_rotation
+		&"from_scale":                   return from_scale
+		&"to_scale":                     return to_scale
 		&"_from_editor_cached_position": return _from_editor_cached_position
 		&"_from_editor_cached_rotation": return _from_editor_cached_rotation
-		&"_from_editor_cached_scale": return _from_editor_cached_scale
-		&"_to_editor_cached_position": return _to_editor_cached_position
-		&"_to_editor_cached_rotation": return _to_editor_cached_rotation
-		&"_to_editor_cached_scale": return _to_editor_cached_scale
-	return null
+		&"_from_editor_cached_scale":    return _from_editor_cached_scale
+		&"_to_editor_cached_position":   return _to_editor_cached_position
+		&"_to_editor_cached_rotation":   return _to_editor_cached_rotation
+		&"_to_editor_cached_scale":      return _to_editor_cached_scale
+	return super._get(property)
 
 
 # =============================================================================
-# INTERNAL STATE
+# INTERNAL STATE — typed runtime vars
 # =============================================================================
 
 # Animation reference base — captured at animation start when target is at natural state.
-# Used purely for From/To computation. NOT for external-move detection (node handles that).
 var _base_position: Vector3 = Vector3.ZERO
 var _base_transform: Transform3D = Transform3D.IDENTITY
 var _base_euler: Vector3 = Vector3.ZERO
 var _base_quat: Quaternion = Quaternion.IDENTITY
 var _base_scale: Vector3 = Vector3.ONE
-var _has_base: bool = false
 
 # Fixed pivot position in parent space (for rotation, computed once at start)
 var _fixed_pivot_parent: Vector3 = Vector3.ZERO
 
 # Resolved pivot point for scale (local space)
 var _scale_pivot_point: Vector3 = Vector3.ZERO
-var _scale_pivot_resolved: bool = false
 
 # Resolved From/To target node references
 var _from_ref: Node3D = null
 var _to_ref: Node3D = null
 
-# Self snapshots
+# Self snapshots — typed (guard flags live in base)
 var _from_self_position_snapshot: Vector3 = Vector3.ZERO
-var _has_from_self_position_snapshot: bool = false
 var _from_self_rotation_snapshot: Vector3 = Vector3.ZERO
-var _has_from_self_rotation_snapshot: bool = false
 var _from_self_scale_snapshot: Vector3 = Vector3.ONE
-var _has_from_self_scale_snapshot: bool = false
-
 var _to_self_position_snapshot: Vector3 = Vector3.ZERO
-var _has_to_self_position_snapshot: bool = false
 var _to_self_rotation_snapshot: Vector3 = Vector3.ZERO
-var _has_to_self_rotation_snapshot: bool = false
 var _to_self_scale_snapshot: Vector3 = Vector3.ONE
-var _has_to_self_scale_snapshot: bool = false
 
 
 # =============================================================================
-# VIRTUAL METHOD OVERRIDES
+# VIRTUAL HOOK IMPLEMENTATIONS
 # =============================================================================
 
-func _on_host_ready(target: Node, host: Node) -> void:
-	_host_node = host
-	_capture_base(target)
-
-	var uses_from_self := from_reference == TransformReference.SELF
-	var uses_to_self := to_reference == TransformReference.SELF
-
-	if uses_from_self:
-		if from_capture_at == CaptureAt.READY:
-			match transform_target:
-				TransformTarget.POSITION:
-					_capture_from_self_position_snapshot(target)
-				TransformTarget.ROTATION:
-					_capture_from_self_rotation_snapshot(target)
-				TransformTarget.SCALE:
-					_capture_from_self_scale_snapshot(target)
-
-	if uses_to_self:
-		if to_capture_at == CaptureAt.READY:
-			match transform_target:
-				TransformTarget.POSITION:
-					_capture_to_self_position_snapshot(target)
-				TransformTarget.ROTATION:
-					_capture_to_self_rotation_snapshot(target)
-				TransformTarget.SCALE:
-					_capture_to_self_scale_snapshot(target)
-
-
-func _on_editor_pre_save(target: Node) -> void:
-	_update_editor_cache(target)
-
-
-func _on_animate_start(target: Node) -> void:
-	if not _has_base:
-		_capture_base(target)
-
-	# Set contribution flags so the domain node knows which channels to aggregate
-	_contributes_position = (transform_target == TransformTarget.POSITION)
-	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
-	_contributes_scale = (transform_target == TransformTarget.SCALE)
-	# Pivot compensation for rotation/scale also contributes position
-	if transform_target == TransformTarget.ROTATION and rotation_pivot_offset != Vector3.ZERO:
-		_contributes_position = true
-	if transform_target == TransformTarget.SCALE and _scale_pivot_point != Vector3.ZERO:
-		_contributes_position = true
-
-	_resolve_from_to_refs()
-
-	var uses_from_self := from_reference == TransformReference.SELF
-	var uses_to_self := to_reference == TransformReference.SELF
-
-	if uses_from_self and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
-		match transform_target:
-			TransformTarget.POSITION:
-				_capture_from_self_position_snapshot(target)
-			TransformTarget.ROTATION:
-				_capture_from_self_rotation_snapshot(target)
-			TransformTarget.SCALE:
-				_capture_from_self_scale_snapshot(target)
-
-	if uses_to_self and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
-		match transform_target:
-			TransformTarget.POSITION:
-				_capture_to_self_position_snapshot(target)
-			TransformTarget.ROTATION:
-				_capture_to_self_rotation_snapshot(target)
-			TransformTarget.SCALE:
-				_capture_to_self_scale_snapshot(target)
-
-	# Resolve scale pivot if needed
-	if transform_target == TransformTarget.SCALE and not _scale_pivot_resolved:
-		_resolve_scale_pivot(target)
-		_scale_pivot_resolved = true
-
+func _do_capture_base(target: Node) -> void:
+	if _has_base:
+		return
+	var n3d := target as Node3D
+	if n3d == null:
+		_base_transform = Transform3D.IDENTITY
+		_has_base = true
+		return
+	# Read from the ledger so we capture the natural state even if other Juice nodes
+	# are active on the same target.
+	_base_position = JuiceLedger.get_base(n3d, "position", n3d.position)
+	var base_rotation: Vector3 = JuiceLedger.get_base(n3d, "rotation", n3d.rotation)
+	_base_scale = JuiceLedger.get_base(n3d, "scale", n3d.scale)
+	_base_transform = Transform3D(Basis.from_euler(base_rotation).scaled(_base_scale), _base_position)
+	var ortho_basis := _base_transform.basis.orthonormalized()
+	_base_euler = ortho_basis.get_euler()
+	_base_quat = Quaternion(ortho_basis)
+	# Pre-compute fixed pivot position in parent space for rotation compensation
+	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
+	_has_base = true
 	if debug_enabled:
-		print("[Transform3D] Start: %s" % TransformTarget.keys()[transform_target])
+		print("[Transform3D] Base captured: pos=%s, scale=%s" % [_base_position, _base_scale])
 
 
-func _apply_effect(progress: float, target: Node) -> void:
+func _do_update_editor_cache(target: Node) -> void:
+	if not Engine.is_editor_hint():
+		return
 	var n3d := target as Node3D
 	if n3d == null:
 		return
-
-	match transform_target:
-		TransformTarget.POSITION:
-			_apply_position_effect(progress, n3d)
-		TransformTarget.ROTATION:
-			_apply_rotation_effect(progress, n3d)
-		TransformTarget.SCALE:
-			_apply_scale_effect(progress, n3d)
-
-
-func _restore_to_natural(_target: Node) -> void:
-	# Clear deltas — the domain node will write natural state via _post_tick_write()
-	_clear_deltas()
+	if from_reference == TransformReference.SELF and from_capture_at == CaptureAt.IN_EDITOR:
+		_from_editor_cached_position = n3d.position
+		_from_editor_cached_rotation = n3d.rotation
+		_from_editor_cached_scale = n3d.scale
+	if to_reference == TransformReference.SELF and to_capture_at == CaptureAt.IN_EDITOR:
+		_to_editor_cached_position = n3d.position
+		_to_editor_cached_rotation = n3d.rotation
+		_to_editor_cached_scale = n3d.scale
+	if debug_enabled:
+		print("[Transform3D] Editor cache updated: pos=%s, rot=%s, scale=%s" % [
+			n3d.position, n3d.rotation, n3d.scale])
 
 
-func _invalidate_base_cache() -> void:
-	_has_base = false
-	_scale_pivot_resolved = false
+func _clear_from_editor_cache_typed() -> void:
+	_from_editor_cached_position = Vector3.ZERO
+	_from_editor_cached_rotation = Vector3.ZERO
+	_from_editor_cached_scale = Vector3.ONE
+
+
+func _clear_to_editor_cache_typed() -> void:
+	_to_editor_cached_position = Vector3.ZERO
+	_to_editor_cached_rotation = Vector3.ZERO
+	_to_editor_cached_scale = Vector3.ONE
+
+
+func _capture_from_self_position_snapshot(target: Node) -> void:
+	if _has_from_self_position_snapshot:
+		return
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_position_snapshot = _from_editor_cached_position
+	else:
+		var n3d := target as Node3D
+		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
+	_has_from_self_position_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
+			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]])
+
+
+func _capture_from_self_rotation_snapshot(target: Node) -> void:
+	if _has_from_self_rotation_snapshot:
+		return
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_rotation_snapshot = _from_editor_cached_rotation
+	else:
+		var n3d := target as Node3D
+		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
+	_has_from_self_rotation_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
+			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
+
+
+func _capture_from_self_scale_snapshot(target: Node) -> void:
+	if _has_from_self_scale_snapshot:
+		return
+	if from_capture_at == CaptureAt.IN_EDITOR:
+		_from_self_scale_snapshot = _from_editor_cached_scale
+	else:
+		var n3d := target as Node3D
+		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
+	_has_from_self_scale_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
+			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
+
+
+func _capture_to_self_position_snapshot(target: Node) -> void:
+	if _has_to_self_position_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_position_snapshot = _to_editor_cached_position
+	else:
+		var n3d := target as Node3D
+		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
+	_has_to_self_position_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
+			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]])
+
+
+func _capture_to_self_rotation_snapshot(target: Node) -> void:
+	if _has_to_self_rotation_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_rotation_snapshot = _to_editor_cached_rotation
+	else:
+		var n3d := target as Node3D
+		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
+	_has_to_self_rotation_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
+			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
+
+
+func _capture_to_self_scale_snapshot(target: Node) -> void:
+	if _has_to_self_scale_snapshot:
+		return
+	if to_capture_at == CaptureAt.IN_EDITOR:
+		_to_self_scale_snapshot = _to_editor_cached_scale
+	else:
+		var n3d := target as Node3D
+		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
+	_has_to_self_scale_snapshot = true
+	if debug_enabled:
+		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
+			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
+
+
+func _scale_pivot_point_is_nonzero() -> bool:
+	return _scale_pivot_point != Vector3.ZERO
+
+
+func _do_resolve_scale_pivot(target: Node) -> void:
+	var n3d := target as Node3D
+	match scale_pivot_mode:
+		PivotMode.AUTO_CENTER:
+			if n3d:
+				var bounds := _infer_node3d_local_bounds(n3d)
+				if bounds.size == Vector3.ZERO:
+					bounds = _infer_node3d_bounds_recursive(n3d)
+				_scale_pivot_point = bounds.get_center() if bounds.size != Vector3.ZERO else Vector3.ZERO
+				if debug_enabled:
+					print("[Transform3D] Auto-center scale pivot: bounds=%s, center=%s" % [bounds, _scale_pivot_point])
+			else:
+				_scale_pivot_point = Vector3.ZERO
+		PivotMode.INHERIT:
+			_scale_pivot_point = Vector3.ZERO
+		PivotMode.CUSTOM:
+			_scale_pivot_point = scale_custom_pivot
+
+
+func _apply_position_effect(progress: float, target: Node) -> void:
+	var n3d := target as Node3D
+	if n3d == null:
+		return
+	var from_value := _resolve_from_position(n3d)
+	var to_value   := _resolve_to_position(n3d)
+	_pos_delta = from_value.lerp(to_value, progress) - _base_position
+
+
+func _apply_rotation_effect(progress: float, target: Node) -> void:
+	var n3d := target as Node3D
+	if n3d == null:
+		return
+	var from_quat := _resolve_from_rotation_quat(n3d)
+	var to_quat   := _resolve_to_rotation_quat(n3d)
+	var current_quat := from_quat.slerp(to_quat, progress)
+	var desired_euler := Basis(current_quat).get_euler()
+	_rot_delta = desired_euler - _base_euler
+	# Pivot compensation
+	if rotation_pivot_offset != Vector3.ZERO:
+		var new_basis := Basis(current_quat)
+		_pos_delta = (_fixed_pivot_parent - new_basis * rotation_pivot_offset) - _base_position
+
+
+func _apply_scale_effect(progress: float, target: Node) -> void:
+	var n3d := target as Node3D
+	if n3d == null:
+		return
+	var from_value := _resolve_from_scale(n3d)
+	var to_value   := _resolve_to_scale(n3d)
+	var desired_absolute := from_value.lerp(to_value, progress)
+	_scale_delta = desired_absolute - _base_scale
+	if _scale_pivot_point != Vector3.ZERO:
+		var scale_ratio := desired_absolute / _base_scale
+		_pos_delta = _scale_pivot_point * (Vector3.ONE - scale_ratio)
+
+
+func _do_resolve_from_to_refs() -> void:
 	_from_ref = null
 	_to_ref = null
-	_has_from_self_position_snapshot = false
-	_has_from_self_rotation_snapshot = false
-	_has_from_self_scale_snapshot = false
-	_has_to_self_position_snapshot = false
-	_has_to_self_rotation_snapshot = false
-	_has_to_self_scale_snapshot = false
-	_clear_deltas()
+	if from_reference == TransformReference.TARGET_NODE:
+		_from_ref = _resolve_node_path_to_node3d(from_target_node, "from_target_node")
+	if to_reference == TransformReference.TARGET_NODE:
+		_to_ref = _resolve_node_path_to_node3d(to_target_node, "to_target_node")
 
 
-func _get_interrupt_identity() -> Variant:
-	return [get_script(), transform_target]
+func _invalidate_typed_refs() -> void:
+	_from_ref = null
+	_to_ref = null
 
 
 # =============================================================================
-# POSITION EFFECT
+# POSITION EFFECT — internal resolvers
 # =============================================================================
 
-## Compute position delta. Stores result in _pos_delta — node writes once per frame.
-func _apply_position_effect(progress: float, n3d: Node3D) -> void:
-	var from_value := _resolve_from_position(n3d)
-	var to_value := _resolve_to_position(n3d)
-	var desired_absolute := from_value.lerp(to_value, progress)
-
-	# Store delta from natural state — node aggregates and writes
-	_pos_delta = desired_absolute - _base_position
-
-
-func _resolve_from_position(animated: Node3D) -> Vector3:
+func _resolve_from_position(n3d: Node3D) -> Vector3:
 	match from_reference:
 		TransformReference.CUSTOM:
-			return _base_position + _convert_to_world_units(from_position, from_position_in, animated)
+			return _base_position + _convert_to_world_units(from_position, from_position_in, n3d)
 		TransformReference.SELF:
 			return _from_self_position_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
-				return _get_ref_local_position(_from_ref, animated)
-			return _base_position
+				return _get_ref_local_position(_from_ref, n3d)
 	return _base_position
 
 
-func _resolve_to_position(animated: Node3D) -> Vector3:
+func _resolve_to_position(n3d: Node3D) -> Vector3:
 	match to_reference:
 		TransformReference.CUSTOM:
-			return _base_position + _convert_to_world_units(to_position, to_position_in, animated)
+			return _base_position + _convert_to_world_units(to_position, to_position_in, n3d)
 		TransformReference.SELF:
 			return _to_self_position_snapshot
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
-				return _get_ref_local_position(_to_ref, animated)
-			return _base_position
+				return _get_ref_local_position(_to_ref, n3d)
 	return _base_position
 
 
@@ -690,28 +436,8 @@ func _get_ref_local_position(ref: Node3D, animated: Node3D) -> Vector3:
 
 
 # =============================================================================
-# ROTATION EFFECT (Quaternion slerp + pivot)
+# ROTATION EFFECT — internal resolvers (Quaternion slerp)
 # =============================================================================
-
-## Compute rotation delta using Quaternion slerp with pivot compensation.
-## Stores result in _rot_delta (and _pos_delta for pivot) — node writes once per frame.
-func _apply_rotation_effect(progress: float, n3d: Node3D) -> void:
-	var from_quat := _resolve_from_rotation_quat(n3d)
-	var to_quat := _resolve_to_rotation_quat(n3d)
-	var current_quat := from_quat.slerp(to_quat, progress)
-
-	# Convert back to euler for delta storage
-	var desired_euler := Basis(current_quat).get_euler()
-
-	# Store rotation delta
-	_rot_delta = desired_euler - _base_euler
-
-	# Pivot compensation: store position delta
-	if rotation_pivot_offset != Vector3.ZERO:
-		var new_basis := Basis(current_quat)
-		var desired_pos := _fixed_pivot_parent - new_basis * rotation_pivot_offset
-		_pos_delta = desired_pos - _base_position
-
 
 func _resolve_from_rotation_quat(animated: Node3D) -> Quaternion:
 	match from_reference:
@@ -723,7 +449,6 @@ func _resolve_from_rotation_quat(animated: Node3D) -> Quaternion:
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_rotation_quat(_from_ref, animated)
-			return _base_quat
 	return _base_quat
 
 
@@ -737,7 +462,6 @@ func _resolve_to_rotation_quat(animated: Node3D) -> Quaternion:
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_rotation_quat(_to_ref, animated)
-			return _base_quat
 	return _base_quat
 
 
@@ -757,24 +481,8 @@ func _get_ref_local_rotation_quat(ref: Node3D, animated: Node3D) -> Quaternion:
 
 
 # =============================================================================
-# SCALE EFFECT (with pivot compensation)
+# SCALE EFFECT — internal resolvers
 # =============================================================================
-
-## Compute scale delta with pivot compensation.
-## Stores result in _scale_delta (and _pos_delta for pivot) — node writes once per frame.
-func _apply_scale_effect(progress: float, n3d: Node3D) -> void:
-	var from_value := _resolve_from_scale(n3d)
-	var to_value := _resolve_to_scale(n3d)
-	var desired_absolute := from_value.lerp(to_value, progress)
-
-	# Store scale delta
-	_scale_delta = desired_absolute - _base_scale
-
-	# Pivot compensation: store position delta
-	if _scale_pivot_point != Vector3.ZERO:
-		var scale_ratio := desired_absolute / _base_scale
-		_pos_delta = _scale_pivot_point * (Vector3.ONE - scale_ratio)
-
 
 func _resolve_from_scale(n3d: Node3D) -> Vector3:
 	match from_reference:
@@ -785,7 +493,6 @@ func _resolve_from_scale(n3d: Node3D) -> Vector3:
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_from_ref):
 				return _get_ref_local_scale(_from_ref, n3d)
-			return _base_scale
 	return _base_scale
 
 
@@ -798,7 +505,6 @@ func _resolve_to_scale(n3d: Node3D) -> Vector3:
 		TransformReference.TARGET_NODE:
 			if is_instance_valid(_to_ref):
 				return _get_ref_local_scale(_to_ref, n3d)
-			return _base_scale
 	return _base_scale
 
 
@@ -809,202 +515,6 @@ func _get_ref_local_scale(ref: Node3D, animated: Node3D) -> Vector3:
 	if parent is Node3D:
 		parent_scale = (parent as Node3D).global_transform.basis.get_scale()
 	return ref_global_scale / parent_scale
-
-
-# =============================================================================
-# FROM/TO REFERENCE RESOLUTION
-# =============================================================================
-
-func _resolve_from_to_refs() -> void:
-	_from_ref = null
-	_to_ref = null
-	if from_reference == TransformReference.TARGET_NODE:
-		_from_ref = _resolve_node_path_to_node3d(from_target_node, "from_target_node")
-	if to_reference == TransformReference.TARGET_NODE:
-		_to_ref = _resolve_node_path_to_node3d(to_target_node, "to_target_node")
-
-
-# =============================================================================
-# FROM SELF SNAPSHOT CAPTURE
-# =============================================================================
-
-func _capture_from_self_position_snapshot(target: Node) -> void:
-	if _has_from_self_position_snapshot:
-		return
-	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_position_snapshot = _from_editor_cached_position
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
-		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
-	_has_from_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
-			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]])
-
-
-func _capture_from_self_rotation_snapshot(target: Node) -> void:
-	if _has_from_self_rotation_snapshot:
-		return
-	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_rotation_snapshot = _from_editor_cached_rotation
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.rotation.
-		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
-	_has_from_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
-			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
-
-
-func _capture_from_self_scale_snapshot(target: Node) -> void:
-	if _has_from_self_scale_snapshot:
-		return
-	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_scale_snapshot = _from_editor_cached_scale
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.scale.
-		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
-	_has_from_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
-			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
-
-# =============================================================================
-# TO SELF SNAPSHOT CAPTURE
-# =============================================================================
-
-func _capture_to_self_position_snapshot(target: Node) -> void:
-	if _has_to_self_position_snapshot:
-		return
-	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_position_snapshot = _to_editor_cached_position
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
-		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
-	_has_to_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
-			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]])
-
-
-func _capture_to_self_rotation_snapshot(target: Node) -> void:
-	if _has_to_self_rotation_snapshot:
-		return
-	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_rotation_snapshot = _to_editor_cached_rotation
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.rotation.
-		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
-	_has_to_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
-			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
-
-
-func _capture_to_self_scale_snapshot(target: Node) -> void:
-	if _has_to_self_scale_snapshot:
-		return
-	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_scale_snapshot = _to_editor_cached_scale
-	else:
-		var n3d := target as Node3D
-		# Prefer the ledger base over n3d.scale.
-		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
-	_has_to_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
-			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
-
-
-# =============================================================================
-# EDITOR CACHE (IN_EDITOR capture mode)
-# =============================================================================
-
-func _update_editor_cache(target: Node = null) -> void:
-	if not Engine.is_editor_hint():
-		return
-	var n3d := target as Node3D
-	if n3d == null:
-		return
-
-	if from_reference == TransformReference.SELF and from_capture_at == CaptureAt.IN_EDITOR:
-		_from_editor_cached_position = n3d.position
-		_from_editor_cached_rotation = n3d.rotation
-		_from_editor_cached_scale = n3d.scale
-
-	if to_reference == TransformReference.SELF and to_capture_at == CaptureAt.IN_EDITOR:
-		_to_editor_cached_position = n3d.position
-		_to_editor_cached_rotation = n3d.rotation
-		_to_editor_cached_scale = n3d.scale
-
-	if debug_enabled:
-		print("[Transform3D] Editor cache updated: pos=%s, rot=%s, scale=%s" % [
-			n3d.position, n3d.rotation, n3d.scale])
-
-
-# =============================================================================
-# BASE CAPTURE
-# =============================================================================
-
-func _capture_base(target: Node) -> void:
-	if _has_base:
-		return
-	var n3d := target as Node3D
-	if n3d == null:
-		_base_transform = Transform3D.IDENTITY
-		_has_base = true
-		return
-
-	# Read from the ledger so we capture the natural state even if other Juice nodes
-	# are active on the same target (e.g. nested packed prefab compositing scenario).
-	_base_position = JuiceLedger.get_base(n3d, "position", n3d.position)
-	var base_rotation: Vector3 = JuiceLedger.get_base(n3d, "rotation", n3d.rotation)
-	_base_scale = JuiceLedger.get_base(n3d, "scale", n3d.scale)
-	_base_transform = Transform3D(Basis.from_euler(base_rotation).scaled(_base_scale), _base_position)
-	var ortho_basis := _base_transform.basis.orthonormalized()
-	_base_euler = ortho_basis.get_euler()
-	_base_quat = Quaternion(ortho_basis)
-
-	# Pre-compute the fixed pivot position in parent space for rotation
-	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
-
-	_has_base = true
-
-	if debug_enabled:
-		print("[Transform3D] Base captured: pos=%s, scale=%s" % [_base_position, _base_scale])
-
-
-# =============================================================================
-# SCALE PIVOT RESOLUTION
-# =============================================================================
-
-func _resolve_scale_pivot(target: Node) -> void:
-	var n3d := target as Node3D
-	match scale_pivot_mode:
-		PivotMode.AUTO_CENTER:
-			if n3d:
-				var bounds := _infer_node3d_local_bounds(n3d)
-				if bounds.size == Vector3.ZERO:
-					bounds = _infer_node3d_bounds_recursive(n3d)
-				if bounds.size != Vector3.ZERO:
-					_scale_pivot_point = bounds.get_center()
-				else:
-					_scale_pivot_point = Vector3.ZERO
-				if debug_enabled:
-					print("[Transform3D] Auto-center scale pivot: bounds=%s, center=%s" % [bounds, _scale_pivot_point])
-			else:
-				_scale_pivot_point = Vector3.ZERO
-		PivotMode.INHERIT:
-			_scale_pivot_point = Vector3.ZERO
-		PivotMode.CUSTOM:
-			_scale_pivot_point = scale_custom_pivot
-
-
 
 
 # =============================================================================
