@@ -396,17 +396,10 @@ var _seq_target_active_indices: Dictionary = {}
 ## Effects are continuously re-applied at From state every frame until released.
 var _seq_held_entries: Array[Dictionary] = []
 
-## Per-target contribution tracking for Container-safe writes.
-## Maps target Node → { "pos": Vector2/3, "rot": float/Vector3, "scale": Vector2/3 }
-## Used by domain _seq_post_tick_write_target to compute:
-##   natural = current - last_contribution; write = natural + new_delta
-var _seq_target_contributions: Dictionary = {}
-
-## Per-target expected values after our last write. Used for external-reset detection.
-## Maps target Node → { "property_name": expected_value_after_write }
-## If the actual value differs from expected, an external system reset the property
-## and our stored contribution is stale — must be cleared before computing natural.
-var _seq_expected_after_write: Dictionary = {}
+# _seq_target_contributions and _seq_expected_after_write were removed.
+# The Centralized Metadata Ledger (LEDGER_KEY on each target) now owns this state,
+# keyed by source instance_id. _seq_post_tick_write_target clears our source slice
+# via _ledger_cleanup_source before re-registering current-frame deltas.
 
 # =============================================================================
 # LIFECYCLE
@@ -489,23 +482,14 @@ func _ready() -> void:
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
 		_try_auto_connect()
 
-	# Capture natural state before any effects modify the target (STACK only)
-	if _target_node != null:
-		_capture_base_values()
-
-	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.) — STACK only
-	if _target_node != null:
-		for effect in _runtime_effects:
-			if effect != null:
-				effect._on_host_ready(_target_node, self)
-
-	# Handle ON_READY trigger
-	if trigger_on == TriggerEvent.ON_READY:
-		_handle_trigger({"play_in": true})
-
-	# Default to no processing — but don't kill a trigger that already started above
-	if not _is_playing:
-		set_process(false)
+	# DEFERRED: Do NOT capture the base or fire ON_READY here.
+	# At this point the scene tree has not finished _ready() for all nodes, and
+	# Containers have not yet run their deferred _sort_children. Reading
+	# ctrl.position here would return (0, 0) for every button regardless of its
+	# real Container slot. call_deferred schedules _post_ready_init to run after
+	# the current frame's deferred queue — by then, Container._sort_children has
+	# already fired, so positions are correct.
+	call_deferred("_post_ready_init")
 
 
 func _process(delta: float) -> void:
@@ -622,6 +606,40 @@ func _exit_tree() -> void:
 	_active_effect_indices.clear()
 	set_process(false)
 
+## Deferred counterpart to _ready().
+## Runs after the Container engine has finished sorting its children for the
+## current frame (Container._sort_children is deferred before JuiceControl.
+## _ready() executes, so it fires first in the deferred queue). This guarantees
+## that _capture_base_values reads the real Container-managed ctrl.position
+## rather than the pre-layout (0, 0) that all buttons share before first sort.
+## Effects that use CaptureAt.READY likewise see the correct position here.
+func _post_ready_init() -> void:
+	# Capture natural state after Container has sorted (STACK only).
+	# In SEQUENCER mode _target_node is null, so this is a no-op.
+	if _target_node != null:
+		_capture_base_values()
+
+	# Forward _on_host_ready so effects with CaptureAt.READY snapshot the
+	# real, Container-managed position rather than the pre-layout (0, 0).
+	if _target_node != null:
+		for effect in _runtime_effects:
+			if effect != null:
+				# Inject ledger base so CaptureAt.READY snapshots read the true natural
+				# position from the ledger rather than a potentially dirty target.property.
+				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
+				effect._on_host_ready(_target_node, self)
+
+	# Handle ON_READY trigger. Also deferred so the From/To snapshots inside
+	# _start_effects see the correct position when CaptureAt == READY.
+	if trigger_on == TriggerEvent.ON_READY:
+		_handle_trigger({"play_in": true})
+
+	# Default to no processing. If ON_READY already set _is_playing, keep it.
+	if not _is_playing:
+		set_process(false)
+
+
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -697,6 +715,8 @@ func set_external_progress(value: float) -> void:
 		_external_progress_initialized = true
 		for effect in _runtime_effects:
 			if effect != null:
+				# Inject ledger base: this path bypasses JuiceEffectBase.start() so injection is manual.
+				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
 				effect._on_animate_start(_target_node)
 	# Set progress on all effects (computes deltas)
 	for effect in _runtime_effects:
@@ -1010,7 +1030,6 @@ func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -
 
 	_seq_start_sequence(is_reverse, is_one_shot_return)
 
-
 ## Stop all sequencer animations cleanly.
 func _seq_stop() -> void:
 	_seq_generation += 1  # Abort any in-flight coroutines
@@ -1020,10 +1039,26 @@ func _seq_stop() -> void:
 	_seq_pp_forward = true
 	_seq_pp_current_cycle = 0
 	_seq_current_loop = 0
+	
+	# Sequencer memory leak fix: ensure we wipe our active ledgers natively
+	# before clearing the target tracking dictionaries.
+	if juice_source == JuiceSource.RECIPE:
+		for target_variant: Variant in _seq_target_active_indices.keys():
+			var target := target_variant as Node
+			if is_instance_valid(target):
+				_seq_restore_target_natural(target)
+				# Write-through: physically restore ctrl.position = base + remaining deltas.
+				# STACK stop() calls _post_tick_write() for this; SEQUENCER has no equivalent
+				# so without this, ctrl.position stays at the last animated value indefinitely.
+				_ledger_write_to_target(target)
+		for entry in _seq_held_entries:
+			var target := entry.get("target") as Node
+			if is_instance_valid(target) and not _seq_target_active_indices.has(target):
+				_seq_restore_target_natural(target)
+				_ledger_write_to_target(target)
+
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
-	_seq_target_contributions.clear()
-	_seq_expected_after_write.clear()
 
 	# Stop all per-target effect clones
 	for target_variant: Variant in _seq_target_effects.keys():
@@ -1258,6 +1293,10 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 		# Start effects at From state (progress 0.0 for in, 1.0 for out)
 		# then write deltas to target as a one-shot.
 		for eff in effects:
+			# Inject ledger base: the warmup path calls _on_animate_start directly (not via
+			# effect.start()), so it needs manual injection. TO=SELF snapshots captured here
+			# should read the target's natural ledger base position, not its warmup-modified state.
+			eff._ledger_base_snapshot = _ledger_get_base_dict(target)
 			eff._on_animate_start(target)
 			var from_progress := 0.0 if play_in else 1.0
 			eff._apply_effect(from_progress, target)
@@ -1521,31 +1560,19 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	pass
 
-
 ## Sequencer: undo warmup contribution on a target, restoring it to its natural
 ## (Container-managed / editor) state. Called before effects re-capture base for
 ## the real animation, preventing warmup contributions from polluting the base.
-## Generic — works for any property channel effects report via _get_seq_contribution().
+## IMPORTANT: non-permanent (false) — STACK JuiceControls own the ledger lifecycle.
+## The sequencer is a writer, not the owner. Permanently destroying the ledger would
+## erase the natural base that other JuiceControls (hover, scene-action, etc.) rely on.
 func _seq_restore_target_natural(target: Node) -> void:
-	var contrib: Dictionary = _seq_target_contributions.get(target, {})
-	var expected: Dictionary = _seq_expected_after_write.get(target, {})
-	for prop_name: String in contrib:
-		var actual: Variant = target.get(prop_name)
-		# External-reset detection: if actual differs from what we wrote last,
-		# an external system reset this property. Our contribution is no longer
-		# baked into the current value — skip subtraction (value is already natural).
-		if prop_name in expected and not _seq_values_approx_equal(actual, expected[prop_name]):
-			continue
-		target.set(prop_name, actual - contrib[prop_name])
-	_seq_target_contributions.erase(target)
-	_seq_expected_after_write.erase(target)
+	_ledger_cleanup_source(target, self, false)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
-## Generic — effects report their contributions via _get_seq_contribution()
-## keyed by Godot property names. Domain nodes do NOT need to override this.
-## Uses contribution-tracking pattern so Container re-sorts are automatically
-## absorbed — same principle as STACK mode's external-move detection.
+## Uses the Centralized Metadata Ledger to sum outputs across cross-stacking nodes
+## safely avoiding Container layout suppressions.
 func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	# Aggregate all effect contributions keyed by property name
 	var total := {}
@@ -1555,52 +1582,59 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 		var contrib: Dictionary = eff._get_seq_contribution()
 		for key: String in contrib:
 			if key in total:
-				total[key] = total[key] + contrib[key]
+				if typeof(total[key]) == TYPE_COLOR and typeof(contrib[key]) == TYPE_COLOR:
+					var c_tot := total[key] as Color
+					var c_con := contrib[key] as Color
+					total[key] = Color(c_tot.r * c_con.r, c_tot.g * c_con.g, c_tot.b * c_con.b, c_tot.a * c_con.a)
+				else:
+					total[key] = total[key] + contrib[key]
 			else:
 				total[key] = contrib[key]
 
-	# Retrieve our last contribution for this target
-	var prev: Dictionary = _seq_target_contributions.get(target, {})
+	var tracked_props: Array[String] = []
+	for k in total.keys():
+		tracked_props.append(k)
 
-	# External-reset detection: if the current value differs from what we wrote
-	# last frame, an external system changed the property. Our stored contribution
-	# is stale — clear it so we derive natural correctly from the reset value.
-	var expected: Dictionary = _seq_expected_after_write.get(target, {})
-	for key: String in prev:
-		if key in expected:
-			var actual: Variant = target.get(key)
-			if not _seq_values_approx_equal(actual, expected[key]):
-				prev.erase(key)
+	# The sequencer is a PURE WRITER: ensure ledger exists, clear stale deltas, register
+	# new deltas, write. It does NOT call _ledger_update_external_displacement.
+	#
+	# WHY: External displacement detection belongs to STACK JuiceControls via _pre_tick.
+	# They have context about their target (runs every frame while playing, plus JIT at
+	# trigger). The sequencer lacks that context and calling displacement detection here
+	# causes a critical bug during the warmup → real-animation transition:
+	#
+	#   _seq_restore_target_natural() zeroes OUR delta in the ledger (permanently=false).
+	#   ctrl.position is still at the warmup FROM position (no physical write happened).
+	#   → next _seq_post_tick_write_target call: total=0, ctrl=FROM_state, base=Container_Y.
+	#   → "idle" path fires: base = ctrl.position = FROM_state. BASE CORRUPTED.
+	#   → All subsequent ledger reads (hover, scene-action) use the corrupted base.
+	#
+	# With deferred _post_ready_init (which fires AFTER Container._sort_children), the
+	# ledger base is already the true Container position. The sequencer should trust it.
+	_ledger_ensure_initialized(target, tracked_props)
 
-	# For each property we're contributing to now: derive natural, then write
-	for key: String in total:
-		var prev_val: Variant = prev.get(key, _seq_zero_for(total[key]))
-		var natural: Variant = target.get(key) - prev_val
-		target.set(key, natural + total[key])
+	# Zero stale entries from the previous frame. Any property we animated last frame but
+	# not this frame (e.g., an effect chain finished one channel) is cleared so it does
+	# not accumulate as phantom deltas in the remaining registration step below.
+	_ledger_cleanup_source(target, self, false)
 
-	# Restore any properties we contributed to last frame but no longer do
-	for key: String in prev:
-		if key not in total:
-			target.set(key, target.get(key) - prev[key])
+	# Write current property offsets into the ledger and resolve absolute value
+	for prop in tracked_props:
+		var delta: Variant = total[prop]
+		_ledger_set_delta(target, self, prop, delta)
+		
+		var base_val: Variant = _ledger_get_base_value(target, prop, target.get(prop))
+		var total_delta: Variant = _ledger_get_total(target, prop, _seq_zero_for(base_val))
 
-	_seq_target_contributions[target] = total
+		if typeof(total_delta) == TYPE_COLOR:
+			var base_col := base_val as Color
+			var tot_col := total_delta as Color
+			target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
+		else:
+			target.set(prop, base_val + total_delta)
 
-	# Store expected values after write for next frame's external-reset detection
-	var new_expected := {}
-	for key: String in total:
-		new_expected[key] = target.get(key)
-	_seq_expected_after_write[target] = new_expected
 
 
-## Return the zero value for the same type as the given Variant.
-## Used by contribution-tracking when no previous contribution exists.
-static func _seq_zero_for(val: Variant) -> Variant:
-	match typeof(val):
-		TYPE_FLOAT: return 0.0
-		TYPE_VECTOR2: return Vector2.ZERO
-		TYPE_VECTOR3: return Vector3.ZERO
-		TYPE_COLOR: return Color(0, 0, 0, 0)
-	return val - val  # fallback for other numeric types
 
 
 ## Compare two Variant values with approximate equality.
@@ -2056,3 +2090,178 @@ func _on_control_gui_input_filtered(event: InputEvent) -> void:
 func _on_animation_finished(_anim_name: StringName) -> void:
 	_on_trigger_momentary()
 
+
+const LEDGER_KEY := &"juice_active_ledger"
+
+static func _seq_zero_for(value: Variant) -> Variant:
+	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT: return 0.0
+	if typeof(value) == TYPE_VECTOR2: return Vector2.ZERO
+	if typeof(value) == TYPE_VECTOR3: return Vector3.ZERO
+	if typeof(value) == TYPE_COLOR: return Color.WHITE
+	return null
+
+static func _ledger_ensure_initialized(target: Node, expected_props: Array[String]) -> Dictionary:
+	var ledger: Dictionary
+	if not target.has_meta(LEDGER_KEY):
+		ledger = { "base": {}, "deltas": {} }
+		target.set_meta(LEDGER_KEY, ledger)
+	else:
+		ledger = target.get_meta(LEDGER_KEY)
+		
+	for prop in expected_props:
+		if not ledger["base"].has(prop):
+			ledger["base"][prop] = target.get(prop)
+	return ledger
+
+static func _ledger_update_external_displacement(target: Node, expected_props: Array[String]) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+		
+	for prop in expected_props:
+		if not ledger["base"].has(prop): continue
+		var base_val: Variant = ledger["base"][prop]
+		var total_delta: Variant = _seq_zero_for(base_val)
+		if ledger["deltas"].has(prop):
+			for delta_val: Variant in ledger["deltas"][prop].values():
+				if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+					# Modulate factors are multiplied, not added
+					var c_tot := total_delta as Color
+					var c_del := delta_val as Color
+					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+				else:
+					total_delta += delta_val
+				
+		var expected_val: Variant = base_val
+		if typeof(total_delta) == TYPE_COLOR:
+			var base_col := base_val as Color
+			var tot_col := total_delta as Color
+			expected_val = Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a)
+		else:
+			expected_val = base_val + total_delta
+
+		var current_val: Variant = target.get(prop)
+		
+		# If the node is a Control in a Container, the layout engine applies absolute positions, not relative offsets.
+		var is_container_position := false
+		if prop == "position" and target is Control:
+			var parent := target.get_parent()
+			if parent is Container and not (target as Control).top_level:
+				is_container_position = true
+		
+		var displaced := false
+		var offset: Variant = _seq_zero_for(base_val)
+		
+		if typeof(current_val) == TYPE_FLOAT:
+			if not is_equal_approx(current_val as float, expected_val as float):
+				displaced = true
+				offset = (current_val as float) - (expected_val as float)
+		elif typeof(current_val) == TYPE_VECTOR2:
+			if not (current_val as Vector2).is_equal_approx(expected_val as Vector2):
+				if is_container_position:
+					# The Container re-sorts children to their natural positions.
+					# When Juice is IDLE (total_delta == 0): current_val IS the true natural
+					# Container position — update the base so subsequent animations start from the
+					# correct spot. This handles HBox re-sorting after resize, visibility change, etc.
+					# When Juice is ACTIVE (total_delta != 0): Juice intentionally displaced the node.
+					# The mismatch is expected — do NOT update the base. Subtracting total_delta
+					# is unsafe because Containers only manage one axis (HBox → X, VBox → Y),
+					# so subtracting a 2D delta corrupts the unmanaged axis.
+					var is_idle: bool = (total_delta as Vector2).is_equal_approx(Vector2.ZERO)
+					if is_idle:
+						ledger["base"][prop] = current_val
+					continue
+				else:
+					var test_offset: Vector2 = (current_val as Vector2) - (expected_val as Vector2)
+					if abs(test_offset.x) > 0.0001 or abs(test_offset.y) > 0.0001:
+						displaced = true
+						offset = test_offset
+		elif typeof(current_val) == TYPE_VECTOR3:
+			if not (current_val as Vector3).is_equal_approx(expected_val as Vector3):
+				displaced = true
+				offset = (current_val as Vector3) - (expected_val as Vector3)
+		elif typeof(current_val) == TYPE_COLOR:
+			pass # We typically do not track external drift on modulate yet
+				
+		if displaced:
+			ledger["base"][prop] += offset
+
+static func _ledger_set_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	if not ledger["deltas"].has(prop):
+		ledger["deltas"][prop] = {}
+	var source_id := source.get_instance_id()
+	ledger["deltas"][prop][source_id] = delta
+
+static func _ledger_get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
+	if not target.has_meta(LEDGER_KEY): return zero_val
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	if not ledger["deltas"].has(prop): return zero_val
+	var total: Variant = zero_val
+	for delta_val: Variant in ledger["deltas"][prop].values():
+		if typeof(total) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+			var c_tot := total as Color
+			var c_del := delta_val as Color
+			total = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+		else:
+			total += delta_val
+	return total
+
+static func _ledger_get_base_value(target: Node, prop: String, fallback: Variant) -> Variant:
+	if not target.has_meta(LEDGER_KEY): return fallback
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	return ledger["base"].get(prop, fallback)
+
+
+## Returns the full "base" property sub-dict from the target's metadata ledger.
+## Effect SELF capture methods call _ledger_base_snapshot.get("position", fallback)
+## so they read the true natural state (pre-all-Juice) instead of dirty target.property.
+## Returns {} when no ledger exists — effects fall back to target.property safely.
+static func _ledger_get_base_dict(target: Node) -> Dictionary:
+	if target == null or not target.has_meta(LEDGER_KEY):
+		return {}
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	return ledger.get("base", {})
+
+static func _ledger_cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	var source_id := source.get_instance_id()
+	
+	var any_remaining := false
+	for prop: String in ledger["deltas"].keys():
+		var sources: Dictionary = ledger["deltas"][prop]
+		sources.erase(source_id)
+		if not sources.is_empty():
+			any_remaining = true
+			
+	if permanently and not any_remaining:
+		for prop: String in ledger["base"].keys():
+			target.set(prop, ledger["base"][prop])
+		target.remove_meta(LEDGER_KEY)
+
+## Immediately writes base + remaining total delta to the target node.
+## Called from _seq_stop() AFTER _seq_restore_target_natural so that the
+## physical ctrl.position reflects the cleared sequencer delta even when
+## no active _process loop is running to do a subsequent write.
+## WHY: STACK stop() calls _post_tick_write() which does this write automatically.
+## SEQUENCER stop() has no equivalent — without this, ctrl.position stays at the
+## last animated value (e.g. y=20) after the ledger delta is zeroed.
+## NOTE: Sums all REMAINING sources (e.g. an active hover JuiceControl) so other
+## writers are preserved additively and not zeroed by the sequencer's stop.
+static func _ledger_write_to_target(target: Node) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	for prop: String in ledger["base"].keys():
+		var base_val: Variant = ledger["base"].get(prop)
+		if base_val == null: continue
+		var total_delta: Variant = _seq_zero_for(base_val)
+		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
+		for delta_val: Variant in delta_sources.values():
+			if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+				var c_tot := total_delta as Color
+				var c_del := delta_val as Color
+				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+			else:
+				total_delta += delta_val
+		target.set(prop, base_val + total_delta)

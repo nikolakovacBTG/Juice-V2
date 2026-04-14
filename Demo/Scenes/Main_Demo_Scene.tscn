@@ -167,13 +167,10 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 0
-from_position_in = 3
-from_position = Vector2(-1, 0)
+from_position_in = 1
+from_position = Vector2(-0.5, 0)
 to_reference = 1
-to_capture_at = 2
-_to_editor_cached_position = Vector2(0, 0)
-_to_editor_cached_rotation = 0.0
-_to_editor_cached_scale = Vector2(1, 1)
+to_capture_at = 0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -183,7 +180,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_n7dmy"]
+[sub_resource type="Resource" id="Resource_5ihny"]
 script = ExtResource("5_lfgkc")
 effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ntvx2")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
@@ -229,7 +226,7 @@ alignment = 1
 layout_mode = 2
 text = "Control Demo"
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo" unique_id=1387513701]
+[node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo" unique_id=1387513701]
 script = ExtResource("3_fay60")
 trigger_on = 0
 recipe = SubResource("Resource_hbpc2")
@@ -239,7 +236,7 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 layout_mode = 2
 text = "2D demo"
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/2D Demo" unique_id=1613150336]
+[node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/2D Demo" unique_id=1613150336]
 script = ExtResource("3_fay60")
 trigger_on = 0
 recipe = SubResource("Resource_yto47")
@@ -249,7 +246,7 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 layout_mode = 2
 text = "3D demo"
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/3D Demo" unique_id=1350848518]
+[node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/3D Demo" unique_id=1350848518]
 script = ExtResource("3_fay60")
 trigger_on = 0
 recipe = SubResource("Resource_gd4to")
@@ -259,7 +256,7 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 layout_mode = 2
 text = "Quit"
 
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit" unique_id=732351268]
+[node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit" unique_id=732351268]
 script = ExtResource("3_fay60")
 trigger_on = 0
 recipe = SubResource("Resource_8wggb")
@@ -270,7 +267,8 @@ script = ExtResource("3_fay60")
 mode = 1
 seq_stagger_delay = 0.3
 start_delay = 0.68
-recipe = SubResource("Resource_n7dmy")
+recipe = SubResource("Resource_5ihny")
+debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Scene Container" type="Node" parent="." unique_id=467602694]

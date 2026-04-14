@@ -835,7 +835,8 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		_from_self_position_snapshot = _from_editor_cached_position
 	else:
 		var n3d := target as Node3D
-		_from_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
+		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_from_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
@@ -849,7 +850,8 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		_from_self_rotation_snapshot = _from_editor_cached_rotation
 	else:
 		var n3d := target as Node3D
-		_from_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.rotation.
+		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_from_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
@@ -863,7 +865,8 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		_from_self_scale_snapshot = _from_editor_cached_scale
 	else:
 		var n3d := target as Node3D
-		_from_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+		# Prefer the ledger base over n3d.scale.
+		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_from_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
@@ -880,7 +883,8 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		_to_self_position_snapshot = _to_editor_cached_position
 	else:
 		var n3d := target as Node3D
-		_to_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
+		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_to_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
@@ -894,7 +898,8 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		_to_self_rotation_snapshot = _to_editor_cached_rotation
 	else:
 		var n3d := target as Node3D
-		_to_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.rotation.
+		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_to_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
@@ -908,7 +913,8 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		_to_self_scale_snapshot = _to_editor_cached_scale
 	else:
 		var n3d := target as Node3D
-		_to_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+		# Prefer the ledger base over n3d.scale.
+		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_to_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
@@ -954,12 +960,15 @@ func _capture_base(target: Node) -> void:
 		_has_base = true
 		return
 
-	_base_position = n3d.position
-	_base_transform = n3d.transform
+	# Read from the ledger so we capture the natural state even if other Juice nodes
+	# are active on the same target (e.g. nested packed prefab compositing scenario).
+	_base_position = JuiceBase._ledger_get_base_value(n3d, "position", n3d.position)
+	var base_rotation: Vector3 = JuiceBase._ledger_get_base_value(n3d, "rotation", n3d.rotation)
+	_base_scale = JuiceBase._ledger_get_base_value(n3d, "scale", n3d.scale)
+	_base_transform = Transform3D(Basis.from_euler(base_rotation).scaled(_base_scale), _base_position)
 	var ortho_basis := _base_transform.basis.orthonormalized()
 	_base_euler = ortho_basis.get_euler()
 	_base_quat = Quaternion(ortho_basis)
-	_base_scale = n3d.scale
 
 	# Pre-compute the fixed pivot position in parent space for rotation
 	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset

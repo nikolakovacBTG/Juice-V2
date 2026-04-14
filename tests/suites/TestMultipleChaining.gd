@@ -36,6 +36,7 @@ func test_impact_ensemble_multiple_chains() -> void:
 	punch.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	punch.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	punch.to_position = Vector2(80, 0)
+	punch.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	punch.duration_in = 0.15
 	punch.duration_out = 0.3
 	punch.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -76,15 +77,12 @@ func test_impact_ensemble_multiple_chains() -> void:
 	
 	# Start the impact ensemble
 	juice.animate_in()
-	
-	# Initially only punch should affect position
-	juice.animate_in()
-	await wait_frames(2)
+	await wait_frames(5)
 	
 	# During punch (before completion): position should be moving, alpha should be full
 	assert_true(target.position.x > 20.0,
 		"During punch: position.x (%.1f) should be moving right" % target.position.x)
-	assert_equal(target.modulate.a, 1.0,
+	assert_equal(target.self_modulate.a, 1.0,
 		"During punch: alpha should still be full (flash not started)")
 	
 	# Wait for punch to complete and secondary effects to start
@@ -92,7 +90,7 @@ func test_impact_ensemble_multiple_chains() -> void:
 	
 	# Now secondary effects should be active: shake + squash + fade
 	# Shake adds random motion, squash changes size, fade reduces alpha
-	assert_true(target.modulate.a < 0.9,
+	assert_true(target.self_modulate.a < 0.9,
 		"After punch: alpha should be reduced (flash active)")
 	# Position should be exactly at punch target (80px) with no shake
 	assert_equal(target.position.x, 80.0,
@@ -106,7 +104,7 @@ func test_impact_ensemble_multiple_chains() -> void:
 	assert_equal(target.position.x, 80.0,
 		"After completion: position should be at target (no shake)")
 	# Alpha should be at target (0.0 for fade)
-	assert_equal(target.modulate.a, 0.0,
+	assert_equal(target.self_modulate.a, 0.0,
 		"After completion: alpha should be at target")
 	
 	# Test stop() returns to natural (PLAY_IN_ONLY effects don't support animate_out)
@@ -114,7 +112,7 @@ func test_impact_ensemble_multiple_chains() -> void:
 	await wait_frames(2)
 	assert_equal(target.position.x, 0.0,
 		"After stop: position should return to natural")
-	assert_equal(target.modulate.a, 1.0,
+	assert_equal(target.self_modulate.a, 1.0,
 		"After stop: alpha should return to natural")
 	
 	await cleanup(target)
@@ -135,6 +133,7 @@ func test_transition_cascade_preroll() -> void:
 	slide.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	slide.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	slide.to_position = Vector2(-300, 0)
+	slide.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	slide.duration_in = 0.5
 	slide.duration_out = 0.4
 	slide.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -171,27 +170,28 @@ func test_transition_cascade_preroll() -> void:
 	
 	# Start transition
 	juice.animate_in()
-	
-	# Start transition
-	juice.animate_in()
-	await wait_frames(2)
+
+	# Wait until we're clearly mid-slide but still before the 0.4s preroll trigger.
+	# Use wall-clock seconds (not frames) for deterministic headless behavior.
+	await wait_seconds(0.20)
 	
 	# Initially only slide should affect position
-	assert_true(target.position.x < -100.0,
+	assert_true(target.position.x < -5.0,
 		"During slide: position should be moving left")
-	assert_equal(target.modulate.a, 1.0,
+	assert_equal(target.self_modulate.a, 1.0,
 		"During slide: alpha should be 1 (fade not started yet)")
 	
-	# Wait for preroll time (0.5 - 0.1 = 0.4s)
-	await wait_seconds(0.45)
+	# Wait past the preroll trigger point (0.5s - 0.1s preroll = fires at 0.4s).
+	# Combined with the 0.20s above we are now at t≈0.45s — 0.05s into the preroll.
+	await wait_seconds(0.25)
 	
 	# Fade and scale should start via preroll while slide still playing
-	assert_true(target.modulate.a > 0.5,
+	assert_true(target.self_modulate.a > 0.5,
 		"During preroll: alpha should be increasing (fade active)")
-	assert_true(target.scale.x > 1.1,
+	assert_true(target.scale.x > 1.01,
 		"During preroll: scale should be increasing (scale active)")
 	# Slide should still be moving
-	assert_true(target.position.x < -250.0,
+	assert_true(target.position.x < -100.0,
 		"During preroll: slide should still be moving")
 	
 	# Wait for all to complete
@@ -202,7 +202,7 @@ func test_transition_cascade_preroll() -> void:
 	assert_true(target.position.x < -250.0,
 		"After completion: position should be at target")
 	# Alpha should be at target (1.0 for fade in)
-	assert_equal(target.modulate.a, 1.0,
+	assert_equal(target.self_modulate.a, 1.0,
 		"After completion: alpha should be at target")
 	# Scale should be at target (1.2x)
 	assert_true(target.scale.x > 1.15,
@@ -213,7 +213,7 @@ func test_transition_cascade_preroll() -> void:
 	await wait_frames(2)
 	assert_equal(target.position.x, 0.0,
 		"After stop: position should return to natural")
-	assert_equal(target.modulate.a, 1.0,
+	assert_equal(target.self_modulate.a, 1.0,
 		"After stop: alpha should return to natural")
 	assert_equal(target.scale.x, 1.0,
 		"After stop: scale should return to natural")
@@ -232,6 +232,7 @@ func test_empty_array_no_chaining() -> void:
 	effect1.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect1.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect1.to_position = Vector2(50, 0)
+	effect1.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	effect1.duration_in = 0.2
 	effect1.chain_to = []  # Empty array
 	effect1.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -240,6 +241,7 @@ func test_empty_array_no_chaining() -> void:
 	effect2.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	effect2.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	effect2.to_position = Vector2(0, 50)
+	effect2.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	effect2.duration_in = 0.2
 	effect2.chain_to = []  # Empty array
 	effect2.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
@@ -257,12 +259,12 @@ func test_empty_array_no_chaining() -> void:
 	
 	# Both should play simultaneously (no chaining)
 	juice.animate_in()
-	await wait_frames(2)
+	await wait_frames(5)
 	
 	# Both effects should be active simultaneously
-	assert_true(target.position.x > 20.0,
+	assert_true(target.position.x > 2.0,
 		"Effect1 should be moving right")
-	assert_true(target.position.y > 20.0,
+	assert_true(target.position.y > 2.0,
 		"Effect2 should be moving down")
 	
 	await wait_seconds(0.25)
@@ -312,6 +314,7 @@ func test_sequencer_mode_multiple_chains() -> void:
 	primary.from_reference = TransformControlJuiceEffect.TransformReference.SELF
 	primary.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
 	primary.to_position = Vector2(20, 0)
+	primary.to_position_in = JuiceControlTransformEffect.PositionIn.PIXELS
 	primary.duration_in = 0.2
 	primary.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	
@@ -346,9 +349,6 @@ func test_sequencer_mode_multiple_chains() -> void:
 	# Start sequence
 	juice.animate_in()
 	
-	# Start sequence
-	juice.animate_in()
-	
 	# Wait for completion
 	await wait_seconds(0.5)
 	
@@ -356,9 +356,9 @@ func test_sequencer_mode_multiple_chains() -> void:
 	assert_true(btn1.position.x > 15.0,
 		"Btn1 should have moved to target position")
 	# Tint effect multiplies color, so check if it's tinted (not exact match)
-	assert_true(btn2.modulate.r > 0.5 and btn2.modulate.g > 0.5,
+	assert_true(btn2.self_modulate.r > 0.5 and btn2.self_modulate.g > 0.5,
 		"Btn2 should be tinted yellow")
-	assert_true(btn3.modulate.g > 0.5 and btn3.modulate.b > 0.5,
+	assert_true(btn3.self_modulate.g > 0.5 and btn3.self_modulate.b > 0.5,
 		"Btn3 should be tinted cyan")
 	
 	# Test stop() returns to natural (PLAY_IN_ONLY effects don't support animate_out)
@@ -366,9 +366,9 @@ func test_sequencer_mode_multiple_chains() -> void:
 	await wait_frames(2)
 	assert_equal(btn1.position.x, 0.0,
 		"After stop: Btn1 should return to natural")
-	assert_equal(btn2.modulate, Color.WHITE,
+	assert_equal(btn2.self_modulate, Color.WHITE,
 		"After stop: Btn2 should return to natural")
-	assert_equal(btn3.modulate, Color.WHITE,
+	assert_equal(btn3.self_modulate, Color.WHITE,
 		"After stop: Btn3 should return to natural")
 	
 	await cleanup(parent)

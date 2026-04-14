@@ -39,26 +39,10 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Natural state — captured once at _ready. Read-only reference after capture;
-# contribution tracking does not modify these.
-var _base_position: Vector3 = Vector3.ZERO
-var _base_rotation: Vector3 = Vector3.ZERO
-var _base_scale: Vector3 = Vector3.ONE
-
-# Sum of all effect deltas currently applied — used by undo/reapply
-var _total_pos_contribution: Vector3 = Vector3.ZERO
-var _total_rot_contribution: Vector3 = Vector3.ZERO
-var _total_scale_contribution: Vector3 = Vector3.ZERO
-
-# Whether base values have been captured at least once
+# Whether base values have been captured at least once.
+# Transform state is owned by the Centralized Metadata Ledger (LEDGER_KEY on target).
+# Appearance state below uses 3D-specific per-node tracking.
 var _base_captured: bool = false
-
-# Expected values after our last write — for external-move detection (pre-tick).
-# If the actual value differs from expected next frame, something external moved
-# the target and we update _base_*.
-var _expected_position: Vector3 = Vector3.INF
-var _expected_rotation: Vector3 = Vector3.INF
-var _expected_scale: Vector3 = Vector3.INF
 
 # 3D Appearance — domain node owns the single working material to prevent multiple
 # Juice3DAppearanceEffect instances fighting over the surface_override_material slot.
@@ -102,6 +86,8 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	super._exit_tree()
+	if _target_node != null and is_instance_valid(_target_node):
+		_ledger_cleanup_source(_target_node, self)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -209,76 +195,32 @@ func _connect_collision_object_3d_signals(col_obj: CollisionObject3D) -> void:
 # =============================================================================
 
 ## Capture target's natural position/rotation/scale.
-## Base values are a read-only reference; contribution tracking handles writes.
+## Transforms use the Shared Target Ledger; appearance uses 3D-specific per-node tracking.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node3D:
 		return
 	var n3d := _target_node as Node3D
-	_base_position = n3d.position
-	_base_rotation = n3d.rotation
-	_base_scale = n3d.scale
+	_ledger_ensure_initialized(n3d, ["position", "rotation", "scale"])
 	_base_captured = true
-	# Reset contribution tracking
-	_total_pos_contribution = Vector3.ZERO
-	_total_rot_contribution = Vector3.ZERO
-	_total_scale_contribution = Vector3.ZERO
-	# Initialise expected values so pre-tick can detect external moves
-	_expected_position = n3d.position
-	_expected_rotation = n3d.rotation
-	_expected_scale = n3d.scale
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
-## Runs once per frame, before effects tick. When displacement is detected,
-## updates _base_* so delta computations use the correct natural state.
+## The Metadata Ledger's external-displacement check handles all tracked props.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	var any_displaced := false
-
-	# Position
-	if _expected_position != Vector3.INF:
-		if not n3d.position.is_equal_approx(_expected_position):
-			var displacement := n3d.position - _expected_position
-			_base_position += displacement
-			_expected_position = n3d.position
-			any_displaced = true
-			if debug_enabled:
-				print("[%s] External displacement (position): %s → new base: %s" % [
-					name, displacement, _base_position])
-
-	# Rotation
-	if _expected_rotation != Vector3.INF:
-		if not n3d.rotation.is_equal_approx(_expected_rotation):
-			var displacement := n3d.rotation - _expected_rotation
-			_base_rotation += displacement
-			_expected_rotation = n3d.rotation
-			any_displaced = true
-
-	# Scale
-	if _expected_scale != Vector3.INF:
-		if not n3d.scale.is_equal_approx(_expected_scale):
-			var displacement := n3d.scale - _expected_scale
-			_base_scale += displacement
-			_expected_scale = n3d.scale
-			any_displaced = true
-
-	# Invalidate effect base caches so they re-capture on next animation start
-	if any_displaced:
-		for effect in _runtime_effects:
-			if effect != null:
-				effect._invalidate_base_cache()
+	_ledger_update_external_displacement(n3d, ["position", "rotation", "scale"])
 
 
-## Contribution-tracking write: subtract old contribution, add new contribution.
-## Multiple Juice nodes on the same target can write independently without
-## overwriting each other — each node only touches its own layer of changes.
+## Contribution-tracking write: register this node's deltas into the shared target ledger,
+## then write absolute: target = ledger_base + sum(all_source_deltas).
+## Multiple Juice nodes on the same target write through the ledger independently.
 func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
 
-	# Sum deltas from all runtime effects
+	# Sum transform deltas from all runtime effects
 	var new_pos := Vector3.ZERO
 	var new_rot := Vector3.ZERO
 	var new_scale := Vector3.ZERO
@@ -296,20 +238,24 @@ func _post_tick_write() -> void:
 		if eff_3d._contributes_scale:
 			new_scale += eff_3d._scale_delta
 
-	# Contribution tracking: subtract what we added last frame, add what we want now
-	n3d.position = n3d.position - _total_pos_contribution + new_pos
-	n3d.rotation = n3d.rotation - _total_rot_contribution + new_rot
-	n3d.scale = n3d.scale - _total_scale_contribution + new_scale
+	# Register our deltas into the Target's ledger
+	_ledger_set_delta(n3d, self, "position", new_pos)
+	_ledger_set_delta(n3d, self, "rotation", new_rot)
+	_ledger_set_delta(n3d, self, "scale", new_scale)
 
-	# Track expected values (for external-displacement detection next frame)
-	_expected_position = n3d.position
-	_expected_rotation = n3d.rotation
-	_expected_scale = n3d.scale
+	# Fetch the unified natural base and total sums of all Juice nodes modifying this target
+	var base_pos: Vector3 = _ledger_get_base_value(n3d, "position", n3d.position)
+	var base_rot: Vector3 = _ledger_get_base_value(n3d, "rotation", n3d.rotation)
+	var base_scale: Vector3 = _ledger_get_base_value(n3d, "scale", n3d.scale)
 
-	# Track total contribution (for undo/reapply and next frame's subtraction)
-	_total_pos_contribution = new_pos
-	_total_rot_contribution = new_rot
-	_total_scale_contribution = new_scale
+	var total_pos: Vector3 = _ledger_get_total(n3d, "position", Vector3.ZERO)
+	var total_rot: Vector3 = _ledger_get_total(n3d, "rotation", Vector3.ZERO)
+	var total_scale: Vector3 = _ledger_get_total(n3d, "scale", Vector3.ZERO)
+
+	# Absolute write
+	n3d.position = base_pos + total_pos
+	n3d.rotation = base_rot + total_rot
+	n3d.scale = base_scale + total_scale
 
 	# Appearance: accumulate albedo/alpha factors from Juice3DAppearanceEffect effects.
 	# Domain node owns one working material; effects only contribute factors.
@@ -416,13 +362,20 @@ func _post_tick_write() -> void:
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
+## Called before effects capture From/To references and before editor save.
 func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	n3d.position -= _total_pos_contribution
-	n3d.rotation -= _total_rot_contribution
-	n3d.scale -= _total_scale_contribution
+	
+	# Strip our transform deltas from the ledger temporarily without destroying it
+	_ledger_cleanup_source(n3d, self, false)
+	
+	# Apply absolute baseline position + sibling remaining deltas
+	n3d.position = _ledger_get_base_value(n3d, "position", n3d.position) + _ledger_get_total(n3d, "position", Vector3.ZERO)
+	n3d.rotation = _ledger_get_base_value(n3d, "rotation", n3d.rotation) + _ledger_get_total(n3d, "rotation", Vector3.ZERO)
+	n3d.scale = _ledger_get_base_value(n3d, "scale", n3d.scale) + _ledger_get_total(n3d, "scale", Vector3.ZERO)
+
 	# Restore natural material so editor save doesn't serialise working material
 	if _appearance_setup and _appearance_mesh != null:
 		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
@@ -432,11 +385,9 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
-	var n3d := _target_node as Node3D
-	n3d.position += _total_pos_contribution
-	n3d.rotation += _total_rot_contribution
-	n3d.scale += _total_scale_contribution
-	# Re-install working material and recompute albedo
+	# Re-apply transform deltas by flushing a fresh post-tick write.
+	# This restores our deltas to the ledger and recalculates absolute values.
+	# Re-install working material and recompute albedo.
 	if _appearance_setup and _appearance_mesh != null and _appearance_working_mat != null:
 		_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
 	_post_tick_write()

@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://byj22an0sy80v"]
+
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="1_vauml"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="2_hhdbv"]
+[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="3_cxtci"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="4_el7ea"]
+
+[sub_resource type="Resource" id="Resource_gmune"]
+script = ExtResource("3_cxtci")
+transform_target = 2
+trigger_behaviour = 3
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+from_capture_at = 2
+to_reference = 0
+to_scale = Vector2(1.3, 1.3)
+pivot_mode = 0
+_from_editor_cached_position = Vector2(0, 0)
+_from_editor_cached_rotation = 0.0
+_from_editor_cached_scale = Vector2(1, 1)
+duration_in = 0.3
+transition_in = 6
+ease_in = 1
+elastic_amplitude_in = 1.0
+elastic_period_in = 0.3
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 10
+ease_out = 0
+back_overshoot_out = 1.70158
+chain_to = Array[ExtResource("2_hhdbv")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bf43e3idc17tt"
+
+[sub_resource type="Resource" id="Resource_6wqmm"]
+script = ExtResource("4_el7ea")
+effects = Array[ExtResource("2_hhdbv")]([SubResource("Resource_gmune")])
+metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[node name="TestBug" type="Control" unique_id=641761345]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1049814312]
+layout_mode = 0
+
+[node name="Button" type="Button" parent="VBoxContainer" unique_id=4639375]
+layout_mode = 2
+text = "Button"
+
+[node name="JuiceControl" type="Node" parent="VBoxContainer/Button" unique_id=1211101226]
+script = ExtResource("1_vauml")
+trigger_on = 2
+trigger_behaviour = 3
+recipe = SubResource("Resource_6wqmm")
