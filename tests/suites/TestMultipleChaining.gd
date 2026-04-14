@@ -170,7 +170,10 @@ func test_transition_cascade_preroll() -> void:
 	
 	# Start transition
 	juice.animate_in()
-	await wait_frames(12)
+
+	# Wait until we're clearly mid-slide but still before the 0.4s preroll trigger.
+	# Use wall-clock seconds (not frames) for deterministic headless behavior.
+	await wait_seconds(0.20)
 	
 	# Initially only slide should affect position
 	assert_true(target.position.x < -5.0,
@@ -178,7 +181,8 @@ func test_transition_cascade_preroll() -> void:
 	assert_equal(target.self_modulate.a, 1.0,
 		"During slide: alpha should be 1 (fade not started yet)")
 	
-	# Wait for preroll time (0.5 - 0.1 = 0.4s)
+	# Wait past the preroll trigger point (0.5s - 0.1s preroll = fires at 0.4s).
+	# Combined with the 0.20s above we are now at t≈0.45s — 0.05s into the preroll.
 	await wait_seconds(0.25)
 	
 	# Fade and scale should start via preroll while slide still playing

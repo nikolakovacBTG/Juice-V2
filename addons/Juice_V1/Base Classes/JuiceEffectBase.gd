@@ -402,6 +402,15 @@ var _pp_use_out_curve: bool = false
 # Not stored persistently; cleared on stop/finish.
 var _host_node: Node = null
 
+# Ledger base snapshot — injected by the caller before _on_animate_start fires.
+# Contains the target's natural property values from the Centralized Metadata Ledger
+# (e.g. {"position": Vector2(0, 40), "rotation": 0.0, "scale": Vector2(1, 1)}).
+# SELF capture methods (e.g. _capture_from_self_position_snapshot) prefer this
+# over target.property so they read the true natural state, not a dirty value
+# that includes deltas from other Juice sources (sequencer, stacked nodes, etc.).
+# Empty dict = no ledger data available → fall back to target.property (safe default).
+var _ledger_base_snapshot: Dictionary = {}
+
 # =============================================================================
 # ANIMATION API (called by host node)
 # =============================================================================
@@ -440,6 +449,12 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 	# Store host node reference for NodePath resolution in subclasses
 	if host != null:
 		_host_node = host
+
+	# Inject ledger base so SELF capture methods in _on_animate_start read the
+	# true natural position (pre-all-Juice) rather than a dirty target.position
+	# that may include active deltas from other Juice sources (sequencer, stacked nodes).
+	# JuiceBase._ledger_get_base_dict returns {} if the target has no ledger — safe fallback.
+	_ledger_base_snapshot = JuiceBase._ledger_get_base_dict(target)
 
 	_on_animate_start(target)
 

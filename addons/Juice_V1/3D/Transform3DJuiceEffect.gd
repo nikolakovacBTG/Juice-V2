@@ -835,7 +835,8 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		_from_self_position_snapshot = _from_editor_cached_position
 	else:
 		var n3d := target as Node3D
-		_from_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
+		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_from_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
@@ -849,7 +850,8 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		_from_self_rotation_snapshot = _from_editor_cached_rotation
 	else:
 		var n3d := target as Node3D
-		_from_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.rotation.
+		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_from_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
@@ -863,7 +865,8 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		_from_self_scale_snapshot = _from_editor_cached_scale
 	else:
 		var n3d := target as Node3D
-		_from_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+		# Prefer the ledger base over n3d.scale.
+		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_from_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
@@ -880,7 +883,8 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		_to_self_position_snapshot = _to_editor_cached_position
 	else:
 		var n3d := target as Node3D
-		_to_self_position_snapshot = n3d.position if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.position (true natural position, pre-all-Juice).
+		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_to_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
@@ -894,7 +898,8 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		_to_self_rotation_snapshot = _to_editor_cached_rotation
 	else:
 		var n3d := target as Node3D
-		_to_self_rotation_snapshot = n3d.rotation if n3d else Vector3.ZERO
+		# Prefer the ledger base over n3d.rotation.
+		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_to_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
@@ -908,7 +913,8 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		_to_self_scale_snapshot = _to_editor_cached_scale
 	else:
 		var n3d := target as Node3D
-		_to_self_scale_snapshot = n3d.scale if n3d else Vector3.ONE
+		# Prefer the ledger base over n3d.scale.
+		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_to_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
