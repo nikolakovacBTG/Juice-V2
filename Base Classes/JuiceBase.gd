@@ -626,7 +626,7 @@ func _post_ready_init() -> void:
 			if effect != null:
 				# Inject ledger base so CaptureAt.READY snapshots read the true natural
 				# position from the ledger rather than a potentially dirty target.property.
-				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
+				effect._ledger_base_snapshot = JuiceLedger.get_base_dict(_target_node)
 				effect._on_host_ready(_target_node, self)
 
 	# Handle ON_READY trigger. Also deferred so the From/To snapshots inside
@@ -716,7 +716,7 @@ func set_external_progress(value: float) -> void:
 		for effect in _runtime_effects:
 			if effect != null:
 				# Inject ledger base: this path bypasses JuiceEffectBase.start() so injection is manual.
-				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
+				effect._ledger_base_snapshot = JuiceLedger.get_base_dict(_target_node)
 				effect._on_animate_start(_target_node)
 	# Set progress on all effects (computes deltas)
 	for effect in _runtime_effects:
@@ -1050,12 +1050,12 @@ func _seq_stop() -> void:
 				# Write-through: physically restore ctrl.position = base + remaining deltas.
 				# STACK stop() calls _post_tick_write() for this; SEQUENCER has no equivalent
 				# so without this, ctrl.position stays at the last animated value indefinitely.
-				_ledger_write_to_target(target)
+				JuiceLedger.flush(target)
 		for entry in _seq_held_entries:
 			var target := entry.get("target") as Node
 			if is_instance_valid(target) and not _seq_target_active_indices.has(target):
 				_seq_restore_target_natural(target)
-				_ledger_write_to_target(target)
+				JuiceLedger.flush(target)
 
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
@@ -1296,7 +1296,7 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 			# Inject ledger base: the warmup path calls _on_animate_start directly (not via
 			# effect.start()), so it needs manual injection. TO=SELF snapshots captured here
 			# should read the target's natural ledger base position, not its warmup-modified state.
-			eff._ledger_base_snapshot = _ledger_get_base_dict(target)
+			eff._ledger_base_snapshot = JuiceLedger.get_base_dict(target)
 			eff._on_animate_start(target)
 			var from_progress := 0.0 if play_in else 1.0
 			eff._apply_effect(from_progress, target)
@@ -1567,7 +1567,7 @@ func _temporarily_reapply_visual() -> void:
 ## The sequencer is a writer, not the owner. Permanently destroying the ledger would
 ## erase the natural base that other JuiceControls (hover, scene-action, etc.) rely on.
 func _seq_restore_target_natural(target: Node) -> void:
-	_ledger_cleanup_source(target, self, false)
+	JuiceLedger.cleanup_source(target, self, false)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
@@ -1611,20 +1611,20 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	#
 	# With deferred _post_ready_init (which fires AFTER Container._sort_children), the
 	# ledger base is already the true Container position. The sequencer should trust it.
-	_ledger_ensure_initialized(target, tracked_props)
+	JuiceLedger.ensure(target, tracked_props)
 
 	# Zero stale entries from the previous frame. Any property we animated last frame but
 	# not this frame (e.g., an effect chain finished one channel) is cleared so it does
 	# not accumulate as phantom deltas in the remaining registration step below.
-	_ledger_cleanup_source(target, self, false)
+	JuiceLedger.cleanup_source(target, self, false)
 
 	# Write current property offsets into the ledger and resolve absolute value
 	for prop in tracked_props:
 		var delta: Variant = total[prop]
-		_ledger_set_delta(target, self, prop, delta)
+		JuiceLedger.register_delta(target, self, prop, delta)
 		
-		var base_val: Variant = _ledger_get_base_value(target, prop, target.get(prop))
-		var total_delta: Variant = _ledger_get_total(target, prop, _seq_zero_for(base_val))
+		var base_val: Variant = JuiceLedger.get_base(target, prop, target.get(prop))
+		var total_delta: Variant = JuiceLedger.get_total(target, prop, JuiceLedger.zero_for(base_val))
 
 		if typeof(total_delta) == TYPE_COLOR:
 			var base_col := base_val as Color
@@ -2090,178 +2090,5 @@ func _on_control_gui_input_filtered(event: InputEvent) -> void:
 func _on_animation_finished(_anim_name: StringName) -> void:
 	_on_trigger_momentary()
 
-
-const LEDGER_KEY := &"juice_active_ledger"
-
-static func _seq_zero_for(value: Variant) -> Variant:
-	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT: return 0.0
-	if typeof(value) == TYPE_VECTOR2: return Vector2.ZERO
-	if typeof(value) == TYPE_VECTOR3: return Vector3.ZERO
-	if typeof(value) == TYPE_COLOR: return Color.WHITE
-	return null
-
-static func _ledger_ensure_initialized(target: Node, expected_props: Array[String]) -> Dictionary:
-	var ledger: Dictionary
-	if not target.has_meta(LEDGER_KEY):
-		ledger = { "base": {}, "deltas": {} }
-		target.set_meta(LEDGER_KEY, ledger)
-	else:
-		ledger = target.get_meta(LEDGER_KEY)
-		
-	for prop in expected_props:
-		if not ledger["base"].has(prop):
-			ledger["base"][prop] = target.get(prop)
-	return ledger
-
-static func _ledger_update_external_displacement(target: Node, expected_props: Array[String]) -> void:
-	if not target.has_meta(LEDGER_KEY): return
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-		
-	for prop in expected_props:
-		if not ledger["base"].has(prop): continue
-		var base_val: Variant = ledger["base"][prop]
-		var total_delta: Variant = _seq_zero_for(base_val)
-		if ledger["deltas"].has(prop):
-			for delta_val: Variant in ledger["deltas"][prop].values():
-				if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
-					# Modulate factors are multiplied, not added
-					var c_tot := total_delta as Color
-					var c_del := delta_val as Color
-					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-				else:
-					total_delta += delta_val
-				
-		var expected_val: Variant = base_val
-		if typeof(total_delta) == TYPE_COLOR:
-			var base_col := base_val as Color
-			var tot_col := total_delta as Color
-			expected_val = Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a)
-		else:
-			expected_val = base_val + total_delta
-
-		var current_val: Variant = target.get(prop)
-		
-		# If the node is a Control in a Container, the layout engine applies absolute positions, not relative offsets.
-		var is_container_position := false
-		if prop == "position" and target is Control:
-			var parent := target.get_parent()
-			if parent is Container and not (target as Control).top_level:
-				is_container_position = true
-		
-		var displaced := false
-		var offset: Variant = _seq_zero_for(base_val)
-		
-		if typeof(current_val) == TYPE_FLOAT:
-			if not is_equal_approx(current_val as float, expected_val as float):
-				displaced = true
-				offset = (current_val as float) - (expected_val as float)
-		elif typeof(current_val) == TYPE_VECTOR2:
-			if not (current_val as Vector2).is_equal_approx(expected_val as Vector2):
-				if is_container_position:
-					# The Container re-sorts children to their natural positions.
-					# When Juice is IDLE (total_delta == 0): current_val IS the true natural
-					# Container position — update the base so subsequent animations start from the
-					# correct spot. This handles HBox re-sorting after resize, visibility change, etc.
-					# When Juice is ACTIVE (total_delta != 0): Juice intentionally displaced the node.
-					# The mismatch is expected — do NOT update the base. Subtracting total_delta
-					# is unsafe because Containers only manage one axis (HBox → X, VBox → Y),
-					# so subtracting a 2D delta corrupts the unmanaged axis.
-					var is_idle: bool = (total_delta as Vector2).is_equal_approx(Vector2.ZERO)
-					if is_idle:
-						ledger["base"][prop] = current_val
-					continue
-				else:
-					var test_offset: Vector2 = (current_val as Vector2) - (expected_val as Vector2)
-					if abs(test_offset.x) > 0.0001 or abs(test_offset.y) > 0.0001:
-						displaced = true
-						offset = test_offset
-		elif typeof(current_val) == TYPE_VECTOR3:
-			if not (current_val as Vector3).is_equal_approx(expected_val as Vector3):
-				displaced = true
-				offset = (current_val as Vector3) - (expected_val as Vector3)
-		elif typeof(current_val) == TYPE_COLOR:
-			pass # We typically do not track external drift on modulate yet
-				
-		if displaced:
-			ledger["base"][prop] += offset
-
-static func _ledger_set_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
-	if not target.has_meta(LEDGER_KEY): return
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	if not ledger["deltas"].has(prop):
-		ledger["deltas"][prop] = {}
-	var source_id := source.get_instance_id()
-	ledger["deltas"][prop][source_id] = delta
-
-static func _ledger_get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
-	if not target.has_meta(LEDGER_KEY): return zero_val
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	if not ledger["deltas"].has(prop): return zero_val
-	var total: Variant = zero_val
-	for delta_val: Variant in ledger["deltas"][prop].values():
-		if typeof(total) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
-			var c_tot := total as Color
-			var c_del := delta_val as Color
-			total = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-		else:
-			total += delta_val
-	return total
-
-static func _ledger_get_base_value(target: Node, prop: String, fallback: Variant) -> Variant:
-	if not target.has_meta(LEDGER_KEY): return fallback
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	return ledger["base"].get(prop, fallback)
-
-
-## Returns the full "base" property sub-dict from the target's metadata ledger.
-## Effect SELF capture methods call _ledger_base_snapshot.get("position", fallback)
-## so they read the true natural state (pre-all-Juice) instead of dirty target.property.
-## Returns {} when no ledger exists — effects fall back to target.property safely.
-static func _ledger_get_base_dict(target: Node) -> Dictionary:
-	if target == null or not target.has_meta(LEDGER_KEY):
-		return {}
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	return ledger.get("base", {})
-
-static func _ledger_cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
-	if not target.has_meta(LEDGER_KEY): return
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	var source_id := source.get_instance_id()
-	
-	var any_remaining := false
-	for prop: String in ledger["deltas"].keys():
-		var sources: Dictionary = ledger["deltas"][prop]
-		sources.erase(source_id)
-		if not sources.is_empty():
-			any_remaining = true
-			
-	if permanently and not any_remaining:
-		for prop: String in ledger["base"].keys():
-			target.set(prop, ledger["base"][prop])
-		target.remove_meta(LEDGER_KEY)
-
-## Immediately writes base + remaining total delta to the target node.
-## Called from _seq_stop() AFTER _seq_restore_target_natural so that the
-## physical ctrl.position reflects the cleared sequencer delta even when
-## no active _process loop is running to do a subsequent write.
-## WHY: STACK stop() calls _post_tick_write() which does this write automatically.
-## SEQUENCER stop() has no equivalent — without this, ctrl.position stays at the
-## last animated value (e.g. y=20) after the ledger delta is zeroed.
-## NOTE: Sums all REMAINING sources (e.g. an active hover JuiceControl) so other
-## writers are preserved additively and not zeroed by the sequencer's stop.
-static func _ledger_write_to_target(target: Node) -> void:
-	if not target.has_meta(LEDGER_KEY): return
-	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	for prop: String in ledger["base"].keys():
-		var base_val: Variant = ledger["base"].get(prop)
-		if base_val == null: continue
-		var total_delta: Variant = _seq_zero_for(base_val)
-		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
-		for delta_val: Variant in delta_sources.values():
-			if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
-				var c_tot := total_delta as Color
-				var c_del := delta_val as Color
-				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-			else:
-				total_delta += delta_val
-		target.set(prop, base_val + total_delta)
+# Ledger helpers live in JuiceLedger.gd (class_name JuiceLedger).
+# All callers use JuiceLedger.ensure(), JuiceLedger.register_delta(), etc.

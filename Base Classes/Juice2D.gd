@@ -64,7 +64,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	super._exit_tree()
 	if _target_node != null and is_instance_valid(_target_node):
-		_ledger_cleanup_source(_target_node, self)
+		JuiceLedger.cleanup_source(_target_node, self)
 
 func _process(delta: float) -> void:
 	super._process(delta)
@@ -183,7 +183,7 @@ func _capture_base_values() -> void:
 		return
 	var n2d := _target_node as Node2D
 	
-	_ledger_ensure_initialized(n2d, ["position", "rotation", "scale"])
+	JuiceLedger.ensure(n2d, ["position", "rotation", "scale"])
 	
 	_base_captured = true
 
@@ -194,7 +194,7 @@ func _pre_tick() -> void:
 		return
 	var n2d := _target_node as Node2D
 	
-	_ledger_update_external_displacement(n2d, ["position", "rotation", "scale"])
+	JuiceLedger.sync_base_if_moved(n2d, ["position", "rotation", "scale"])
 
 
 ## Contribution-tracking write: register this node's deltas into the shared target ledger,
@@ -224,18 +224,18 @@ func _post_tick_write() -> void:
 			new_scale += eff_2d._scale_delta
 
 	# Register our deltas into the Target's ledger
-	_ledger_set_delta(n2d, self, "position", new_pos)
-	_ledger_set_delta(n2d, self, "rotation", new_rot)
-	_ledger_set_delta(n2d, self, "scale", new_scale)
+	JuiceLedger.register_delta(n2d, self, "position", new_pos)
+	JuiceLedger.register_delta(n2d, self, "rotation", new_rot)
+	JuiceLedger.register_delta(n2d, self, "scale", new_scale)
 
 	# Fetch the unified natural base and the total sums of all Juice nodes modifying this target
-	var base_pos: Vector2 = _ledger_get_base_value(n2d, "position", n2d.position)
-	var base_rot: float = _ledger_get_base_value(n2d, "rotation", n2d.rotation)
-	var base_scale: Vector2 = _ledger_get_base_value(n2d, "scale", n2d.scale)
+	var base_pos: Vector2 = JuiceLedger.get_base(n2d, "position", n2d.position)
+	var base_rot: float = JuiceLedger.get_base(n2d, "rotation", n2d.rotation)
+	var base_scale: Vector2 = JuiceLedger.get_base(n2d, "scale", n2d.scale)
 
-	var total_pos: Vector2 = _ledger_get_total(n2d, "position", Vector2.ZERO)
-	var total_rot: float = _ledger_get_total(n2d, "rotation", 0.0)
-	var total_scale: Vector2 = _ledger_get_total(n2d, "scale", Vector2.ZERO)
+	var total_pos: Vector2 = JuiceLedger.get_total(n2d, "position", Vector2.ZERO)
+	var total_rot: float = JuiceLedger.get_total(n2d, "rotation", 0.0)
+	var total_scale: Vector2 = JuiceLedger.get_total(n2d, "scale", Vector2.ZERO)
 
 	# Absolute write — natively beats external snapping without drifting
 	n2d.position = base_pos + total_pos
@@ -321,12 +321,12 @@ func _temporarily_undo_visual() -> void:
 	var n2d := _target_node as Node2D
 	
 	# Strip our deltas from the ledger temporarily without destroying it
-	_ledger_cleanup_source(n2d, self, false)
+	JuiceLedger.cleanup_source(n2d, self, false)
 	
 	# Apply absolute baseline position + sibling remaining deltas
-	n2d.position = _ledger_get_base_value(n2d, "position", n2d.position) + _ledger_get_total(n2d, "position", Vector2.ZERO)
-	n2d.rotation = _ledger_get_base_value(n2d, "rotation", n2d.rotation) + _ledger_get_total(n2d, "rotation", 0.0)
-	n2d.scale = _ledger_get_base_value(n2d, "scale", n2d.scale) + _ledger_get_total(n2d, "scale", Vector2.ZERO)
+	n2d.position = JuiceLedger.get_base(n2d, "position", n2d.position) + JuiceLedger.get_total(n2d, "position", Vector2.ZERO)
+	n2d.rotation = JuiceLedger.get_base(n2d, "rotation", n2d.rotation) + JuiceLedger.get_total(n2d, "rotation", 0.0)
+	n2d.scale = JuiceLedger.get_base(n2d, "scale", n2d.scale) + JuiceLedger.get_total(n2d, "scale", Vector2.ZERO)
 
 	# Restore modulate to natural so Appearance effects see the true From state
 	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
