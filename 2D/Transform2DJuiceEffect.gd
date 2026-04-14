@@ -907,6 +907,8 @@ func _update_editor_cache(target: Node = null) -> void:
 # =============================================================================
 # BASE CAPTURE
 # =============================================================================
+
+func _capture_base(target: Node) -> void:
 	if _has_base:
 		if debug_enabled:
 			print("[FROMTO_DBG] Transform2D._capture_base: SKIPPED (already has _base_pos=%s)" % [_base_position])
@@ -915,6 +917,7 @@ func _update_editor_cache(target: Node = null) -> void:
 	if n2d == null:
 		return
 		
+	# Read from the ledger so we get the natural state even if other Juice nodes are active.
 	_base_position = JuiceBase._ledger_get_base_value(n2d, "position", n2d.position)
 	_base_rotation_radians = JuiceBase._ledger_get_base_value(n2d, "rotation", n2d.rotation)
 	_base_scale = JuiceBase._ledger_get_base_value(n2d, "scale", n2d.scale)

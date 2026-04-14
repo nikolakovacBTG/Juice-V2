@@ -954,12 +954,15 @@ func _capture_base(target: Node) -> void:
 		_has_base = true
 		return
 
-	_base_position = n3d.position
-	_base_transform = n3d.transform
+	# Read from the ledger so we capture the natural state even if other Juice nodes
+	# are active on the same target (e.g. nested packed prefab compositing scenario).
+	_base_position = JuiceBase._ledger_get_base_value(n3d, "position", n3d.position)
+	var base_rotation: Vector3 = JuiceBase._ledger_get_base_value(n3d, "rotation", n3d.rotation)
+	_base_scale = JuiceBase._ledger_get_base_value(n3d, "scale", n3d.scale)
+	_base_transform = Transform3D(Basis.from_euler(base_rotation).scaled(_base_scale), _base_position)
 	var ortho_basis := _base_transform.basis.orthonormalized()
 	_base_euler = ortho_basis.get_euler()
 	_base_quat = Quaternion(ortho_basis)
-	_base_scale = n3d.scale
 
 	# Pre-compute the fixed pivot position in parent space for rotation
 	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
