@@ -907,21 +907,23 @@ func _update_editor_cache(target: Node = null) -> void:
 # =============================================================================
 # BASE CAPTURE
 # =============================================================================
-
-func _capture_base(target: Node) -> void:
 	if _has_base:
+		if debug_enabled:
+			print("[FROMTO_DBG] Transform2D._capture_base: SKIPPED (already has _base_pos=%s)" % [_base_position])
 		return
 	var n2d := target as Node2D
 	if n2d == null:
-		_has_base = true
 		return
-	_base_position = n2d.position
-	_base_rotation_radians = n2d.rotation
-	_base_scale = n2d.scale
+		
+	_base_position = JuiceBase._ledger_get_base_value(n2d, "position", n2d.position)
+	_base_rotation_radians = JuiceBase._ledger_get_base_value(n2d, "rotation", n2d.rotation)
+	_base_scale = JuiceBase._ledger_get_base_value(n2d, "scale", n2d.scale)
+	
 	_has_base = true
 	if debug_enabled:
-		print("[Transform2D] Base captured: pos=%s, rot=%.1f°, scale=%s" % [
+		print("[FROMTO_DBG] Transform2D._capture_base: pos=%s, rot=%.1f°, scale=%s" % [
 			_base_position, rad_to_deg(_base_rotation_radians), _base_scale])
+
 
 
 # =============================================================================

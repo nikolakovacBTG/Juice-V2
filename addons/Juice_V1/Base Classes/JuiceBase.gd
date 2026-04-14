@@ -2083,10 +2083,6 @@ static func _ledger_ensure_initialized(target: Node, expected_props: Array[Strin
 static func _ledger_update_external_displacement(target: Node, expected_props: Array[String]) -> void:
 	if not target.has_meta(LEDGER_KEY): return
 	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
-	
-	var skip_frame: int = ledger.get("skip_drift_frame", -1)
-	if skip_frame == Engine.get_process_frames() or skip_frame == Engine.get_process_frames() - 1:
-		return
 		
 	for prop in expected_props:
 		if not ledger["base"].has(prop): continue
@@ -2112,6 +2108,13 @@ static func _ledger_update_external_displacement(target: Node, expected_props: A
 
 		var current_val: Variant = target.get(prop)
 		
+		# If the node is a Control in a Container, the layout engine applies absolute positions, not relative offsets.
+		var is_container_position := false
+		if prop == "position" and target is Control:
+			var parent := target.get_parent()
+			if parent is Container and not (target as Control).top_level:
+				is_container_position = true
+		
 		var displaced := false
 		var offset: Variant = _seq_zero_for(base_val)
 		
@@ -2120,9 +2123,22 @@ static func _ledger_update_external_displacement(target: Node, expected_props: A
 				displaced = true
 				offset = (current_val as float) - (expected_val as float)
 		elif typeof(current_val) == TYPE_VECTOR2:
+			if prop == "scale":
+				print("[LEDGER_DEBUG_X] target=%s, actual=%s, base=%s, total=%s, expected=%s" % [target.name, current_val, base_val, total_delta, expected_val])
+			
 			if not (current_val as Vector2).is_equal_approx(expected_val as Vector2):
-				displaced = true
-				offset = (current_val as Vector2) - (expected_val as Vector2)
+				if is_container_position:
+					# For Containers, the layout engine simply sets the true baseline bounds directly.
+					# It does not apply additive offsets to our Juice deltas.
+					ledger["base"][prop] = current_val
+					continue
+				else:
+					var test_offset = (current_val as Vector2) - (expected_val as Vector2)
+					if abs(test_offset.x) > 0.0001 or abs(test_offset.y) > 0.0001:
+						displaced = true
+						offset = test_offset
+						if prop == "scale":
+							print("[LEDGER DRIFT] SCALE DRIFT DETECTED! actual: ", current_val, " expected: ", expected_val, " (base: ", base_val, " + total: ", total_delta, ")")
 		elif typeof(current_val) == TYPE_VECTOR3:
 			if not (current_val as Vector3).is_equal_approx(expected_val as Vector3):
 				displaced = true

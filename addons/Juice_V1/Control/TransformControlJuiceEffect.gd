@@ -950,9 +950,14 @@ func _capture_base(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
 		return
-	_base_position = ctrl.position
-	_base_rotation_radians = ctrl.rotation
-	_base_scale = ctrl.scale
+		
+	# M: Crucial bugfix for stacked effects multiplication!
+	# We MUST NOT capture 'ctrl.position' directly if the node is already under the influence of another Juice node!
+	# Relying heavily on the Domain Node's ledger to give us the "clean" state of the node.
+	_base_position = JuiceBase._ledger_get_base_value(ctrl, "position", ctrl.position)
+	_base_rotation_radians = JuiceBase._ledger_get_base_value(ctrl, "rotation", ctrl.rotation)
+	_base_scale = JuiceBase._ledger_get_base_value(ctrl, "scale", ctrl.scale)
+	
 	_has_base = true
 	if debug_enabled:
 		print("[FROMTO_DBG] TransformCtrl._capture_base: pos=%s, rot=%.1f°, scale=%s" % [
