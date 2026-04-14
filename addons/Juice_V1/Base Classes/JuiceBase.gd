@@ -482,23 +482,14 @@ func _ready() -> void:
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
 		_try_auto_connect()
 
-	# Capture natural state before any effects modify the target (STACK only)
-	if _target_node != null:
-		_capture_base_values()
-
-	# Forward _on_host_ready to all effects (for CaptureAt.READY etc.) — STACK only
-	if _target_node != null:
-		for effect in _runtime_effects:
-			if effect != null:
-				effect._on_host_ready(_target_node, self)
-
-	# Handle ON_READY trigger
-	if trigger_on == TriggerEvent.ON_READY:
-		_handle_trigger({"play_in": true})
-
-	# Default to no processing — but don't kill a trigger that already started above
-	if not _is_playing:
-		set_process(false)
+	# DEFERRED: Do NOT capture the base or fire ON_READY here.
+	# At this point the scene tree has not finished _ready() for all nodes, and
+	# Containers have not yet run their deferred _sort_children. Reading
+	# ctrl.position here would return (0, 0) for every button regardless of its
+	# real Container slot. call_deferred schedules _post_ready_init to run after
+	# the current frame's deferred queue — by then, Container._sort_children has
+	# already fired, so positions are correct.
+	call_deferred("_post_ready_init")
 
 
 func _process(delta: float) -> void:
@@ -614,6 +605,37 @@ func _exit_tree() -> void:
 				effect.stop(_target_node)
 	_active_effect_indices.clear()
 	set_process(false)
+
+## Deferred counterpart to _ready().
+## Runs after the Container engine has finished sorting its children for the
+## current frame (Container._sort_children is deferred before JuiceControl.
+## _ready() executes, so it fires first in the deferred queue). This guarantees
+## that _capture_base_values reads the real Container-managed ctrl.position
+## rather than the pre-layout (0, 0) that all buttons share before first sort.
+## Effects that use CaptureAt.READY likewise see the correct position here.
+func _post_ready_init() -> void:
+	# Capture natural state after Container has sorted (STACK only).
+	# In SEQUENCER mode _target_node is null, so this is a no-op.
+	if _target_node != null:
+		_capture_base_values()
+
+	# Forward _on_host_ready so effects with CaptureAt.READY snapshot the
+	# real, Container-managed position rather than the pre-layout (0, 0).
+	if _target_node != null:
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._on_host_ready(_target_node, self)
+
+	# Handle ON_READY trigger. Also deferred so the From/To snapshots inside
+	# _start_effects see the correct position when CaptureAt == READY.
+	if trigger_on == TriggerEvent.ON_READY:
+		_handle_trigger({"play_in": true})
+
+	# Default to no processing. If ON_READY already set _is_playing, keep it.
+	if not _is_playing:
+		set_process(false)
+
+
 
 # =============================================================================
 # PUBLIC API
