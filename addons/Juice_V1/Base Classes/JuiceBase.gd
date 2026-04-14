@@ -1581,17 +1581,27 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	for k in total.keys():
 		tracked_props.append(k)
 
-	# ORDER IS CRITICAL: ensure + detect-displacement BEFORE zeroing our deltas.
-	# If we zero our deltas first, the displacement detector sees total=0 and believes
-	# the target moved externally by the full last-frame delta — it then "corrects" the
-	# base upward, corrupting it. By detecting displacement first (with last-frame totals
-	# still in the ledger), expected==actual and no false drift is recorded.
+	# The sequencer is a PURE WRITER: ensure ledger exists, clear stale deltas, register
+	# new deltas, write. It does NOT call _ledger_update_external_displacement.
+	#
+	# WHY: External displacement detection belongs to STACK JuiceControls via _pre_tick.
+	# They have context about their target (runs every frame while playing, plus JIT at
+	# trigger). The sequencer lacks that context and calling displacement detection here
+	# causes a critical bug during the warmup → real-animation transition:
+	#
+	#   _seq_restore_target_natural() zeroes OUR delta in the ledger (permanently=false).
+	#   ctrl.position is still at the warmup FROM position (no physical write happened).
+	#   → next _seq_post_tick_write_target call: total=0, ctrl=FROM_state, base=Container_Y.
+	#   → "idle" path fires: base = ctrl.position = FROM_state. BASE CORRUPTED.
+	#   → All subsequent ledger reads (hover, scene-action) use the corrupted base.
+	#
+	# With deferred _post_ready_init (which fires AFTER Container._sort_children), the
+	# ledger base is already the true Container position. The sequencer should trust it.
 	_ledger_ensure_initialized(target, tracked_props)
-	_ledger_update_external_displacement(target, tracked_props)
 
-	# NOW zero our stale entries. Any property we animated last frame but not this frame
-	# (e.g., after an effect chain finishes one channel) is cleared from the ledger so it
-	# doesn't accumulate as ghost deltas below.
+	# Zero stale entries from the previous frame. Any property we animated last frame but
+	# not this frame (e.g., an effect chain finished one channel) is cleared so it does
+	# not accumulate as phantom deltas in the remaining registration step below.
 	_ledger_cleanup_source(target, self, false)
 
 	# Write current property offsets into the ledger and resolve absolute value
