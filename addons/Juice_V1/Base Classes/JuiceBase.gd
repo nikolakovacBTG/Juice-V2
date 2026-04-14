@@ -396,17 +396,10 @@ var _seq_target_active_indices: Dictionary = {}
 ## Effects are continuously re-applied at From state every frame until released.
 var _seq_held_entries: Array[Dictionary] = []
 
-## Per-target contribution tracking for Container-safe writes.
-## Maps target Node → { "pos": Vector2/3, "rot": float/Vector3, "scale": Vector2/3 }
-## Used by domain _seq_post_tick_write_target to compute:
-##   natural = current - last_contribution; write = natural + new_delta
-var _seq_target_contributions: Dictionary = {}
-
-## Per-target expected values after our last write. Used for external-reset detection.
-## Maps target Node → { "property_name": expected_value_after_write }
-## If the actual value differs from expected, an external system reset the property
-## and our stored contribution is stale — must be cleared before computing natural.
-var _seq_expected_after_write: Dictionary = {}
+# _seq_target_contributions and _seq_expected_after_write were removed.
+# The Centralized Metadata Ledger (LEDGER_KEY on each target) now owns this state,
+# keyed by source instance_id. _seq_post_tick_write_target clears our source slice
+# via _ledger_cleanup_source before re-registering current-frame deltas.
 
 # =============================================================================
 # LIFECYCLE
@@ -1034,8 +1027,6 @@ func _seq_stop() -> void:
 
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
-	_seq_target_contributions.clear()
-	_seq_expected_after_write.clear()
 
 	# Stop all per-target effect clones
 	for target_variant: Variant in _seq_target_effects.keys():
@@ -1565,10 +1556,16 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	for k in total.keys():
 		tracked_props.append(k)
 
+	# Clear our stale ledger entries for this target BEFORE re-registering active channels.
+	# This ensures any property we animated last frame but not this frame (e.g., after
+	# an effect chain finishes one channel) is zeroed out from the ledger before the
+	# new totals are pushed below. Without this, stale channels accumulate as ghost deltas.
+	_ledger_cleanup_source(target, self, false)
+
 	_ledger_ensure_initialized(target, tracked_props)
 	_ledger_update_external_displacement(target, tracked_props)
 
-	# Write current property offsets
+	# Write current property offsets into the ledger and resolve absolute value
 	for prop in tracked_props:
 		var delta: Variant = total[prop]
 		_ledger_set_delta(target, self, prop, delta)
@@ -1582,23 +1579,6 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 			target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
 		else:
 			target.set(prop, base_val + total_delta)
-
-	# Zero out any properties we contributed to last frame but no longer do
-	var prev: Dictionary = _seq_target_contributions.get(target, {})
-	for prop: String in prev.keys():
-		if not total.has(prop):
-			_ledger_set_delta(target, self, prop, _seq_zero_for(prev[prop]))
-			var base_val: Variant = _ledger_get_base_value(target, prop, target.get(prop))
-			var total_delta: Variant = _ledger_get_total(target, prop, _seq_zero_for(base_val))
-			
-			if typeof(total_delta) == TYPE_COLOR:
-				var base_col := base_val as Color
-				var tot_col := total_delta as Color
-				target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
-			else:
-				target.set(prop, base_val + total_delta)
-
-	_seq_target_contributions[target] = total
 
 
 
