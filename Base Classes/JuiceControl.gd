@@ -268,7 +268,7 @@ func _post_tick_write() -> void:
 	ctrl.scale = base_scale + total_scale
 	
 	if debug_enabled:
-		print("[%s] POST_TICK base_pos=%s, new_pos_delta=%s, total_pos_ledger=%s, ctrl_now=%s" % [name, base_pos, new_pos, total_pos, ctrl.position])
+		print("[%s] POST_TICK base_scale=%s, new_scale_delta=%s, total_scale_ledger=%s, ctrl_scale=%s" % [name, base_scale, new_scale, total_scale, ctrl.scale])
 
 	# Appearance: accumulate modulate factors from JuiceControlAppearanceEffect effects.
 	# Only write modulate when at least one appearance effect has a non-identity factor.
