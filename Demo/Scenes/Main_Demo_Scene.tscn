@@ -10,7 +10,6 @@
 [ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="8_3p8n2"]
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
-[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -159,35 +158,6 @@ script = ExtResource("5_lfgkc")
 effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_w3iwx")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="Resource_ntvx2"]
-script = ExtResource("10_ntvx2")
-transform_target = 0
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-from_reference = 0
-from_position_in = 1
-from_position = Vector2(-0.5, 0)
-to_reference = 1
-to_capture_at = 2
-_to_editor_cached_position = Vector2(0, 0)
-_to_editor_cached_rotation = 0.0
-_to_editor_cached_scale = Vector2(1, 1)
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://bf43e3idc17tt"
-
-[sub_resource type="Resource" id="Resource_5ihny"]
-script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ntvx2")])
-metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
-
 [node name="MainDemoScene" type="Control" unique_id=75509961]
 layout_mode = 3
 anchors_preset = 15
@@ -263,15 +233,6 @@ text = "Quit"
 script = ExtResource("3_fay60")
 trigger_on = 0
 recipe = SubResource("Resource_8wggb")
-metadata/_custom_type_script = "uid://c7dye3orhby4j"
-
-[node name="JuiceControl" type="Node" parent="MarginContainer/CenterContainer/Menu" unique_id=1241854014]
-script = ExtResource("3_fay60")
-mode = 1
-seq_stagger_delay = 0.3
-start_delay = 0.68
-recipe = SubResource("Resource_5ihny")
-debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Scene Container" type="Node" parent="." unique_id=467602694]

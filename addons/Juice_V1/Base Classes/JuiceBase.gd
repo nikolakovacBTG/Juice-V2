@@ -1527,8 +1527,11 @@ func _temporarily_reapply_visual() -> void:
 ## Sequencer: undo warmup contribution on a target, restoring it to its natural
 ## (Container-managed / editor) state. Called before effects re-capture base for
 ## the real animation, preventing warmup contributions from polluting the base.
+## IMPORTANT: non-permanent (false) — STACK JuiceControls own the ledger lifecycle.
+## The sequencer is a writer, not the owner. Permanently destroying the ledger would
+## erase the natural base that other JuiceControls (hover, scene-action, etc.) rely on.
 func _seq_restore_target_natural(target: Node) -> void:
-	_ledger_cleanup_source(target, self)
+	_ledger_cleanup_source(target, self, false)
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
@@ -1556,14 +1559,18 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 	for k in total.keys():
 		tracked_props.append(k)
 
-	# Clear our stale ledger entries for this target BEFORE re-registering active channels.
-	# This ensures any property we animated last frame but not this frame (e.g., after
-	# an effect chain finishes one channel) is zeroed out from the ledger before the
-	# new totals are pushed below. Without this, stale channels accumulate as ghost deltas.
-	_ledger_cleanup_source(target, self, false)
-
+	# ORDER IS CRITICAL: ensure + detect-displacement BEFORE zeroing our deltas.
+	# If we zero our deltas first, the displacement detector sees total=0 and believes
+	# the target moved externally by the full last-frame delta — it then "corrects" the
+	# base upward, corrupting it. By detecting displacement first (with last-frame totals
+	# still in the ledger), expected==actual and no false drift is recorded.
 	_ledger_ensure_initialized(target, tracked_props)
 	_ledger_update_external_displacement(target, tracked_props)
+
+	# NOW zero our stale entries. Any property we animated last frame but not this frame
+	# (e.g., after an effect chain finishes one channel) is cleared from the ledger so it
+	# doesn't accumulate as ghost deltas below.
+	_ledger_cleanup_source(target, self, false)
 
 	# Write current property offsets into the ledger and resolve absolute value
 	for prop in tracked_props:
@@ -2103,22 +2110,25 @@ static func _ledger_update_external_displacement(target: Node, expected_props: A
 				displaced = true
 				offset = (current_val as float) - (expected_val as float)
 		elif typeof(current_val) == TYPE_VECTOR2:
-			if prop == "scale":
-				print("[LEDGER_DEBUG_X] target=%s, actual=%s, base=%s, total=%s, expected=%s" % [target.name, current_val, base_val, total_delta, expected_val])
-			
 			if not (current_val as Vector2).is_equal_approx(expected_val as Vector2):
 				if is_container_position:
-					# For Containers, the layout engine simply sets the true baseline bounds directly.
-					# It does not apply additive offsets to our Juice deltas.
-					ledger["base"][prop] = current_val
+					# The Container re-sorts children to their natural positions.
+					# When Juice is IDLE (total_delta == 0): current_val IS the true natural
+					# Container position — update the base so subsequent animations start from the
+					# correct spot. This handles HBox re-sorting after resize, visibility change, etc.
+					# When Juice is ACTIVE (total_delta != 0): Juice intentionally displaced the node.
+					# The mismatch is expected — do NOT update the base. Subtracting total_delta
+					# is unsafe because Containers only manage one axis (HBox → X, VBox → Y),
+					# so subtracting a 2D delta corrupts the unmanaged axis.
+					var is_idle: bool = (total_delta as Vector2).is_equal_approx(Vector2.ZERO)
+					if is_idle:
+						ledger["base"][prop] = current_val
 					continue
 				else:
-					var test_offset = (current_val as Vector2) - (expected_val as Vector2)
+					var test_offset: Vector2 = (current_val as Vector2) - (expected_val as Vector2)
 					if abs(test_offset.x) > 0.0001 or abs(test_offset.y) > 0.0001:
 						displaced = true
 						offset = test_offset
-						if prop == "scale":
-							print("[LEDGER DRIFT] SCALE DRIFT DETECTED! actual: ", current_val, " expected: ", expected_val, " (base: ", base_val, " + total: ", total_delta, ")")
 		elif typeof(current_val) == TYPE_VECTOR3:
 			if not (current_val as Vector3).is_equal_approx(expected_val as Vector3):
 				displaced = true

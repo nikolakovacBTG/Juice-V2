@@ -526,11 +526,12 @@ func test_custom_from_scale_not_polluted_by_warmup() -> void:
 
 
 func test_external_reset_during_warmup_hold_recovers() -> void:
-	# Reproduces the exact bug from Control_Intro_v1.tscn:
-	# Something externally resets scale from 0 (warmup From) back to 1 (natural)
-	# between warmup and the first process tick. Without external-reset detection,
-	# contribution tracking computes wrong natural: (1,1)-(-1,-1)=(2,2) instead of (1,1).
-	# Result: scale stays at 1 during delay, then animates 1→2 instead of 0→1.
+	# Verifies that an external scale reset during the sequencer's warmup hold
+	# does NOT corrupt the ledger base. Previously (before ledger architecture),
+	# drift detection would bake the external +1.0 into the base, causing the
+	# animation to arrive at To=(1,1) + drift=(1,1) = (2,2) instead of (1,1).
+	# With the corrected ledger (displacement detection runs before cleanup,
+	# Container position strips deltas), the animation must land cleanly at To=(1,1).
 	var parent := HBoxContainer.new()
 	parent.name = "ResetHBox"
 	parent.size = Vector2(600, 100)
@@ -574,28 +575,28 @@ func test_external_reset_during_warmup_hold_recovers() -> void:
 	await wait_frames(3)
 
 	seq.animate_in()
-	# Warmup just ran synchronously — targets should be at scale=0
-	# Now SIMULATE the external reset that happens in real scenes
-	# (something resets scale back to 1 before the first process tick)
+	# Warmup holds targets at From = scale(0,0).
+	# Now simulate an external reset (e.g. another system restoring natural scale)
 	for btn in buttons:
 		btn.scale = Vector2(1, 1)
 
-	# Wait a few frames — V1 drift detection will permanently add the external +1.0 override to the baseline.
-	# The hold delta (-1.0) + the new base (2.0) = 1.0.
+	# After a few frames, warmup should reassert From=0 cleanly.
+	# The ledger base must NOT drift upward from the external reset.
 	await wait_frames(5)
-	assert_approx_float(buttons[0].scale.x, 1.0,
-		"Post-reset recovery: Btn0 holds at 1.0 due to additive drift (scale.x=%.2f)" % buttons[0].scale.x, 0.05)
-	assert_approx_float(buttons[1].scale.x, 1.0,
-		"Post-reset recovery: Btn1 holds at 1.0 due to additive drift (scale.x=%.2f)" % buttons[1].scale.x, 0.05)
+	assert_approx_float(buttons[0].scale.x, 0.0,
+		"Post-reset: Btn0 warmup re-holds at From=0 (scale.x=%.2f)" % buttons[0].scale.x, 0.1)
+	assert_approx_float(buttons[1].scale.x, 0.0,
+		"Post-reset: Btn1 warmup re-holds at From=0 (scale.x=%.2f)" % buttons[1].scale.x, 0.1)
 
 	# Wait for delay + animation to complete
 	await wait_seconds(1.0)
 
-	# After animation: scale must be at To=(1,1) + Drift(1,1) = (2,2)
+	# After animation: scale must be at To=(1,1), NOT (2,2).
+	# (2,2) was the broken drift-accumulation result — the corrected ledger eliminates that.)
 	for btn: Button in buttons:
-		assert_approx_float(btn.scale.x, 2.0,
-			"Post-anim: %s scale.x = 2 (baseline 1 + drift 1)" % btn.text, 0.1)
-		assert_approx_float(btn.scale.y, 2.0,
-			"Post-anim: %s scale.y = 2 (baseline 1 + drift 1)" % btn.text, 0.1)
+		assert_approx_float(btn.scale.x, 1.0,
+			"Post-anim: %s scale.x = 1.0 (To target, no drift)" % btn.text, 0.15)
+		assert_approx_float(btn.scale.y, 1.0,
+			"Post-anim: %s scale.y = 1.0 (To target, no drift)" % btn.text, 0.15)
 
 	await cleanup(parent)
