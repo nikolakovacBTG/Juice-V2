@@ -40,34 +40,13 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Natural state — captured once at _ready. Read-only reference after capture;
-# contribution tracking does not modify these.
-var _base_position: Vector2 = Vector2.ZERO
-var _base_rotation: float = 0.0
-var _base_scale: Vector2 = Vector2.ONE
-
-# Sum of all effect deltas currently applied — used by undo/reapply
-var _total_pos_contribution: Vector2 = Vector2.ZERO
-var _total_rot_contribution: float = 0.0
-var _total_scale_contribution: Vector2 = Vector2.ZERO
-
-# Whether base values have been captured at least once
+# Whether base values have been captured at least once.
+# Transform state is owned by the Centralized Metadata Ledger (LEDGER_KEY on target).
+# Appearance stacking uses per-node _own_modulate_contribution as before.
 var _base_captured: bool = false
 
-# Expected values after our last write — for external-move detection (pre-tick).
-# If the actual value differs from expected next frame, something external moved
-# the target and we update _base_*.
-var _expected_position: Vector2 = Vector2.INF
-var _expected_rotation: float = INF
-var _expected_scale: Vector2 = Vector2.INF
-
-# Modulate base — captured at _capture_base_values for appearance accumulation.
-# Juice2DAppearanceEffect effects contribute _modulate_factor multiplicatively;
-# the domain node writes target.modulate = _base_modulate * combined_factor once per frame.
-var _base_modulate: Color = Color.WHITE
-var _has_modulate_base: bool = false
-
-# Phase B: Per-node contribution tracking for sibling stacking
+# Per-node modulate contribution for sibling stacking (Appearance effects only).
+# Transform properties use the shared Metadata Ledger.
 var _own_modulate_contribution: Color = Color.WHITE
 
 # =============================================================================
@@ -84,6 +63,8 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	super._exit_tree()
+	if _target_node != null and is_instance_valid(_target_node):
+		_ledger_cleanup_source(_target_node, self)
 
 func _process(delta: float) -> void:
 	super._process(delta)
@@ -196,86 +177,35 @@ func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 # =============================================================================
 
 ## Capture target's natural position/rotation/scale.
-## Base values are a read-only reference; contribution tracking handles writes.
+## Transforms use the Shared Target Ledger; Modulate uses the dedicated META_KEY.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node2D:
 		return
 	var n2d := _target_node as Node2D
-	_base_position = n2d.position
-	_base_rotation = n2d.rotation
-	_base_scale = n2d.scale
-	_base_modulate = n2d.modulate
-	_has_modulate_base = true
+	
+	_ledger_ensure_initialized(n2d, ["position", "rotation", "scale"])
+	
 	_base_captured = true
-	# Reset contribution tracking
-	_total_pos_contribution = Vector2.ZERO
-	_total_rot_contribution = 0.0
-	_total_scale_contribution = Vector2.ZERO
-	# Initialise expected values so pre-tick can detect external moves
-	_expected_position = n2d.position
-	_expected_rotation = n2d.rotation
-	_expected_scale = n2d.scale
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
-## Runs once per frame, before effects tick. When displacement is detected,
-## updates _base_* so delta computations use the correct natural state.
+## The Metadata Ledger's external-displacement check handles all tracked props.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
-	var any_displaced := false
-
-	# Position
-	if _expected_position != Vector2.INF:
-		if not n2d.position.is_equal_approx(_expected_position):
-			var displacement := n2d.position - _expected_position
-			_base_position += displacement
-			_expected_position = n2d.position
-			any_displaced = true
-			if debug_enabled:
-				print("[%s] External displacement (position): %s → new base: %s" % [
-					name, displacement, _base_position])
-
-	# Rotation
-	if _expected_rotation != INF:
-		if not is_equal_approx(n2d.rotation, _expected_rotation):
-			var displacement := n2d.rotation - _expected_rotation
-			_base_rotation += displacement
-			_expected_rotation = n2d.rotation
-			any_displaced = true
-
-	# Scale
-	if _expected_scale != Vector2.INF:
-		if not n2d.scale.is_equal_approx(_expected_scale):
-			var displacement := n2d.scale - _expected_scale
-			_base_scale += displacement
-			_expected_scale = n2d.scale
-			any_displaced = true
-
-	# Invalidate effect base caches so they re-capture on next animation start
-	if any_displaced:
-		for effect in _runtime_effects:
-			if effect != null:
-				effect._invalidate_base_cache()
-
-
-## Contribution-tracking write: subtract old contribution, add new contribution.
-## Multiple Juice nodes on the same target can write independently without
-## overwriting each other — each node only touches its own layer of changes.
-func _post_tick_write() -> void:
-	if debug_enabled:
-		print("[DEBUG] Phase B: _post_tick_write called")
-		print("[DEBUG] Phase B: _target_node: ", _target_node)
-		print("[DEBUG] Phase B: _base_captured: ", _base_captured)
-		print("[DEBUG] Phase B: _runtime_effects count: ", _runtime_effects.size())
 	
+	_ledger_update_external_displacement(n2d, ["position", "rotation", "scale"])
+
+
+## Contribution-tracking write: register this node's deltas into the shared target ledger,
+## then write absolute: target = ledger_base + sum(all_source_deltas).
+## Multiple Juice nodes on the same target write through the ledger independently.
+func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
-		if debug_enabled:
-			print("[DEBUG] Phase B: Early exit - target null or base not captured")
 		return
 	var n2d := _target_node as Node2D
 
-	# Sum deltas from all runtime effects
+	# Sum transform deltas from all runtime effects
 	var new_pos := Vector2.ZERO
 	var new_rot := 0.0
 	var new_scale := Vector2.ZERO
@@ -293,20 +223,24 @@ func _post_tick_write() -> void:
 		if eff_2d._contributes_scale:
 			new_scale += eff_2d._scale_delta
 
-	# Contribution tracking: subtract what we added last frame, add what we want now
-	n2d.position = n2d.position - _total_pos_contribution + new_pos
-	n2d.rotation = n2d.rotation - _total_rot_contribution + new_rot
-	n2d.scale = n2d.scale - _total_scale_contribution + new_scale
+	# Register our deltas into the Target's ledger
+	_ledger_set_delta(n2d, self, "position", new_pos)
+	_ledger_set_delta(n2d, self, "rotation", new_rot)
+	_ledger_set_delta(n2d, self, "scale", new_scale)
 
-	# Track expected values (for external-displacement detection next frame)
-	_expected_position = n2d.position
-	_expected_rotation = n2d.rotation
-	_expected_scale = n2d.scale
+	# Fetch the unified natural base and the total sums of all Juice nodes modifying this target
+	var base_pos: Vector2 = _ledger_get_base_value(n2d, "position", n2d.position)
+	var base_rot: float = _ledger_get_base_value(n2d, "rotation", n2d.rotation)
+	var base_scale: Vector2 = _ledger_get_base_value(n2d, "scale", n2d.scale)
 
-	# Update tracked contribution (for undo/reapply and next frame's subtraction)
-	_total_pos_contribution = new_pos
-	_total_rot_contribution = new_rot
-	_total_scale_contribution = new_scale
+	var total_pos: Vector2 = _ledger_get_total(n2d, "position", Vector2.ZERO)
+	var total_rot: float = _ledger_get_total(n2d, "rotation", 0.0)
+	var total_scale: Vector2 = _ledger_get_total(n2d, "scale", Vector2.ZERO)
+
+	# Absolute write — natively beats external snapping without drifting
+	n2d.position = base_pos + total_pos
+	n2d.rotation = base_rot + total_rot
+	n2d.scale = base_scale + total_scale
 
 	# Appearance: accumulate modulate factors from Juice2DAppearanceEffect effects.
 	# Only write modulate when at least one appearance effect has a non-identity factor.
@@ -380,19 +314,26 @@ func _post_tick_write() -> void:
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
+## Called before effects capture From/To references and before editor save.
 func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
-	n2d.position -= _total_pos_contribution
-	n2d.rotation -= _total_rot_contribution
-	n2d.scale -= _total_scale_contribution
+	
+	# Strip our deltas from the ledger temporarily without destroying it
+	_ledger_cleanup_source(n2d, self, false)
+	
+	# Apply absolute baseline position + sibling remaining deltas
+	n2d.position = _ledger_get_base_value(n2d, "position", n2d.position) + _ledger_get_total(n2d, "position", Vector2.ZERO)
+	n2d.rotation = _ledger_get_base_value(n2d, "rotation", n2d.rotation) + _ledger_get_total(n2d, "rotation", 0.0)
+	n2d.scale = _ledger_get_base_value(n2d, "scale", n2d.scale) + _ledger_get_total(n2d, "scale", Vector2.ZERO)
+
 	# Restore modulate to natural so Appearance effects see the true From state
 	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
 	const META_KEY := &"juice_modulate_natural"
 	if n2d.has_meta(META_KEY):
 		n2d.modulate = n2d.get_meta(META_KEY)
-	# Phase B: Set own contribution to identity so sibling rescan excludes us
+	# Set own contribution to identity so sibling rescan excludes us
 	_own_modulate_contribution = Color.WHITE
 
 
@@ -400,10 +341,8 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
-	var n2d := _target_node as Node2D
-	n2d.position += _total_pos_contribution
-	n2d.rotation += _total_rot_contribution
-	n2d.scale += _total_scale_contribution
+	# Re-apply transform deltas by flushing a fresh post-tick write.
+	# This restores our deltas to the ledger and recalculates absolute values.
 	_post_tick_write()
 
 
