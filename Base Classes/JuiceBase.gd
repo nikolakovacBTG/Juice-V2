@@ -624,6 +624,9 @@ func _post_ready_init() -> void:
 	if _target_node != null:
 		for effect in _runtime_effects:
 			if effect != null:
+				# Inject ledger base so CaptureAt.READY snapshots read the true natural
+				# position from the ledger rather than a potentially dirty target.property.
+				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
 				effect._on_host_ready(_target_node, self)
 
 	# Handle ON_READY trigger. Also deferred so the From/To snapshots inside
@@ -712,6 +715,8 @@ func set_external_progress(value: float) -> void:
 		_external_progress_initialized = true
 		for effect in _runtime_effects:
 			if effect != null:
+				# Inject ledger base: this path bypasses JuiceEffectBase.start() so injection is manual.
+				effect._ledger_base_snapshot = _ledger_get_base_dict(_target_node)
 				effect._on_animate_start(_target_node)
 	# Set progress on all effects (computes deltas)
 	for effect in _runtime_effects:
@@ -1042,10 +1047,15 @@ func _seq_stop() -> void:
 			var target := target_variant as Node
 			if is_instance_valid(target):
 				_seq_restore_target_natural(target)
+				# Write-through: physically restore ctrl.position = base + remaining deltas.
+				# STACK stop() calls _post_tick_write() for this; SEQUENCER has no equivalent
+				# so without this, ctrl.position stays at the last animated value indefinitely.
+				_ledger_write_to_target(target)
 		for entry in _seq_held_entries:
 			var target := entry.get("target") as Node
 			if is_instance_valid(target) and not _seq_target_active_indices.has(target):
 				_seq_restore_target_natural(target)
+				_ledger_write_to_target(target)
 
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
@@ -1283,6 +1293,10 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 		# Start effects at From state (progress 0.0 for in, 1.0 for out)
 		# then write deltas to target as a one-shot.
 		for eff in effects:
+			# Inject ledger base: the warmup path calls _on_animate_start directly (not via
+			# effect.start()), so it needs manual injection. TO=SELF snapshots captured here
+			# should read the target's natural ledger base position, not its warmup-modified state.
+			eff._ledger_base_snapshot = _ledger_get_base_dict(target)
 			eff._on_animate_start(target)
 			var from_progress := 0.0 if play_in else 1.0
 			eff._apply_effect(from_progress, target)
@@ -2198,6 +2212,17 @@ static func _ledger_get_base_value(target: Node, prop: String, fallback: Variant
 	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
 	return ledger["base"].get(prop, fallback)
 
+
+## Returns the full "base" property sub-dict from the target's metadata ledger.
+## Effect SELF capture methods call _ledger_base_snapshot.get("position", fallback)
+## so they read the true natural state (pre-all-Juice) instead of dirty target.property.
+## Returns {} when no ledger exists — effects fall back to target.property safely.
+static func _ledger_get_base_dict(target: Node) -> Dictionary:
+	if target == null or not target.has_meta(LEDGER_KEY):
+		return {}
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	return ledger.get("base", {})
+
 static func _ledger_cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
 	if not target.has_meta(LEDGER_KEY): return
 	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
@@ -2214,3 +2239,29 @@ static func _ledger_cleanup_source(target: Node, source: Node, permanently: bool
 		for prop: String in ledger["base"].keys():
 			target.set(prop, ledger["base"][prop])
 		target.remove_meta(LEDGER_KEY)
+
+## Immediately writes base + remaining total delta to the target node.
+## Called from _seq_stop() AFTER _seq_restore_target_natural so that the
+## physical ctrl.position reflects the cleared sequencer delta even when
+## no active _process loop is running to do a subsequent write.
+## WHY: STACK stop() calls _post_tick_write() which does this write automatically.
+## SEQUENCER stop() has no equivalent — without this, ctrl.position stays at the
+## last animated value (e.g. y=20) after the ledger delta is zeroed.
+## NOTE: Sums all REMAINING sources (e.g. an active hover JuiceControl) so other
+## writers are preserved additively and not zeroed by the sequencer's stop.
+static func _ledger_write_to_target(target: Node) -> void:
+	if not target.has_meta(LEDGER_KEY): return
+	var ledger: Dictionary = target.get_meta(LEDGER_KEY)
+	for prop: String in ledger["base"].keys():
+		var base_val: Variant = ledger["base"].get(prop)
+		if base_val == null: continue
+		var total_delta: Variant = _seq_zero_for(base_val)
+		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
+		for delta_val: Variant in delta_sources.values():
+			if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+				var c_tot := total_delta as Color
+				var c_del := delta_val as Color
+				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+			else:
+				total_delta += delta_val
+		target.set(prop, base_val + total_delta)

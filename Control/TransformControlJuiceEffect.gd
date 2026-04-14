@@ -827,10 +827,12 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: IN_EDITOR → cached=%s" % [_from_editor_cached_position])
 	else:
 		var ctrl := target as Control
-		_from_self_position_snapshot = ctrl.position if ctrl else Vector2.ZERO
+		# Prefer the ledger base (true natural position, pre-all-Juice) over ctrl.position
+		# which may be polluted by sequencer or peer Juice node deltas.
+		_from_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
 		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: %s → ctrl.pos=%s" % [
-				CaptureAt.keys()[from_capture_at], _from_self_position_snapshot])
+			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: %s → snap=%s (ledger=%s)" % [
+				CaptureAt.keys()[from_capture_at], _from_self_position_snapshot, not _ledger_base_snapshot.is_empty()])
 	_has_from_self_position_snapshot = true
 
 
@@ -841,7 +843,8 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		_from_self_rotation_snapshot = _from_editor_cached_rotation
 	else:
 		var ctrl := target as Control
-		_from_self_rotation_snapshot = ctrl.rotation if ctrl else 0.0
+		# Prefer the ledger base over ctrl.rotation (may include peer Juice rotation deltas).
+		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
 	_has_from_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[TransformCtrl] From Self rotation snapshot: %s rad (mode=%s)" % [
@@ -855,7 +858,8 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		_from_self_scale_snapshot = _from_editor_cached_scale
 	else:
 		var ctrl := target as Control
-		_from_self_scale_snapshot = ctrl.scale if ctrl else Vector2.ONE
+		# Prefer the ledger base over ctrl.scale (may include peer Juice scale deltas).
+		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)
 	_has_from_self_scale_snapshot = true
 	if debug_enabled:
 		print("[TransformCtrl] From Self scale snapshot: %s (mode=%s)" % [
@@ -876,10 +880,11 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: IN_EDITOR → cached=%s" % [_to_editor_cached_position])
 	else:
 		var ctrl := target as Control
-		_to_self_position_snapshot = ctrl.position if ctrl else Vector2.ZERO
+		# Prefer the ledger base over ctrl.position (true natural position, pre-all-Juice).
+		_to_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
 		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: %s → ctrl.pos=%s" % [
-				CaptureAt.keys()[to_capture_at], _to_self_position_snapshot])
+			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: %s → snap=%s (ledger=%s)" % [
+				CaptureAt.keys()[to_capture_at], _to_self_position_snapshot, not _ledger_base_snapshot.is_empty()])
 	_has_to_self_position_snapshot = true
 
 
@@ -890,7 +895,8 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		_to_self_rotation_snapshot = _to_editor_cached_rotation
 	else:
 		var ctrl := target as Control
-		_to_self_rotation_snapshot = ctrl.rotation if ctrl else 0.0
+		# Prefer the ledger base over ctrl.rotation.
+		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
 	_has_to_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[TransformCtrl] To Self rotation snapshot: %s rad (mode=%s)" % [
@@ -904,7 +910,8 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		_to_self_scale_snapshot = _to_editor_cached_scale
 	else:
 		var ctrl := target as Control
-		_to_self_scale_snapshot = ctrl.scale if ctrl else Vector2.ONE
+		# Prefer the ledger base over ctrl.scale.
+		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)
 	_has_to_self_scale_snapshot = true
 	if debug_enabled:
 		print("[TransformCtrl] To Self scale snapshot: %s (mode=%s)" % [

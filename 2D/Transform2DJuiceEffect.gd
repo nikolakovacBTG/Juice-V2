@@ -799,7 +799,9 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		_from_self_position_snapshot = _from_editor_cached_position
 	else:
 		var n2d := target as Node2D
-		_from_self_position_snapshot = n2d.position if n2d else Vector2.ZERO
+		# Prefer the ledger base (true natural position, pre-all-Juice) over n2d.position
+		# which may be polluted by sequencer or peer Juice node deltas.
+		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n2d.position if n2d else Vector2.ZERO)
 	_has_from_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] From Self position snapshot: %s (mode=%s)" % [
@@ -813,7 +815,8 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		_from_self_rotation_snapshot = _from_editor_cached_rotation
 	else:
 		var n2d := target as Node2D
-		_from_self_rotation_snapshot = n2d.rotation if n2d else 0.0
+		# Prefer the ledger base over n2d.rotation.
+		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n2d.rotation if n2d else 0.0)
 	_has_from_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] From Self rotation snapshot: %s rad (mode=%s)" % [
@@ -827,7 +830,8 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		_from_self_scale_snapshot = _from_editor_cached_scale
 	else:
 		var n2d := target as Node2D
-		_from_self_scale_snapshot = n2d.scale if n2d else Vector2.ONE
+		# Prefer the ledger base over n2d.scale.
+		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n2d.scale if n2d else Vector2.ONE)
 	_has_from_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] From Self scale snapshot: %s (mode=%s)" % [
@@ -844,7 +848,8 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		_to_self_position_snapshot = _to_editor_cached_position
 	else:
 		var n2d := target as Node2D
-		_to_self_position_snapshot = n2d.position if n2d else Vector2.ZERO
+		# Prefer the ledger base over n2d.position (true natural position, pre-all-Juice).
+		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n2d.position if n2d else Vector2.ZERO)
 	_has_to_self_position_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] To Self position snapshot: %s (mode=%s)" % [
@@ -858,7 +863,8 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		_to_self_rotation_snapshot = _to_editor_cached_rotation
 	else:
 		var n2d := target as Node2D
-		_to_self_rotation_snapshot = n2d.rotation if n2d else 0.0
+		# Prefer the ledger base over n2d.rotation.
+		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n2d.rotation if n2d else 0.0)
 	_has_to_self_rotation_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] To Self rotation snapshot: %s rad (mode=%s)" % [
@@ -872,7 +878,8 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		_to_self_scale_snapshot = _to_editor_cached_scale
 	else:
 		var n2d := target as Node2D
-		_to_self_scale_snapshot = n2d.scale if n2d else Vector2.ONE
+		# Prefer the ledger base over n2d.scale.
+		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n2d.scale if n2d else Vector2.ONE)
 	_has_to_self_scale_snapshot = true
 	if debug_enabled:
 		print("[Transform2D] To Self scale snapshot: %s (mode=%s)" % [
