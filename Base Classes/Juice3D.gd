@@ -243,19 +243,9 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(n3d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n3d, self, "scale", new_scale)
 
-	# Fetch the unified natural base and total sums of all Juice nodes modifying this target
-	var base_pos: Vector3 = JuiceLedger.get_base(n3d, "position", n3d.position)
-	var base_rot: Vector3 = JuiceLedger.get_base(n3d, "rotation", n3d.rotation)
-	var base_scale: Vector3 = JuiceLedger.get_base(n3d, "scale", n3d.scale)
-
-	var total_pos: Vector3 = JuiceLedger.get_total(n3d, "position", Vector3.ZERO)
-	var total_rot: Vector3 = JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO)
-	var total_scale: Vector3 = JuiceLedger.get_total(n3d, "scale", Vector3.ZERO)
-
-	# Absolute write
-	n3d.position = base_pos + total_pos
-	n3d.rotation = base_rot + total_rot
-	n3d.scale = base_scale + total_scale
+	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
+	# Only flushes transform properties; appearance uses multiplicative accumulation below.
+	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
 
 	# Appearance: accumulate albedo/alpha factors from Juice3DAppearanceEffect effects.
 	# Domain node owns one working material; effects only contribute factors.

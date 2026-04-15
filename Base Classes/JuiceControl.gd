@@ -55,10 +55,9 @@ var _expected_modulate: Color = Color.WHITE
 var _base_modulate: Color = Color.WHITE
 var _has_modulate_base: bool = false
 
-# Whether the target is inside a Container. In V1's write-every-frame model,
-# _post_tick_write() inherently beats Container re-sorts each frame.
-# This flag is kept for potential future Container-specific edge cases.
-var _in_container: bool = false
+# Whether the target is inside a Container — REMOVED.
+# Container detection is handled by JuiceLedger.sync_base_if_moved() which checks
+# target.get_parent() is Container internally. No flag needed here.
 
 # =============================================================================
 # LIFECYCLE
@@ -66,10 +65,6 @@ var _in_container: bool = false
 
 func _ready() -> void:
 	super._ready()
-	# Detect Container parent for hold pattern
-	if _target_node != null and _target_node is Control:
-		var ctrl := _target_node as Control
-		_in_container = ctrl.get_parent() is Container
 
 
 func _exit_tree() -> void:
@@ -253,22 +248,17 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(ctrl, self, "rotation", new_rot)
 	JuiceLedger.register_delta(ctrl, self, "scale", new_scale)
 
-	# Fetch the unified natural base and the total sums of all Juice nodes modifying this target
-	var base_pos: Vector2 = JuiceLedger.get_base(ctrl, "position", ctrl.position)
-	var base_rot: float = JuiceLedger.get_base(ctrl, "rotation", ctrl.rotation)
-	var base_scale: Vector2 = JuiceLedger.get_base(ctrl, "scale", ctrl.scale)
+	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
+	# Only flushes transform properties; self_modulate uses multiplicative accumulation below.
+	JuiceLedger.flush(ctrl, ["position", "rotation", "scale"])
 
-	var total_pos: Vector2 = JuiceLedger.get_total(ctrl, "position", Vector2.ZERO)
-	var total_rot: float = JuiceLedger.get_total(ctrl, "rotation", 0.0)
-	var total_scale: Vector2 = JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO)
-
-	# Absolute write — natively beats container eager snapping without drifting
-	ctrl.position = base_pos + total_pos
-	ctrl.rotation = base_rot + total_rot
-	ctrl.scale = base_scale + total_scale
-	
 	if debug_enabled:
-		print("[%s] POST_TICK base_scale=%s, new_scale_delta=%s, total_scale_ledger=%s, ctrl_scale=%s" % [name, base_scale, new_scale, total_scale, ctrl.scale])
+		print("[%s] POST_TICK base_scale=%s, new_scale_delta=%s, total_scale=%s, ctrl_scale=%s" % [
+			name,
+			JuiceLedger.get_base(ctrl, "scale", Vector2.ONE),
+			new_scale,
+			JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO),
+			ctrl.scale])
 
 	# Appearance: accumulate modulate factors from JuiceControlAppearanceEffect effects.
 	# Only write modulate when at least one appearance effect has a non-identity factor.

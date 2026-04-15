@@ -203,14 +203,19 @@ static func cleanup_source(target: Node, source: Node, permanently: bool = true)
 		target.remove_meta(KEY)
 
 
-## Immediately writes [code]base + Σdeltas[/code] for every tracked property
-## to the target node. Called after stop() when no active _process loop will
-## perform the next write — ensures the physical node state matches the ledger.
-## All REMAINING sources (e.g. an active hover) are preserved additively.
-static func flush(target: Node) -> void:
+## Immediately writes [code]base + Σdeltas[/code] for tracked properties to the
+## target node. Called after stop() or from [_temporarily_undo_visual] when no
+## active _process loop will perform the next write.
+## [param props] restricts which properties are written. If empty, all tracked
+## properties are flushed (original behaviour). Pass [code]["position","rotation","scale"][/code]
+## to skip modulate/appearance properties that use multiplicative accumulation
+## and cannot be written correctly via additive base+total.
+## All REMAINING sources (e.g. an active hover) are preserved.
+static func flush(target: Node, props: Array[String] = []) -> void:
 	if not target.has_meta(KEY): return
 	var ledger: Dictionary = target.get_meta(KEY)
-	for prop: String in ledger["base"].keys():
+	var keys: Array = props if not props.is_empty() else ledger["base"].keys()
+	for prop: String in keys:
 		var base_val: Variant = ledger["base"].get(prop)
 		if base_val == null: continue
 		var total_delta: Variant = zero_for(base_val)

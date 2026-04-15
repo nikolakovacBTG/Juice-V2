@@ -228,19 +228,9 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(n2d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n2d, self, "scale", new_scale)
 
-	# Fetch the unified natural base and the total sums of all Juice nodes modifying this target
-	var base_pos: Vector2 = JuiceLedger.get_base(n2d, "position", n2d.position)
-	var base_rot: float = JuiceLedger.get_base(n2d, "rotation", n2d.rotation)
-	var base_scale: Vector2 = JuiceLedger.get_base(n2d, "scale", n2d.scale)
-
-	var total_pos: Vector2 = JuiceLedger.get_total(n2d, "position", Vector2.ZERO)
-	var total_rot: float = JuiceLedger.get_total(n2d, "rotation", 0.0)
-	var total_scale: Vector2 = JuiceLedger.get_total(n2d, "scale", Vector2.ZERO)
-
-	# Absolute write — natively beats external snapping without drifting
-	n2d.position = base_pos + total_pos
-	n2d.rotation = base_rot + total_rot
-	n2d.scale = base_scale + total_scale
+	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
+	# Only flushes transform properties; modulate uses multiplicative accumulation below.
+	JuiceLedger.flush(n2d, ["position", "rotation", "scale"])
 
 	# Appearance: accumulate modulate factors from Juice2DAppearanceEffect effects.
 	# Only write modulate when at least one appearance effect has a non-identity factor.
