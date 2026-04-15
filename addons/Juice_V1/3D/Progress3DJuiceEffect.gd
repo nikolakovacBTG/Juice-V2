@@ -27,19 +27,9 @@ extends Juice3DTransformEffect
 # ENUMS
 # =============================================================================
 
-## Which transform property to accumulate.
-enum TransformTarget {
-	POSITION,  ## Accumulate Node3D.position (Vector3 drift).
-	ROTATION,  ## Accumulate Node3D.rotation (Vector3, degrees/sec per axis).
-	SCALE      ## Accumulate Node3D.scale (Vector3 growth/shrink).
-}
+# TransformTarget inherited from Juice3DTransformEffect
 
-## How the pivot point is determined for rotation/scale.
-enum PivotMode {
-	AUTO_CENTER,  ## Infer visual center from child AABB bounds.
-	INHERIT,      ## Rotate/scale from node origin (no compensation).
-	CUSTOM        ## Rotate/scale from custom_pivot (local-space units).
-}
+# PivotMode inherited from Juice3DTransformEffect
 
 ## What to do when accumulated distance reaches the bound.
 enum BoundBehaviour {
@@ -64,12 +54,10 @@ enum BoundMode {
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	transform_target = TransformTarget.ROTATION  # Progress defaults to ROTATION not POSITION
 
 
-var transform_target: int = TransformTarget.ROTATION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from Juice3DTransformEffect (default set to ROTATION in _init)
 
 var auto_start: bool = false
 var hold_on_stop: bool = true
@@ -87,10 +75,7 @@ var rotation_rate: Vector3 = Vector3(0.0, 90.0, 0.0)
 var scale_rate: Vector3 = Vector3(0.1, 0.1, 0.1)
 
 # --- Pivot ---
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from Juice3DTransformEffect (default: AUTO_CENTER)
 ## Pivot in local-space units when pivot_mode = CUSTOM.
 var custom_pivot: Vector3 = Vector3.ZERO
 
@@ -205,7 +190,7 @@ var _accumulated_position: Vector3 = Vector3.ZERO
 var _accumulated_rotation: Vector3 = Vector3.ZERO  # radians per axis
 var _accumulated_scale: Vector3 = Vector3.ZERO
 var _current_direction: float = 1.0
-var _has_base: bool = false
+# _has_base inherited from Juice3DTransformEffect
 var _base_position: Vector3 = Vector3.ZERO
 var _base_rotation: Vector3 = Vector3.ZERO  # radians per axis
 var _base_scale: Vector3 = Vector3.ONE

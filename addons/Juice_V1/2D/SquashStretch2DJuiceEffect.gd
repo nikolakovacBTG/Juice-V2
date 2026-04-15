@@ -103,8 +103,7 @@ func _get(property: StringName) -> Variant:
 ## Captured base scale.
 var _base_scale: Vector2 = Vector2.ONE
 
-## Whether base has been captured.
-var _has_base: bool = false
+	# _has_base inherited from Juice2DTransformEffect
 
 
 # =============================================================================

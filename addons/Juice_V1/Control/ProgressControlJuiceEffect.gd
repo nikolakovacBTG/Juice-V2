@@ -25,19 +25,9 @@ extends JuiceControlTransformEffect
 # ENUMS
 # =============================================================================
 
-## Which transform property to accumulate.
-enum TransformTarget {
-	POSITION,  ## Accumulate Control.position (Vector2 drift).
-	ROTATION,  ## Accumulate Control.rotation (single-axis Z, degrees/sec).
-	SCALE      ## Accumulate Control.scale (Vector2 growth/shrink).
-}
+# TransformTarget inherited from JuiceControlTransformEffect
 
-## How the pivot point is determined for rotation/scale.
-enum PivotMode {
-	AUTO_CENTER,  ## Set pivot_offset to size / 2 (most common for UI).
-	INHERIT,      ## Use the Control's existing pivot_offset unchanged.
-	CUSTOM        ## Use custom_pivot in normalized coords (0..1 of size).
-}
+# PivotMode inherited from JuiceControlTransformEffect
 
 ## What to do when accumulated distance reaches the bound.
 enum BoundBehaviour {
@@ -62,12 +52,10 @@ enum BoundMode {
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	transform_target = TransformTarget.ROTATION  # Progress defaults to ROTATION not POSITION
 
 
-var transform_target: int = TransformTarget.ROTATION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from JuiceControlTransformEffect (default set to ROTATION in _init)
 
 var auto_start: bool = false
 var hold_on_stop: bool = true
@@ -82,10 +70,7 @@ var rotation_rate: float = 90.0
 var scale_rate: Vector2 = Vector2(0.1, 0.1)
 
 # --- Pivot ---
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from JuiceControlTransformEffect (default: AUTO_CENTER)
 ## Pivot in normalized Control size coords (0.5, 0.5 = center) for CUSTOM mode.
 var custom_pivot: Vector2 = Vector2(0.5, 0.5)
 
@@ -203,7 +188,7 @@ var _accumulated_position: Vector2 = Vector2.ZERO
 var _accumulated_rotation: float = 0.0  # radians
 var _accumulated_scale: Vector2 = Vector2.ZERO
 var _current_direction: float = 1.0
-var _has_base: bool = false
+# _has_base inherited from JuiceControlTransformEffect
 var _base_position: Vector2 = Vector2.ZERO
 var _base_rotation: float = 0.0  # radians
 var _base_scale: Vector2 = Vector2.ONE

@@ -28,11 +28,7 @@ extends Juice2DTransformEffect
 # ENUMS
 # =============================================================================
 
-enum TransformTarget {
-	POSITION,  ## Displace Node2D.position (XY)
-	ROTATION,  ## Rotate Node2D.rotation (Z-axis degrees)
-	SCALE      ## Scale Node2D.scale (XY)
-}
+# TransformTarget inherited from Juice2DTransformEffect
 
 enum NoiseDirection {
 	BOTH,
@@ -40,21 +36,14 @@ enum NoiseDirection {
 	NEGATIVE_ONLY
 }
 
-enum PivotMode {
-	AUTO_CENTER,  ## Estimate visual center from child Sprite2D
-	INHERIT,      ## Rotate/scale around node origin
-	CUSTOM        ## Use custom_pivot_offset in local pixels
-}
+# PivotMode inherited from Juice2DTransformEffect
 
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-var transform_target: int = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from Juice2DTransformEffect (default: POSITION)
 
 var position_amplitude: Vector2 = Vector2(5.0, 5.0)
 var position_unit: int = PositionIn.PIXELS:
@@ -69,10 +58,7 @@ var scale_uniform: bool = true:
 	set(value):
 		scale_uniform = value
 		notify_property_list_changed()
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from Juice2DTransformEffect (default: AUTO_CENTER)
 var custom_pivot_offset: Vector2 = Vector2.ZERO
 
 var noise_type: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
@@ -263,7 +249,7 @@ var _tick_delta: float = 0.0
 var _pivot_offset: Vector2 = Vector2.ZERO
 var _base_rotation: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
-var _has_base: bool = false
+# _has_base inherited from Juice2DTransformEffect
 
 
 # =============================================================================

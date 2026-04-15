@@ -39,19 +39,9 @@ extends Juice2DTransformEffect
 # ENUMS
 # =============================================================================
 
-## Which transform property to accumulate.
-enum TransformTarget {
-	POSITION,  ## Accumulate Node2D.position (Vector2 drift).
-	ROTATION,  ## Accumulate Node2D.rotation (single-axis Z, degrees/sec).
-	SCALE      ## Accumulate Node2D.scale (Vector2 growth/shrink).
-}
+# TransformTarget inherited from Juice2DTransformEffect
 
-## How the pivot point is determined for rotation/scale.
-enum PivotMode {
-	AUTO_CENTER,  ## Infer visual center from Sprite2D/CollisionShape2D/Polygon2D.
-	INHERIT,      ## Rotate/scale from node origin (no position compensation).
-	CUSTOM        ## Rotate/scale from custom_pivot (local pixels).
-}
+# PivotMode inherited from Juice2DTransformEffect
 
 ## What to do when accumulated distance reaches the bound.
 enum BoundBehaviour {
@@ -76,14 +66,10 @@ enum BoundMode {
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	transform_target = TransformTarget.ROTATION  # Progress defaults to ROTATION not POSITION
 
 
-# --- Transform target selector (always visible) ---
-## Which transform property to accumulate.
-var transform_target: int = TransformTarget.ROTATION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from Juice2DTransformEffect (default set to ROTATION in _init)
 
 ## Start accumulating at full speed immediately when the scene starts,
 ## without an explicit animate_in() call.
@@ -106,11 +92,7 @@ var rotation_rate: float = 90.0
 var scale_rate: Vector2 = Vector2(0.1, 0.1)
 
 # --- Pivot (shown for ROTATION and SCALE) ---
-## How the pivot is determined.
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from Juice2DTransformEffect (default: AUTO_CENTER)
 ## Pivot in local-space pixels when pivot_mode = CUSTOM.
 var custom_pivot: Vector2 = Vector2.ZERO
 
@@ -237,8 +219,7 @@ var _accumulated_scale: Vector2 = Vector2.ZERO
 ## Direction multiplier: +1.0 forward, -1.0 reverse (flipped by REVERSE bound).
 var _current_direction: float = 1.0
 
-## Whether base values have been captured.
-var _has_base: bool = false
+# _has_base inherited from Juice2DTransformEffect
 
 ## Captured natural base values (captured once at animation start).
 var _base_position: Vector2 = Vector2.ZERO
@@ -247,7 +228,7 @@ var _base_scale: Vector2 = Vector2.ONE
 
 ## Resolved pivot point in target's local space.
 var _pivot_point: Vector2 = Vector2.ZERO
-var _pivot_resolved: bool = false
+# _pivot_resolved inherited from Juice2DTransformEffect
 
 ## Fixed pivot in parent space (pre-computed at animation start for correct arc).
 var _fixed_pivot_parent: Vector2 = Vector2.ZERO

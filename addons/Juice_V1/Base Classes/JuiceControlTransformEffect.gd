@@ -534,7 +534,7 @@ func _convert_to_pixels(position: Vector2, position_in: int, ctrl: Control) -> V
 			var size := ctrl.size
 			return Vector2(position.x * size.x, position.y * size.y)
 		PositionIn.PARENT_SIZE:
-			var size := _get_parent_size(ctrl)
+			var size := _get_parent_control_size(ctrl)
 			return Vector2(position.x * size.x, position.y * size.y)
 		PositionIn.VIEWPORT_SIZE:
 			var size := _get_viewport_size(ctrl)
@@ -542,7 +542,7 @@ func _convert_to_pixels(position: Vector2, position_in: int, ctrl: Control) -> V
 	return position
 
 
-func _get_parent_size(ctrl: Control) -> Vector2:
+func _get_parent_control_size(ctrl: Control) -> Vector2:
 	var parent := ctrl.get_parent_control()
 	if parent:
 		return parent.size
