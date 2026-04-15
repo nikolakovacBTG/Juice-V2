@@ -125,7 +125,7 @@ var _base_scale: Vector3 = Vector3.ONE
 var _base_position: Vector3 = Vector3.ZERO
 
 ## Whether base has been captured.
-var _has_base: bool = false
+# _has_base inherited from Juice3DTransformEffect
 
 
 # =============================================================================

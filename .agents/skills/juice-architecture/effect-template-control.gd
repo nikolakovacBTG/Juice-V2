@@ -75,8 +75,8 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-var _base_scale: Vector2 = Vector2.ONE  # [Adjust per effect needs]
-var _has_base: bool = false
+# _has_base — inherited from JuiceControlTransformEffect. Do NOT redeclare.
+var _base_scale: Vector2 = Vector2.ONE  # [Adjust per effect needs — or remove if not needed]
 
 
 # =============================================================================

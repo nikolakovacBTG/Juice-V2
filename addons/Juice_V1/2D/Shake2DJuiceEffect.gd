@@ -25,27 +25,16 @@ extends Juice2DTransformEffect
 # ENUMS
 # =============================================================================
 
-enum TransformTarget {
-	POSITION,
-	ROTATION,
-	SCALE
-}
+# TransformTarget inherited from Juice2DTransformEffect
 
-enum PivotMode {
-	AUTO_CENTER,
-	INHERIT,
-	CUSTOM
-}
+# PivotMode inherited from Juice2DTransformEffect
 
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-var transform_target: int = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from Juice2DTransformEffect (default: POSITION)
 
 var shake_frequency: float = 20.0
 
@@ -63,10 +52,7 @@ var scale_amplitude: Vector2 = Vector2(0.15, 0.15)
 var scale_randomness: float = 0.5
 var scale_uniform: bool = true
 
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from Juice2DTransformEffect (default: AUTO_CENTER)
 var custom_pivot: Vector2 = Vector2.ZERO
 
 func _init() -> void:
@@ -171,7 +157,7 @@ var _last_sine_sign: float = 1.0
 var _pivot_offset: Vector2 = Vector2.ZERO
 var _base_rotation: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
-var _has_base: bool = false
+# _has_base inherited from Juice2DTransformEffect
 
 
 # =============================================================================

@@ -30,12 +30,7 @@ extends JuiceControlTransformEffect
 # ENUMS
 # =============================================================================
 
-## Which transform property to drive with noise
-enum TransformTarget {
-	POSITION,  ## Displace Control.position (XY pixels)
-	ROTATION,  ## Rotate Control.rotation (Z-axis degrees)
-	SCALE      ## Scale Control.scale (XY)
-}
+# TransformTarget inherited from JuiceControlTransformEffect
 
 ## Controls the direction of noise displacement
 enum NoiseDirection {
@@ -44,22 +39,14 @@ enum NoiseDirection {
 	NEGATIVE_ONLY   ## One-directional: only negative (-1 to 0)
 }
 
-## How the pivot point is determined for Control nodes.
-enum PivotMode {
-	AUTO_CENTER,  ## Center pivot on control (updates on resize)
-	INHERIT,      ## Use existing pivot_offset
-	CUSTOM        ## Use custom_pivot fraction
-}
+# PivotMode inherited from JuiceControlTransformEffect
 
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-var transform_target: int = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from JuiceControlTransformEffect (default: POSITION)
 
 # --- Amplitude ---
 var position_amplitude: Vector2 = Vector2(5.0, 5.0)
@@ -79,10 +66,7 @@ var scale_uniform: bool = true:
 		notify_property_list_changed()
 
 # --- Pivot ---
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from JuiceControlTransformEffect (default: AUTO_CENTER)
 var custom_pivot: Vector2 = Vector2(0.5, 0.5)
 
 # --- Noise Pattern ---
@@ -280,7 +264,7 @@ func _get(property: StringName) -> Variant:
 var _noise: FastNoiseLite
 var _noise_time: float = 0.0
 var _tick_delta: float = 0.0
-var _pivot_applied: bool = false
+# _pivot_applied inherited from JuiceControlTransformEffect
 
 
 # =============================================================================

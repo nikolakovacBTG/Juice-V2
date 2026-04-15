@@ -72,6 +72,7 @@ func _ready() -> void:
 
 func _register_suites() -> void:
 	# --- Add new test suites here ---
+	_suites.append(load("res://tests/suites/TestJuiceLedger.gd").new())
 	_suites.append(load("res://tests/suites/TestNodeProperties.gd").new())
 	_suites.append(load("res://tests/suites/TestTransformControl.gd").new())
 	_suites.append(load("res://tests/suites/TestTransform2D.gd").new())

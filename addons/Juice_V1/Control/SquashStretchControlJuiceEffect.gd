@@ -38,13 +38,7 @@ enum SquashAxis {
 	HORIZONTAL   ## Squash on X, stretch on Y (side impact)
 }
 
-## Pivot origin for the scale transformation.
-## Controls where scaling appears to originate from.
-enum PivotMode {
-	AUTO_CENTER,  ## Automatically center pivot on the Control's size
-	INHERIT,      ## Use the Control's existing pivot_offset (don't change it)
-	CUSTOM        ## Use a custom normalized pivot (see custom_pivot)
-}
+# PivotMode inherited from JuiceControlTransformEffect
 
 
 # =============================================================================
@@ -65,10 +59,7 @@ var preserve_volume: bool = true
 ## Controls scale origin point. AUTO_CENTER sets pivot to center of the Control.
 ## INHERIT keeps whatever pivot_offset the Control already has.
 ## CUSTOM uses normalized coordinates from custom_pivot.
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from JuiceControlTransformEffect (default: AUTO_CENTER)
 
 ## Custom pivot in normalized coordinates (0–1).
 ## (0.5, 0.5) = center, (0.5, 1.0) = bottom center.
@@ -137,8 +128,8 @@ func _get(property: StringName) -> Variant:
 # =============================================================================
 
 var _base_scale: Vector2 = Vector2.ONE
-var _has_base: bool = false
-var _pivot_applied: bool = false
+# _has_base inherited from JuiceControlTransformEffect
+# _pivot_applied inherited from JuiceControlTransformEffect
 
 
 # =============================================================================
