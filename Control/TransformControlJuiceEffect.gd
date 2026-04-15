@@ -468,11 +468,6 @@ func _get_ref_local_scale(ref: Control, animated: Control) -> Vector2:
 # HELPERS
 # =============================================================================
 
-func _get_viewport_size(ctrl: Control) -> Vector2:
-	var vp := ctrl.get_viewport()
-	if vp:
-		return Vector2(vp.get_visible_rect().size)
-	return Vector2.ZERO
 
 
 func _resolve_node_path_to_control(path: NodePath, path_name: String) -> Control:

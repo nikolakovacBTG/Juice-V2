@@ -27,11 +27,7 @@ extends Juice3DTransformEffect
 # ENUMS
 # =============================================================================
 
-enum TransformTarget {
-	POSITION,  ## Displace Node3D.position (XYZ)
-	ROTATION,  ## Rotate Node3D.rotation (XYZ Euler degrees)
-	SCALE      ## Scale Node3D.scale (XYZ)
-}
+# TransformTarget inherited from Juice3DTransformEffect
 
 enum NoiseDirection {
 	BOTH,
@@ -39,21 +35,14 @@ enum NoiseDirection {
 	NEGATIVE_ONLY
 }
 
-enum PivotMode {
-	AUTO_CENTER,  ## Rotate/scale around node origin (typical for centered meshes)
-	INHERIT,      ## Same as AUTO_CENTER for 3D
-	CUSTOM        ## Use custom_pivot_offset
-}
+# PivotMode inherited from Juice3DTransformEffect
 
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-var transform_target: int = TransformTarget.POSITION:
-	set(value):
-		transform_target = value
-		notify_property_list_changed()
+# transform_target inherited from Juice3DTransformEffect (default: POSITION)
 
 var position_amplitude: Vector3 = Vector3(0.5, 0.5, 0.5)
 var position_unit: int = PositionIn3D.WORLD_UNITS:
@@ -68,10 +57,7 @@ var scale_uniform: bool = true:
 	set(value):
 		scale_uniform = value
 		notify_property_list_changed()
-var pivot_mode: int = PivotMode.AUTO_CENTER:
-	set(value):
-		pivot_mode = value
-		notify_property_list_changed()
+# pivot_mode inherited from Juice3DTransformEffect (default: AUTO_CENTER)
 var custom_pivot_offset: Vector3 = Vector3.ZERO
 
 var noise_type: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
@@ -268,7 +254,7 @@ var _tick_delta: float = 0.0
 var _pivot_offset: Vector3 = Vector3.ZERO
 var _base_rotation: Vector3 = Vector3.ZERO
 var _base_scale: Vector3 = Vector3.ONE
-var _has_base: bool = false
+# _has_base inherited from Juice3DTransformEffect
 
 
 # =============================================================================

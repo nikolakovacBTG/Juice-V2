@@ -83,11 +83,7 @@ enum PositionIn3D {
 	PARENT_SIZE   ## Multiple of parent's AABB
 }
 
-## Rotation input unit (3D only — 2D/Control always use degrees float)
-enum RotationUnit {
-	DEGREES,  ## Input in degrees (converted to radians internally)
-	RADIANS   ## Input in radians directly
-}
+# Note: RotationUnit (DEGREES/RADIANS) is inherited from JuiceEffectBase.
 
 # =============================================================================
 # CONFIGURATION — non-typed, shared by all 3D transform effects
@@ -98,6 +94,13 @@ enum RotationUnit {
 var transform_target: int = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
+		notify_property_list_changed()
+
+# Shared pivot mode for effects using simple pivot selection (Noise/Shake/Progress).
+# Transform3D effects use scale_pivot_mode + rotation_pivot_offset instead.
+var pivot_mode: int = PivotMode.AUTO_CENTER:
+	set(value):
+		pivot_mode = value
 		notify_property_list_changed()
 
 func _init() -> void:
@@ -307,7 +310,10 @@ func _get_scale_from_to_properties() -> Array[Dictionary]:
 
 func _get_rotation_pivot_properties() -> Array[Dictionary]:
 	# 3D rotation pivot uses an explicit offset vector (always shown)
-	return _get_rotation_pivot_offset_property()
+	return [{
+		"name": "rotation_pivot_offset", "type": TYPE_VECTOR3,
+		"usage": PROPERTY_USAGE_DEFAULT, "hint": PROPERTY_HINT_NONE
+	}]
 
 
 func _get_scale_pivot_properties() -> Array[Dictionary]:
