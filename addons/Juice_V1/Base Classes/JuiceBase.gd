@@ -476,7 +476,16 @@ func _ready() -> void:
 	if trigger_on == TriggerEvent.MANUAL:
 		# MANUAL: only connect if manual_trigger_signal is specified
 		if not manual_trigger_signal.is_empty():
-			_connect_manual_signal()
+			var manual_source: Node = get_parent() \
+				if trigger_source == TriggerSource.PARENT \
+				else get_node_or_null(trigger_source_path)
+			if manual_source != null:
+				JuiceTriggerRouter.wire_manual(
+					manual_source, manual_trigger_signal,
+					_on_trigger_momentary, set_external_progress,
+					name if debug_enabled else "")
+			elif debug_enabled:
+				push_warning("[%s] Manual trigger source not found" % name)
 	elif trigger_source == TriggerSource.PARENT and auto_connect_parent:
 		_try_auto_connect()
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
@@ -1845,7 +1854,7 @@ func _try_auto_connect() -> void:
 
 	# Visibility triggers (work on CanvasItem and Node3D — both have visibility_changed)
 	if trigger_on in [TriggerEvent.ON_SHOW, TriggerEvent.ON_HIDE]:
-		_connect_visibility_signals(_trigger_source_node)
+		JuiceTriggerRouter.connect_visibility(_trigger_source_node, _on_visibility_changed)
 		return
 
 	# AnimationPlayer: cross-domain, connect animation_finished
@@ -1875,64 +1884,9 @@ func _is_recognized_trigger_source(node: Node) -> bool:
 	return false  # Subclasses override for domain-specific types
 
 
-## Connect visibility_changed signal. Works for both CanvasItem and Node3D.
-func _connect_visibility_signals(node: Node) -> void:
-	if node.has_signal("visibility_changed"):
-		if not node.is_connected("visibility_changed", _on_visibility_changed):
-			node.connect("visibility_changed", _on_visibility_changed)
-
-
-func _connect_manual_signal() -> void:
-	var source: Node
-	match trigger_source:
-		TriggerSource.PARENT:
-			source = get_parent()
-		TriggerSource.NODE:
-			source = get_node_or_null(trigger_source_path)
-	if source == null:
-		if debug_enabled:
-			push_warning("[%s] Manual trigger source not found" % name)
-		return
-	if source.has_signal(manual_trigger_signal):
-		var target := _make_manual_callable(source, manual_trigger_signal)
-		if not source.is_connected(manual_trigger_signal, target):
-			source.connect(manual_trigger_signal, target)
-
-
-## Inspect a signal's argument list and return the right Callable target.
-##
-## Routing rules:
-##  - 0 args         → _on_trigger_momentary()        (momentary, no args needed)
-##  - 1 float arg    → set_external_progress(float)   (continuous progress drive)
-##  - N other args   → _on_trigger_momentary.unbind(N) (strip args, treat as momentary)
-##
-## This makes "Manual" universally safe — any signal from any source works,
-## including SoftTrigger.progress_changed(float), without crashing.
-func _make_manual_callable(source: Object, sig_name: StringName) -> Callable:
-	var sig_args: Array = []
-	for sig in source.get_signal_list():
-		if sig["name"] == sig_name:
-			sig_args = sig.get("args", [])
-			break
-
-	if debug_enabled:
-		print("[%s] _make_manual_callable: signal='%s' | arg_count=%d | types=%s" % [
-			name, sig_name, sig_args.size(),
-			sig_args.map(func(a): return type_string(a.get("type", TYPE_NIL)))])
-
-	# Case 1: zero-arg signal → standard momentary trigger
-	if sig_args.is_empty():
-		if debug_enabled: print("[%s]   → routing to _on_trigger_momentary (0 args)" % name)
-		return _on_trigger_momentary
-
-	# Case 2: single float arg → drive external progress directly
-	if sig_args.size() == 1 and sig_args[0].get("type", -1) == TYPE_FLOAT:
-		if debug_enabled: print("[%s]   → routing to set_external_progress (float arg)" % name)
-		return set_external_progress
-
-	# Case 3: any other signature → strip all args, treat as momentary
-	if debug_enabled: print("[%s]   → routing to _on_trigger_momentary.unbind(%d)" % [name, sig_args.size()])
-	return _on_trigger_momentary.unbind(sig_args.size())
+# _connect_visibility_signals  → JuiceTriggerRouter.connect_visibility()
+# _connect_manual_signal       → JuiceTriggerRouter.wire_manual()   (inlined in _ready)
+# _make_manual_callable        → JuiceTriggerRouter.resolve_manual_callable()
 
 # =============================================================================
 # SIGNAL CALLBACKS
