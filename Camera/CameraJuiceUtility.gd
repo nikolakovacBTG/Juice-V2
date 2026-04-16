@@ -14,8 +14,8 @@
 # DOES NOT: Discover which camera to use — it IS the camera (via get_parent()).
 # DOES NOT: Limit which juice effects can write to it — effects self-register.
 #
-# SETUP: Add as direct child of Camera2D or Camera3D. Configure offset limits.
-#        Juice effects on any entity will find this automatically via viewport.
+# SETUP: Camera juice effects auto-add this to the active camera on first use.
+#        Optionally place manually as a camera child to customise offset limits.
 # ============================================================================
 
 @tool
@@ -100,6 +100,8 @@ func _ready() -> void:
 
 
 func _initialize_camera() -> void:
+	if _initialized:
+		return  # Idempotent — safe to call from bootstrap before _ready() fires.
 	var parent := get_parent()
 
 	if parent is Camera3D:
