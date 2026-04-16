@@ -971,6 +971,13 @@ func _restore_to_natural(_target: Node) -> void:
 func _invalidate_base_cache() -> void:
 	pass
 
+## Return the property deltas this effect wrote to the target node this tick.
+## Used by the Sequencer to aggregate contributions via the JuiceLedger.
+## Meta-effects (Camera, Screen) return {} — they write to external utilities,
+## not to the host target node. Domain effects override to return their deltas.
+func _get_seq_contribution() -> Dictionary:
+	return {}
+
 ## Identity key for sibling interruption matching.
 func _get_interrupt_identity() -> Variant:
 	return get_script()
