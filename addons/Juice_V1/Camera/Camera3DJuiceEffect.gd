@@ -1,21 +1,24 @@
 ## Animates Camera3D position, rotation, or FOV via CameraJuiceUtility.
 ##
 ## Place this effect in any domain recipe on any entity. When triggered, it
-## finds the active Camera3D's CameraJuiceUtility and applies the offset.
+## finds (or auto-creates) the active Camera3D's CameraJuiceUtility and applies
+## the offset. No manual node setup required at runtime.
 
 # ============================================================================
 # WHAT: Meta effect that offsets Camera3D properties (position/rotation/FOV).
 # WHY:  Camera shake and camera-space effects should be authored on the entity
-#       that causes them (a boss, a door, an explosion) — not on the camera.
+#       that causes them (a boss, a door, an explosion) -- not on the camera.
 #       This effect auto-discovers the active Camera3D each tick so camera
 #       switches are handled correctly without any manual rewiring.
 # SYSTEM: Juice System (addons/Juice_V1/Camera/)
-# DOES NOT: Animate the JuiceBase target node — writes to the camera only.
-# DOES NOT: Handle Camera2D — use Camera2DJuiceEffect for that.
-# DOES NOT: Cache the utility reference — re-discovers each frame.
+# DOES NOT: Animate the JuiceBase target node -- writes to the camera only.
+# DOES NOT: Handle Camera2D -- use Camera2DJuiceEffect for that.
+# DOES NOT: Auto-bootstrap in the editor -- would dirty the scene on save.
 #
-# SETUP: Add a CameraJuiceUtility node as a direct child of your Camera3D.
-#        Add this effect to any entity's recipe. No further wiring needed.
+# SETUP: None. Drop this effect in any recipe and it works at runtime.
+#        Optionally add CameraJuiceUtility manually to tune offset limits.
+#        Camera switches mid-animation are handled -- new camera gets its own
+#        utility on first use. Old utility persists idle at zero cost.
 # ============================================================================
 
 @tool
@@ -51,11 +54,9 @@ var channel: int = Channel.POSITION:
 var position_offset: Vector3 = Vector3(0.0, 0.0, 0.5)
 
 ## If true, position_offset is in camera-local space and rotates with the camera.
-## Most intuitive for directional kicks — a kick of (0,0,-0.5) always punches forward.
 var use_local_space: bool = true
 
-## Camera rotation offset at progress=1.0 (degrees).
-## X = pitch, Y = yaw, Z = roll.
+## Camera rotation offset at progress=1.0 (degrees). X=pitch, Y=yaw, Z=roll.
 var rotation_offset_degrees: Vector3 = Vector3(0.0, 0.0, 5.0)
 
 ## FOV offset at progress=1.0 (degrees). Positive = wider, negative = narrower.
@@ -121,10 +122,9 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-## Delta-first contribution tracking.
-var _my_pos:  Vector3 = Vector3.ZERO
-var _my_rot:  Vector3 = Vector3.ZERO
-var _my_fov:  float   = 0.0
+var _my_pos: Vector3 = Vector3.ZERO
+var _my_rot: Vector3 = Vector3.ZERO
+var _my_fov: float   = 0.0
 
 
 # =============================================================================
@@ -132,7 +132,7 @@ var _my_fov:  float   = 0.0
 # =============================================================================
 
 func _apply_effect(progress: float, _target: Node) -> void:
-	var util := _find_utility()
+	var util := _find_or_create_utility()
 	if not is_instance_valid(util):
 		return
 
@@ -158,7 +158,6 @@ func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
 	var desired := position_offset * progress
 
 	if use_local_space:
-		# Transform offset by camera's basis so it follows camera orientation.
 		var cam := _find_camera_3d()
 		if cam:
 			desired = cam.global_transform.basis * desired
@@ -192,7 +191,7 @@ func _apply_fov(util: CameraJuiceUtility, progress: float) -> void:
 # =============================================================================
 
 func _remove_contribution() -> void:
-	var util := _find_utility()
+	var util := _find_or_create_utility()
 	if is_instance_valid(util):
 		util.position_offset -= _my_pos
 		util.rotation_offset -= _my_rot
@@ -203,10 +202,16 @@ func _remove_contribution() -> void:
 
 
 # =============================================================================
-# UTILITY / CAMERA DISCOVERY
+# UTILITY DISCOVERY + AUTO-BOOTSTRAP
 # =============================================================================
 
-func _find_utility() -> CameraJuiceUtility:
+## Returns the active Camera3D's CameraJuiceUtility, creating one if absent.
+## Re-discovers every call -- handles mid-animation camera switches at zero cost.
+## Returns null in editor (would dirty the scene) or if no Camera3D exists.
+func _find_or_create_utility() -> CameraJuiceUtility:
+	if Engine.is_editor_hint():
+		return null
+
 	var cam := _find_camera_3d()
 	if not cam:
 		return null
@@ -215,9 +220,20 @@ func _find_utility() -> CameraJuiceUtility:
 		if child is CameraJuiceUtility:
 			return child
 
+	return _bootstrap_utility_on(cam)
+
+
+## Creates and attaches a CameraJuiceUtility to the given camera.
+func _bootstrap_utility_on(cam: Camera3D) -> CameraJuiceUtility:
+	var util := CameraJuiceUtility.new()
+	util.name = "CameraJuiceUtility"
+	cam.add_child(util)
+	util._initialize_camera()
+
 	if debug_enabled:
-		push_warning("[Camera3DJuiceEffect] No CameraJuiceUtility found on Camera3D '%s'. Add one as a direct child." % cam.name)
-	return null
+		print("[Camera3DJuiceEffect] Auto-bootstrapped CameraJuiceUtility on '%s'" % cam.name)
+
+	return util
 
 
 func _find_camera_3d() -> Camera3D:
