@@ -21,6 +21,7 @@
 #        utility on first use. Old utility persists idle at zero cost.
 # ============================================================================
 
+@icon("res://addons/Juice_V1/icons/JuiceBaseCamera3D.svg")
 @tool
 class_name Camera3DJuiceEffect
 extends JuiceEffectBase
@@ -37,6 +38,12 @@ enum Channel {
 	FOV,       ## Offset field of view (zoom punch, breathe).
 }
 
+## Animation mode.
+enum AnimationMode {
+	DETERMINISTIC, ## Smooth ramp: 0 → value → 0. Curve shapes the motion.
+	SHAKE,         ## Chaotic: value = max amplitude, curve = amplitude envelope.
+}
+
 
 # =============================================================================
 # CONFIGURATION
@@ -48,12 +55,16 @@ var channel: int = Channel.POSITION:
 		channel = value
 		notify_property_list_changed()
 
-## Position offset at progress=1.0.
-## World-space by default. Enable use_local_space to make it camera-relative
-## (e.g. Z=forward kick always pushes "forward" regardless of camera yaw).
+## Animation mode.
+var animation_mode: int = AnimationMode.DETERMINISTIC:
+	set(value):
+		animation_mode = value
+		notify_property_list_changed()
+
+## Position offset at progress=1.0 (world-space meters, or camera-local if use_local_space).
 var position_offset: Vector3 = Vector3(0.0, 0.0, 0.5)
 
-## If true, position_offset is in camera-local space and rotates with the camera.
+## If true, position_offset is in camera-local space.
 var use_local_space: bool = true
 
 ## Camera rotation offset at progress=1.0 (degrees). X=pitch, Y=yaw, Z=roll.
@@ -61,6 +72,12 @@ var rotation_offset_degrees: Vector3 = Vector3(0.0, 0.0, 5.0)
 
 ## FOV offset at progress=1.0 (degrees). Positive = wider, negative = narrower.
 var fov_offset: float = -10.0
+
+## SHAKE: Oscillation frequency (cycles per second).
+var shake_frequency: float = 8.0
+
+## SHAKE: Phase offset for the noise oscillator.
+var shake_seed: float = 0.0
 
 
 # =============================================================================
@@ -79,6 +96,9 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "channel", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,FOV",
 		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "animation_mode", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Deterministic,Shake",
+		"usage": PROPERTY_USAGE_DEFAULT})
 
 	match channel:
 		Channel.POSITION:
@@ -94,6 +114,14 @@ func _get_property_list() -> Array[Dictionary]:
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "-60.0,60.0,0.5,or_less,or_greater",
 				"usage": PROPERTY_USAGE_DEFAULT})
 
+	if animation_mode == AnimationMode.SHAKE:
+		props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,30.0,0.5",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
+			"usage": PROPERTY_USAGE_DEFAULT})
+
 	props.append_array(_get_effect_base_properties())
 	return props
 
@@ -101,20 +129,26 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"channel":                 channel = value;                return true
+		&"animation_mode":          animation_mode = value;         return true
 		&"position_offset":         position_offset = value;        return true
 		&"use_local_space":         use_local_space = value;        return true
 		&"rotation_offset_degrees": rotation_offset_degrees = value; return true
 		&"fov_offset":              fov_offset = value;             return true
+		&"shake_frequency":         shake_frequency = value;        return true
+		&"shake_seed":              shake_seed = value;             return true
 	return super._set(property, value)
 
 
 func _get(property: StringName) -> Variant:
 	match property:
 		&"channel":                 return channel
+		&"animation_mode":          return animation_mode
 		&"position_offset":         return position_offset
 		&"use_local_space":         return use_local_space
 		&"rotation_offset_degrees": return rotation_offset_degrees
 		&"fov_offset":              return fov_offset
+		&"shake_frequency":         return shake_frequency
+		&"shake_seed":              return shake_seed
 	return super._get(property)
 
 
@@ -155,7 +189,8 @@ func _restore_to_natural(_target: Node) -> void:
 # =============================================================================
 
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
-	var desired := position_offset * progress
+	var s := _sample(progress, 0.0)
+	var desired := position_offset * s
 
 	if use_local_space:
 		var cam := _find_camera_3d()
@@ -173,14 +208,14 @@ func _apply_rotation(util: CameraJuiceUtility, progress: float) -> void:
 		deg_to_rad(rotation_offset_degrees.y),
 		deg_to_rad(rotation_offset_degrees.z)
 	)
-	var desired := rad * progress
+	var desired := rad * _sample(progress, 200.0)
 	var delta   := desired - _my_rot
 	util.rotation_offset += delta
 	_my_rot = desired
 
 
 func _apply_fov(util: CameraJuiceUtility, progress: float) -> void:
-	var desired := fov_offset * progress
+	var desired := fov_offset * _sample(progress, 300.0)
 	var delta   := desired - _my_fov
 	util.zoom_offset += delta
 	_my_fov = desired
@@ -191,7 +226,13 @@ func _apply_fov(util: CameraJuiceUtility, progress: float) -> void:
 # =============================================================================
 
 func _remove_contribution() -> void:
-	var util := _find_or_create_utility()
+	var cam := _find_camera_3d()
+	var util: CameraJuiceUtility = null
+	if is_instance_valid(cam):
+		for child in cam.get_children():
+			if child is CameraJuiceUtility:
+				util = child
+				break
 	if is_instance_valid(util):
 		util.position_offset -= _my_pos
 		util.rotation_offset -= _my_rot
@@ -199,6 +240,28 @@ func _remove_contribution() -> void:
 	_my_pos = Vector3.ZERO
 	_my_rot = Vector3.ZERO
 	_my_fov = 0.0
+
+
+# =============================================================================
+# SHAKE OSCILLATOR
+# =============================================================================
+
+func _sample(envelope: float, seed_offset: float) -> float:
+	match animation_mode:
+		AnimationMode.DETERMINISTIC:
+			return envelope
+		AnimationMode.SHAKE:
+			var t := Time.get_ticks_msec() / 1000.0
+			return envelope * _noise_sample(t, shake_seed + seed_offset)
+		_:
+			return envelope
+
+
+func _noise_sample(t: float, seed: float) -> float:
+	return (  sin(t * shake_frequency * 1.00 + seed * 0.00) * 0.50
+			+ sin(t * shake_frequency * 2.10 + seed * 1.00) * 0.30
+			+ sin(t * shake_frequency * 4.30 + seed * 2.00) * 0.15
+			+ sin(t * shake_frequency * 8.70 + seed * 3.00) * 0.05)
 
 
 # =============================================================================

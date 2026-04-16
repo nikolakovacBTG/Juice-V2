@@ -22,7 +22,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete 2D-domain effect class names.
 ## Update this list when adding new 2D effects.
-const _CONCRETE_EFFECTS := "Appearance2DJuiceEffect,CallMethod2DJuiceUtility,Camera2DJuiceEffect,Camera3DJuiceEffect,Noise2DJuiceEffect,Progress2DJuiceEffect,ProgressProperty2DJuiceEffect,SceneAction2DJuiceUtility,ScreenMotionJuiceEffect,ScreenOverlay2DJuiceEffect,Shake2DJuiceEffect,SignalEmit2DJuiceUtility,SquashStretch2DJuiceEffect,Time2DJuiceEffect,Transform2DJuiceEffect"
+const _CONCRETE_EFFECTS := "Appearance2DJuiceEffect,CallMethod2DJuiceUtility,Camera2DJuiceEffect,Camera3DJuiceEffect,Noise2DJuiceEffect,Progress2DJuiceEffect,ProgressProperty2DJuiceEffect,SceneAction2DJuiceUtility,ScreenJuiceEffect,ScreenOverlay2DJuiceEffect,Shake2DJuiceEffect,SignalEmit2DJuiceUtility,SquashStretch2DJuiceEffect,Time2DJuiceEffect,Transform2DJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides Juice2DEffectBase from the inspector dropdown.
