@@ -99,7 +99,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestProgressProperty.gd").new())
 	_suites.append(load("res://tests/suites/TestIntegrationDemoSequencer.gd").new())
 	_suites.append(load("res://tests/suites/TestCameraJuice.gd").new())
-	_suites.append(load("res://tests/suites/TestScreenMotion.gd").new())
+	_suites.append(load("res://tests/suites/TestScreenJuice.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

@@ -62,7 +62,7 @@ func _create_entity_with_camera_effect(
 
 	var effect := Camera2DJuiceEffect.new()
 	effect.channel = p_channel
-	effect.position_offset_percent = Vector2(5.0, 0.0)
+	effect.position_offset = Vector2(5.0, 0.0)
 	effect.rotation_degrees = 10.0
 	effect.zoom_offset = 0.3
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT

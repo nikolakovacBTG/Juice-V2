@@ -206,10 +206,16 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		if debug_enabled:
 			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: SKIPPED (snap=%s)" % [_from_self_position_snapshot])
 		return
+	# IN_EDITOR: prefer the per-target ledger base when available.
+	# The ledger holds the natural position captured at ready-time — identical to the editor
+	# state in all normal cases. This fixes the Sequencer multi-target stacking bug, where
+	# one recipe effect has only one cache slot but each target needs its own natural position.
+	# Fall back to the baked editor cache only when no ledger exists (very rare).
 	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_position_snapshot = _from_editor_cached_position
+		var ledger_pos: Variant = _ledger_base_snapshot.get("position", null)
+		_from_self_position_snapshot = ledger_pos if ledger_pos != null else _from_editor_cached_position
 		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: IN_EDITOR → cached=%s" % [_from_editor_cached_position])
+			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: IN_EDITOR → snap=%s (ledger=%s)" % [_from_self_position_snapshot, ledger_pos != null])
 	else:
 		var ctrl := target as Control
 		_from_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
@@ -223,7 +229,8 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 	if _has_from_self_rotation_snapshot:
 		return
 	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_rotation_snapshot = _from_editor_cached_rotation
+		var ledger_rot: Variant = _ledger_base_snapshot.get("rotation", null)
+		_from_self_rotation_snapshot = ledger_rot if ledger_rot != null else _from_editor_cached_rotation
 	else:
 		var ctrl := target as Control
 		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
@@ -237,7 +244,8 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 	if _has_from_self_scale_snapshot:
 		return
 	if from_capture_at == CaptureAt.IN_EDITOR:
-		_from_self_scale_snapshot = _from_editor_cached_scale
+		var ledger_sc: Variant = _ledger_base_snapshot.get("scale", null)
+		_from_self_scale_snapshot = ledger_sc if ledger_sc != null else _from_editor_cached_scale
 	else:
 		var ctrl := target as Control
 		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)
@@ -252,10 +260,12 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		if debug_enabled:
 			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: SKIPPED (snap=%s)" % [_to_self_position_snapshot])
 		return
+	# IN_EDITOR: prefer the per-target ledger base when available (see _capture_from_self_position_snapshot).
 	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_position_snapshot = _to_editor_cached_position
+		var ledger_pos: Variant = _ledger_base_snapshot.get("position", null)
+		_to_self_position_snapshot = ledger_pos if ledger_pos != null else _to_editor_cached_position
 		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: IN_EDITOR → cached=%s" % [_to_editor_cached_position])
+			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: IN_EDITOR → snap=%s (ledger=%s)" % [_to_self_position_snapshot, ledger_pos != null])
 	else:
 		var ctrl := target as Control
 		_to_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
@@ -269,7 +279,8 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 	if _has_to_self_rotation_snapshot:
 		return
 	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_rotation_snapshot = _to_editor_cached_rotation
+		var ledger_rot: Variant = _ledger_base_snapshot.get("rotation", null)
+		_to_self_rotation_snapshot = ledger_rot if ledger_rot != null else _to_editor_cached_rotation
 	else:
 		var ctrl := target as Control
 		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
@@ -283,7 +294,8 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 	if _has_to_self_scale_snapshot:
 		return
 	if to_capture_at == CaptureAt.IN_EDITOR:
-		_to_self_scale_snapshot = _to_editor_cached_scale
+		var ledger_sc: Variant = _ledger_base_snapshot.get("scale", null)
+		_to_self_scale_snapshot = ledger_sc if ledger_sc != null else _to_editor_cached_scale
 	else:
 		var ctrl := target as Control
 		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)

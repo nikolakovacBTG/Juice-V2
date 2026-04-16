@@ -11,7 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
-[ext_resource type="Script" uid="uid://ctvc4iv7bpwj2" path="res://addons/Juice_V1/Camera/Camera2DJuiceEffect.gd" id="10_y5dc2"]
+[ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -161,25 +161,6 @@ effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_w3iwx")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_n7dmy"]
-script = ExtResource("10_y5dc2")
-channel = 0
-position_offset_percent = Vector2(3, 3)
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 6
-ease_in = 1
-elastic_amplitude_in = 1.0
-elastic_period_in = 0.3
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://ctvc4iv7bpwj2"
-
-[sub_resource type="Resource" id="Resource_ntvx2"]
 script = ExtResource("10_ntvx2")
 transform_target = 0
 trigger_behaviour = 1
@@ -188,22 +169,24 @@ crossfade_time = 0.0
 loop_count = 1
 from_reference = 0
 from_position_in = 1
-from_position = Vector2(-0.5, 0)
+from_position = Vector2(-1, 0)
 to_reference = 1
-to_capture_at = 0
+to_capture_at = 2
+_to_editor_cached_position = Vector2(0, 0)
+_to_editor_cached_rotation = 0.0
+_to_editor_cached_scale = Vector2(1, 1)
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_n7dmy")])
+chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
-chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
 [sub_resource type="Resource" id="Resource_5ihny"]
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ntvx2"), SubResource("Resource_n7dmy")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_n7dmy")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [node name="MainDemoScene" type="Control" unique_id=75509961]
@@ -295,3 +278,10 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 [node name="Scene Container" type="Node" parent="." unique_id=467602694]
 
 [node name="Dummy" parent="Scene Container" unique_id=447935588 instance=ExtResource("9_008jw")]
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=2123426834]
+position = Vector2(571, 314)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1251152495]
+position = Vector2(232, 207)
+texture = ExtResource("14_vfjyb")

@@ -5,22 +5,22 @@
 ## the offset. No manual node setup required at runtime.
 
 # ============================================================================
-# WHAT: Meta effect that offsets Camera2D properties (position/rotation/zoom).
-# WHY:  Camera shake and camera-space effects should be authored on the entity
-#       that causes them (a chest, a door, an explosion) -- not on the camera.
-#       This effect auto-discovers the active Camera2D each tick so camera
-#       switches are handled correctly without any manual rewiring.
+# WHAT: Meta effect that offsets Camera2D properties (position/rotation/zoom)
+#       via CameraJuiceUtility. Two animation modes: Deterministic (smooth curve)
+#       or Shake (chaotic noise-driven with curve envelope).
+# WHY:  Camera shake is authored on the entity that causes it — a chest, a sword,
+#       an explosion — not on the camera itself. This effect auto-discovers the
+#       active Camera2D, so camera switches mid-animation work automatically.
 # SYSTEM: Juice System (addons/Juice_V1/Camera/)
-# DOES NOT: Animate the JuiceBase target node -- writes to the camera only.
-# DOES NOT: Handle Camera3D -- use Camera3DJuiceEffect for that.
-# DOES NOT: Auto-bootstrap in the editor -- would dirty the scene on save.
+# DOES NOT: Animate the JuiceBase target node — writes to camera only.
+# DOES NOT: Handle Camera3D — use Camera3DJuiceEffect for that.
+# DOES NOT: Auto-bootstrap in the editor — would dirty the scene on save.
 #
-# SETUP: None. Drop this effect in any recipe and it works at runtime.
-#        Optionally add CameraJuiceUtility manually to a camera to tune limits.
-#        On camera switch mid-animation, the new camera gets its own utility
-#        on first use. Old utility persists idle at zero cost.
+# SETUP: None. Drop in any recipe. Works at runtime automatically.
+#        Optionally add CameraJuiceUtility manually to tune limits.
 # ============================================================================
 
+@icon("res://addons/Juice_V1/icons/JuiceBaseCamera2D.svg")
 @tool
 class_name Camera2DJuiceEffect
 extends JuiceEffectBase
@@ -32,9 +32,22 @@ extends JuiceEffectBase
 
 ## Which Camera2D property to animate.
 enum Channel {
-	POSITION,  ## Offset camera position (kick, dolly, push). % of viewport size.
-	ROTATION,  ## Offset camera rotation (tilt, dutch angle).
+	POSITION,  ## Offset camera position (kick, dolly). Unit controlled by position_unit.
+	ROTATION,  ## Offset camera rotation (tilt, dutch angle). Always in degrees.
 	ZOOM,      ## Offset camera zoom (punch zoom, breathe).
+}
+
+## Unit for the POSITION channel.
+enum PositionUnit {
+	PIXELS,           ## Direct pixels — absolute, viewport-size-dependent.
+	PERCENT_VIEWPORT, ## Percent of viewport size — resolution independent.
+}
+
+## Animation mode. Deterministic plays a smooth curve-shaped ramp.
+## Shake adds a multi-frequency noise oscillator whose amplitude is the curve.
+enum AnimationMode {
+	DETERMINISTIC, ## Smooth ramp: 0 → value → 0. Curve shapes the motion.
+	SHAKE,         ## Chaotic: value = max amplitude, curve = amplitude envelope.
 }
 
 
@@ -48,16 +61,36 @@ var channel: int = Channel.POSITION:
 		channel = value
 		notify_property_list_changed()
 
-## Camera position offset at progress=1.0 (% of viewport size).
-## X = horizontal, Y = vertical. E.g. Vector2(3, 0) = 3% rightward kick.
-var position_offset_percent: Vector2 = Vector2(3.0, 0.0)
+## Animation mode.
+var animation_mode: int = AnimationMode.DETERMINISTIC:
+	set(value):
+		animation_mode = value
+		notify_property_list_changed()
 
-## Camera rotation offset at progress=1.0 (degrees, Z-axis only for 2D).
+# --- Channel-specific values (shown/hidden by _get_property_list) ---
+
+## POSITION: Camera position offset at peak. Interpretation depends on position_unit.
+var position_offset: Vector2 = Vector2(3.0, 0.0)
+
+## POSITION: Unit for position_offset.
+var position_unit: int = PositionUnit.PERCENT_VIEWPORT:
+	set(value):
+		position_unit = value
+		notify_property_list_changed()
+
+## ROTATION: Camera rotation offset at peak (degrees, Z-axis).
 var rotation_degrees: float = 5.0
 
-## Camera zoom offset at progress=1.0. Positive = zoom in, negative = zoom out.
-## Applied uniformly on Camera2D.zoom both axes.
+## ZOOM: Camera zoom offset at peak. Positive = zoom in (larger zoom value on Camera2D).
 var zoom_offset: float = 0.2
+
+# --- Shake parameters (visible only when animation_mode == SHAKE) ---
+
+## SHAKE: Oscillation frequency (cycles per second). Higher = more frantic.
+var shake_frequency: float = 8.0
+
+## SHAKE: Phase offset for the noise oscillator. Different seeds change the feel.
+var shake_seed: float = 0.0
 
 
 # =============================================================================
@@ -73,22 +106,40 @@ func _get_property_list() -> Array[Dictionary]:
 
 	props.append({"name": "Camera 2D Effect", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+
 	props.append({"name": "channel", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Zoom",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
+	props.append({"name": "animation_mode", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Deterministic,Shake",
+		"usage": PROPERTY_USAGE_DEFAULT})
+
 	match channel:
 		Channel.POSITION:
-			props.append({"name": "position_offset_percent", "type": TYPE_VECTOR2,
+			props.append({"name": "position_offset", "type": TYPE_VECTOR2,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "position_unit", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Pixels,Percent Viewport",
 				"usage": PROPERTY_USAGE_DEFAULT})
 		Channel.ROTATION:
 			props.append({"name": "rotation_degrees", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "-180.0,180.0,0.1,or_less,or_greater",
+				"hint": PROPERTY_HINT_RANGE,
+				"hint_string": "-180.0,180.0,0.1,or_less,or_greater",
 				"usage": PROPERTY_USAGE_DEFAULT})
 		Channel.ZOOM:
 			props.append({"name": "zoom_offset", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE, "hint_string": "-5.0,5.0,0.01,or_less,or_greater",
+				"hint": PROPERTY_HINT_RANGE,
+				"hint_string": "-5.0,5.0,0.01,or_less,or_greater",
 				"usage": PROPERTY_USAGE_DEFAULT})
+
+	if animation_mode == AnimationMode.SHAKE:
+		props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,30.0,0.5",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
 	return props
@@ -96,19 +147,27 @@ func _get_property_list() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"channel":                  channel = value;                  return true
-		&"position_offset_percent":  position_offset_percent = value;  return true
-		&"rotation_degrees":         rotation_degrees = value;         return true
-		&"zoom_offset":              zoom_offset = value;              return true
+		&"channel":          channel = value;          return true
+		&"animation_mode":   animation_mode = value;   return true
+		&"position_offset":  position_offset = value;  return true
+		&"position_unit":    position_unit = value;    return true
+		&"rotation_degrees": rotation_degrees = value; return true
+		&"zoom_offset":      zoom_offset = value;      return true
+		&"shake_frequency":  shake_frequency = value;  return true
+		&"shake_seed":       shake_seed = value;       return true
 	return super._set(property, value)
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		&"channel":                  return channel
-		&"position_offset_percent":  return position_offset_percent
-		&"rotation_degrees":         return rotation_degrees
-		&"zoom_offset":              return zoom_offset
+		&"channel":          return channel
+		&"animation_mode":   return animation_mode
+		&"position_offset":  return position_offset
+		&"position_unit":    return position_unit
+		&"rotation_degrees": return rotation_degrees
+		&"zoom_offset":      return zoom_offset
+		&"shake_frequency":  return shake_frequency
+		&"shake_seed":       return shake_seed
 	return super._get(property)
 
 
@@ -116,10 +175,11 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-## Delta-first contribution tracking -- what THIS effect has written to the utility.
+# Delta-first contribution tracking — what THIS effect has written to the utility this frame.
 var _my_pos:  Vector3 = Vector3.ZERO
 var _my_rot:  Vector3 = Vector3.ZERO
 var _my_zoom: float   = 0.0
+
 
 
 # =============================================================================
@@ -127,7 +187,7 @@ var _my_zoom: float   = 0.0
 # =============================================================================
 
 func _apply_effect(progress: float, _target: Node) -> void:
-	# Re-discover (or bootstrap) utility every frame -- handles camera switches.
+	# Re-discover (or bootstrap) utility every frame — handles camera switches.
 	var util := _find_or_create_utility()
 	if not is_instance_valid(util):
 		return
@@ -147,30 +207,39 @@ func _restore_to_natural(_target: Node) -> void:
 
 
 # =============================================================================
-# CHANNEL APPLY
+# CHANNEL APPLY METHODS
 # =============================================================================
 
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
-	var viewport_size: Vector2 = _host_node.get_viewport().get_visible_rect().size
-	var px := Vector2(
-		position_offset_percent.x * viewport_size.x / 100.0,
-		position_offset_percent.y * viewport_size.y / 100.0
-	)
-	var desired := Vector3(px.x, px.y, 0.0) * progress
+	var s := _sample(progress, 0.0)
+
+	var px: Vector2
+	match position_unit:
+		PositionUnit.PIXELS:
+			px = position_offset * s
+		PositionUnit.PERCENT_VIEWPORT:
+			if is_instance_valid(_host_node):
+				var vp_size := _host_node.get_viewport().get_visible_rect().size
+				px = Vector2(position_offset.x * vp_size.x / 100.0,
+							 position_offset.y * vp_size.y / 100.0) * s
+			else:
+				px = position_offset * s
+
+	var desired := Vector3(px.x, px.y, 0.0)
 	var delta   := desired - _my_pos
 	util.position_offset += delta
 	_my_pos = desired
 
 
 func _apply_rotation(util: CameraJuiceUtility, progress: float) -> void:
-	var desired := Vector3(0.0, 0.0, deg_to_rad(rotation_degrees)) * progress
+	var desired := Vector3(0.0, 0.0, deg_to_rad(rotation_degrees) * _sample(progress, 200.0))
 	var delta   := desired - _my_rot
 	util.rotation_offset += delta
 	_my_rot = desired
 
 
 func _apply_zoom(util: CameraJuiceUtility, progress: float) -> void:
-	var desired := zoom_offset * progress
+	var desired := zoom_offset * _sample(progress, 300.0)
 	var delta   := desired - _my_zoom
 	util.zoom_offset += delta
 	_my_zoom = desired
@@ -181,7 +250,7 @@ func _apply_zoom(util: CameraJuiceUtility, progress: float) -> void:
 # =============================================================================
 
 func _remove_contribution() -> void:
-	var util := _find_or_create_utility()
+	var util := _find_utility()
 	if is_instance_valid(util):
 		util.position_offset -= _my_pos
 		util.rotation_offset -= _my_rot
@@ -192,17 +261,54 @@ func _remove_contribution() -> void:
 
 
 # =============================================================================
+# SHAKE OSCILLATOR
+# =============================================================================
+
+## Returns effective multiplier. DETERMINISTIC = envelope; SHAKE = envelope × noise.
+func _sample(envelope: float, seed_offset: float) -> float:
+	match animation_mode:
+		AnimationMode.DETERMINISTIC:
+			return envelope
+		AnimationMode.SHAKE:
+			var t := Time.get_ticks_msec() / 1000.0
+			return envelope * _noise_sample(t, shake_seed + seed_offset)
+		_:
+			return envelope
+
+
+## Multi-frequency sin superposition for chaotic shake. |output| ≤ 1.0.
+func _noise_sample(t: float, seed: float) -> float:
+	return (  sin(t * shake_frequency * 1.00 + seed * 0.00) * 0.50
+			+ sin(t * shake_frequency * 2.10 + seed * 1.00) * 0.30
+			+ sin(t * shake_frequency * 4.30 + seed * 2.00) * 0.15
+			+ sin(t * shake_frequency * 8.70 + seed * 3.00) * 0.05)
+
+
+# =============================================================================
 # UTILITY DISCOVERY + AUTO-BOOTSTRAP
 # =============================================================================
 
-## Returns the active Camera2D's CameraJuiceUtility, creating one if absent.
-## Re-discovers every call -- handles mid-animation camera switches at zero cost.
-## Returns null in editor (would dirty the scene) or if no Camera2D exists.
+## Fast path — returns existing utility without discovery overhead.
+func _find_utility() -> CameraJuiceUtility:
+	if not is_instance_valid(_host_node):
+		return null
+	var vp := _host_node.get_viewport()
+	if not vp:
+		return null
+	var cam := vp.get_camera_2d()
+	if not is_instance_valid(cam):
+		return null
+	for child in cam.get_children():
+		if child is CameraJuiceUtility:
+			return child
+	return null
+
+
+## Returns the active Camera2D's utility, creating one if absent.
+## Returns null in editor or if no enabled Camera2D exists in viewport.
 func _find_or_create_utility() -> CameraJuiceUtility:
-	# Guard: never auto-create in editor -- add_child would dirty/save the scene.
 	if Engine.is_editor_hint():
 		return null
-
 	if not is_instance_valid(_host_node):
 		return null
 
@@ -211,27 +317,25 @@ func _find_or_create_utility() -> CameraJuiceUtility:
 		return null
 
 	var cam := vp.get_camera_2d()
-	if not cam:
+	if not is_instance_valid(cam):
 		if debug_enabled:
-			push_warning("[Camera2DJuiceEffect] No active Camera2D found in viewport")
+			push_warning("[Camera2DJuiceEffect] No enabled Camera2D found in viewport. " +
+				"Add a Camera2D to the scene and set Enabled = true.")
 		return null
 
-	# Fast path -- utility already exists on this camera.
+	# Fast path — utility already exists
 	for child in cam.get_children():
 		if child is CameraJuiceUtility:
 			return child
 
-	# Auto-bootstrap -- camera is active but has no utility yet.
 	return _bootstrap_utility_on(cam)
 
 
 ## Creates and attaches a CameraJuiceUtility to the given camera.
-## Forces initialization immediately so the utility is ready within this tick.
 func _bootstrap_utility_on(cam: Camera2D) -> CameraJuiceUtility:
 	var util := CameraJuiceUtility.new()
 	util.name = "CameraJuiceUtility"
 	cam.add_child(util)
-	# _ready() may not have fired yet within this physics tick -- force init now.
 	util._initialize_camera()
 
 	if debug_enabled:

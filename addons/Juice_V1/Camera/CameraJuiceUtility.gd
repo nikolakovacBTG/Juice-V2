@@ -19,7 +19,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/juice/Icons/JuiceBaseCamera.svg")
+@icon("res://addons/Juice_V1/icons/JuiceBaseCamera.svg")
 class_name CameraJuiceUtility
 extends Node
 

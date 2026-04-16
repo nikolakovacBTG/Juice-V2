@@ -413,10 +413,15 @@ func _notification(what: int) -> void:
 		update_configuration_warnings()
 		# In editor, _runtime_effects is empty (_ready returns early).
 		# Use recipe.effects directly for editor cache baking.
+		# STACK mode only: in Sequencer mode each target has its own per-target ledger
+		# base snapshot at runtime, so IN_EDITOR capture reads from the ledger instead
+		# of the baked editor cache (see _capture_*_self_*_snapshot in concrete classes).
+		if recipe == null or mode != Mode.STACK:
+			return
 		var target := _target_node
 		if target == null:
 			target = _resolve_target()
-		if target == null or recipe == null:
+		if target == null:
 			return
 		for effect in recipe.effects:
 			if effect != null:
@@ -1399,7 +1404,7 @@ func _seq_process_tick(delta: float) -> void:
 						var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
 						if chained != null:
 							var play_in := peff._animation_progress >= 0.5
-							chained.start(target, play_in, false)
+							chained.start(target, play_in, false, self)
 							active_indices.append(chain_idx)
 							any_playing = true
 				peff._chained_preroll_triggered = true
@@ -1417,7 +1422,7 @@ func _seq_process_tick(delta: float) -> void:
 						var chained: JuiceEffectBase = effects[chain_idx] as JuiceEffectBase
 						if chained != null:
 							var play_in := effect._animation_progress >= 0.5
-							chained.start(target, play_in, false)
+							chained.start(target, play_in, false, self)
 							active_indices.append(chain_idx)
 							any_playing = true
 
