@@ -53,13 +53,13 @@
 | `Shake2DJuiceComp` | `Shake2DJuiceEffect` | ✅ | `TestShake2D` | 2026-03-29 |
 | `Shake3DJuiceComp` | `Shake3DJuiceEffect` | ✅ | `TestShake3D` | 2026-03-29 |
 
-## Spring (3 effects)
+## Spring (3 effects — Cut, deferred)
 
-| V0 Class | V1 Class | Status | Tests | Last Verified |
-|----------|----------|--------|-------|---------------|
-| `SpringControlJuiceComp` | `SpringControlJuiceEffect` | ✅ | `TestSpringControl` | 2026-03-29 |
-| `Spring2DJuiceComp` | `Spring2DJuiceEffect` | ✅ | `TestSpring2D` | 2026-03-29 |
-| `Spring3DJuiceComp` | `Spring3DJuiceEffect` | ✅ | `TestSpring3D` | 2026-03-29 |
+| V0 Class | V1 Class | Status | Notes |
+|----------|----------|--------|-------|
+| `SpringControlJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
+| `Spring2DJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
+| `Spring3DJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
 
 ## Appearance (3 effects)
 
@@ -106,7 +106,7 @@
 |----------|----------|--------|-------|---------------|
 | `NoisePropertyJuiceComp` | `NoisePropertyJuiceEffect` | ❌ | — | — |
 | `ShakePropertyJuiceComp` | `ShakePropertyJuiceEffect` | ❌ | — | — |
-| `SpringPropertyJuiceComp` | `SpringPropertyJuiceEffect` | ❌ | — | — |
+| `SpringPropertyJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
 | `ShaderPropertyJuiceComp` | `ShaderPropertyJuiceEffect` | ❌ | — | — |
 
 ## Visibility (1 effect — Legacy, absorbed by Appearance)
@@ -167,9 +167,9 @@
 
 ## Summary
 
-| Category | Total | Ported | In Progress | Not Started | Legacy |
+| Category | Total | Ported | In Progress | Not Started | Legacy/Cut |
 |----------|-------|--------|-------------|-------------|--------|
-| Effects | ~43 | 34 | 0 | 9 | 4 |
+| Effects | ~43 | 28 | 0 | 8 | 11 |
 | Utilities | ~10 | 8 | 0 | 2 | 0 |
 | Infrastructure | 4 | 4 | 0 | 0 | 0 |
-| **Total** | **~57** | **46** | **0** | **11** | **4** |
+| **Total** | **~57** | **40** | **0** | **10** | **11** |

@@ -1,0 +1,232 @@
+## Animates Camera3D position, rotation, or FOV via CameraJuiceUtility.
+##
+## Place this effect in any domain recipe on any entity. When triggered, it
+## finds the active Camera3D's CameraJuiceUtility and applies the offset.
+
+# ============================================================================
+# WHAT: Meta effect that offsets Camera3D properties (position/rotation/FOV).
+# WHY:  Camera shake and camera-space effects should be authored on the entity
+#       that causes them (a boss, a door, an explosion) — not on the camera.
+#       This effect auto-discovers the active Camera3D each tick so camera
+#       switches are handled correctly without any manual rewiring.
+# SYSTEM: Juice System (addons/Juice_V1/Camera/)
+# DOES NOT: Animate the JuiceBase target node — writes to the camera only.
+# DOES NOT: Handle Camera2D — use Camera2DJuiceEffect for that.
+# DOES NOT: Cache the utility reference — re-discovers each frame.
+#
+# SETUP: Add a CameraJuiceUtility node as a direct child of your Camera3D.
+#        Add this effect to any entity's recipe. No further wiring needed.
+# ============================================================================
+
+@tool
+class_name Camera3DJuiceEffect
+extends JuiceEffectBase
+
+
+# =============================================================================
+# ENUMS
+# =============================================================================
+
+## Which Camera3D property to animate.
+enum Channel {
+	POSITION,  ## Offset camera position (kick, dolly). World or local space.
+	ROTATION,  ## Offset camera rotation (tilt, roll, lean).
+	FOV,       ## Offset field of view (zoom punch, breathe).
+}
+
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+## Which camera channel to animate.
+var channel: int = Channel.POSITION:
+	set(value):
+		channel = value
+		notify_property_list_changed()
+
+## Position offset at progress=1.0.
+## World-space by default. Enable use_local_space to make it camera-relative
+## (e.g. Z=forward kick always pushes "forward" regardless of camera yaw).
+var position_offset: Vector3 = Vector3(0.0, 0.0, 0.5)
+
+## If true, position_offset is in camera-local space and rotates with the camera.
+## Most intuitive for directional kicks — a kick of (0,0,-0.5) always punches forward.
+var use_local_space: bool = true
+
+## Camera rotation offset at progress=1.0 (degrees).
+## X = pitch, Y = yaw, Z = roll.
+var rotation_offset_degrees: Vector3 = Vector3(0.0, 0.0, 5.0)
+
+## FOV offset at progress=1.0 (degrees). Positive = wider, negative = narrower.
+var fov_offset: float = -10.0
+
+
+# =============================================================================
+# CONDITIONAL EXPORT SYSTEM
+# =============================================================================
+
+func _init() -> void:
+	_subclass_owns_effect_group = true
+
+
+func _get_property_list() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+
+	props.append({"name": "Camera 3D Effect", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({"name": "channel", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,FOV",
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	match channel:
+		Channel.POSITION:
+			props.append({"name": "position_offset", "type": TYPE_VECTOR3,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "use_local_space", "type": TYPE_BOOL,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		Channel.ROTATION:
+			props.append({"name": "rotation_offset_degrees", "type": TYPE_VECTOR3,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		Channel.FOV:
+			props.append({"name": "fov_offset", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "-60.0,60.0,0.5,or_less,or_greater",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+	props.append_array(_get_effect_base_properties())
+	return props
+
+
+func _set(property: StringName, value: Variant) -> bool:
+	match property:
+		&"channel":                 channel = value;                return true
+		&"position_offset":         position_offset = value;        return true
+		&"use_local_space":         use_local_space = value;        return true
+		&"rotation_offset_degrees": rotation_offset_degrees = value; return true
+		&"fov_offset":              fov_offset = value;             return true
+	return super._set(property, value)
+
+
+func _get(property: StringName) -> Variant:
+	match property:
+		&"channel":                 return channel
+		&"position_offset":         return position_offset
+		&"use_local_space":         return use_local_space
+		&"rotation_offset_degrees": return rotation_offset_degrees
+		&"fov_offset":              return fov_offset
+	return super._get(property)
+
+
+# =============================================================================
+# INTERNAL STATE
+# =============================================================================
+
+## Delta-first contribution tracking.
+var _my_pos:  Vector3 = Vector3.ZERO
+var _my_rot:  Vector3 = Vector3.ZERO
+var _my_fov:  float   = 0.0
+
+
+# =============================================================================
+# VIRTUAL METHOD OVERRIDES
+# =============================================================================
+
+func _apply_effect(progress: float, _target: Node) -> void:
+	var util := _find_utility()
+	if not is_instance_valid(util):
+		return
+
+	match channel:
+		Channel.POSITION: _apply_position(util, progress)
+		Channel.ROTATION: _apply_rotation(util, progress)
+		Channel.FOV:      _apply_fov(util, progress)
+
+
+func _on_animate_out_complete(_target: Node) -> void:
+	_remove_contribution()
+
+
+func _restore_to_natural(_target: Node) -> void:
+	_remove_contribution()
+
+
+# =============================================================================
+# CHANNEL APPLY
+# =============================================================================
+
+func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
+	var desired := position_offset * progress
+
+	if use_local_space:
+		# Transform offset by camera's basis so it follows camera orientation.
+		var cam := _find_camera_3d()
+		if cam:
+			desired = cam.global_transform.basis * desired
+
+	var delta := desired - _my_pos
+	util.position_offset += delta
+	_my_pos = desired
+
+
+func _apply_rotation(util: CameraJuiceUtility, progress: float) -> void:
+	var rad := Vector3(
+		deg_to_rad(rotation_offset_degrees.x),
+		deg_to_rad(rotation_offset_degrees.y),
+		deg_to_rad(rotation_offset_degrees.z)
+	)
+	var desired := rad * progress
+	var delta   := desired - _my_rot
+	util.rotation_offset += delta
+	_my_rot = desired
+
+
+func _apply_fov(util: CameraJuiceUtility, progress: float) -> void:
+	var desired := fov_offset * progress
+	var delta   := desired - _my_fov
+	util.zoom_offset += delta
+	_my_fov = desired
+
+
+# =============================================================================
+# CONTRIBUTION CLEANUP
+# =============================================================================
+
+func _remove_contribution() -> void:
+	var util := _find_utility()
+	if is_instance_valid(util):
+		util.position_offset -= _my_pos
+		util.rotation_offset -= _my_rot
+		util.zoom_offset     -= _my_fov
+	_my_pos = Vector3.ZERO
+	_my_rot = Vector3.ZERO
+	_my_fov = 0.0
+
+
+# =============================================================================
+# UTILITY / CAMERA DISCOVERY
+# =============================================================================
+
+func _find_utility() -> CameraJuiceUtility:
+	var cam := _find_camera_3d()
+	if not cam:
+		return null
+
+	for child in cam.get_children():
+		if child is CameraJuiceUtility:
+			return child
+
+	if debug_enabled:
+		push_warning("[Camera3DJuiceEffect] No CameraJuiceUtility found on Camera3D '%s'. Add one as a direct child." % cam.name)
+	return null
+
+
+func _find_camera_3d() -> Camera3D:
+	if not is_instance_valid(_host_node):
+		return null
+	var vp := _host_node.get_viewport()
+	if not vp:
+		return null
+	var cam := vp.get_camera_3d()
+	if not cam and debug_enabled:
+		push_warning("[Camera3DJuiceEffect] No active Camera3D found in viewport")
+	return cam
