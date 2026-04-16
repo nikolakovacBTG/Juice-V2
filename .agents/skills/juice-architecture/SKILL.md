@@ -10,6 +10,17 @@ description: Juice V1 architecture contracts and patterns. Auto-invoke for addon
 - **L2 Domain**: [CONTRACTS/l2-domain.md](CONTRACTS/l2-domain.md)  
 - **L3 Effects**: [CONTRACTS/l3-effects.md](CONTRACTS/l3-effects.md)
 - **Domain Parity**: [domain-parity.md](domain-parity.md)
+- **Architecture Rules**: [architecture-rules.md](architecture-rules.md) ← Rules 1–15, includes write path
+
+## Key Infrastructure Files (Base Classes/)
+| File | Purpose |
+|------|---------|
+| `JuiceLedger.gd` | Static write coordinator — all domain nodes flush through this |
+| `JuiceTriggerRouter.gd` | Static signal wiring — MANUAL trigger routing, visibility connect |
+| `Juice2DTransformEffect.gd` | Domain transform base for Node2D effects |
+| `JuiceControlTransformEffect.gd` | Domain transform base for Control effects |
+| `Juice3DTransformEffect.gd` | Domain transform base for Node3D effects |
+
 
 ## Decision Tree
 ```

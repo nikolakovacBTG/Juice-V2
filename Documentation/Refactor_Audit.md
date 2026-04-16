@@ -287,3 +287,48 @@ All external callers (effects, domain nodes) are unaffected.
 
 **Total estimated line reduction: ~6,000 lines from 21,904 = 27% leaner**  
 **Porting cost per new V0 effect after refactor: ~700 lines vs ~3,000 lines today**
+
+---
+
+## 11. Phase Completion Record
+
+**Branch:** `refactor/lean-out` → merged to `master` 2026-04-15  
+**Final test count:** 391 passed, 0 failed  
+**Final JuiceBase.gd size:** ~2,035 lines (from 2,267)
+
+### What Was Done (vs Plan)
+
+| Phase | Planned | Actual | Δ |
+|-------|---------|--------|---|
+| 0 | Codebase audit | ✅ `Refactor_Audit.md` created | On plan |
+| 1 | JuiceLedger extraction | ✅ `JuiceLedger.gd` + 21 unit tests | On plan |
+| 2 (partial) | `JuiceTriggerRouter` | ✅ 60 lines removed from JuiceBase | Reduced scope (see below) |
+| 2 (dropped) | `JuiceSequencerKernel` | ❌ Not extracted | **Decision: dropped** |
+| 3a | Domain transform bases | ✅ 3 × domain base files, Transform effects halved | On plan |
+| 3b | Cross-domain effect base | ❌ Not extracted | **Decision: dropped** |
+| 4 | Unified write path | ✅ All 3 domains use `JuiceLedger.flush()` | On plan |
+| 5 | Docs + SOP update | ✅ architecture-rules.md, l2-domain.md, SKILL.md | On plan |
+
+### Key Architectural Decisions Made During Execution
+
+**JuiceSequencerKernel (Phase 2) — DROPPED**
+- 527 sequencer lines are well-sectioned, well-commented, well-tested inside JuiceBase
+- Extraction would require a Node child (for `await get_tree()...timeout`), `_owner: JuiceBase` coupling, and same code count across two files
+- Decision: well-separated code in one file beats same-code in two files
+
+**Cross-Domain TransformJuiceEffectBase (Phase 3b) — DROPPED**
+- Phase 3a domain bases already halved Transform effect files (1050 → 500 lines each)
+- Remaining ~500 lines are ~63% genuinely domain-specific (typed vars, typed casts, pivot math)
+- The ~37% that could be shared requires Variant gymnastics — GDScript lacks generics
+- Decision: stop at domain bases; cross-domain extraction makes code worse, not better
+
+### New Files Added
+
+| File | Purpose |
+|------|---------|
+| `addons/Juice_V1/Base Classes/JuiceLedger.gd` | Static multi-source write coordinator |
+| `addons/Juice_V1/Base Classes/JuiceTriggerRouter.gd` | Static signal wiring utilities |
+| `addons/Juice_V1/Base Classes/Juice2DTransformEffect.gd` | Domain transform base — Node2D |
+| `addons/Juice_V1/Base Classes/JuiceControlTransformEffect.gd` | Domain transform base — Control |
+| `addons/Juice_V1/Base Classes/Juice3DTransformEffect.gd` | Domain transform base — Node3D |
+| `tests/suites/TestJuiceLedger.gd` | 21 JuiceLedger unit tests |

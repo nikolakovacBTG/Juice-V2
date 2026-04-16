@@ -17,11 +17,17 @@
 ## Rule 2: Domain Nodes Own Write Coordination
 
 Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
-1. **Base value capture** — natural pos/rot/scale before any effects
-2. **External-move detection** — once per frame, pre-tick
-3. **Delta aggregation** — sum all active effects' deltas per channel
-4. **Write-once-per-frame** — `target.property = base + sum(deltas)`
-5. **`_temporarily_undo/reapply_visual()`** — for editor save pipeline
+1. **Base value capture** — natural pos/rot/scale before any effects, stored in `JuiceLedger`
+2. **External-move detection** — once per frame via `_pre_tick()` (`_expected_*` tracking)
+3. **Delta registration** — effects write `_pos_delta`, `_rot_delta`, `_scale_delta`; domain node registers to ledger via `JuiceLedger.register_delta()`
+4. **Write-once-per-frame** — `JuiceLedger.flush(target)` — NOT `target.property = base + sum`. The ledger owns the single write.
+5. **`_temporarily_undo/reapply_visual()`** — calls `JuiceLedger.flush(target, props)` with selective property filter
+
+**JuiceLedger** (`addons/Juice_V1/Base Classes/JuiceLedger.gd`) is the canonical multi-source write coordinator.
+- `JuiceLedger.ensure(target)` — initialises ledger on first contact
+- `JuiceLedger.register_delta(target, source_id, prop, val)` — registers one effect's contribution
+- `JuiceLedger.flush(target, props=[])` — writes `base + Σdeltas` for all (or filtered) props
+- `JuiceLedger.get_base(target, prop, fallback)` — reads natural state without any effect contribution
 
 ## Rule 3: All Three Domains — Always
 
@@ -131,3 +137,33 @@ When a fix touches a protocol boundary (how effects report data, how nodes aggre
 - Never copy-paste logic into all 3 domain nodes
 - If you recognize an architectural choice (narrow vs generic), STOP and present both options to the user
 - The generic approach is almost always correct at protocol boundaries
+
+## Rule 14: Domain Transform Base Hierarchy
+
+Transform effects use a 3-tier class hierarchy. **Never flatten this — the tiers exist for clear reasons:**
+
+```
+JuiceEffectBase              (Resource — core tick/progress contract)
+  └── Juice[Domain]EffectBase    (domain-agnostic appearance/meta effects)
+        └── Juice[Domain]TransformEffect  (transform delta vars, enums, inspector framework)
+              └── Transform[Domain]JuiceEffect  (typed vars — Vector2 vs Vector3, domain-specific math)
+```
+
+- `Juice2DTransformEffect` / `JuiceControlTransformEffect` / `Juice3DTransformEffect` own:
+  enums (`TransformReference`, `CaptureAt`, `PivotMode`), shared config exports, all `_get_property_list()` / `_validate_property()` plumbing, guard flags, delta vars
+- Concrete effects own **only**: typed vars (`from_position: Vector2`), typed casts, typed resolvers
+- Do **NOT** attempt a cross-domain `TransformJuiceEffectBase` — GDScript lacks generics and the
+  Vector2/Vector3 type difference makes a meaningful shared ancestor impossible without Variant gymnastics that hurt readability
+
+## Rule 15: JuiceTriggerRouter for Signal Wiring
+
+Signal wiring decisions (which Callable to connect for MANUAL triggers, visibility triggers, etc.)
+live in `JuiceTriggerRouter` — **not** in JuiceBase or domain subclasses.
+
+- `JuiceTriggerRouter.wire_manual(source, sig_name, on_momentary, on_progress)` — connects MANUAL trigger
+- `JuiceTriggerRouter.connect_visibility(source, on_changed)` — connects visibility_changed cross-domain
+- `JuiceTriggerRouter.resolve_manual_callable(source, sig_name, on_momentary, on_progress)` — pure routing logic
+
+**JuiceBase._ready()** calls these directly. Signal callbacks (`_on_trigger_momentary`, `_on_visibility_changed`, etc.)
+remain as instance methods on JuiceBase (they are `self` methods, cannot move). Domain-specific signal
+connections remain in each domain's `_auto_connect_domain_signals()` override.
