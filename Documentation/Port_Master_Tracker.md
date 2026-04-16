@@ -86,19 +86,25 @@
 | `Outline2DJuiceComp` | — | ➖ | Absorbed by Appearance2D |
 | `Outline3DJuiceComp` | — | ➖ | Absorbed by Appearance3D |
 
-## Camera (2 effects)
+## Camera (2 effects + CameraJuiceUtility)
+
+> **Design note:** `CameraJuiceUtility` is auto-bootstrapped onto the active camera on first effect tick — no manual placement required. Camera switches mid-animation are handled automatically.
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `Camera2DJuiceComp` | `Camera2DJuiceEffect` | ❌ | — | — |
-| `Camera3DJuiceComp` | `Camera3DJuiceEffect` | ❌ | — | — |
+| `Camera2DJuiceComp` | `Camera2DJuiceEffect` | ✅ | `TestCameraJuice` | 2026-04-16 |
+| `Camera3DJuiceComp` | `Camera3DJuiceEffect` | 🧪 | `TestCameraJuice` (2D only tested headless) | 2026-04-16 |
+| `CameraJuiceUtility` | `CameraJuiceUtility` | ✅ | `TestCameraJuice` | 2026-04-16 |
 
-## Screen (2 effects)
+## Screen (2 effects + ScreenJuiceUtility)
+
+> **Design note:** `ScreenJuiceUtility` is auto-bootstrapped at `SceneTree.root` on first effect tick — no manual CanvasLayer/ColorRect setup required. Survives scene changes. Manual placement respected as opt-in.
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ScreenMotionJuiceComp` | `ScreenMotionJuiceEffect` | ❌ | — | — |
+| `ScreenMotionJuiceComp` | `ScreenMotionJuiceEffect` | 🔧 | — | — |
 | `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | 🧪 | `TestScreenOverlay` | — |
+| `ScreenJuiceUtility` | `ScreenJuiceUtility` | 🔧 | — | — |
 
 ## Property (4 effects)
 
@@ -158,6 +164,14 @@
 
 ## Editor Tooling
 
+> **Transport + Camera/Screen preview — known gap:** Camera and Screen effects are guarded by `Engine.is_editor_hint()` at runtime to prevent scene dirtying (Camera) and editor-UI overlays (Screen). This means neither can be previewed via the editor transport today.
+>
+> **Planned fix (Transport port):** The editor preview transport should:
+> 1. **Camera** — temporarily inject a `CameraJuiceUtility` onto the viewport's active camera before preview, and remove it on transport stop — never saved to scene.
+> 2. **Screen** — temporarily bootstrap a `CanvasLayer`+`ScreenJuiceUtility` inside the editor's SubViewport (not `SceneTree.root`) before preview, and clean up on stop.
+>
+> Do NOT implement this workaround inside the effects themselves — the transport owns this lifecycle.
+
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
 | `JuicePreviewDirector` | TBD | ❌ | — | — |
@@ -169,7 +183,7 @@
 
 | Category | Total | Ported | In Progress | Not Started | Legacy/Cut |
 |----------|-------|--------|-------------|-------------|--------|
-| Effects | ~43 | 28 | 0 | 8 | 11 |
-| Utilities | ~10 | 8 | 0 | 2 | 0 |
+| Effects | ~43 | 30 | 1 | 7 | 11 |
+| Utilities | ~10 | 9 | 1 | 1 | 0 |
 | Infrastructure | 4 | 4 | 0 | 0 | 0 |
-| **Total** | **~57** | **40** | **0** | **10** | **11** |
+| **Total** | **~57** | **43** | **2** | **8** | **11** |
