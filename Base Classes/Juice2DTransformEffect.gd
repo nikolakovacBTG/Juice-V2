@@ -93,6 +93,12 @@ var transform_target: int = TransformTarget.POSITION:
 func _init() -> void:
 	_subclass_owns_effect_group = true
 
+## Set to true in any direct subclass that has its own complete _get_property_list().
+## When true, this class skips its own layout entirely to prevent the double
+## "Effect" GROUP duplication that Godot causes by auto-combining all
+## _get_property_list() overrides in the inheritance chain.
+var _leaf_owns_layout: bool = false
+
 var from_reference: int = TransformReference.SELF:
 	set(value):
 		from_reference = value
@@ -144,6 +150,10 @@ var pivot_mode: int = PivotMode.AUTO_CENTER:
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
+	# If a direct subclass owns the full layout, skip to avoid double "Effect" GROUP.
+	# See _leaf_owns_layout for details.
+	if _leaf_owns_layout:
+		return []
 	var props: Array[Dictionary] = []
 
 	props.append({"name": "Effect", "type": TYPE_NIL,

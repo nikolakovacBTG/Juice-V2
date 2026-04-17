@@ -14,6 +14,20 @@
 # DOES NOT: Handle return values from called methods.
 # DOES NOT: Block animation completion — calls and immediately completes.
 #
+# INSPECTOR LAYOUT:
+#   ▼ Trigger
+#       Trigger Behaviour  — Play In And Out fires on start AND reverse
+#       Start Delay        — delays when the call fires in a sequence
+#       Loop Count         — enables rhythmic repeated calls
+#       [loop options: ping_pong, loop_delay, loop_phase_offset]
+#       Target Node Path   — relative to the host JuiceBase; empty = juiced target
+#       Method Name        — name of the method to call
+#       Arguments          — Array of arguments passed to the method
+#       Call On            — On Start / On Complete / On Both
+#
+# CROSSFADE TIME is intentionally hidden — it blends _animation_progress,
+# but _apply_effect is a no-op here so crossfade has no observable effect.
+#
 # TARGET RESOLUTION:
 #   target_node_path resolves relative to _host_node (the JuiceBase node).
 #   Leave empty to call on the juiced target node itself (passed via _apply_effect).
@@ -41,7 +55,21 @@ enum CallTiming {
 # CONFIGURATION
 # =============================================================================
 
-@export_group("Method Call")
+func _init() -> void:
+	_subclass_owns_effect_group = true
+
+## Path to the node containing the method, resolved relative to the host
+## JuiceBase node. Leave empty to call on the juiced target node itself.
+var target_node_path: NodePath
+
+## Name of the method to call on the target node.
+var method_name: String = ""
+
+## Arguments to pass. Each element is one argument (any Variant type).
+var arguments: Array = []
+
+## When to call the method relative to the animation lifecycle.
+var call_on: CallTiming = CallTiming.ON_START
 
 
 # =============================================================================
@@ -50,23 +78,66 @@ enum CallTiming {
 
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
-	props.append({"name": "Utility", "type": TYPE_NIL,
+
+	# Single "Trigger" group — meta effects have no visual properties.
+	props.append({"name": "Trigger", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append_array(_get_effect_base_properties())
+
+	# Trigger Behaviour: kept — Play In And Out fires on start AND reverse,
+	# which is useful to sync method calls with in-and-out visual effects.
+	props.append({"name": "trigger_behaviour", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Play In And Out,Play In Only,Play Out Only,Toggle,Set From Source",
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	props.append({"name": "start_delay", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
+		"usage": PROPERTY_USAGE_DEFAULT})
+
+	# loop_count != 1 enables rhythmic repeated calls (e.g. periodic events).
+	props.append({"name": "loop_count", "type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	if loop_count != 1:
+		props.append({"name": "ping_pong", "type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "loop_delay", "type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "loop_phase_offset", "type": TYPE_FLOAT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+			"usage": PROPERTY_USAGE_DEFAULT})
+
+	# Crossfade Time intentionally omitted — see file header.
+
+	props.append({"name": "target_node_path", "type": TYPE_NODE_PATH,
+		"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES, "hint_string": "Node",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "method_name", "type": TYPE_STRING,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "arguments", "type": TYPE_ARRAY,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "call_on", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "On Start,On Complete,On Both",
+		"usage": PROPERTY_USAGE_DEFAULT})
+
 	return props
 
-## Path to the node containing the method. Resolved relative to the host
-## JuiceBase node. Leave empty to call on the juiced target node itself.
-@export_node_path("Node") var target_node_path: NodePath
 
-## Name of the method to call on the target node.
-@export var method_name: String = ""
+func _set(property: StringName, value: Variant) -> bool:
+	match property:
+		&"target_node_path": target_node_path = value; return true
+		&"method_name":      method_name      = value; return true
+		&"arguments":        arguments        = value; return true
+		&"call_on":          call_on          = value; return true
+	return false
 
-## Arguments to pass. Each element is one argument (any Variant type).
-@export var arguments: Array = []
 
-## When to call the method relative to the animation.
-@export var call_on: CallTiming = CallTiming.ON_START
+func _get(property: StringName) -> Variant:
+	match property:
+		&"target_node_path": return target_node_path
+		&"method_name":      return method_name
+		&"arguments":        return arguments
+		&"call_on":          return call_on
+	return null
 
 
 # =============================================================================
@@ -75,10 +146,6 @@ func _get_property_list() -> Array[Dictionary]:
 
 ## Cached target node reference. Resolved in _on_animate_start.
 var _method_target: Node = null
-
-
-func _init() -> void:
-	_subclass_owns_effect_group = true
 
 
 # =============================================================================

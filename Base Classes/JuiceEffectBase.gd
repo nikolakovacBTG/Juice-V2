@@ -383,6 +383,10 @@ var _in_hold_at_peak: bool = false
 var _hold_elapsed: float = 0.0
 var _in_sustain: bool = false
 var _in_loop_delay: bool = false
+# Current frame delta — set at the start of every tick() call. Subclasses that need
+# delta inside _apply_effect() read this instead of maintaining their own _tick_delta.
+# This removes the need for per-effect tick() overrides just to capture delta.
+var _current_delta: float = 0.0
 var _loop_delay_elapsed: float = 0.0
 
 # Crossfade state
@@ -471,6 +475,9 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 
 ## Advance animation by one frame. Returns PLAYING or COMPLETED.
 func tick(delta: float, target: Node) -> TickResult:
+	# Keep _current_delta fresh for all _apply_effect calls this frame.
+	# Subclasses read _current_delta instead of maintaining their own _tick_delta.
+	_current_delta = delta
 	if not _is_playing:
 		return TickResult.COMPLETED
 
@@ -491,6 +498,11 @@ func tick(delta: float, target: Node) -> TickResult:
 	# --- Hold at peak ---
 	if _in_hold_at_peak:
 		_hold_elapsed += delta
+		# Keep procedural effects (Noise, Shake) alive during the hold window.
+		# Without this, oscillators freeze on a single sample for the entire hold duration.
+		# Non-procedural effects (_needs_sustain() = false) are unaffected.
+		if _needs_sustain():
+			_apply_effect(1.0, target)
 		if _hold_elapsed < hold_at_peak:
 			return TickResult.PLAYING
 		_in_hold_at_peak = false

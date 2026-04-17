@@ -54,6 +54,7 @@ enum BoundMode {
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	_leaf_owns_layout = true
 	transform_target = TransformTarget.ROTATION  # Progress defaults to ROTATION not POSITION
 
 
@@ -80,6 +81,9 @@ var scale_rate: Vector3 = Vector3(0.1, 0.1, 0.1)
 var custom_pivot: Vector3 = Vector3.ZERO
 
 # --- Bound ---
+## When enabled, the accumulated transform is tracked against [bound_value].
+## When the limit is exceeded, [bound_behaviour] fires (reverse, wrap, stop, etc.).
+## Useful for ping-pong loops (Reverse Eased), bounded orbits, or one-shot travel.
 var bound_enabled: bool = false:
 	set(value):
 		bound_enabled = value
@@ -108,7 +112,6 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "auto_start", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "hold_on_stop", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append({"name": "Rate", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	match transform_target:
 		TransformTarget.POSITION:
 			props.append({"name": "position_unit", "type": TYPE_INT,
@@ -121,14 +124,12 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "scale_rate", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT})
 
 	if transform_target != TransformTarget.POSITION:
-		props.append({"name": "Pivot", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 		props.append({"name": "pivot_mode", "type": TYPE_INT,
 			"hint": PROPERTY_HINT_ENUM, "hint_string": "Auto Center,Inherit,Custom",
 			"usage": PROPERTY_USAGE_DEFAULT})
 		if pivot_mode == PivotMode.CUSTOM:
 			props.append({"name": "custom_pivot", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append({"name": "Bound", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	props.append({"name": "bound_enabled", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	if bound_enabled:
 		props.append({"name": "bound_behaviour", "type": TYPE_INT,

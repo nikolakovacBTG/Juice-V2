@@ -13,9 +13,10 @@
 # WRITE PATTERN: Delta-first. Computes noise offset and stores in
 #   _pos_delta / _rot_delta / _scale_delta. Domain node writes once per frame.
 #
-# NOISE EVOLUTION: Overrides tick() to capture frame delta for noise time
-#   advancement. During hold_at_peak, base tick skips _apply_effect but this
-#   override keeps noise evolving at full intensity.
+# NOISE EVOLUTION: Uses _current_delta from JuiceEffectBase — base tick() sets this
+#   each frame before any _apply_effect call. No per-effect tick() override needed.
+#   During hold_at_peak, JuiceEffectBase calls _apply_effect(1.0) when _needs_sustain()
+#   returns true, keeping noise alive for all trigger behaviour modes.
 #
 # PIVOT: Control has native pivot_offset — set once at animation start.
 # ============================================================================
@@ -97,6 +98,7 @@ var clamp_max: float = 1.0
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	_leaf_owns_layout = true
 
 
 # =============================================================================
@@ -263,24 +265,7 @@ func _get(property: StringName) -> Variant:
 
 var _noise: FastNoiseLite
 var _noise_time: float = 0.0
-var _tick_delta: float = 0.0
 # _pivot_applied inherited from JuiceControlTransformEffect
-
-
-# =============================================================================
-# TICK OVERRIDE
-# =============================================================================
-
-## Override tick to capture frame delta and keep noise evolving during hold_at_peak.
-func tick(delta: float, target: Node) -> TickResult:
-	_tick_delta = delta
-	var result := super.tick(delta, target)
-	if _in_hold_at_peak and _is_playing:
-		_advance_noise_time(delta)
-		var ctrl := target as Control
-		if ctrl:
-			_compute_noise_deltas(1.0, ctrl)
-	return result
 
 
 # =============================================================================
@@ -313,14 +298,14 @@ func _on_animate_start(target: Node) -> void:
 
 
 func _apply_effect(progress: float, target: Node) -> void:
-	_advance_noise_time(_tick_delta)
+	_advance_noise_time(_current_delta)
 	var ctrl := target as Control
 	if ctrl:
 		_compute_noise_deltas(progress, ctrl)
 
 
 func _on_animate_in_complete(_target: Node) -> void:
-	pass  # Noise keeps running via tick override during hold
+	pass  # Noise continues via _needs_sustain() in JuiceEffectBase
 
 
 func _on_animate_out_complete(_target: Node) -> void:

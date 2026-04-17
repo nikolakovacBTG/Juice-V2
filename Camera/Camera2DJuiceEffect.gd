@@ -89,8 +89,15 @@ var zoom_offset: float = 0.2
 ## SHAKE: Oscillation frequency (cycles per second). Higher = more frantic.
 var shake_frequency: float = 8.0
 
-## SHAKE: Phase offset for the noise oscillator. Different seeds change the feel.
+## SHAKE: Seed for the noise field. Different seeds produce different oscillation character.
 var shake_seed: float = 0.0
+
+## SHAKE: Noise algorithm that shapes the oscillator character.
+## - Simplex Smooth: organic, flowing tremor (default)
+## - Cellular:       twitchy, heartbeat-style glitch
+## - Perlin:         classic gradient rumble
+## - Value:          chunky, retro blocky shake
+var shake_noise_type: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 
 
 # =============================================================================
@@ -140,6 +147,10 @@ func _get_property_list() -> Array[Dictionary]:
 		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
 			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "shake_noise_type", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Simplex Smooth:1,Simplex:0,Cellular:2,Perlin:3,Value:5,Value Cubic:6",
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
 	return props
@@ -155,6 +166,7 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"zoom_offset":      zoom_offset = value;      return true
 		&"shake_frequency":  shake_frequency = value;  return true
 		&"shake_seed":       shake_seed = value;       return true
+		&"shake_noise_type": shake_noise_type = value; return true
 	return super._set(property, value)
 
 
@@ -168,6 +180,7 @@ func _get(property: StringName) -> Variant:
 		&"zoom_offset":      return zoom_offset
 		&"shake_frequency":  return shake_frequency
 		&"shake_seed":       return shake_seed
+		&"shake_noise_type": return shake_noise_type
 	return super._get(property)
 
 
@@ -180,11 +193,27 @@ var _my_pos:  Vector3 = Vector3.ZERO
 var _my_rot:  Vector3 = Vector3.ZERO
 var _my_zoom: float   = 0.0
 
+# FastNoiseLite instance — created at _on_animate_start for SHAKE mode.
+var _shake_noise: FastNoiseLite = null
+
 
 
 # =============================================================================
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
+
+func _needs_sustain() -> bool:
+	return animation_mode == AnimationMode.SHAKE
+
+
+func _on_animate_start(_target: Node) -> void:
+	if animation_mode != AnimationMode.SHAKE:
+		return
+	_shake_noise = FastNoiseLite.new()
+	_shake_noise.noise_type = shake_noise_type
+	_shake_noise.seed      = int(shake_seed)
+	_shake_noise.frequency = 1.0  # Rate driven externally via t * shake_frequency
+
 
 func _apply_effect(progress: float, _target: Node) -> void:
 	# Re-discover (or bootstrap) utility every frame — handles camera switches.
@@ -211,21 +240,40 @@ func _restore_to_natural(_target: Node) -> void:
 # =============================================================================
 
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
-	var s := _sample(progress, 0.0)
-
-	var px: Vector2
-	match position_unit:
-		PositionUnit.PIXELS:
-			px = position_offset * s
-		PositionUnit.PERCENT_VIEWPORT:
-			if is_instance_valid(_host_node):
-				var vp_size := _host_node.get_viewport().get_visible_rect().size
-				px = Vector2(position_offset.x * vp_size.x / 100.0,
-							 position_offset.y * vp_size.y / 100.0) * s
-			else:
+	var desired: Vector3
+	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
+		# Decorrelated X/Y: each axis sampled from a different noise-field row.
+		# Fixes the old diagonal-only motion from multiplying Vector2 by a single scalar.
+		var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
+		var nx := _shake_noise.get_noise_2d(t, 0.0)
+		var ny := _shake_noise.get_noise_2d(t, 100.0)
+		var px: Vector2
+		match position_unit:
+			PositionUnit.PIXELS:
+				px = Vector2(position_offset.x * nx, position_offset.y * ny) * progress
+			PositionUnit.PERCENT_VIEWPORT:
+				if is_instance_valid(_host_node):
+					var vp_size := _host_node.get_viewport().get_visible_rect().size
+					px = Vector2(
+						position_offset.x * vp_size.x / 100.0 * nx,
+						position_offset.y * vp_size.y / 100.0 * ny) * progress
+				else:
+					px = Vector2(position_offset.x * nx, position_offset.y * ny) * progress
+		desired = Vector3(px.x, px.y, 0.0)
+	else:
+		var s := _sample(progress, 0.0)
+		var px: Vector2
+		match position_unit:
+			PositionUnit.PIXELS:
 				px = position_offset * s
-
-	var desired := Vector3(px.x, px.y, 0.0)
+			PositionUnit.PERCENT_VIEWPORT:
+				if is_instance_valid(_host_node):
+					var vp_size := _host_node.get_viewport().get_visible_rect().size
+					px = Vector2(position_offset.x * vp_size.x / 100.0,
+								 position_offset.y * vp_size.y / 100.0) * s
+				else:
+					px = position_offset * s
+		desired = Vector3(px.x, px.y, 0.0)
 	var delta   := desired - _my_pos
 	util.position_offset += delta
 	_my_pos = desired
@@ -270,18 +318,12 @@ func _sample(envelope: float, seed_offset: float) -> float:
 		AnimationMode.DETERMINISTIC:
 			return envelope
 		AnimationMode.SHAKE:
-			var t := Time.get_ticks_msec() / 1000.0
-			return envelope * _noise_sample(t, shake_seed + seed_offset)
+			if _shake_noise == null:
+				return envelope
+			var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
+			return envelope * _shake_noise.get_noise_2d(t, seed_offset)
 		_:
 			return envelope
-
-
-## Multi-frequency sin superposition for chaotic shake. |output| ≤ 1.0.
-func _noise_sample(t: float, seed: float) -> float:
-	return (  sin(t * shake_frequency * 1.00 + seed * 0.00) * 0.50
-			+ sin(t * shake_frequency * 2.10 + seed * 1.00) * 0.30
-			+ sin(t * shake_frequency * 4.30 + seed * 2.00) * 0.15
-			+ sin(t * shake_frequency * 8.70 + seed * 3.00) * 0.05)
 
 
 # =============================================================================

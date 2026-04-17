@@ -53,6 +53,28 @@ enum ScreenOffsetUnit {
 	PIXELS,        ## Pixels. Converted to UV at apply-time via viewport size.
 }
 
+## Wave displacement direction.
+## HORIZONTAL: each row shifts sideways (classic scanline/underwater look).
+## VERTICAL:   each column shifts up/down.
+## CONCENTRIC: radial ripples expanding from pivot_uv (pond-ripple look).
+enum WaveDirection {
+	HORIZONTAL,  ## Rows shift in X by sin(y * freq)
+	VERTICAL,    ## Columns shift in Y by sin(x * freq)
+	CONCENTRIC,  ## Radial ripples from pivot_uv
+}
+
+## Chromatic aberration displacement mode.
+## UNIFORM_SHIFT:    Equal horizontal R/Blue offset (classic impact smear).
+## VIGNETTE_FALLOFF: Horizontal offset scaled by vignette_mask (= 0 at center, 1 at edges).
+##                   Simulates realistic lens dispersion at screen periphery.
+## NOISE_PER_CHANNEL: R, G, B each get independent 2D noise offsets ("drunken" chromatic warp).
+##                   Driven by shake_frequency (speed) and shake_seed (character).
+enum ChromaticMode {
+	UNIFORM_SHIFT,     ## Horizontal split — same for all pixels
+	VIGNETTE_FALLOFF,  ## Horizontal split — fades toward center
+	NOISE_PER_CHANNEL, ## Independent R/G/B 2D noise offsets — drunken/warp look
+}
+
 
 # =============================================================================
 # CONFIGURATION
@@ -91,9 +113,10 @@ var screen_zoom_offset: float = 0.05
 ## Typical range: -0.2 to 0.2. Positive x = lean right.
 var skew_amount: Vector2 = Vector2(0.1, 0.0)
 
-## BARREL: Radial distortion strength at peak. Negative = barrel (edges bow outward).
-## Positive = pincushion (edges bow inward). Typical range: -0.5 to 0.5.
-var barrel_amount: float = -0.2
+## BARREL: Radial distortion strength per axis at peak.
+## X = horizontal warp, Y = vertical warp. Negative = barrel, positive = pincushion.
+## Decouple X/Y to get anamorphic or asymmetric lens effects. Typical: -0.5 to 0.5 per axis.
+var barrel_amount: Vector2 = Vector2(-0.2, -0.2)
 
 ## WAVE: Maximum wave amplitude at peak (UV normalized). Typical: 0.005–0.05.
 var wave_amplitude: float = 0.015
@@ -102,17 +125,44 @@ var wave_amplitude: float = 0.015
 ## Higher = tighter/faster ripple. Typical: 5–30.
 var wave_frequency: float = 12.0
 
+## WAVE: Which axis the wave displaces. See WaveDirection enum.
+var wave_direction: int = WaveDirection.HORIZONTAL
+
 ## CHROMATIC: RGB channel separation at peak (UV normalized). Typical: 0.002–0.02.
 var chromatic_amount: float = 0.008
+
+## CHROMATIC: Which displacement pattern to use. See ChromaticMode.
+var chromatic_mode: int = ChromaticMode.UNIFORM_SHIFT
+
+## PIVOT: UV-space offset from screen center (0.5, 0.5) used as the rotation/zoom/
+## skew/barrel transform origin. (0, 0) = center, (-0.5, -0.5) = top-left corner.
+## Only meaningful for ROTATION, BARREL, ZOOM, and SKEW channels.
+var pivot_offset: Vector2 = Vector2.ZERO
+
+## VIGNETTE: Fades the effect toward the screen center using a radial mask.
+## Only meaningful for WAVE and CHROMATIC channels.
+## use_vignette: enables the vignette falloff.
+## vignette_scale: stretches the ellipse. (1,1) = circle, (2,1) = wide.
+## vignette_softness: falloff steepness. Higher = sharper edge. Typical: 0.5–3.0.
+var use_vignette:      bool    = false
+var vignette_scale:    Vector2 = Vector2.ONE
+var vignette_softness: float   = 1.0
 
 # --- Shake-mode parameters (shown only when animation_mode == SHAKE) ---
 
 ## SHAKE: Oscillation frequency (cycles per second). Higher = more frantic.
 var shake_frequency: float = 8.0
 
-## SHAKE: Seed offset for the noise oscillator. Different seeds give different
-## feel from the same settings. Range: 0.0 to 1000.0.
+## SHAKE: Seed for the noise field. Different seeds produce different oscillation
+## character from the same frequency settings.
 var shake_seed: float = 0.0
+
+## SHAKE: Noise algorithm that shapes the oscillator character.
+## - Simplex Smooth: organic, flowing tremor (default)
+## - Cellular:       twitchy, heartbeat-style glitch
+## - Perlin:         classic gradient rumble
+## - Value:          chunky, retro blocky shake
+var shake_noise_type: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 
 
 # =============================================================================
@@ -160,9 +210,9 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "skew_amount", "type": TYPE_VECTOR2,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		Channel.BARREL:
-			props.append({"name": "barrel_amount", "type": TYPE_FLOAT,
-				"hint": PROPERTY_HINT_RANGE,
-				"hint_string": "-1.0,1.0,0.005,or_less,or_greater",
+			# Vector2: no PROPERTY_HINT_RANGE support in Godot 4 — just usage DEFAULT.
+			# X = horizontal warp (typical -0.5..0.5), Y = vertical warp.
+			props.append({"name": "barrel_amount", "type": TYPE_VECTOR2,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		Channel.WAVE:
 			props.append({"name": "wave_amplitude", "type": TYPE_FLOAT,
@@ -172,11 +222,45 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "wave_frequency", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE, "hint_string": "1.0,60.0,0.5",
 				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "wave_direction", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM, "hint_string": "Horizontal,Vertical,Concentric",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			# Vignette: shown inline for channels where it is meaningful.
+			props.append({"name": "use_vignette", "type": TYPE_BOOL,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			if use_vignette:
+				props.append({"name": "vignette_scale", "type": TYPE_VECTOR2,
+					"usage": PROPERTY_USAGE_DEFAULT})
+				props.append({"name": "vignette_softness", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,5.0,0.1",
+					"usage": PROPERTY_USAGE_DEFAULT})
 		Channel.CHROMATIC:
 			props.append({"name": "chromatic_amount", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE,
 				"hint_string": "0.0,0.05,0.0005,or_greater",
 				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "chromatic_mode", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": "Uniform Shift,Vignette Falloff,Noise Per Channel",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({"name": "use_vignette", "type": TYPE_BOOL,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			if use_vignette:
+				props.append({"name": "vignette_scale", "type": TYPE_VECTOR2,
+					"usage": PROPERTY_USAGE_DEFAULT})
+				props.append({"name": "vignette_softness", "type": TYPE_FLOAT,
+					"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,5.0,0.1",
+					"usage": PROPERTY_USAGE_DEFAULT})
+
+	# Pivot: visible only for channels that use a transform origin.
+	# Wave and Chromatic are full-screen effects — pivot has no meaning for them.
+	# Offset is a translation — pivot doesn't apply either.
+	var _is_pivotable := (channel == Channel.ROTATION or channel == Channel.ZOOM
+		or channel == Channel.SKEW or channel == Channel.BARREL)
+	if _is_pivotable:
+		props.append({"name": "pivot_offset", "type": TYPE_VECTOR2,
+			"hint": PROPERTY_HINT_NONE,
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# Shake params — only visible in SHAKE mode
 	if animation_mode == AnimationMode.SHAKE:
@@ -185,6 +269,10 @@ func _get_property_list() -> Array[Dictionary]:
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "shake_noise_type", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": "Simplex Smooth:1,Simplex:0,Cellular:2,Perlin:3,Value:5,Value Cubic:6",
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
@@ -203,9 +291,16 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"barrel_amount":            barrel_amount = value;            return true
 		&"wave_amplitude":           wave_amplitude = value;           return true
 		&"wave_frequency":           wave_frequency = value;           return true
+		&"wave_direction":           wave_direction = value;           return true
 		&"chromatic_amount":         chromatic_amount = value;         return true
+		&"chromatic_mode":           chromatic_mode = value;           return true
 		&"shake_frequency":          shake_frequency = value;          return true
 		&"shake_seed":               shake_seed = value;               return true
+		&"shake_noise_type":         shake_noise_type = value;         return true
+		&"pivot_offset":             pivot_offset = value;             return true
+		&"use_vignette":             use_vignette = value;             return true
+		&"vignette_scale":           vignette_scale = value;           return true
+		&"vignette_softness":        vignette_softness = value;        return true
 	return super._set(property, value)
 
 
@@ -221,9 +316,16 @@ func _get(property: StringName) -> Variant:
 		&"barrel_amount":            return barrel_amount
 		&"wave_amplitude":           return wave_amplitude
 		&"wave_frequency":           return wave_frequency
+		&"wave_direction":           return wave_direction
 		&"chromatic_amount":         return chromatic_amount
+		&"chromatic_mode":           return chromatic_mode
 		&"shake_frequency":          return shake_frequency
 		&"shake_seed":               return shake_seed
+		&"shake_noise_type":         return shake_noise_type
+		&"pivot_offset":             return pivot_offset
+		&"use_vignette":             return use_vignette
+		&"vignette_scale":           return vignette_scale
+		&"vignette_softness":        return vignette_softness
 	return super._get(property)
 
 
@@ -236,9 +338,14 @@ var _my_offset:    Vector2 = Vector2.ZERO
 var _my_rot:       float   = 0.0
 var _my_zoom:      float   = 0.0
 var _my_skew:      Vector2 = Vector2.ZERO
-var _my_barrel:    float   = 0.0
+var _my_barrel:    Vector2 = Vector2.ZERO
 var _my_wave:      float   = 0.0
 var _my_chromatic: float   = 0.0
+
+# FastNoiseLite instance — created at _on_animate_start for SHAKE mode.
+# Stateless query: get_noise_2d(t, offset) is safe to call from multiple
+# callers with the same t as there is no internal position/playhead state.
+var _shake_noise: FastNoiseLite = null
 
 
 
@@ -263,6 +370,22 @@ func _apply_effect(progress: float, _target: Node) -> void:
 		Channel.CHROMATIC: _apply_chromatic(util, envelope)
 
 
+func _needs_sustain() -> bool:
+	# SHAKE uses a time-driven noise field — must keep ticking after animate_in
+	# so the screen keeps oscillating during hold_at_peak and indefinite waits.
+	return animation_mode == AnimationMode.SHAKE
+
+
+func _on_animate_start(_target: Node) -> void:
+	if animation_mode != AnimationMode.SHAKE:
+		return
+	# (Re-)create noise so seed/type changes take effect mid-session.
+	_shake_noise = FastNoiseLite.new()
+	_shake_noise.noise_type = shake_noise_type
+	_shake_noise.seed      = int(shake_seed)
+	_shake_noise.frequency = 1.0  # Rate driven externally via t * shake_frequency
+
+
 func _on_animate_out_complete(_target: Node) -> void:
 	_remove_contribution()
 
@@ -277,13 +400,24 @@ func _restore_to_natural(_target: Node) -> void:
 
 func _apply_offset(util: ScreenJuiceUtility, envelope: float) -> void:
 	var uv := _offset_to_uv(screen_offset)
-	var desired := uv * _sample(envelope, 0.0)
+	var desired: Vector2
+	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
+		# Sample X and Y at different noise-field offsets — fully decorrelated axes.
+		# This fixes the diagonal-only motion of the old single-scalar approach.
+		var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
+		desired = Vector2(
+			uv.x * _shake_noise.get_noise_2d(t, 0.0)   * envelope,
+			uv.y * _shake_noise.get_noise_2d(t, 100.0) * envelope)
+	else:
+		desired = uv * envelope
 	var delta   := desired - _my_offset
 	util.offset += delta
 	_my_offset = desired
 
 
 func _apply_rotation(util: ScreenJuiceUtility, envelope: float) -> void:
+	# Pivot: moves the rotation origin. (0,0) = center, (-0.5,-0.5) = top-left corner.
+	util.pivot_uv = Vector2(0.5, 0.5) + pivot_offset
 	var desired := deg_to_rad(screen_rotation_degrees) * _sample(envelope, 200.0)
 	var delta   := desired - _my_rot
 	util.rotation_amount += delta
@@ -291,6 +425,7 @@ func _apply_rotation(util: ScreenJuiceUtility, envelope: float) -> void:
 
 
 func _apply_zoom(util: ScreenJuiceUtility, envelope: float) -> void:
+	util.pivot_uv = Vector2(0.5, 0.5) + pivot_offset
 	var desired := screen_zoom_offset * _sample(envelope, 300.0)
 	var delta   := desired - _my_zoom
 	util.zoom_offset += delta
@@ -298,6 +433,7 @@ func _apply_zoom(util: ScreenJuiceUtility, envelope: float) -> void:
 
 
 func _apply_skew(util: ScreenJuiceUtility, envelope: float) -> void:
+	util.pivot_uv = Vector2(0.5, 0.5) + pivot_offset
 	var desired := skew_amount * _sample(envelope, 100.0)
 	var delta   := desired - _my_skew
 	util.skew_offset += delta
@@ -305,6 +441,7 @@ func _apply_skew(util: ScreenJuiceUtility, envelope: float) -> void:
 
 
 func _apply_barrel(util: ScreenJuiceUtility, envelope: float) -> void:
+	util.pivot_uv = Vector2(0.5, 0.5) + pivot_offset
 	var desired := barrel_amount * _sample(envelope, 400.0)
 	var delta   := desired - _my_barrel
 	util.barrel_distortion += delta
@@ -312,6 +449,12 @@ func _apply_barrel(util: ScreenJuiceUtility, envelope: float) -> void:
 
 
 func _apply_wave(util: ScreenJuiceUtility, envelope: float) -> void:
+	# Vignette config: last-write-wins. Shader reads use_vignette to decide whether
+	# to apply the vignette mask. Falsy writes are intentional — they match the default state.
+	util.use_vignette     = use_vignette
+	util.vignette_scale   = vignette_scale
+	util.vignette_softness = vignette_softness
+	util.wave_direction   = wave_direction  # last-write-wins config
 	var desired := wave_amplitude * absf(_sample(envelope, 500.0))  # abs: amplitude, sign via wave
 	var delta   := desired - _my_wave
 	util.wave_amplitude += delta
@@ -320,6 +463,15 @@ func _apply_wave(util: ScreenJuiceUtility, envelope: float) -> void:
 
 
 func _apply_chromatic(util: ScreenJuiceUtility, envelope: float) -> void:
+	util.use_vignette     = use_vignette
+	util.vignette_scale   = vignette_scale
+	util.vignette_softness = vignette_softness
+	util.chromatic_mode   = chromatic_mode
+	if chromatic_mode == ChromaticMode.NOISE_PER_CHANNEL:
+		# Drive the shader's sin oscillator at shake_frequency speed.
+		# Time advances monotonically so each frame the shader gets a new input.
+		util.chromatic_time = Time.get_ticks_msec() / 1000.0 * shake_frequency
+		util.chromatic_seed = shake_seed
 	var desired := chromatic_amount * absf(_sample(envelope, 600.0))  # abs: separation always positive
 	var delta   := desired - _my_chromatic
 	util.chromatic_amount += delta
@@ -340,11 +492,20 @@ func _remove_contribution() -> void:
 		util.barrel_distortion -= _my_barrel
 		util.wave_amplitude    -= _my_wave
 		util.chromatic_amount  -= _my_chromatic
+		# Reset last-write-wins config so stale values don’t affect the next effect.
+		util.pivot_uv           = Vector2(0.5, 0.5)
+		util.use_vignette       = false
+		util.vignette_scale     = Vector2.ONE
+		util.vignette_softness  = 1.0
+		util.wave_direction     = 0  # back to Horizontal default
+		util.chromatic_mode     = 0  # back to Uniform default
+		util.chromatic_time     = 0.0
+		util.chromatic_seed     = 0.0
 	_my_offset    = Vector2.ZERO
 	_my_rot       = 0.0
 	_my_zoom      = 0.0
 	_my_skew      = Vector2.ZERO
-	_my_barrel    = 0.0
+	_my_barrel    = Vector2.ZERO
 	_my_wave      = 0.0
 	_my_chromatic = 0.0
 
@@ -355,25 +516,20 @@ func _remove_contribution() -> void:
 
 ## Returns the effective multiplier for the current frame.
 ## DETERMINISTIC: returns envelope (0→1→0 curve value).
-## SHAKE: returns envelope × multi-frequency noise oscillator.
+## SHAKE: returns envelope × FastNoiseLite sample (decorrelated per channel via seed_offset).
 func _sample(envelope: float, seed_offset: float) -> float:
 	match animation_mode:
 		AnimationMode.DETERMINISTIC:
 			return envelope
 		AnimationMode.SHAKE:
-			var t := Time.get_ticks_msec() / 1000.0
-			return envelope * _noise_sample(t, shake_seed + seed_offset)
+			if _shake_noise == null:
+				return envelope  # Safety: noise not yet initialized
+			# t * shake_frequency = oscillation rate in noise-space (≈ cycles/sec).
+			# seed_offset selects a different noise-field row per channel.
+			var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
+			return envelope * _shake_noise.get_noise_2d(t, seed_offset)
 		_:
 			return envelope
-
-
-## Multi-frequency sin superposition — cheap chaotic waveform.
-## Normalized so |output| ≤ 1.0.
-func _noise_sample(t: float, seed: float) -> float:
-	return (  sin(t * shake_frequency * 1.00 + seed * 0.00) * 0.50
-			+ sin(t * shake_frequency * 2.10 + seed * 1.00) * 0.30
-			+ sin(t * shake_frequency * 4.30 + seed * 2.00) * 0.15
-			+ sin(t * shake_frequency * 8.70 + seed * 3.00) * 0.05)
 
 
 # =============================================================================

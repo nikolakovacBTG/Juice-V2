@@ -12,6 +12,6 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V1/icons/JuiceUtilityTimeCoord.svg")
 class_name Time2DJuiceEffect
 extends TimeJuiceEffectBase

@@ -85,6 +85,7 @@ var clamp_max: float = 1.0
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	_leaf_owns_layout = true
 
 
 # =============================================================================
@@ -245,26 +246,11 @@ func _get(property: StringName) -> Variant:
 
 var _noise: FastNoiseLite
 var _noise_time: float = 0.0
-var _tick_delta: float = 0.0
 var _pivot_offset: Vector2 = Vector2.ZERO
 var _base_rotation: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
 # _has_base inherited from Juice2DTransformEffect
 
-
-# =============================================================================
-# TICK OVERRIDE
-# =============================================================================
-
-func tick(delta: float, target: Node) -> TickResult:
-	_tick_delta = delta
-	var result := super.tick(delta, target)
-	if _in_hold_at_peak and _is_playing:
-		_advance_noise_time(delta)
-		var n2d := target as Node2D
-		if n2d:
-			_compute_noise_deltas(1.0, n2d)
-	return result
 
 
 # =============================================================================
@@ -299,7 +285,7 @@ func _on_animate_start(target: Node) -> void:
 
 
 func _apply_effect(progress: float, target: Node) -> void:
-	_advance_noise_time(_tick_delta)
+	_advance_noise_time(_current_delta)
 	var n2d := target as Node2D
 	if n2d:
 		_compute_noise_deltas(progress, n2d)
