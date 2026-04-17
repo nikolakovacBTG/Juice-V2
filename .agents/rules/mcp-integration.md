@@ -14,16 +14,18 @@ description: MCP integration for Godot operations. Use MCP0 for engine access, M
 ## Core Rules
 
 - **NEVER use bash for Godot operations** if MCP0 can handle it
-- **NEVER manually edit Godot files** if MCP0 can edit them
+- **For GDScript code edits — prefer native tools over MCP0 `edit_file`**
+  - `write_to_file` (Overwrite) / `replace_file_content` / `multi_replace_file_content` write directly to disk and are reliable
+  - MCP0 `edit_file` operates on editor in-memory state and can silently no-op if the search string doesn't match exactly
+  - Use MCP0 `edit_file` only for small, targeted tweaks where the match string is unambiguous (e.g. a single property value)
 - **ALWAYS check MCP1 documentation** before implementing ANY Godot class API
   - Verify method exists on the class (e.g. `Resource` vs `Node` vs `Object`)
   - Verify signal exists on that specific class (not just a parent)
   - Example: `get_process_delta_time()` exists on `Node`, NOT on `Resource`
   - Example: `completed` signal exists on `JuiceBase`, NOT on `JuiceEffectBase`
-- **VERIFY disk state after MCP0 `edit_file` on infrastructure files** (base classes, enums)
-  - MCP0 edits operate on the editor's in-memory state and may not flush to disk
-  - After editing `JuiceEffectBase`, `JuiceBase`, or any base class, call `view_file` to
-    confirm the change is present on disk before writing dependent code
+- **VERIFY disk state after any MCP0 `edit_file` call** — call `view_file` to confirm the change landed
+  - MCP0 `edit_file` returns "File edited" even on a silent no-op (search text not found)
+  - For full-file rewrites, always use `write_to_file` with `Overwrite: true` — it never silently fails
 - **USE MCP0 for testing** - scene playback, test execution, validation
 
 ## Common Scenarios

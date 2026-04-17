@@ -64,6 +64,7 @@ var custom_pivot: Vector2 = Vector2(0.5, 0.5)
 
 func _init() -> void:
 	_subclass_owns_effect_group = true
+	_leaf_owns_layout = true
 
 
 # =============================================================================
@@ -158,25 +159,9 @@ func _get(property: StringName) -> Variant:
 
 var _shake_time: float = 0.0
 var _shake_seed: float = 0.0
-var _tick_delta: float = 0.0
 var _direction_multiplier: float = 1.0
 var _last_sine_sign: float = 1.0
 # _pivot_applied inherited from JuiceControlTransformEffect
-
-
-# =============================================================================
-# TICK OVERRIDE
-# =============================================================================
-
-func tick(delta: float, target: Node) -> TickResult:
-	_tick_delta = delta
-	var result := super.tick(delta, target)
-	if _in_hold_at_peak and _is_playing:
-		_shake_time += delta
-		var ctrl := target as Control
-		if ctrl:
-			_compute_shake_deltas(1.0, ctrl)
-	return result
 
 
 # =============================================================================
@@ -207,7 +192,7 @@ func _on_animate_start(target: Node) -> void:
 
 
 func _apply_effect(progress: float, target: Node) -> void:
-	_shake_time += _tick_delta
+	_shake_time += _current_delta
 	var ctrl := target as Control
 	if ctrl:
 		_compute_shake_deltas(progress, ctrl)

@@ -106,6 +106,10 @@ var pivot_mode: int = PivotMode.AUTO_CENTER:
 func _init() -> void:
 	_subclass_owns_effect_group = true
 
+## Set to true in any direct subclass that has its own complete _get_property_list().
+## Prevents double "Effect" GROUP duplication from Godot auto-combining the chain.
+var _leaf_owns_layout: bool = false
+
 var from_reference: int = TransformReference.SELF:
 	set(value):
 		from_reference = value
@@ -165,6 +169,8 @@ var scale_custom_pivot: Vector3 = Vector3.ZERO
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
+	if _leaf_owns_layout:
+		return []
 	var props: Array[Dictionary] = []
 
 	props.append({"name": "Effect", "type": TYPE_NIL,
