@@ -162,8 +162,8 @@
 | `SoftTriggerControlJuiceUtility` | Same | 🧪 | `TestSoftTriggerControl` | — |
 | `SignalRelayJuiceUtility` | Same | 🧪 | `TestSignalRelay` | — |
 | `SceneActionJuiceUtility` | Same | ✅ | `TestSceneAction` | 2026-04-12 |
-| `CameraJuiceUtility` | Same | ❌ | — | — |
-| `ScreenJuiceUtility` | Same | ❌ | — | — |
+| `CameraJuiceUtility` | Same | ✅ | `TestCameraJuice` | 2026-04-16 |
+| `ScreenJuiceUtility` | Same | 🔧 | — | — |
 | `TimeCoordinatorJuiceUtility` | Same | 🧪 | — | — |
 
 ## Editor Tooling
