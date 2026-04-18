@@ -78,6 +78,8 @@
 | `Progress3DJuiceComp` | `Progress3DJuiceEffect` | 🧪 | `TestProgress3D` | — |
 | `ProgressPropertyJuiceComp` | `ProgressPropertyJuiceEffect` | 🧪 | `TestProgressProperty` | — |
 
+> **Inspector note (2026-04-17):** Rate, Pivot, Bound demoted from top-level GROUPs to flat properties inside the Effect group. `bound_enabled` tooltip improved. `_leaf_owns_layout` applied to suppress duplicate Effect header.
+
 ## Outline (3 effects — Legacy, absorbed by Appearance)
 
 | V0 Class | V1 Class | Status | Notes |
@@ -144,8 +146,10 @@
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|-----------|
 | `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\|3D}JuiceEffect` | ✅ | `TestTimeEffect` | 2026-03-30 |
-| `SignalEmitJuiceUtility` | `SignalEmitJuiceEffectBase` + `SignalEmit{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
-| `CallMethodJuiceUtility` | `CallMethodJuiceEffectBase` + `CallMethod{Control\|2D\|3D}JuiceEffect` | ✅ | `TestMetaEffects` | 2026-03-30 |
+| `SignalEmitJuiceUtility` | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
+| `CallMethodJuiceUtility` | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
+
+> **Inspector note (2026-04-17):** SignalEmit + CallMethod refactored — single "Trigger" group, crossfade_time hidden (no-op for meta effects), icons corrected (JuiceUtilitySignals / JuiceUtilityMethods / JuiceUtilityTimeCoord). Time2D/3D icons also corrected to JuiceUtilityTimeCoord.
 
 ## Utilities (Nodes & Helpers)
 
