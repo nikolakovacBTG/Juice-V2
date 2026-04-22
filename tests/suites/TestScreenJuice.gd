@@ -60,7 +60,7 @@ func _create_entity_with_screen_effect(
 	effect.screen_rotation_degrees = 5.0
 	effect.screen_zoom_offset = 0.1
 	effect.skew_amount        = Vector2(0.1, 0.0)
-	effect.barrel_amount      = -0.2
+	effect.barrel_amount      = Vector2(-0.2, -0.2)
 	effect.wave_amplitude     = 0.02
 	effect.chromatic_amount   = 0.01
 	effect.trigger_behaviour  = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT

@@ -209,7 +209,7 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 	header.set_selectable(1, false)
 	header.set_text(0, section_name)
 	header.set_custom_color(0, Color(0.7, 0.7, 0.7))
-	header.set_cell_mode(0, TreeItem.CELL_MODE_LABEL)
+	header.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
 	header.collapsed = false
 
 	for prop: Dictionary in items:
@@ -276,7 +276,7 @@ func _add_shader_section_for_material(
 	header.set_selectable(1, false)
 	header.set_text(0, "Shader Parameters (%s)" % mat_prop)
 	header.set_custom_color(0, Color(0.9, 0.75, 0.3))
-	header.set_cell_mode(0, TreeItem.CELL_MODE_LABEL)
+	header.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
 	header.collapsed = false
 
 	for u: Dictionary in filtered:
@@ -290,7 +290,7 @@ func _add_shader_section_for_material(
 		if is_texture:
 			# Sampler/texture uniforms cannot be lerped or noise-driven.
 			# Show them greyed and non-checkable so the user sees them but can't pick them.
-			item.set_cell_mode(0, TreeItem.CELL_MODE_LABEL)
+			item.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
 			item.set_selectable(0, false)
 			item.set_text(0, uname + "  (sampler — not animatable)")
 			item.set_custom_color(0, Color(0.5, 0.5, 0.5))
