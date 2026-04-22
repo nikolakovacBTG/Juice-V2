@@ -17,16 +17,6 @@
 # DOES NOT: Handle return values from called methods.
 # DOES NOT: Block animation completion — calls and immediately completes.
 #
-# INSPECTOR LAYOUT:
-#   ▼ Trigger
-#       Trigger Behaviour  — Play In And Out fires on start AND reverse
-#       Start Delay        — delays when calls fire in a sequence
-#       Loop Count         — enables rhythmic repeated calls
-#       [loop options: ping_pong, loop_delay, loop_phase_offset]
-#   ▼ Method Calls  (Array[CallMethodEntry])
-#       [0] target_node_path / method_name / arguments / call_on
-#       [1] …
-#
 # CROSSFADE TIME is intentionally hidden — it blends _animation_progress,
 # but _apply_effect is a no-op here so crossfade has no observable effect.
 #
