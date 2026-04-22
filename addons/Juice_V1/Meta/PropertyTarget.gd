@@ -146,6 +146,14 @@ func get_target_warnings() -> Array[String]:
 			"Type of '%s' could not be auto-detected. " % property_path
 			+ "Amplitude fields will not show correctly. "
 			+ "Note: ':x', ':y', ':a' sub-properties are always float.")
+	# Warn when targeting a shared shader material so the user knows
+	# changes will affect every node using the same resource.
+	if ":shader_parameter/" in property_path:
+		var mat_prop: String = property_path.split(":")[0]
+		warnings.append(
+			"Shader parameter is on a shared '%s'. Changes affect ALL nodes " % mat_prop
+			+ "using this material. Right-click the material in the Inspector "
+			+ "→ Make Unique for per-instance animation.")
 	return warnings
 
 
@@ -186,14 +194,33 @@ func _detect_type() -> void:
 		_detected_type = TYPE_NIL
 		return
 
-	# Refine for single sub-properties (e.g., ":a", ":x", ":y").
-	# These are always float regardless of the parent type.
+	# Refine for sub-properties and shader parameter paths.
 	if segments.size() > 1:
-		var sub := segments[1].to_lower()
-		if sub in ["x", "y", "z", "w", "r", "g", "b", "a"]:
+		var sub := segments[1]
+
+		# --- Shader parameter path: "material:shader_parameter/<name>" ---
+		# base_prop is "material", "material_override", or "material_overlay".
+		# We confirmed via live test that get_indexed chains correctly through
+		# these properties into ShaderMaterial.get("shader_parameter/name").
+		if sub.begins_with("shader_parameter/"):
+			var param_name: String = sub.substr("shader_parameter/".length())
+			var material = node.get(base_prop)
+			if material is ShaderMaterial and material.shader != null:
+				for u: Dictionary in material.shader.get_shader_uniform_list():
+					if u.get("name", "") == param_name:
+						_detected_type = u.get("type", TYPE_NIL)
+						return
+			# Shader or param not found yet — keep TYPE_NIL.
+			_detected_type = TYPE_NIL
+			return
+
+		# --- Single component sub-properties: ":a", ":x", ":y", etc. ---
+		# These are always float regardless of the parent vector/color type.
+		var sub_lower := sub.to_lower()
+		if sub_lower in ["x", "y", "z", "w", "r", "g", "b", "a"]:
 			_detected_type = TYPE_FLOAT
 		else:
-			# Complex nested path (shader_parameter/name, etc.) — unknown.
+			# Other complex nested path — unknown at editor time.
 			_detected_type = TYPE_NIL
 	else:
 		_detected_type = base_type
