@@ -11,8 +11,8 @@
 #       Mirrors the paradigm of recipe array items — visual list of configs.
 # SYSTEM: Juice System (addons/Juice_V1/Editor/) — EDITOR ONLY.
 # DOES NOT: Run in game — registered via juice_plugin.gd, stripped on export.
-# DOES NOT: Handle shader parameters (set_indexed paths like
-#            "material:shader_parameter/x" must be typed manually for now).
+# DOES NOT: Support per-surface shader materials on MeshInstance3D (surface_material_override/N
+#            is inaccessible via get_indexed — those require method calls, not property access).
 # =============================================================================
 
 @tool
@@ -194,6 +194,10 @@ func _populate_tree() -> void:
 	if not restrict and not engine_items.is_empty():
 		_add_tree_section("Engine / Storage Properties", engine_items)
 
+	# Shader parameters — always shown regardless of the restrict toggle.
+	# Checks material, material_override, and material_overlay independently.
+	_add_shader_params_section(filter)
+
 
 func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 	if items.is_empty():
@@ -227,6 +231,82 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 		# Type column.
 		item.set_text(1, type_string(type_id))
 		item.set_custom_color(1, Color(0.6, 0.8, 1.0))
+
+
+# =============================================================================
+# SHADER PARAMETER SECTIONS
+# =============================================================================
+
+## Check all material-type properties on the target node and add a picker
+## section for each one that holds a ShaderMaterial with a compiled shader.
+## Confirmed working via live editor-script test:
+##   node.get("material")          → CanvasItem / Sprite2D / Label etc.
+##   node.get("material_override") → MeshInstance3D / GeometryInstance3D
+##   node.get("material_overlay")  → MeshInstance3D second overlay layer
+func _add_shader_params_section(filter: String) -> void:
+	if not is_instance_valid(_target_node):
+		return
+	for mat_prop: String in ["material", "material_override", "material_overlay"]:
+		var material = _target_node.get(mat_prop)
+		if material is ShaderMaterial and material.shader != null:
+			_add_shader_section_for_material(mat_prop, material, filter)
+
+
+## Populate one amber section in the tree for a specific ShaderMaterial.
+## mat_prop: the node property name holding the material
+## ("material", "material_override", or "material_overlay").
+func _add_shader_section_for_material(
+		mat_prop: String, material: ShaderMaterial, filter: String) -> void:
+
+	# Build filtered uniform list.
+	var filtered: Array[Dictionary] = []
+	for u: Dictionary in material.shader.get_shader_uniform_list():
+		var uname: String = u.get("name", "")
+		if not filter.is_empty() and not uname.to_lower().contains(filter):
+			continue
+		filtered.append(u)
+	if filtered.is_empty():
+		return
+
+	# Section header — amber colour distinguishes shader params from node props.
+	# Label includes mat_prop so users know which material slot this targets.
+	var root := _tree.get_root()
+	var header := _tree.create_item(root)
+	header.set_selectable(0, false)
+	header.set_selectable(1, false)
+	header.set_text(0, "Shader Parameters (%s)" % mat_prop)
+	header.set_custom_color(0, Color(0.9, 0.75, 0.3))
+	header.set_cell_mode(0, TreeItem.CELL_MODE_LABEL)
+	header.collapsed = false
+
+	for u: Dictionary in filtered:
+		var uname: String     = u.get("name", "")
+		var utype: int        = u.get("type", TYPE_NIL)
+		# Full path that get_indexed / set_indexed accepts at runtime.
+		var full_path: String = mat_prop + ":shader_parameter/" + uname
+		var is_texture: bool  = (utype == TYPE_OBJECT)
+
+		var item := _tree.create_item(header)
+		if is_texture:
+			# Sampler/texture uniforms cannot be lerped or noise-driven.
+			# Show them greyed and non-checkable so the user sees them but can't pick them.
+			item.set_cell_mode(0, TreeItem.CELL_MODE_LABEL)
+			item.set_selectable(0, false)
+			item.set_text(0, uname + "  (sampler — not animatable)")
+			item.set_custom_color(0, Color(0.5, 0.5, 0.5))
+			item.set_text(1, type_string(utype))
+			item.set_custom_color(1, Color(0.5, 0.5, 0.5))
+		else:
+			item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
+			item.set_editable(0, true)
+			item.set_text(0, uname)
+			item.set_meta("property_path", full_path)
+			var is_checked := full_path in _initial_paths
+			item.set_checked(0, is_checked)
+			if is_checked:
+				item.set_custom_color(0, Color(0.4, 1.0, 0.5))
+			item.set_text(1, type_string(utype))
+			item.set_custom_color(1, Color(0.9, 0.75, 0.3))
 
 
 # =============================================================================
