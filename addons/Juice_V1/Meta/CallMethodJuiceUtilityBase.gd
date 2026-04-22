@@ -1,14 +1,17 @@
 ## Base class for method-call utilities.
 ##
-## Calls a named method on a target node at the configured timing.
-## Domain-agnostic — no visual output.
+## Holds an array of CallMethodEntry sub-resources. Each entry calls its own
+## method on its own target node at its own timing. Multiple entries let one
+## utility drive several method calls from a single recipe resource.
 
 # ============================================================================
-# WHAT: Calls any method on any node when an animation starts or completes.
+# WHAT: Calls one method per CallMethodEntry when an animation starts or completes.
+#       Domain-agnostic — no visual output.
 # WHY:  Allows designers to wire "when this animation fires → call method X"
 #       purely in the inspector, without writing custom scripts. Replaces V0
 #       CallMethodJuiceUtility (standalone Node) with a chainable Resource that
 #       participates in the recipe stack: start_delay, chain_to, loop all work.
+#       Upgraded from single-entry to array to match recipe-item paradigm.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Produce any visual effect — control/flow only.
 # DOES NOT: Handle return values from called methods.
@@ -17,20 +20,19 @@
 # INSPECTOR LAYOUT:
 #   ▼ Trigger
 #       Trigger Behaviour  — Play In And Out fires on start AND reverse
-#       Start Delay        — delays when the call fires in a sequence
+#       Start Delay        — delays when calls fire in a sequence
 #       Loop Count         — enables rhythmic repeated calls
 #       [loop options: ping_pong, loop_delay, loop_phase_offset]
-#       Target Node Path   — relative to the host JuiceBase; empty = juiced target
-#       Method Name        — name of the method to call
-#       Arguments          — Array of arguments passed to the method
-#       Call On            — On Start / On Complete / On Both
+#   ▼ Method Calls  (Array[CallMethodEntry])
+#       [0] target_node_path / method_name / arguments / call_on
+#       [1] …
 #
 # CROSSFADE TIME is intentionally hidden — it blends _animation_progress,
 # but _apply_effect is a no-op here so crossfade has no observable effect.
 #
-# TARGET RESOLUTION:
+# TARGET RESOLUTION per entry:
 #   target_node_path resolves relative to _host_node (the JuiceBase node).
-#   Leave empty to call on the juiced target node itself (passed via _apply_effect).
+#   Leave empty to call on the juiced target node itself.
 # ============================================================================
 
 @tool
@@ -43,11 +45,11 @@ extends JuiceEffectBase
 # ENUMS
 # =============================================================================
 
-## When to call the method relative to the animation lifecycle.
+## Timing constants (matches CallMethodEntry.call_on int values).
 enum CallTiming {
-	ON_START,    ## Call when animate_in() begins (after start_delay).
-	ON_COMPLETE, ## Call when animation reaches peak (progress=1.0).
-	ON_BOTH,     ## Call on both start and complete.
+	ON_START    = 0,  ## Call when animate_in() begins (after start_delay).
+	ON_COMPLETE = 1,  ## Call when animation reaches peak (progress=1.0).
+	ON_BOTH     = 2,  ## Call on both start and complete.
 }
 
 
@@ -58,18 +60,8 @@ enum CallTiming {
 func _init() -> void:
 	_subclass_owns_effect_group = true
 
-## Path to the node containing the method, resolved relative to the host
-## JuiceBase node. Leave empty to call on the juiced target node itself.
-var target_node_path: NodePath
-
-## Name of the method to call on the target node.
-var method_name: String = ""
-
-## Arguments to pass. Each element is one argument (any Variant type).
-var arguments: Array = []
-
-## When to call the method relative to the animation lifecycle.
-var call_on: CallTiming = CallTiming.ON_START
+## List of method call entries. Each fires independently at its own timing.
+var entries: Array = []
 
 
 # =============================================================================
@@ -83,18 +75,14 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "Trigger", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 
-	# Trigger Behaviour: kept — Play In And Out fires on start AND reverse,
-	# which is useful to sync method calls with in-and-out visual effects.
 	props.append({"name": "trigger_behaviour", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM,
 		"hint_string": "Play In And Out,Play In Only,Play Out Only,Toggle,Set From Source",
 		"usage": PROPERTY_USAGE_DEFAULT})
-
 	props.append({"name": "start_delay", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
-	# loop_count != 1 enables rhythmic repeated calls (e.g. periodic events).
 	props.append({"name": "loop_count", "type": TYPE_INT,
 		"usage": PROPERTY_USAGE_DEFAULT})
 	if loop_count != 1:
@@ -108,35 +96,30 @@ func _get_property_list() -> Array[Dictionary]:
 
 	# Crossfade Time intentionally omitted — see file header.
 
-	props.append({"name": "target_node_path", "type": TYPE_NODE_PATH,
-		"hint": PROPERTY_HINT_NODE_PATH_VALID_TYPES, "hint_string": "Node",
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "method_name", "type": TYPE_STRING,
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "arguments", "type": TYPE_ARRAY,
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "call_on", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM, "hint_string": "On Start,On Complete,On Both",
-		"usage": PROPERTY_USAGE_DEFAULT})
+	# Method Calls group — typed array of CallMethodEntry resources.
+	props.append({"name": "Method Calls", "type": TYPE_NIL,
+		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	props.append({
+		"name": "entries",
+		"type": TYPE_ARRAY,
+		"hint": PROPERTY_HINT_ARRAY_TYPE,
+		"hint_string": "%d/%d:%s" % [
+			TYPE_OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "CallMethodEntry"],
+		"usage": PROPERTY_USAGE_DEFAULT
+	})
 
 	return props
 
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"target_node_path": target_node_path = value; return true
-		&"method_name":      method_name      = value; return true
-		&"arguments":        arguments        = value; return true
-		&"call_on":          call_on          = value; return true
+		&"entries": entries = value; return true
 	return false
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		&"target_node_path": return target_node_path
-		&"method_name":      return method_name
-		&"arguments":        return arguments
-		&"call_on":          return call_on
+		&"entries": return entries
 	return null
 
 
@@ -144,8 +127,9 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE
 # =============================================================================
 
-## Cached target node reference. Resolved in _on_animate_start.
-var _method_target: Node = null
+## Cache of per-entry resolved target nodes. Populated in _on_animate_start,
+## cleared in _restore_to_natural. Index matches entries array.
+var _resolved_targets: Array[Node] = []
 
 
 # =============================================================================
@@ -153,22 +137,20 @@ var _method_target: Node = null
 # =============================================================================
 
 func _on_animate_start(target: Node) -> void:
-	_resolve_method_target(target)
-	if call_on == CallTiming.ON_START or call_on == CallTiming.ON_BOTH:
-		_call_method()
+	_resolve_all_targets(target)
+	_call_entries_for_timing(CallTiming.ON_START, "ON_START")
 
 
 func _on_animate_in_complete(_target: Node) -> void:
-	if call_on == CallTiming.ON_COMPLETE or call_on == CallTiming.ON_BOTH:
-		_call_method()
+	_call_entries_for_timing(CallTiming.ON_COMPLETE, "ON_COMPLETE")
 
 
 func _apply_effect(_progress: float, _target: Node) -> void:
-	pass  # No visual output — method call happens in lifecycle hooks.
+	pass  # No visual output — method calls happen in lifecycle hooks.
 
 
 func _restore_to_natural(_target: Node) -> void:
-	_method_target = null
+	_resolved_targets.clear()
 
 
 # =============================================================================
@@ -177,8 +159,15 @@ func _restore_to_natural(_target: Node) -> void:
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
-	if method_name.is_empty():
-		warnings.append("method_name is empty — no method will be called.")
+	if entries.is_empty():
+		warnings.append("No Method Call entries configured. Add at least one entry.")
+	else:
+		for i: int in entries.size():
+			var entry: CallMethodEntry = entries[i]
+			if entry == null:
+				warnings.append("entries[%d] is null." % i)
+			elif entry.method_name.is_empty():
+				warnings.append("entries[%d]: method_name is empty." % i)
 	return warnings
 
 
@@ -186,37 +175,63 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
-func _resolve_method_target(fallback_target: Node) -> void:
-	if not target_node_path.is_empty():
-		if _host_node != null:
-			_method_target = _host_node.get_node_or_null(target_node_path)
-		if _method_target == null and debug_enabled:
-			push_warning("[CallMethod] target_node_path '%s' not found from host" % target_node_path)
-	else:
-		_method_target = fallback_target  # Default: the juiced node itself
+## Resolve all entry target nodes relative to the host / fallback target.
+func _resolve_all_targets(fallback_target: Node) -> void:
+	_resolved_targets.clear()
+	for entry: CallMethodEntry in entries:
+		if entry == null:
+			_resolved_targets.append(null)
+			continue
+		if not entry.target_node_path.is_empty():
+			var resolved: Node = null
+			if _host_node != null:
+				resolved = _host_node.get_node_or_null(entry.target_node_path)
+			if resolved == null and debug_enabled:
+				push_warning("[CallMethod] entry target_node_path '%s' not found from host"
+					% entry.target_node_path)
+			_resolved_targets.append(resolved)
+		else:
+			_resolved_targets.append(fallback_target)
 
 
-func _call_method() -> void:
-	if not is_instance_valid(_method_target):
+## Call all entries whose call_on matches the given timing.
+func _call_entries_for_timing(timing: CallTiming, timing_label: String) -> void:
+	for i: int in entries.size():
+		var entry: CallMethodEntry = entries[i]
+		if entry == null:
+			continue
+		if entry.call_on != timing and entry.call_on != CallTiming.ON_BOTH:
+			continue
+
+		var method_target: Node = null
+		if i < _resolved_targets.size():
+			method_target = _resolved_targets[i]
+
+		_do_call(entry, method_target, timing_label)
+
+
+func _do_call(entry: CallMethodEntry, method_target: Node, timing_label: String) -> void:
+	if not is_instance_valid(method_target):
 		if debug_enabled:
-			push_warning("[CallMethod] No valid target node to call '%s'" % method_name)
+			push_warning("[CallMethod] No valid target node to call '%s'" % entry.method_name)
 		return
 
-	if method_name.is_empty():
+	if entry.method_name.is_empty():
 		if debug_enabled:
-			push_warning("[CallMethod] method_name is empty")
+			push_warning("[CallMethod] method_name is empty for entry")
 		return
 
-	if not _method_target.has_method(method_name):
+	if not method_target.has_method(entry.method_name):
 		push_warning("[CallMethod] '%s' doesn't have method '%s'" % [
-			_method_target.name, method_name])
+			method_target.name, entry.method_name])
 		return
 
-	if arguments.is_empty():
-		_method_target.call(method_name)
+	if entry.arguments.is_empty():
+		method_target.call(entry.method_name)
 	else:
-		_method_target.callv(method_name, arguments)
+		method_target.callv(entry.method_name, entry.arguments)
 
 	if debug_enabled:
-		var args_str := str(arguments) if not arguments.is_empty() else "()"
-		print("[CallMethod] Called %s.%s%s" % [_method_target.name, method_name, args_str])
+		var args_str := str(entry.arguments) if not entry.arguments.is_empty() else "()"
+		print("[CallMethod] [%s] Called %s.%s%s" % [
+			timing_label, method_target.name, entry.method_name, args_str])
