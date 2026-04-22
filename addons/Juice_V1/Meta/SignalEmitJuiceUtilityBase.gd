@@ -16,17 +16,6 @@
 # DOES NOT: Produce any visual effect — control/flow only.
 # DOES NOT: Block animation completion — fires and immediately completes.
 #
-# INSPECTOR LAYOUT:
-#   ▼ Trigger
-#       Trigger Behaviour  — Play In And Out fires on start AND reverse
-#       Start Delay        — delays when signals fire in a sequence
-#       Loop Count         — enables rhythmic repeated emission
-#       [loop options: ping_pong, loop_delay, loop_phase_offset]
-#   ▼ Signal Entries  (Array[SignalEmitEntry])
-#       [0] signal_description / payload / emit_on
-#       [1] signal_description / payload / emit_on
-#       …
-#
 # CROSSFADE TIME is intentionally hidden — it blends _animation_progress,
 # but _apply_effect is a no-op here so crossfade has no observable effect.
 #
