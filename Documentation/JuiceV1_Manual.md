@@ -103,11 +103,11 @@ Each endpoint (From and To) is independently configured with a **reference sourc
 
 ### Transform — Control
 
-<!-- TODO: Control-domain specifics (pivot_offset built-in, Container hold pattern, pixel units). -->
+`TransformControlJuiceEffect` operates identically to the 2D version but animates `Control.position`, `Control.rotation` (in degrees), and `Control.scale`. It uses the `pivot_offset` built into the `Control` node for pivot calculations and includes a Container Hold pattern to ensure UI layouts don't instantly snap back during deferred sorts.
 
 ### Transform — 3D
 
-<!-- TODO: 3D-domain specifics (Vector3, Quaternion slerp for rotation, rotation_unit Degrees/Radians, rotation_pivot_offset, scale_pivot via AABB). -->
+`Transform3DJuiceEffect` operates in 3D space, animating `Node3D.position` (`Vector3`), `Node3D.rotation` (`Vector3` via Quaternion spherical interpolation to prevent gimbal lock), and `Node3D.scale` (`Vector3`). Pivot compensation is handled via AABB visual center calculation or a custom `Vector3` offset.
 
 ---
 
@@ -129,21 +129,15 @@ This makes Progress ideal for looping platforms (Wrap) or bouncing objects (Reve
 
 ### Progress — 2D
 
-<!-- TODO: 2D specifics (Vector2 rates, position_unit, pivot). -->
+`Progress2DJuiceEffect` accumulates `Vector2` rates for position and scale, and a `float` rate (degrees/sec) for rotation. It natively supports pixel, own-size, or parent-size units.
 
 ### Progress — Control
 
-<!-- TODO: Control specifics. -->
+`ProgressControlJuiceEffect` functions identically to the 2D variant but applies offsets to the UI `Control` node, utilizing its native `pivot_offset`.
 
 ### Progress — 3D
 
-<!-- TODO: 3D specifics (Vector3 rates, rotation in degrees/sec, AABB pivot). -->
-
-### Progress — Property  *(domain-agnostic)*
-
-`ProgressPropertyJuiceEffect` — Accumulates any arbitrary node property at a rate per second.
-
-<!-- TODO: Explain how this differs from domain-bound Progress (targets any Variant property via NodePath, not just transform channels). -->
+`Progress3DJuiceEffect` accumulates `Vector3` rates for position, rotation (degrees/sec), and scale. Pivot compensation utilizes the visual AABB center.
 
 ---
 
@@ -152,8 +146,6 @@ This makes Progress ideal for looping platforms (Wrap) or bouncing objects (Reve
 Continuous procedural noise-driven animation for position, rotation, or scale. Uses `FastNoiseLite` for configurable noise patterns with fractal and domain warp options. The progress envelope controls intensity — at progress=0 the noise is silent, at progress=1 it's full amplitude.
 
 **Domain variants:** `NoiseControlJuiceEffect` · `Noise2DJuiceEffect` · `Noise3DJuiceEffect`
-
-### Noise — Overview
 
 ### Noise — Overview
 
@@ -169,25 +161,15 @@ Noise effects act as a procedural offset added to the natural state of the targe
 
 ### Noise — 2D
 
-### Property — 2D
-
-`Property2DJuiceEffect` applies property interpolations when triggered within a 2D domain recipe.
+`Noise2DJuiceEffect` applies procedural noise offsets to `Node2D` transforms using `Vector2` amplitude constraints.
 
 ### Noise — Control
 
-<!-- TODO: Control specifics. -->
+`NoiseControlJuiceEffect` applies procedural noise offsets to `Control` node transforms.
 
 ### Noise — 3D
 
-### Property — 3D
-
-`Property3DJuiceEffect` applies property interpolations when triggered within a 3D domain recipe.
-
-### Noise — Property  *(domain-agnostic)*
-
-`NoisePropertyJuiceEffect` — Applies procedural noise to any arbitrary node property.
-
-<!-- TODO: Property noise — drives any Variant property with noise. -->
+`Noise3DJuiceEffect` applies procedural noise offsets to `Node3D` transforms using `Vector3` amplitude constraints.
 
 ---
 
@@ -196,8 +178,6 @@ Noise effects act as a procedural offset added to the natural state of the targe
 Sine-wave + random oscillation for position, rotation, or scale. The progress envelope controls intensity — perfect for impacts, screen shakes, and nervous anticipation. Unlike Noise (which is smooth and organic), Shake is rhythmic and aggressive, driven by a configurable frequency (Hz).
 
 **Domain variants:** `ShakeControlJuiceEffect` · `Shake2DJuiceEffect` · `Shake3DJuiceEffect`
-
-### Shake — Overview
 
 ### Shake — Overview
 
@@ -214,21 +194,15 @@ Like Noise, the output is multiplied by the effect's `progress` envelope, so the
 
 ### Shake — 2D
 
-<!-- TODO -->
+`Shake2DJuiceEffect` applies rhythmic oscillation to `Node2D` transform channels.
 
 ### Shake — Control
 
-<!-- TODO -->
+`ShakeControlJuiceEffect` applies rhythmic oscillation to `Control` transform channels.
 
 ### Shake — 3D
 
-<!-- TODO -->
-
-### Shake — Property  *(domain-agnostic)*
-
-`ShakePropertyJuiceEffect` — Applies sine+random shake to any arbitrary node property.
-
-<!-- TODO -->
+`Shake3DJuiceEffect` applies rhythmic oscillation to `Node3D` transform channels.
 
 ---
 
@@ -237,8 +211,6 @@ Like Noise, the output is multiplied by the effect's `progress` envelope, so the
 Classic squash and stretch deformation with optional volume preservation. The primary axis compresses at the peak of the animation curve, while perpendicular axes expand to maintain visual volume. Ideal for landing impacts, bouncy anticipation, and breathing idle animations.
 
 **Domain variants:** `SquashStretchControlJuiceEffect` · `SquashStretch2DJuiceEffect` · `SquashStretch3DJuiceEffect`
-
-### Squash & Stretch — Overview
 
 ### Squash & Stretch — Overview
 
@@ -256,15 +228,15 @@ The deformation is driven by a `sin(progress × PI)` curve, which evaluates to 0
 
 ### Squash & Stretch — 2D
 
-<!-- TODO -->
+`SquashStretch2DJuiceEffect` applies volume-preserving deformation to `Node2D` scale.
 
 ### Squash & Stretch — Control
 
-<!-- TODO -->
+`SquashStretchControlJuiceEffect` applies volume-preserving deformation to `Control` scale.
 
 ### Squash & Stretch — 3D
 
-<!-- TODO -->
+`SquashStretch3DJuiceEffect` applies volume-preserving deformation to `Node3D` scale.
 
 ---
 
@@ -273,8 +245,6 @@ The deformation is driven by a `sin(progress × PI)` curve, which evaluates to 0
 Animate visual appearance properties: tint, fade (alpha), overbright (HDR bloom), and outline. Each mode uses the From/To reference system (Custom or Self, with configurable capture timing). An optional Flicker sub-system modulates the output with noise or a custom curve for flickering, strobing, or pulsing effects.
 
 **Domain variants:** `AppearanceControlJuiceEffect` · `Appearance2DJuiceEffect` · `Appearance3DJuiceEffect`
-
-### Appearance — Overview
 
 ### Appearance — Overview
 
@@ -296,17 +266,11 @@ All appearance effects can optionally have temporal flicker applied *on top* of 
 
 ### Appearance — 2D
 
-### Appearance — 2D
-
 `Appearance2DJuiceEffect` operates on `CanvasItem` properties. TINT and FADE directly manipulate the `modulate` property. OUTLINE leverages the `self_modulate` trick or a simple shader depending on the implementation.
 
 ### Appearance — Control
 
-### Appearance — Control
-
 `AppearanceControlJuiceEffect` functions identically to the 2D variant, acting on the `Control` node's `modulate` and `self_modulate` properties.
-
-### Appearance — 3D
 
 ### Appearance — 3D
 
@@ -338,11 +302,7 @@ Camera effects are meta-effects — they don't animate the target they are attac
 
 ### Camera — 2D
 
-### Camera — 2D
-
 `Camera2DJuiceEffect` targets `Camera2D`. For the POSITION channel, the `position_unit` can be set to `PIXELS` (absolute) or `PERCENT_VIEWPORT` (resolution-independent relative offsets). Zoom offsets the `zoom` scale factor.
-
-### Camera — 3D
 
 ### Camera — 3D
 
@@ -356,8 +316,6 @@ Animate full-screen post-processing effects via `ScreenJuiceUtility` and its sha
 
 **Effect class:** `ScreenJuiceEffect` (domain-agnostic — works from any recipe)
 **Utility:** `ScreenJuiceUtility` (auto-bootstrapped)
-
-### Screen — Overview
 
 ### Screen — Overview
 
