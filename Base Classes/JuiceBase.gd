@@ -237,6 +237,16 @@ enum TriggerSource {
 		if Engine.is_editor_hint() and recipe != null:
 			if recipe.changed.is_connected(_on_recipe_changed):
 				recipe.changed.disconnect(_on_recipe_changed)
+				
+		# --- Preset Safety Mechanism ---
+		# If the user assigns a recipe, ensure it doesn't accidentally share state 
+		# across multiple JuiceBase instances unless explicitly permitted by config.
+		if Engine.is_editor_hint() and value != null:
+			if JuiceProjectSettings.get_auto_local_to_scene() and not value.resource_local_to_scene:
+				var safe_copy := value.duplicate(true) as JuiceRecipe
+				safe_copy.resource_local_to_scene = true
+				value = safe_copy
+				
 		recipe = value
 		_invalidate_runtime_effects()
 		if Engine.is_editor_hint():
@@ -245,6 +255,8 @@ enum TriggerSource {
 			# so warnings refresh without requiring the user to re-assign the recipe.
 			if recipe != null and not recipe.changed.is_connected(_on_recipe_changed):
 				recipe.changed.connect(_on_recipe_changed)
+			# Register the new recipe with the editor context so sub-resources can resolve their host
+			JuiceEditorContext.register_recipe(recipe, self)
 
 @export_group("Debug")
 
@@ -430,6 +442,8 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
+		if recipe != null:
+			JuiceEditorContext.register_recipe(recipe, self)
 		set_process(false)
 		return
 
@@ -1676,6 +1690,8 @@ static func _seq_values_approx_equal(a: Variant, b: Variant) -> bool:
 # including array mutations and sub-resource property changes.
 func _on_recipe_changed() -> void:
 	if Engine.is_editor_hint():
+		if recipe != null:
+			JuiceEditorContext.register_recipe(recipe, self)
 		update_configuration_warnings()
 
 

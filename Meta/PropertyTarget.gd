@@ -48,12 +48,21 @@ var property_path: String = "":
 # display of amplitude/from-to fields in subclasses. TYPE_NIL = unknown.
 var _detected_type: int = TYPE_NIL
 
+## Set to true in _init() of any subclass that provides a complete _get_property_list().
+## Prevents double-registration of node_path / property_path (Godot calls each class
+## in the inheritance chain separately). Each subclass is then responsible for emitting
+## those parent properties in the correct position.
+var _subclass_owns_target_layout: bool = false
+
 
 # =============================================================================
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
 func _get_property_list() -> Array[Dictionary]:
+	if _subclass_owns_target_layout:
+		return []
+
 	var props: Array[Dictionary] = []
 
 	props.append({"name": "node_path", "type": TYPE_NODE_PATH,
@@ -174,11 +183,10 @@ func _detect_type() -> void:
 	var segments := property_path.split(":")
 	var base_prop := segments[0]
 
-	# Resolve the node from the current edited scene root.
-	var scene_root := EditorInterface.get_edited_scene_root()
-	if scene_root == null:
-		return
-	var node := scene_root.get_node_or_null(node_path)
+	# Resolve the target node. node_path is relative to the JuiceBase node that
+	# owns this PropertyTarget (because the inspector stores NodePaths relative
+	# to the closest Node ancestor of the resource).
+	var node := _resolve_node_for_editor()
 	if node == null:
 		# NodePath not resolved yet. Keep existing _detected_type.
 		return
@@ -225,6 +233,19 @@ func _detect_type() -> void:
 	else:
 		_detected_type = base_type
 
+	# Normalize integer Variant types → float equivalents.
+	# Our effects use float math (amplitude_float, amplitude_vec2, etc.) so
+	# TYPE_INT → TYPE_FLOAT, TYPE_VECTOR2I → TYPE_VECTOR2, TYPE_VECTOR3I → TYPE_VECTOR3.
+	# At_runtime set_indexed() handles the final cast back to the node's actual type.
+	match _detected_type:
+		TYPE_INT:       _detected_type = TYPE_FLOAT
+		TYPE_VECTOR2I:  _detected_type = TYPE_VECTOR2
+		TYPE_VECTOR3I:  _detected_type = TYPE_VECTOR3
+
+	# Trigger inspector refresh so amplitude/strength fields appear immediately
+	# after the property path is picked (without needing to close/reopen the inspector).
+	notify_property_list_changed()
+
 
 # =============================================================================
 # HELPERS
@@ -235,6 +256,58 @@ func _resolve_node(host: Node) -> Node:
 		# Empty = target the juiced node itself.
 		return host
 	return host.get_node_or_null(node_path)
+
+
+## Editor-only node resolution. Uses the JuiceEditorContext to robustly map
+## this resource to its host JuiceBase. Falls back to editor selection context.
+## Used by _detect_type() for auto-detecting property types at editor time.
+func _resolve_node_for_editor() -> Node:
+	var scene_root := EditorInterface.get_edited_scene_root()
+	if scene_root == null:
+		return null
+
+	# Strategy 1: Robust Context Discovery
+	var context_host: Node = JuiceEditorContext.get_host_node(self)
+	if context_host != null:
+		if node_path == NodePath():
+			return context_host
+		var resolved := context_host.get_node_or_null(node_path)
+		if resolved != null:
+			return resolved
+
+	# Strategy 2: Fragile Selection Discovery (fallback)
+	var juice_node: Node = _find_juice_base_from_selection()
+	if juice_node != null:
+		if node_path == NodePath():
+			return juice_node
+		var resolved := juice_node.get_node_or_null(node_path)
+		if resolved != null:
+			return resolved
+
+	# Strategy 2: Try resolving from scene root (handles absolute paths).
+	if node_path != NodePath():
+		var resolved := scene_root.get_node_or_null(node_path)
+		if resolved != null:
+			return resolved
+
+	# Strategy 3: Last resort — scene root itself.
+	return scene_root
+
+
+## Find a JuiceBase node from the current editor selection.
+## The selected node is usually the target node (parent of JuiceBase).
+func _find_juice_base_from_selection() -> Node:
+	var selection := EditorInterface.get_selection()
+	var selected_nodes := selection.get_selected_nodes()
+	for selected in selected_nodes:
+		# Check if the selected node IS a JuiceBase.
+		if selected is JuiceBase:
+			return selected
+		# Check direct children for JuiceBase.
+		for child in selected.get_children():
+			if child is JuiceBase:
+				return child
+	return null
 
 
 # =============================================================================

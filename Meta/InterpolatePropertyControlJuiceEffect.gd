@@ -8,5 +8,5 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
-class_name InterpolatePropertyControlJuiceEffect
-extends InterpolatePropertyJuiceEffectBase
+class_name PropertyInterpolateControlJuiceEffect
+extends PropertyInterpolateJuiceEffectBase

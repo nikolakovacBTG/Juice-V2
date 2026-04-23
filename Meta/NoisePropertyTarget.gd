@@ -37,41 +37,45 @@ var amplitude_color: float = 0.1
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
+func _init() -> void:
+	# Take full ownership of the property list so we control ordering:
+	# node_path + property_path (from parent) appear FIRST, then amplitude.
+	# Without this, Godot emits our props before the parent's — wrong order.
+	_subclass_owns_target_layout = true
+
+
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
-	# Node/property path fields from parent (node_path, property_path, _type_display).
-	props.append_array(super._get_property_list())
+	# --- Paths (from PropertyTarget — emitted here because we own the layout) ---
+	props.append({"name": "node_path", "type": TYPE_NODE_PATH,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "property_path", "type": TYPE_STRING,
+		"hint": PROPERTY_HINT_NONE, "usage": PROPERTY_USAGE_DEFAULT})
+	if not property_path.is_empty():
+		props.append({"name": "_type_display", "type": TYPE_STRING,
+			"hint": PROPERTY_HINT_NONE,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
+	props.append({"name": "_detected_type", "type": TYPE_INT,
+		"usage": PROPERTY_USAGE_STORAGE})
 
-	# Show only the amplitude field matching the detected type.
-	# If TYPE_NIL (unknown), show all so the user can see something.
+	# --- Amplitude (shown only when type is known — hidden until Pick is used) ---
 	var t := _detected_type
-	var show_float := (t == TYPE_FLOAT or t == TYPE_NIL)
-	var show_vec2 := (t == TYPE_VECTOR2 or t == TYPE_NIL)
-	var show_vec3 := (t == TYPE_VECTOR3 or t == TYPE_NIL)
-	var show_color := (t == TYPE_COLOR or t == TYPE_NIL)
-
-	if show_float:
+	if t == TYPE_FLOAT:
 		props.append({"name": "amplitude_float", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,100.0,0.001,or_greater",
 			"usage": PROPERTY_USAGE_DEFAULT})
-	if show_vec2:
+	elif t == TYPE_VECTOR2:
 		props.append({"name": "amplitude_vec2", "type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_DEFAULT})
-	if show_vec3:
+	elif t == TYPE_VECTOR3:
 		props.append({"name": "amplitude_vec3", "type": TYPE_VECTOR3,
 			"usage": PROPERTY_USAGE_DEFAULT})
-	if show_color:
+	elif t == TYPE_COLOR:
 		props.append({"name": "amplitude_color", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.001,or_greater",
 			"usage": PROPERTY_USAGE_DEFAULT})
-
-	# Always serialize all amplitude values so switching detected type
-	# doesn't lose the previously configured value.
-	props.append({"name": "amplitude_float", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "amplitude_vec2", "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "amplitude_vec3", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "amplitude_color", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_STORAGE})
+	# TYPE_NIL: no amplitude shown — pick a property first.
 
 	return props
 

@@ -4,7 +4,7 @@
 ## inspector row. Supports multi-select, search, and an "exports only" filter.
 
 # =============================================================================
-# WHAT: Popup Window that lists node properties in a checkable tree.
+# WHAT: ConfirmationDialog that lists node properties in a checkable tree.
 #       Multi-selection adds multiple PropertyTarget entries at once.
 #       Already-picked paths are pre-checked.
 # WHY:  Provides a better UX than typing property paths manually.
@@ -17,7 +17,7 @@
 
 @tool
 class_name PropertyPickerDialog
-extends Window
+extends ConfirmationDialog
 
 
 # =============================================================================
@@ -39,7 +39,6 @@ var _initial_paths: Array[String] = []
 var _search_edit: LineEdit
 var _restrict_check: CheckBox
 var _tree: Tree
-var _ok_btn: Button
 
 
 # =============================================================================
@@ -52,29 +51,25 @@ func _init() -> void:
 	min_size = Vector2i(460, 540)
 	exclusive = true
 	unresizable = false
+	visible = false  # Hidden until explicitly opened via open_for_node().
+	ok_button_text = "OK"
 
 	_build_ui()
 
-	# Close on X button.
-	close_requested.connect(func(): hide())
+	# ConfirmationDialog signals.
+	confirmed.connect(_on_ok_pressed)
+	# close_requested is already handled by ConfirmationDialog (closes on X and Cancel).
 
 
 func _build_ui() -> void:
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	add_child(margin)
-
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
-	margin.add_child(vbox)
+	# AcceptDialog / ConfirmationDialog (which inherit from Window) do not automatically
+	# layout multiple custom children. We MUST wrap everything in a single container.
+	var main_vbox := VBoxContainer.new()
+	add_child(main_vbox)
 
 	# --- Top bar: search + filter ---
 	var top_bar := HBoxContainer.new()
-	vbox.add_child(top_bar)
+	main_vbox.add_child(top_bar)
 
 	_search_edit = LineEdit.new()
 	_search_edit.placeholder_text = "Search properties…"
@@ -101,37 +96,18 @@ func _build_ui() -> void:
 	_tree.set_column_expand(0, true)
 	_tree.set_column_expand(1, false)
 	_tree.set_column_custom_minimum_width(1, 90)
-	vbox.add_child(_tree)
+	main_vbox.add_child(_tree)
 
 	# Tip label
 	var tip := Label.new()
 	tip.text = "✓ = already in list  |  Check to add, uncheck to remove"
-	tip.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(tip)
-
-	# --- Buttons ---
-	var sep := HSeparator.new()
-	vbox.add_child(sep)
-
-	var btn_bar := HBoxContainer.new()
-	btn_bar.alignment = BoxContainer.ALIGNMENT_END
-	vbox.add_child(btn_bar)
-
-	var cancel_btn := Button.new()
-	cancel_btn.text = "Cancel"
-	btn_bar.add_child(cancel_btn)
-
-	_ok_btn = Button.new()
-	_ok_btn.text = "OK"
-	_ok_btn.add_theme_color_override("font_color", Color.CYAN)
-	btn_bar.add_child(_ok_btn)
+	tip.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	main_vbox.add_child(tip)
 
 	# --- Connections ---
 	_search_edit.text_changed.connect(func(_t): _populate_tree())
 	_restrict_check.toggled.connect(func(_v): _populate_tree())
-	cancel_btn.pressed.connect(func(): hide())
-	_ok_btn.pressed.connect(_on_ok_pressed)
 
 
 # =============================================================================

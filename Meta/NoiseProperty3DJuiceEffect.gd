@@ -13,5 +13,5 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
-class_name NoiseProperty3DJuiceEffect
-extends NoisePropertyJuiceEffectBase
+class_name PropertyNoise3DJuiceEffect
+extends PropertyNoiseJuiceEffectBase

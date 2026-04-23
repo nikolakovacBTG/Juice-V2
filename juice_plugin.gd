@@ -21,6 +21,9 @@ var _picker_plugin: PropertyPickerPlugin = null
 # =============================================================================
 
 func _enter_tree() -> void:
+	# Register custom addon project settings
+	JuiceProjectSettings.register_settings()
+	
 	_picker_plugin = PropertyPickerPlugin.new()
 	add_inspector_plugin(_picker_plugin)
 	# The dialog is a Window — it must live in the editor scene tree to popup.

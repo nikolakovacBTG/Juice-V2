@@ -32,6 +32,13 @@ func _init() -> void:
 	_subclass_owns_effect_group = true
 
 
+## Set to true in _init() of any subclass that provides its own complete
+## _get_property_list(). Prevents this base from emitting duplicate
+## "Effect" and "Property Targets" group headers (same pattern as
+## _subclass_owns_effect_group in JuiceEffectBase).
+var _subclass_owns_prop_layout: bool = false
+
+
 ## List of property targets driven by this effect.
 ## Each entry specifies a node + property path + effect-specific config.
 ## Subclasses expose this with their concrete PropertyTarget subclass type hint
@@ -50,6 +57,11 @@ func _get_target_resource_type() -> String:
 
 
 func _get_property_list() -> Array[Dictionary]:
+	# Subclasses that override _get_property_list() fully (Noise, Shake) set
+	# _subclass_owns_prop_layout = true in _init() to suppress this layout.
+	if _subclass_owns_prop_layout:
+		return []
+
 	var props: Array[Dictionary] = []
 
 	# Effect group — trigger, timing, loop settings from base.
@@ -99,11 +111,12 @@ func _needs_sustain() -> bool:
 ## Capture natural base values for all configured targets.
 ## Called by JuiceEffectBase.start() → _on_animate_start().
 func _on_animate_start(target: Node) -> void:
-	# _host_node is set by JuiceEffectBase.start() before this is called.
-	var host := _host_node if _host_node != null else target
+	# Pass `target` (the animated node — ctrl, Sprite2D, etc.) NOT _host_node.
+	# _host_node is the JuiceBase node itself (a plain Node with no domain properties).
+	# When node_path is empty, _resolve_node returns its argument — so it must be `target`.
 	for entry: PropertyTarget in property_targets:
 		if entry != null and entry.is_configured():
-			entry.capture_base(host)
+			entry.capture_base(target)
 
 
 ## Restore all targets to their natural values. Called by stop().

@@ -21,7 +21,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseProperty.svg")
-class_name NoisePropertyJuiceEffectBase
+class_name PropertyNoiseJuiceEffectBase
 extends PropertyJuiceEffectBase
 
 
@@ -83,6 +83,15 @@ var clamp_max: float = 1.0
 
 func _get_target_resource_type() -> String:
 	return "NoisePropertyTarget"
+
+
+func _init() -> void:
+	# Both flags required:
+	# _subclass_owns_effect_group  → suppresses JuiceEffectBase's Effect group
+	# _subclass_owns_prop_layout   → suppresses PropertyJuiceEffectBase's Effect+PropertyTargets groups
+	# Without both, Godot's per-class _get_property_list() chain causes duplicate group headers.
+	_subclass_owns_effect_group = true
+	_subclass_owns_prop_layout = true
 
 
 func _get_property_list() -> Array[Dictionary]:

@@ -17,7 +17,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseProperty.svg")
-class_name ShakePropertyJuiceEffectBase
+class_name PropertyShakeJuiceEffectBase
 extends PropertyJuiceEffectBase
 
 
@@ -37,6 +37,12 @@ var randomness: float = 0.5
 
 func _get_target_resource_type() -> String:
 	return "ShakePropertyTarget"
+
+
+func _init() -> void:
+	# Both flags required — same rationale as NoisePropertyJuiceEffectBase._init().
+	_subclass_owns_effect_group = true
+	_subclass_owns_prop_layout = true
 
 
 func _get_property_list() -> Array[Dictionary]:

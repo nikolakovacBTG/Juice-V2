@@ -8,5 +8,5 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
-class_name ShakeProperty3DJuiceEffect
-extends ShakePropertyJuiceEffectBase
+class_name PropertyShake3DJuiceEffect
+extends PropertyShakeJuiceEffectBase

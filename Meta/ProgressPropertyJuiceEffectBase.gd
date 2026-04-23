@@ -21,7 +21,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseProperty.svg")
-class_name ProgressPropertyJuiceEffectBase
+class_name PropertyProgressJuiceEffectBase
 extends JuiceEffectBase
 
 
@@ -104,7 +104,7 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "auto_start", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "hold_on_stop", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append({"name": "Rate", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	# Rate — only the field matching property_type is shown.
 	match property_type:
 		PropertyType.FLOAT:
 			props.append({"name": "float_rate", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
@@ -115,7 +115,7 @@ func _get_property_list() -> Array[Dictionary]:
 		PropertyType.COLOR:
 			props.append({"name": "color_rate", "type": TYPE_COLOR, "usage": PROPERTY_USAGE_DEFAULT})
 
-	props.append({"name": "Bound", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
+	# Bound — conditional expansion.
 	props.append({"name": "bound_enabled", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	if bound_enabled:
 		props.append({"name": "bound_behaviour", "type": TYPE_INT,
