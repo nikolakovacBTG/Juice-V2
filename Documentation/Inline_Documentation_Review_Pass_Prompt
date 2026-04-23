@@ -1,0 +1,8 @@
+Review our codebase. Compare the inline and header comments against our SOPs.
+ Identify any comments that are:
+
+1. Lies: Describing logic that has been refactored or removed.
+2. Vague: Using 'lazy' AI-generated phrases like 'Handles logic' instead of specific architectural roles.
+3. Missing: Key inheritance-based dependencies that aren't documented.
+
+DO NOT rewrite them yet. List the discrepancies so I can verify the intent.
