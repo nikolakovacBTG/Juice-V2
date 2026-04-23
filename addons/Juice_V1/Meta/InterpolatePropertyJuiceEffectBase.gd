@@ -20,7 +20,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseProperty.svg")
-class_name InterpolatePropertyJuiceEffectBase
+class_name PropertyInterpolateJuiceEffectBase
 extends PropertyJuiceEffectBase
 
 

@@ -65,9 +65,28 @@ var _to_editor_cached: Variant = null
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
+func _init() -> void:
+	# Same rationale as NoisePropertyTarget._init():
+	# Godot calls child _get_property_list() first, so without this flag
+	# From/To fields would appear before node_path/property_path.
+	_subclass_owns_target_layout = true
+
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
-	props.append_array(super._get_property_list())
+	# NOTE: do NOT call super._get_property_list() — we own the layout
+	# (see _subclass_owns_target_layout set in _init).
+
+	# --- Paths (from PropertyTarget — emitted here because we own the layout) ---
+	props.append({"name": "node_path", "type": TYPE_NODE_PATH,
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "property_path", "type": TYPE_STRING,
+		"hint": PROPERTY_HINT_NONE, "usage": PROPERTY_USAGE_DEFAULT})
+	if not property_path.is_empty():
+		props.append({"name": "_type_display", "type": TYPE_STRING,
+			"hint": PROPERTY_HINT_NONE,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
+	props.append({"name": "_detected_type", "type": TYPE_INT,
+		"usage": PROPERTY_USAGE_STORAGE})
 
 	# ---- FROM ----
 	props.append({"name": "From", "type": TYPE_NIL,
@@ -125,6 +144,8 @@ func _get_property_list() -> Array[Dictionary]:
 
 
 ## Returns value fields for the given prefix ("from"/"to") keyed by detected type.
+## Returns [] when TYPE_NIL (no property picked yet) — hides all value fields
+## until the user picks a property and the type is auto-detected.
 func _value_props(prefix: String, label: String) -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 	var t := _detected_type
@@ -144,15 +165,8 @@ func _value_props(prefix: String, label: String) -> Array[Dictionary]:
 		TYPE_COLOR:
 			props.append({"name": "%s_color" % prefix, "type": TYPE_COLOR,
 				"usage": PROPERTY_USAGE_DEFAULT})
-		_:  # TYPE_NIL — unknown, show all
-			props.append({"name": "%s_float" % prefix, "type": TYPE_FLOAT,
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "%s_vec2" % prefix, "type": TYPE_VECTOR2,
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "%s_vec3" % prefix, "type": TYPE_VECTOR3,
-				"usage": PROPERTY_USAGE_DEFAULT})
-			props.append({"name": "%s_color" % prefix, "type": TYPE_COLOR,
-				"usage": PROPERTY_USAGE_DEFAULT})
+		_:  # TYPE_NIL — no property picked yet, hide all value fields.
+			pass
 	return props
 
 
@@ -296,9 +310,41 @@ func _capture_to_in_editor_now() -> void:
 
 
 func _resolve_editor_node() -> Node:
+	# Robust Context Discovery
+	var context_host: Node = JuiceEditorContext.get_host_node(self)
+	if context_host != null:
+		if node_path == NodePath():
+			return context_host
+		var resolved := context_host.get_node_or_null(node_path)
+		if resolved != null:
+			return resolved
+
+	# Fragile Fallbacks (if Context is missing)
 	var scene_root := EditorInterface.get_edited_scene_root()
 	if scene_root == null:
 		return null
+		
+	# Try walking selection to find JuiceBase (copied from PropertyPickerPlugin)
+	var selection := EditorInterface.get_selection()
+	var juice_node: Node = null
+	for selected in selection.get_selected_nodes():
+		if selected is JuiceBase:
+			juice_node = selected
+			break
+		for child in selected.get_children():
+			if child is JuiceBase:
+				juice_node = child
+				break
+		if juice_node != null:
+			break
+			
+	if juice_node != null:
+		if node_path == NodePath():
+			return juice_node
+		var resolved := juice_node.get_node_or_null(node_path)
+		if resolved != null:
+			return resolved
+
 	if node_path == NodePath():
-		return null  # Can't resolve host from a resource — set node_path.
+		return null
 	return scene_root.get_node_or_null(node_path)

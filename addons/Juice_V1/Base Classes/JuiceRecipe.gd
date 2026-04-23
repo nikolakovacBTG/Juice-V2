@@ -56,7 +56,6 @@ func create_runtime_effects() -> Array[JuiceEffectBase]:
 	# Save original chain_to refs BEFORE deep duplicate replaces them with copies
 	var original_chains: Array[Array] = []
 	for effect in valid_effects:
-		print("DEBUG BASE RECIPE: effect ", effect.get_class(), " has chain_to size: ", effect.chain_to.size())
 		original_chains.append(effect.chain_to.duplicate())
 		clones.append(effect.duplicate(true) as JuiceEffectBase)
 
@@ -67,7 +66,6 @@ func create_runtime_effects() -> Array[JuiceEffectBase]:
 			if original_chain == null:
 				continue
 			var chain_idx := valid_effects.find(original_chain)
-			print("DEBUG RECIPE MAPPING: found ", original_chain, " at index ", chain_idx)
 			if chain_idx >= 0 and chain_idx < clones.size():
 				remapped_array.append(clones[chain_idx])
 		clones[i].chain_to = remapped_array

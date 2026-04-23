@@ -92,6 +92,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestAppearanceEffects.gd").new())
 	_suites.append(load("res://tests/suites/TestTimeEffect.gd").new())
 	_suites.append(load("res://tests/suites/TestMetaEffects.gd").new())
+	_suites.append(load("res://tests/suites/TestPropertyFamily.gd").new())
 	_suites.append(load("res://tests/suites/TestMultipleChaining.gd").new())
 	_suites.append(load("res://tests/suites/TestProgress2D.gd").new())
 	_suites.append(load("res://tests/suites/TestProgressControl.gd").new())

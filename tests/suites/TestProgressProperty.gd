@@ -1,6 +1,6 @@
-## TestProgressProperty.gd
+﻿## TestProgressProperty.gd
 ## ============================================================================
-## WHAT: Tests for ProgressPropertyJuiceEffectBase and its domain wrappers.
+## WHAT: Tests for PropertyProgressJuiceEffectBase and its domain wrappers.
 ## WHY: Verify arbitrary property accumulation via set_indexed() works for
 ##      float, Vector2, Vector3, and Color types. Tests use the Control-domain
 ##      wrapper as it is most testable headlessly.
@@ -42,7 +42,7 @@ func _create_property_rig(
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = path
 	effect.property_type = prop_type
 	effect.float_rate = f_rate
@@ -72,9 +72,9 @@ func test_float_accumulates() -> void:
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = "modulate:a"
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
 	effect.float_rate = -0.5  # decrease alpha
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.1
@@ -108,9 +108,9 @@ func test_color_alpha_accumulates() -> void:
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = "modulate"
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.COLOR
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.COLOR
 	effect.color_rate = Color(0.0, 0.0, 0.0, -0.5)  # decrease alpha only
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.1
@@ -143,9 +143,9 @@ func test_hold_on_stop_true() -> void:
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = "modulate:a"
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
 	effect.float_rate = -0.5
 	effect.hold_on_stop = true
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
@@ -181,9 +181,9 @@ func test_hold_on_stop_false() -> void:
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = "modulate:a"
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
 	effect.float_rate = -0.5
 	effect.hold_on_stop = false
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
@@ -223,14 +223,14 @@ func test_bound_stop() -> void:
 	target.custom_minimum_size = Vector2(80.0, 40.0)
 	_runner.add_child(target)
 
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = "modulate:a"
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
 	effect.float_rate = -2.0  # Fast decrease
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.05
 	effect.bound_enabled = true
-	effect.bound_behaviour = ProgressPropertyJuiceEffectBase.BoundBehaviour.STOP
+	effect.bound_behaviour = PropertyProgressJuiceEffectBase.BoundBehaviour.STOP
 	effect.bound_value = 0.5  # Stop when 0.5 has been accumulated (alpha = 0.5)
 
 	var juice := JuiceControl.new()
@@ -258,13 +258,13 @@ func test_bound_stop() -> void:
 # =============================================================================
 
 func test_needs_sustain() -> void:
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	assert_true(effect._needs_sustain(),
-		"ProgressPropertyControlJuiceEffect must return true from _needs_sustain()")
+		"PropertyProgressControlJuiceEffect must return true from _needs_sustain()")
 
 
 func test_warning_on_empty_path() -> void:
-	var effect := ProgressPropertyControlJuiceEffect.new()
+	var effect := PropertyProgressControlJuiceEffect.new()
 	effect.property_path = ""
 	var warnings := effect._get_configuration_warnings()
 	assert_true(warnings.size() > 0,

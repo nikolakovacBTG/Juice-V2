@@ -13,5 +13,5 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
-class_name ProgressPropertyControlJuiceEffect
-extends ProgressPropertyJuiceEffectBase
+class_name PropertyProgressControlJuiceEffect
+extends PropertyProgressJuiceEffectBase

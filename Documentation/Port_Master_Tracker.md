@@ -76,7 +76,7 @@
 | `ProgressControlJuiceComp` | `ProgressControlJuiceEffect` | 🧪 | `TestProgressControl` | — |
 | `Progress2DJuiceComp` | `Progress2DJuiceEffect` | 🧪 | `TestProgress2D` | — |
 | `Progress3DJuiceComp` | `Progress3DJuiceEffect` | 🧪 | `TestProgress3D` | — |
-| `ProgressPropertyJuiceComp` | `ProgressPropertyJuiceEffect` | 🧪 | `TestProgressProperty` | — |
+| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
 
 > **Inspector note (2026-04-17):** Rate, Pivot, Bound demoted from top-level GROUPs to flat properties inside the Effect group. `bound_enabled` tooltip improved. `_leaf_owns_layout` applied to suppress duplicate Effect header.
 
@@ -108,14 +108,19 @@
 | `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | 🧪 | `TestScreenOverlay` | — |
 | `ScreenJuiceUtility` | `ScreenJuiceUtility` | 🔧 | — | — |
 
-## Property (4 effects)
+## Property Family (7 effects — includes 4 NEW)
+
+> **Architecture note (2026-04-23):** The Property family uses a shared `PropertyTarget` resource with a custom picker dialog (`PropertyPickerDialog`). Integer variant types (Vector2i, Vector3i, int) are auto-normalized to float equivalents.
+>
+> **Open polish (2026-04-23):** NodePath editor-time resolution is fragile (selection-based). Dialog theming via ConfirmationDialog landed but needs visual verification. Multi-select target addition needs UX testing.
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `NoisePropertyJuiceComp` | `NoisePropertyJuiceEffect` | ❌ | — | — |
-| `ShakePropertyJuiceComp` | `ShakePropertyJuiceEffect` | ❌ | — | — |
+| `NoisePropertyJuiceComp` | `PropertyNoise{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
+| `ShakePropertyJuiceComp` | `PropertyShake{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
+| NEW | `PropertyInterpolate{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
 | `SpringPropertyJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
-| `ShaderPropertyJuiceComp` | `ShaderPropertyJuiceEffect` | ❌ | — | — |
+| `ShaderPropertyJuiceComp` | — | ➖ | Absorbed into PropertyInterpolate/Noise/Shake via shader_parameter/ path support |
 
 ## Visibility (1 effect — Legacy, absorbed by Appearance)
 
@@ -141,13 +146,14 @@
 | NEW | `TriggerStackJuiceEffect` | ➖ | Native logic in `Mode.STACK` |
 | NEW | `TriggerSequencerJuiceEffect` | ➖ | Native logic in `Mode.SEQUENCER` |
 
-## Meta Effects (4 — includes 2 NEW)
+## Meta Effects (5 — includes 3 NEW)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|-----------|
 | `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\|3D}JuiceEffect` | ✅ | `TestTimeEffect` | 2026-03-30 |
-| `SignalEmitJuiceUtility` | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
-| `CallMethodJuiceUtility` | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
+| NEW | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
+| NEW | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
+| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffectBase` + `PropertyProgress{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
 
 > **Inspector note (2026-04-17):** SignalEmit + CallMethod refactored — single "Trigger" group, crossfade_time hidden (no-op for meta effects), icons corrected (JuiceUtilitySignals / JuiceUtilityMethods / JuiceUtilityTimeCoord). Time2D/3D icons also corrected to JuiceUtilityTimeCoord.
 
@@ -173,6 +179,7 @@
 > **Planned fix (Transport port):** The editor preview transport should:
 > 1. **Camera** — temporarily inject a `CameraJuiceUtility` onto the viewport's active camera before preview, and remove it on transport stop — never saved to scene.
 > 2. **Screen** — temporarily bootstrap a `CanvasLayer`+`ScreenJuiceUtility` inside the editor's SubViewport (not `SceneTree.root`) before preview, and clean up on stop.
+> 3. **JuiceEditorContext** — Utilize the newly created `JuiceEditorContext` (V1.0) to hold references to these injected preview nodes safely decoupled from the resources.
 >
 > Do NOT implement this workaround inside the effects themselves — the transport owns this lifecycle.
 
@@ -185,9 +192,11 @@
 
 ## Summary
 
-| Category | Total | Ported | In Progress | Not Started | Legacy/Cut |
-|----------|-------|--------|-------------|-------------|--------|
-| Effects | ~43 | 30 | 1 | 7 | 11 |
-| Utilities | ~10 | 9 | 1 | 1 | 0 |
-| Infrastructure | 4 | 4 | 0 | 0 | 0 |
-| **Total** | **~57** | **43** | **2** | **8** | **11** |
+| Category | Total | Ported | Pending UX | In Progress | Not Started | Legacy/Cut |
+|----------|-------|--------|------------|-------------|-------------|--------|
+| Effects | ~43 | 30 | 7 | 1 | 2 | 12 |
+| Utilities | ~10 | 9 | 0 | 1 | 1 | 0 |
+| Infrastructure | 4 | 4 | 0 | 0 | 0 | 0 |
+| **Total** | **~57** | **43** | **7** | **2** | **3** | **12** |
+
+> **Last updated:** 2026-04-23 — Property family (Interpolate/Noise/Shake) ported, unit tests passing (24/24), UX polish in progress. ProgressProperty renamed to PropertyProgress. ShaderProperty absorbed via shader_parameter/ path support.
