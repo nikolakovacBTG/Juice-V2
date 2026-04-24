@@ -199,23 +199,29 @@ static func cleanup_source(target: Node, source: Node, permanently: bool = true)
 
 	if permanently and not any_remaining:
 		for prop: String in ledger["base"].keys():
+			# Skip synthetic keys (e.g. "_appearance_factor") that are used for
+			# Ledger-based tracking but don't correspond to real Node properties.
+			if prop.begins_with("_"):
+				continue
 			target.set(prop, ledger["base"][prop])
 		target.remove_meta(KEY)
 
 
-## Immediately writes [code]base + Σdeltas[/code] for tracked properties to the
-## target node. Called after stop() or from [_temporarily_undo_visual] when no
-## active _process loop will perform the next write.
+## Immediately writes the combined value for tracked properties to the target node.
+## Additive properties (position, rotation, scale): [code]base + Σdeltas[/code].
+## Multiplicative properties (self_modulate, modulate): [code]base × Πfactors[/code].
+## Called after stop() or from [_temporarily_undo_visual] when no active
+## _process loop will perform the next write.
 ## [param props] restricts which properties are written. If empty, all tracked
-## properties are flushed (original behaviour). Pass [code]["position","rotation","scale"][/code]
-## to skip modulate/appearance properties that use multiplicative accumulation
-## and cannot be written correctly via additive base+total.
+## properties are flushed.
 ## All REMAINING sources (e.g. an active hover) are preserved.
 static func flush(target: Node, props: Array[String] = []) -> void:
 	if not target.has_meta(KEY): return
 	var ledger: Dictionary = target.get_meta(KEY)
 	var keys: Array = props if not props.is_empty() else ledger["base"].keys()
 	for prop: String in keys:
+		# Skip synthetic keys (e.g. "_appearance_factor") — not real Node properties.
+		if prop.begins_with("_"): continue
 		var base_val: Variant = ledger["base"].get(prop)
 		if base_val == null: continue
 		var total_delta: Variant = zero_for(base_val)
@@ -227,7 +233,14 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
 			else:
 				total_delta += delta_val
-		target.set(prop, base_val + total_delta)
+		# Color properties use multiplicative accumulation (base × Πfactors).
+		# All other types use additive accumulation (base + Σdeltas).
+		if typeof(base_val) == TYPE_COLOR:
+			var b := base_val as Color
+			var t := total_delta as Color
+			target.set(prop, Color(b.r * t.r, b.g * t.g, b.b * t.b, b.a * t.a))
+		else:
+			target.set(prop, base_val + total_delta)
 
 
 ## Returns [code]true[/code] if [param target] has an active ledger.

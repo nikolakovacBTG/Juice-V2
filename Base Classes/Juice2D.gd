@@ -41,13 +41,8 @@ func _validate_property(property: Dictionary) -> void:
 # =============================================================================
 
 # Whether base values have been captured at least once.
-# Transform state is owned by the Centralized Metadata Ledger (LEDGER_KEY on target).
-# Appearance stacking uses per-node _own_modulate_contribution as before.
+# All property tracking (transform + modulate) is owned by JuiceLedger.
 var _base_captured: bool = false
-
-# Per-node modulate contribution for sibling stacking (Appearance effects only).
-# Transform properties use the shared Metadata Ledger.
-var _own_modulate_contribution: Color = Color.WHITE
 
 # =============================================================================
 # LIFECYCLE
@@ -176,29 +171,26 @@ func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
 
-## Capture target's natural position/rotation/scale.
-## Transforms use the Shared Target Ledger; Modulate uses the dedicated META_KEY.
+## Capture target's natural position/rotation/scale/modulate.
+## All properties are tracked through the Shared Target Ledger.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node2D:
 		return
 	var n2d := _target_node as Node2D
-	
-	JuiceLedger.ensure(n2d, ["position", "rotation", "scale"])
-	
+	JuiceLedger.ensure(n2d, ["position", "rotation", "scale", "modulate"])
 	_base_captured = true
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
-## The Metadata Ledger's external-displacement check handles all tracked props.
+## The Ledger handles external-displacement for all tracked properties.
 func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
-	
-	JuiceLedger.sync_base_if_moved(n2d, ["position", "rotation", "scale"])
+	JuiceLedger.sync_base_if_moved(n2d, ["position", "rotation", "scale", "modulate"])
 
 
 ## Contribution-tracking write: register this node's deltas into the shared target ledger,
-## then write absolute: target = ledger_base + sum(all_source_deltas).
+## then write absolute values. Transform uses additive, modulate uses multiplicative.
 ## Multiple Juice nodes on the same target write through the ledger independently.
 func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
@@ -223,19 +215,15 @@ func _post_tick_write() -> void:
 		if eff_2d._contributes_scale:
 			new_scale += eff_2d._scale_delta
 
-	# Register our deltas into the Target's ledger
+	# Register transform deltas into the Target's ledger
 	JuiceLedger.register_delta(n2d, self, "position", new_pos)
 	JuiceLedger.register_delta(n2d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n2d, self, "scale", new_scale)
 
-	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
-	# Only flushes transform properties; modulate uses multiplicative accumulation below.
-	JuiceLedger.flush(n2d, ["position", "rotation", "scale"])
-
-	# Appearance: accumulate modulate factors from Juice2DAppearanceEffect effects.
-	# Only write modulate when at least one appearance effect has a non-identity factor.
+	# Accumulate modulate factors from Juice2DAppearanceEffect effects.
+	# Each effect contributes a multiplicative factor; the Ledger handles
+	# base × Πfactors for Color properties automatically.
 	var combined_modulate := Color.WHITE
-	var has_appearance := false
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
@@ -246,61 +234,13 @@ func _post_tick_write() -> void:
 		combined_modulate.g *= app_eff._modulate_factor.g
 		combined_modulate.b *= app_eff._modulate_factor.b
 		combined_modulate.a *= app_eff._modulate_factor.a
-		has_appearance = true
 
-	# Sibling stacking with metadata-based natural base capture
-	# Get shared natural base from target metadata (captured by first Juice2D)
-	const META_KEY := &"juice_modulate_natural"
-	var base_color: Color = n2d.modulate
-	if not n2d.has_meta(META_KEY):
-		# First Juice2D node — capture natural base and store in metadata
-		n2d.set_meta(META_KEY, n2d.modulate)
-	else:
-		# Subsequent Juice2D nodes — read natural base from metadata
-		base_color = n2d.get_meta(META_KEY)
+	# Register modulate factor into the Ledger — sibling stacking is handled
+	# automatically via per-source delta tracking (one entry per Juice2D node).
+	JuiceLedger.register_delta(n2d, self, "modulate", combined_modulate)
 
-	# Scan all sibling Juice2D nodes on the same target, multiply contributions.
-	# In STACK mode, Juice nodes are children of the target — scan target's children.
-	var final_factor := Color.WHITE
-	for child in n2d.get_children():
-		var j := child as Juice2D
-		if j == null or j == self:
-			continue
-		var sibling_contrib: Color = Color.WHITE
-		if j._own_modulate_contribution != Color.WHITE:
-			sibling_contrib = j._own_modulate_contribution
-		final_factor.r *= sibling_contrib.r
-		final_factor.g *= sibling_contrib.g
-		final_factor.b *= sibling_contrib.b
-		final_factor.a *= sibling_contrib.a
-
-	# Write once: base * own_contribution * product of all sibling contributions
-	n2d.modulate = Color(
-		base_color.r * combined_modulate.r * final_factor.r,
-		base_color.g * combined_modulate.g * final_factor.g,
-		base_color.b * combined_modulate.b * final_factor.b,
-		base_color.a * combined_modulate.a * final_factor.a)
-
-	# Update own contribution tracking
-	if has_appearance:
-		_own_modulate_contribution = combined_modulate
-	else:
-		_own_modulate_contribution = Color.WHITE
-
-	# Check if all siblings are at identity (no active effects)
-	var all_siblings_idle := true
-	for child in n2d.get_children():
-		var j := child as Juice2D
-		if j == null or j == self:
-			continue
-		if j._own_modulate_contribution != Color.WHITE:
-			all_siblings_idle = false
-			break
-
-	# If all siblings idle and we're idle, remove metadata and restore natural state
-	if all_siblings_idle and not has_appearance and n2d.has_meta(META_KEY):
-		n2d.remove_meta(META_KEY)
-		n2d.modulate = base_color
+	# Flush all properties — transform (additive) + modulate (multiplicative)
+	JuiceLedger.flush(n2d, ["position", "rotation", "scale", "modulate"])
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
@@ -309,22 +249,13 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
-	
+
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n2d, self, false)
-	
-	# Apply absolute baseline position + sibling remaining deltas
-	n2d.position = JuiceLedger.get_base(n2d, "position", n2d.position) + JuiceLedger.get_total(n2d, "position", Vector2.ZERO)
-	n2d.rotation = JuiceLedger.get_base(n2d, "rotation", n2d.rotation) + JuiceLedger.get_total(n2d, "rotation", 0.0)
-	n2d.scale = JuiceLedger.get_base(n2d, "scale", n2d.scale) + JuiceLedger.get_total(n2d, "scale", Vector2.ZERO)
 
-	# Restore modulate to natural so Appearance effects see the true From state
-	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
-	const META_KEY := &"juice_modulate_natural"
-	if n2d.has_meta(META_KEY):
-		n2d.modulate = n2d.get_meta(META_KEY)
-	# Set own contribution to identity so sibling rescan excludes us
-	_own_modulate_contribution = Color.WHITE
+	# Flush remaining sibling contributions — Ledger handles both additive
+	# (transform) and multiplicative (modulate) correctly.
+	JuiceLedger.flush(n2d, ["position", "rotation", "scale", "modulate"])
 
 
 ## Re-add contributions after temporary undo.
