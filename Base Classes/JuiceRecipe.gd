@@ -89,13 +89,40 @@ func get_root_effect_indices() -> Array[int]:
 
 
 ## Get total preview duration (longest chain path).
+## Walks the chain_to graph recursively, summing durations along each path
+## and subtracting chained_preroll overlap. Returns the longest path found.
+## NOTE: Editor Transport port can rely on this returning accurate chain totals.
 func get_total_preview_duration() -> float:
 	if effects.is_empty():
 		return 0.0
-	# Simple approximation: max of all individual effect durations
-	# TODO: Proper chain-walk for accurate total with chaining
-	var max_dur := 0.0
-	for effect in effects:
-		if effect != null:
-			max_dur = maxf(max_dur, effect.get_total_preview_duration())
-	return max_dur
+	var roots := get_root_effect_indices()
+	if roots.is_empty():
+		# All effects are chained to something — fall back to max individual
+		var max_dur := 0.0
+		for effect in effects:
+			if effect != null:
+				max_dur = maxf(max_dur, effect.get_total_preview_duration())
+		return max_dur
+	var longest := 0.0
+	for root_idx in roots:
+		longest = maxf(longest, _walk_chain_duration(effects[root_idx]))
+	return longest
+
+
+# Recursively compute the total duration of an effect plus its longest
+# chained descendant path, accounting for chained_preroll overlap.
+func _walk_chain_duration(effect: JuiceEffectBase) -> float:
+	if effect == null:
+		return 0.0
+	var own := effect.get_total_preview_duration()
+	if effect.chain_to.is_empty():
+		return own
+	var max_chained := 0.0
+	for chained in effect.chain_to:
+		if chained == null:
+			continue
+		var chained_dur := _walk_chain_duration(chained)
+		# Preroll means the chained effect starts early — subtract that overlap
+		var overlap := effect.chained_preroll if effect.chained_preroll > 0.0 else 0.0
+		max_chained = maxf(max_chained, chained_dur - overlap)
+	return own + max_chained
