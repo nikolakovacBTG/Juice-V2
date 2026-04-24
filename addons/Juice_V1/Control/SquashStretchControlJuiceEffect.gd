@@ -190,8 +190,12 @@ func _invalidate_base_cache() -> void:
 	_clear_deltas()
 
 
-# TODO: Override _get_interrupt_identity() to share identity with future
-# TransformControlJuiceEffect SCALE mode once that effect is ported.
+## Share interrupt identity with TransformControlJuiceEffect(SCALE).
+## SquashStretch exclusively writes to _scale_delta — the same channel as
+## TransformControl in SCALE mode. When interrupt_siblings is enabled on either,
+## they should correctly stop each other. Without interrupt, they stack normally.
+func _get_interrupt_identity() -> Variant:
+	return [JuiceControlTransformEffect, JuiceControlTransformEffect.TransformTarget.SCALE]
 
 
 # =============================================================================

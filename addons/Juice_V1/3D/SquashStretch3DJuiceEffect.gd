@@ -203,6 +203,14 @@ func _invalidate_base_cache() -> void:
 	_clear_deltas()
 
 
+## Share interrupt identity with Juice3DTransformEffect(SCALE).
+## SquashStretch exclusively writes to _scale_delta — the same channel as
+## Transform3D in SCALE mode. When interrupt_siblings is enabled on either,
+## they should correctly stop each other. Without interrupt, they stack normally.
+func _get_interrupt_identity() -> Variant:
+	return [Juice3DTransformEffect, Juice3DTransformEffect.TransformTarget.SCALE]
+
+
 # =============================================================================
 # HELPERS
 # =============================================================================

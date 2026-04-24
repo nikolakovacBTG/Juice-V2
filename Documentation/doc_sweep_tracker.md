@@ -53,7 +53,7 @@ Generated: 2026-04-24
 | `JuiceControlTransformEffect.gd` | 42 | 30 | TODO | — |
 | `JuiceEffectBase.gd` | 46 | 16 | PARTIAL | Gemini added comments, RATIONALE: stripped, needs validation |
 | `JuiceLedger.gd` | 10 | 0 | DONE | Validated Gemini work, tightened 3 redundant comments |
-| `JuiceRecipe.gd` | 3 | 0 | BLOCKED | Doc-clean, but 1 valid TODO: chain-walk preview duration (L96) |
+| `JuiceRecipe.gd` | 4 | 0 | DONE | Chain-walk TODO resolved — recursive duration walk implemented |
 | `JuiceTriggerRouter.gd` | 3 | 0 | DONE | Already clean, no changes needed |
 | `TriggerHintBuilder.gd` | 2 | 1 | DONE | Already clean, _full_hint_for_domain deliberately skipped (trivial) |
 
@@ -73,7 +73,7 @@ Generated: 2026-04-24
 | `NoiseControlJuiceEffect.gd` | 18 | 16 | TODO | — |
 | `ProgressControlJuiceEffect.gd` | 24 | 24 | TODO | — |
 | `ShakeControlJuiceEffect.gd` | 14 | 14 | TODO | — |
-| `SquashStretchControlJuiceEffect.gd` | 11 | 4 | TODO | ⚠️ Contains valid TODO: _get_interrupt_identity sharing (L193) |
+| `SquashStretchControlJuiceEffect.gd` | 11 | 4 | TODO | ✅ _get_interrupt_identity sharing resolved (all 3 domains) |
 | `TransformControlJuiceEffect.gd` | 35 | 35 | TODO | — |
 
 ## Editor
