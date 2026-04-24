@@ -38,26 +38,9 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Per-node contribution tracking for sibling stacking (Modulate)
-# Transform properties use the shared Metadata Ledger.
-var _own_modulate_contribution: Color = Color.WHITE
-
-# Whether base values have been captured at least once
+# Whether base values have been captured at least once.
+# All property tracking (transform + self_modulate) is owned by JuiceLedger.
 var _base_captured: bool = false
-
-# Expected values after our last write — for external-move detection (pre-tick).
-# Kept for modulate, as transform uses the ledger.
-var _expected_modulate: Color = Color.WHITE
-
-# Modulate base — captured at _capture_base_values for appearance accumulation.
-# JuiceControlAppearanceEffect effects contribute _modulate_factor multiplicatively;
-# the domain node writes target.modulate = _base_modulate * combined_factor once per frame.
-var _base_modulate: Color = Color.WHITE
-var _has_modulate_base: bool = false
-
-# Whether the target is inside a Container — REMOVED.
-# Container detection is handled by JuiceLedger.sync_base_if_moved() which checks
-# target.get_parent() is Container internally. No flag needed here.
 
 # =============================================================================
 # LIFECYCLE
@@ -194,17 +177,13 @@ func _connect_control_signals(control: Control) -> void:
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
 
-## Capture target's natural position/rotation/scale.
-## Transforms use the Shared Target Ledger; Modulate uses the dedicated META_KEY.
+## Capture target's natural position/rotation/scale/self_modulate.
+## All properties are tracked through the Shared Target Ledger.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Control:
 		return
 	var ctrl := _target_node as Control
-	
-	JuiceLedger.ensure(ctrl, ["position", "rotation", "scale"])
-	
-	_base_modulate = ctrl.modulate
-	_has_modulate_base = true
+	JuiceLedger.ensure(ctrl, ["position", "rotation", "scale", "self_modulate"])
 	_base_captured = true
 
 ## Detect external displacement of the target (Container re-sort, game logic, tweens).
@@ -213,19 +192,19 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	
-	JuiceLedger.sync_base_if_moved(ctrl, ["position", "rotation", "scale"])
+	JuiceLedger.sync_base_if_moved(ctrl, ["position", "rotation", "scale", "self_modulate"])
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
 ## Multiple Juice nodes on the same target can write independently without
 ## overwriting each other — each node only touches its own layer of changes.
+## Both transform (additive) and self_modulate (multiplicative) go through the Ledger.
 func _post_tick_write() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
 
-	# Sum deltas from all runtime effects
+	# Sum transform deltas from all runtime effects
 	var new_pos := Vector2.ZERO
 	var new_rot := 0.0
 	var new_scale := Vector2.ZERO
@@ -243,14 +222,10 @@ func _post_tick_write() -> void:
 		if ctrl_effect._contributes_scale:
 			new_scale += ctrl_effect._scale_delta
 
-	# Register our deltas into the Target's ledger
+	# Register transform deltas into the Target's ledger
 	JuiceLedger.register_delta(ctrl, self, "position", new_pos)
 	JuiceLedger.register_delta(ctrl, self, "rotation", new_rot)
 	JuiceLedger.register_delta(ctrl, self, "scale", new_scale)
-
-	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
-	# Only flushes transform properties; self_modulate uses multiplicative accumulation below.
-	JuiceLedger.flush(ctrl, ["position", "rotation", "scale"])
 
 	if debug_enabled:
 		print("[%s] POST_TICK base_scale=%s, new_scale_delta=%s, total_scale=%s, ctrl_scale=%s" % [
@@ -260,10 +235,10 @@ func _post_tick_write() -> void:
 			JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO),
 			ctrl.scale])
 
-	# Appearance: accumulate modulate factors from JuiceControlAppearanceEffect effects.
-	# Only write modulate when at least one appearance effect has a non-identity factor.
+	# Accumulate modulate factors from JuiceControlAppearanceEffect effects.
+	# Each effect contributes a multiplicative factor; the Ledger handles
+	# base × Πfactors for Color properties automatically.
 	var combined_modulate := Color.WHITE
-	var has_appearance := false
 	for effect in _runtime_effects:
 		if effect == null:
 			continue
@@ -274,62 +249,13 @@ func _post_tick_write() -> void:
 		combined_modulate.g *= app_effect._modulate_factor.g
 		combined_modulate.b *= app_effect._modulate_factor.b
 		combined_modulate.a *= app_effect._modulate_factor.a
-		has_appearance = true
 
-	# Sibling stacking with metadata-based natural base capture
-	# JuiceControl writes to self_modulate, so base capture uses self_modulate.
-	# TODO: Absorb META_KEY into JuiceLedger as "self_modulate" property.
-	const META_KEY := &"juice_modulate_natural"
-	var base_color: Color = ctrl.self_modulate
-	if not ctrl.has_meta(META_KEY):
-		# First JuiceControl node — capture natural self_modulate and store in metadata
-		ctrl.set_meta(META_KEY, ctrl.self_modulate)
-	else:
-		# Subsequent JuiceControl nodes — read natural base from metadata
-		base_color = ctrl.get_meta(META_KEY)
+	# Register modulate factor into the Ledger — sibling stacking is handled
+	# automatically via per-source delta tracking (one entry per JuiceControl node).
+	JuiceLedger.register_delta(ctrl, self, "self_modulate", combined_modulate)
 
-	# Scan all sibling JuiceControl nodes on the same target, multiply contributions.
-	# In STACK mode, Juice nodes are children of the target — scan target's children.
-	var final_factor := Color.WHITE
-	for child in ctrl.get_children():
-		var j := child as JuiceControl
-		if j == null or j == self:
-			continue
-		var sibling_contrib: Color = Color.WHITE
-		if j._own_modulate_contribution != Color.WHITE:
-			sibling_contrib = j._own_modulate_contribution
-		final_factor.r *= sibling_contrib.r
-		final_factor.g *= sibling_contrib.g
-		final_factor.b *= sibling_contrib.b
-		final_factor.a *= sibling_contrib.a
-
-	# Write once: base * own_contribution * product of all sibling contributions
-	ctrl.self_modulate = Color(
-		base_color.r * combined_modulate.r * final_factor.r,
-		base_color.g * combined_modulate.g * final_factor.g,
-		base_color.b * combined_modulate.b * final_factor.b,
-		base_color.a * combined_modulate.a * final_factor.a)
-
-	# Update own contribution tracking
-	if has_appearance:
-		_own_modulate_contribution = combined_modulate
-	else:
-		_own_modulate_contribution = Color.WHITE
-
-	# Check if all siblings are at identity (no active effects)
-	var all_siblings_idle := true
-	for child in ctrl.get_children():
-		var j := child as JuiceControl
-		if j == null or j == self:
-			continue
-		if j._own_modulate_contribution != Color.WHITE:
-			all_siblings_idle = false
-			break
-
-	# If all siblings idle and we're idle, remove metadata and restore natural state
-	if all_siblings_idle and not has_appearance and ctrl.has_meta(META_KEY):
-		ctrl.remove_meta(META_KEY)
-		ctrl.self_modulate = base_color
+	# Flush all properties — transform (additive) + self_modulate (multiplicative)
+	JuiceLedger.flush(ctrl, ["position", "rotation", "scale", "self_modulate"])
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
@@ -338,23 +264,13 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	
+
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(ctrl, self, false)
-	
-	# Apply absolute baseline position + sibling remaining deltas
-	ctrl.position = JuiceLedger.get_base(ctrl, "position", ctrl.position) + JuiceLedger.get_total(ctrl, "position", Vector2.ZERO)
-	ctrl.rotation = JuiceLedger.get_base(ctrl, "rotation", ctrl.rotation) + JuiceLedger.get_total(ctrl, "rotation", 0.0)
-	ctrl.scale = JuiceLedger.get_base(ctrl, "scale", ctrl.scale) + JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO)
 
-	# Restore self_modulate to natural so Appearance effects see the true From state
-	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
-	# TODO: Absorb META_KEY into JuiceLedger as "self_modulate" property.
-	const META_KEY := &"juice_modulate_natural"
-	if ctrl.has_meta(META_KEY):
-		ctrl.self_modulate = ctrl.get_meta(META_KEY)
-	# Set own contribution to identity so sibling rescan excludes us
-	_own_modulate_contribution = Color.WHITE
+	# Flush remaining sibling contributions — Ledger handles both additive
+	# (transform) and multiplicative (self_modulate) correctly.
+	JuiceLedger.flush(ctrl, ["position", "rotation", "scale", "self_modulate"])
 
 
 ## Re-add contributions after temporary undo.

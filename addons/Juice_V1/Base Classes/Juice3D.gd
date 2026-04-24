@@ -41,7 +41,7 @@ func _validate_property(property: Dictionary) -> void:
 
 # Whether base values have been captured at least once.
 # Transform state is owned by the Centralized Metadata Ledger (LEDGER_KEY on target).
-# Appearance state below uses 3D-specific per-node tracking.
+# Appearance uses Ledger-based factor tracking with domain-owned working material.
 var _base_captured: bool = false
 
 # 3D Appearance — domain node owns the single working material to prevent multiple
@@ -71,10 +71,6 @@ var _flicker_noise: FastNoiseLite = null
 
 # 3D OUTLINE support
 var _outline_material: ShaderMaterial = null
-
-# Per-node contribution tracking for sibling stacking
-var _own_albedo_contribution: Color = Color.WHITE
-var _own_alpha_contribution: float = 1.0
 
 # =============================================================================
 # LIFECYCLE
@@ -194,13 +190,22 @@ func _connect_collision_object_3d_signals(col_obj: CollisionObject3D) -> void:
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
 
-## Capture target's natural position/rotation/scale.
-## Transforms use the Shared Target Ledger; appearance uses 3D-specific per-node tracking.
+## Capture target's natural position/rotation/scale and appearance base.
+## Transform and appearance factor tracking go through the Shared Target Ledger.
+## The working material lifecycle remains domain-specific.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node3D:
 		return
 	var n3d := _target_node as Node3D
 	JuiceLedger.ensure(n3d, ["position", "rotation", "scale"])
+	# Store natural albedo+alpha packed as Color for Ledger-based factor tracking.
+	# The Ledger uses this as the base for multiplicative accumulation.
+	# We use a synthetic "_appearance_factor" key since there's no direct node property.
+	var ledger := JuiceLedger.ensure(n3d, [])
+	if not ledger["base"].has("_appearance_factor"):
+		# Lazily capture the natural albedo+alpha once the working mat is set up.
+		# For now, seed with WHITE — _ensure_appearance_working_mat() will update.
+		ledger["base"]["_appearance_factor"] = Color.WHITE
 	_base_captured = true
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
@@ -280,45 +285,32 @@ func _post_tick_write() -> void:
 			outline_color = app_eff._computed_outline_color
 			has_outline = true
 
-	# Sibling stacking with metadata-based natural base capture
-	# Get shared natural base from target metadata (captured by first Juice3D)
-	const META_KEY := &"juice_albedo_natural"
-	var base_albedo: Color = _appearance_natural_albedo
-	var base_alpha: float = _appearance_natural_alpha
-	var mesh_inst := _find_mesh_on(_target_node)
-	if mesh_inst != null and not mesh_inst.has_meta(META_KEY):
-		# First Juice3D node - capture natural base and store in metadata
-		mesh_inst.set_meta(META_KEY, {
-			"albedo": _appearance_natural_albedo,
-			"alpha": _appearance_natural_alpha
-		})
-	elif mesh_inst != null:
-		# Subsequent Juice3D nodes - read natural base from metadata
-		var meta = mesh_inst.get_meta(META_KEY)
-		base_albedo = meta.get("albedo", Color.WHITE)
-		base_alpha = meta.get("alpha", 1.0)
+	# Appearance: use Ledger-based factor tracking for sibling stacking.
+	# 3D albedo is a sub-resource property on the working material, so we
+	# can't use Ledger.flush() (which calls target.set()). Instead, we use
+	# register_delta for per-source tracking and get_total for the combined
+	# factor, then write to the working material manually.
+	#
+	# Store as Color(albedo.r, albedo.g, albedo.b, alpha) to pack both channels.
+	var appearance_factor := Color(combined_albedo.r, combined_albedo.g, combined_albedo.b, combined_alpha)
+	JuiceLedger.register_delta(n3d, self, "_appearance_factor", appearance_factor)
 
-	# Scan all sibling Juice3D nodes on the same target, multiply contributions.
-	# In STACK mode, Juice nodes are children of the target — scan target's children.
-	var final_albedo := Color.WHITE
-	var final_alpha := 1.0
-	for child in _target_node.get_children():
-		var j := child as Juice3D
-		if j == null or j == self:
-			continue
-		if j._own_albedo_contribution != Color.WHITE or j._own_alpha_contribution != 1.0:
-			final_albedo.r *= j._own_albedo_contribution.r
-			final_albedo.g *= j._own_albedo_contribution.g
-			final_albedo.b *= j._own_albedo_contribution.b
-			final_alpha *= j._own_alpha_contribution
+	# Read the combined factor from all sibling Juice3D nodes on this target.
+	# The Ledger multiplies Color deltas automatically (multiplicative accumulation).
+	var total_factor: Color = JuiceLedger.get_total(n3d, "_appearance_factor", Color.WHITE)
 
-	# Write once: base * own_contribution * product of all sibling contributions
+	# Read base albedo/alpha from the Ledger (captured at ensure time).
+	var base_app: Color = JuiceLedger.get_base(n3d, "_appearance_factor", Color.WHITE)
+	var base_albedo := Color(base_app.r, base_app.g, base_app.b, 1.0)
+	var base_alpha := base_app.a
+
+	# Write to working material: base × Πfactors (total from all sources)
 	if _ensure_appearance_working_mat():
 		_appearance_working_mat.albedo_color = Color(
-			base_albedo.r * combined_albedo.r * final_albedo.r,
-			base_albedo.g * combined_albedo.g * final_albedo.g,
-			base_albedo.b * combined_albedo.b * final_albedo.b,
-			base_alpha * combined_alpha * final_alpha)
+			base_albedo.r * total_factor.r,
+			base_albedo.g * total_factor.g,
+			base_albedo.b * total_factor.b,
+			base_alpha * total_factor.a)
 		# Handle 3D OUTLINE next_pass
 		if has_outline and _ensure_outline_material():
 			_outline_material.set_shader_parameter("amount", outline_amount)
@@ -327,27 +319,8 @@ func _post_tick_write() -> void:
 		else:
 			_appearance_working_mat.next_pass = null
 
-	# Update own contribution tracking
-	if has_appearance:
-		_own_albedo_contribution = combined_albedo
-		_own_alpha_contribution = combined_alpha
-	else:
-		_own_albedo_contribution = Color.WHITE
-		_own_alpha_contribution = 1.0
-
-	# Check if all siblings are at identity (no active effects)
-	var all_siblings_idle := true
-	for child in _target_node.get_children():
-		var j := child as Juice3D
-		if j == null or j == self:
-			continue
-		if j._own_albedo_contribution != Color.WHITE or j._own_alpha_contribution != 1.0:
-			all_siblings_idle = false
-			break
-
-	# If all siblings idle and we're idle, remove metadata and restore natural state
-	if all_siblings_idle and not has_appearance and mesh_inst != null and mesh_inst.has_meta(META_KEY):
-		mesh_inst.remove_meta(META_KEY)
+	# If all sources are at identity, clean up working material
+	if total_factor == Color.WHITE and not has_outline:
 		_clear_appearance_working_mat()
 
 
@@ -357,14 +330,12 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	
+
 	# Strip our transform deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n3d, self, false)
-	
-	# Apply absolute baseline position + sibling remaining deltas
-	n3d.position = JuiceLedger.get_base(n3d, "position", n3d.position) + JuiceLedger.get_total(n3d, "position", Vector3.ZERO)
-	n3d.rotation = JuiceLedger.get_base(n3d, "rotation", n3d.rotation) + JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO)
-	n3d.scale = JuiceLedger.get_base(n3d, "scale", n3d.scale) + JuiceLedger.get_total(n3d, "scale", Vector3.ZERO)
+
+	# Flush remaining sibling transform contributions
+	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
 
 	# Restore natural material so editor save doesn't serialise working material
 	if _appearance_setup and _appearance_mesh != null:
@@ -416,6 +387,12 @@ func _ensure_appearance_working_mat() -> bool:
 	_appearance_natural_albedo = std_mat.albedo_color
 	_appearance_natural_alpha = std_mat.albedo_color.a
 	_appearance_setup = true
+	# Update the Ledger base with real natural albedo+alpha (was seeded with WHITE).
+	if _target_node != null and JuiceLedger.has_ledger(_target_node):
+		var ledger: Dictionary = _target_node.get_meta(JuiceLedger.KEY)
+		ledger["base"]["_appearance_factor"] = Color(
+			_appearance_natural_albedo.r, _appearance_natural_albedo.g,
+			_appearance_natural_albedo.b, _appearance_natural_alpha)
 	return true
 
 

@@ -46,7 +46,7 @@ Generated: 2026-04-24
 | `Juice3DRecipe.gd` | 1 | 0 | DONE | Already clean, no changes needed |
 | `Juice3DTransformEffect.gd` | 48 | 35 | TODO | — |
 | `JuiceBase.gd` | 73 | 28 | PARTIAL | Gemini added comments to Public API section, needs validation |
-| `JuiceControl.gd` | 15 | 7 | BLOCKED | Doc-clean, but 2 valid TODOs: META_KEY→JuiceLedger (L281, L352) |
+| `JuiceControl.gd` | 25 | 12 | TODO | ✅ META_KEY TODOs resolved — modulate now uses JuiceLedger |
 | `JuiceControlAppearanceEffect.gd` | 2 | 0 | DONE | Downgraded _clear_modulate and _get_seq_contribution ##→# |
 | `JuiceControlEffectBase.gd` | 0 | 0 | SKIP | No methods |
 | `JuiceControlRecipe.gd` | 1 | 0 | DONE | Already clean, no changes needed |
