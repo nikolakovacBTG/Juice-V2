@@ -1,4 +1,4 @@
-## TriggerHintBuilder.gd
+## Dynamically generates configuration warnings and inspector hints for Juice triggers.
 ## ============================================================================
 ## WHAT: Static helper that builds a filtered Godot PROPERTY_HINT_ENUM hint
 ##       string for the `trigger_on` property on JuiceBase domain nodes.

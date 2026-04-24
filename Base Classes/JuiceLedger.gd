@@ -33,7 +33,7 @@ const KEY := &"juice_active_ledger"
 # =============================================================================
 
 ## Returns the zero value appropriate for the type of [param value].
-## Used to create a starting accumulator before summing deltas.
+## Used to create a starting accumulator before summing deltas dynamically.
 static func zero_for(value: Variant) -> Variant:
 	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT: return 0.0
 	if typeof(value) == TYPE_VECTOR2: return Vector2.ZERO
@@ -44,11 +44,11 @@ static func zero_for(value: Variant) -> Variant:
 
 ## Ensures the ledger exists on [param target] and that each property in
 ## [param props] has its base value recorded from the current node state.
-## Safe to call every frame — existing entries are never overwritten.
+## Prevents duplicate instantiations of the ledger while ensuring all requested properties are tracked before animation begins. Safe to call every frame.
 static func ensure(target: Node, props: Array[String]) -> Dictionary:
 	var ledger: Dictionary
 	if not target.has_meta(KEY):
-		ledger = { "base": {}, "deltas": {} }
+		ledger = {"base": {}, "deltas": {}}
 		target.set_meta(KEY, ledger)
 	else:
 		ledger = target.get_meta(KEY)
@@ -61,7 +61,7 @@ static func ensure(target: Node, props: Array[String]) -> Dictionary:
 
 ## Detects whether [param target] was moved externally (e.g. by a layout engine)
 ## and adjusts the ledger base accordingly so subsequent animation reads are correct.
-## Container positions are handled with special idle-only logic to avoid axis corruption.
+## Ensures that external movement (like layout engines or game logic) doesn't cause the juice animation to snap back to an outdated origin. Container positions are handled with special idle-only logic to avoid axis corruption.
 static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 	if not target.has_meta(KEY): return
 	var ledger: Dictionary = target.get_meta(KEY)
@@ -135,7 +135,7 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 
 
 ## Registers [param delta] for [param prop] from [param source] on [param target].
-## Re-registering from the same source replaces the previous value (no accumulation).
+## Allows multiple effects (e.g. hover and click) to independently contribute to the same property without overwriting each other. Re-registering from the same source replaces the previous value.
 static func register_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
 	if not target.has_meta(KEY): return
 	var ledger: Dictionary = target.get_meta(KEY)
@@ -146,7 +146,7 @@ static func register_delta(target: Node, source: Node, prop: String, delta: Vari
 
 
 ## Returns the summed total delta for [param prop] across all registered sources.
-## Colors are multiplied (modulate factors); all other types are added.
+## Aggregates all active effect contributions so the domain node can perform a single combined write per frame. Colors are multiplied (modulate factors); all other types are added.
 static func get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
 	if not target.has_meta(KEY): return zero_val
 	var ledger: Dictionary = target.get_meta(KEY)
@@ -163,7 +163,7 @@ static func get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
 
 
 ## Returns the recorded natural (base) value for [param prop].
-## Falls back to [param fallback] when no ledger exists.
+## Safely retrieves the unmodified property value, falling back to the current value if the ledger hasn't captured it yet.
 static func get_base(target: Node, prop: String, fallback: Variant) -> Variant:
 	if not target.has_meta(KEY): return fallback
 	var ledger: Dictionary = target.get_meta(KEY)
@@ -231,5 +231,6 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 
 
 ## Returns [code]true[/code] if [param target] has an active ledger.
+## Quickly checks if a target is currently under Juice control without allocating.
 static func has_ledger(target: Node) -> bool:
 	return target != null and target.has_meta(KEY)

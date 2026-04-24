@@ -673,16 +673,19 @@ func _post_ready_init() -> void:
 # =============================================================================
 
 ## Trigger animate_in on all root effects in the recipe.
+## The primary entry point for starting effects in the forward direction. Dispatches to _handle_trigger to apply retrigger policies.
 func animate_in() -> void:
 	_handle_trigger({"play_in": true})
 
 
 ## Trigger animate_out on all root effects in the recipe.
+## The primary entry point for starting effects in the reverse direction. Typically invoked by release events (e.g., button up, mouse exit).
 func animate_out(is_one_shot_return: bool = false) -> void:
 	_handle_trigger({"play_in": false, "is_one_shot_return": is_one_shot_return})
 
 
 ## Stop all effects and restore to natural state.
+## Instantly terminates all active animations and forces a rewrite of the natural state, wiping any active deltas. Used to hard-cancel juice before state changes.
 func stop() -> void:
 	if mode == Mode.SEQUENCER:
 		_seq_stop()
@@ -702,6 +705,7 @@ func stop() -> void:
 
 
 ## Stop all effects but keep current visual state.
+## Freezes animations without reverting them. Useful for pausing juice during hitstops or menu overlays.
 func stop_and_hold() -> void:
 	_in_node_start_delay = false
 	for effect in _runtime_effects:
@@ -714,6 +718,7 @@ func stop_and_hold() -> void:
 
 
 ## Toggle between animate_in and animate_out.
+## Flips the internal direction state. Primarily used for UI components that act as binary switches where no polarity signal exists.
 func toggle() -> void:
 	_toggle_state = not _toggle_state
 	if _toggle_state:
@@ -723,9 +728,9 @@ func toggle() -> void:
 
 
 ## Set external progress on all effects (for SET_FROM_SOURCE).
-## Mirrors V0's direct-apply pattern: initialises effects on first call, then
-## sets progress and writes deltas to the target node directly each call.
-## Does NOT rely on _process (which self-terminates when no effects are playing).
+## Bypasses the standard animation loop to allow external systems to drive the effect dynamically. 
+## It initializes effects on the first call, then manually sets progress and writes deltas directly to the target node, 
+## avoiding reliance on `_process` (which intentionally self-terminates when no effects are actively ticking).
 func set_external_progress(value: float) -> void:
 	if _target_node == null:
 		return
@@ -987,7 +992,7 @@ func _on_all_effects_completed() -> void:
 
 ## D2: Stop sibling JuiceBase nodes whose effects share an interrupt identity
 ## with any effect in this node that has interrupt_siblings = true.
-## Only called on new triggers (not loop restarts), matching V0's
+## Only called on new triggers (not loop restarts) to ensure consistent event propagation.
 ## `interrupt_siblings and not is_one_shot_return` guard.
 func _stop_matching_siblings() -> void:
 	# Collect identities from our effects that want sibling interruption

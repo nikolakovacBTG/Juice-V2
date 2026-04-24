@@ -38,6 +38,7 @@ static var instance: ScreenJuiceUtility = null
 # =============================================================================
 
 @export_group("Debug")
+## Prints detailed state changes and logic paths to the console.
 @export var debug_enabled: bool = false
 
 

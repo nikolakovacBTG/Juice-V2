@@ -318,6 +318,9 @@ func _validate_property(property: Dictionary) -> void:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+## Resolves NodePaths from the inspector, stamps all config onto a new orchestrator,
+## and spawns it on the scene tree root (deferred). Fire-and-forget — the orchestrator
+## manages the full cover → action → reveal lifecycle independently.
 func _on_animate_start(target: Node) -> void:
 	if Engine.is_editor_hint():
 		return
@@ -430,7 +433,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
-## Returns true if the current action config destroys the host scene.
+# Returns true if the current action config destroys the host scene.
 func _is_destructive_action() -> bool:
 	if action == SceneAction.RELOAD_SCENE or action == SceneAction.QUIT_GAME:
 		return true

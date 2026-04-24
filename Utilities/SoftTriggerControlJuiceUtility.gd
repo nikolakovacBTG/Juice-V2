@@ -200,8 +200,8 @@ func _on_mouse_exited() -> void:
 # DISTANCE CALCULATION
 # =============================================================================
 
-## Calculate 0–1 progress from a point inside a rectangle.
-## 0.0 at the border, 1.0 in the inner region past the falloff zone.
+# Calculate 0–1 progress from a point inside a rectangle.
+# 0.0 at the border, 1.0 in the inner region past the falloff zone.
 func _calculate_rect_progress(local_pos: Vector2, rect_size: Vector2) -> float:
 	if rect_size.x <= 0.0 or rect_size.y <= 0.0:
 		return 0.0
@@ -241,8 +241,8 @@ func _calculate_rect_progress(local_pos: Vector2, rect_size: Vector2) -> float:
 # SIBLING DISCOVERY
 # =============================================================================
 
-## Find all sibling JuiceBase nodes (type-safe discovery).
-## Called lazily — only rebuilds when _juice_siblings_dirty is true.
+# Find all sibling JuiceBase nodes (type-safe discovery).
+# Called lazily — only rebuilds when _juice_siblings_dirty is true.
 func _ensure_juice_siblings() -> void:
 	if not _juice_siblings_dirty:
 		return

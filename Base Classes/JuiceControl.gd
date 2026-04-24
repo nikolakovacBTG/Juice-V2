@@ -38,7 +38,7 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE (Write Coordination)
 # =============================================================================
 
-# Phase B: Per-node contribution tracking for sibling stacking (Modulate)
+# Per-node contribution tracking for sibling stacking (Modulate)
 # Transform properties use the shared Metadata Ledger.
 var _own_modulate_contribution: Color = Color.WHITE
 
@@ -85,7 +85,7 @@ func _resolve_target() -> Node:
 		if parent != null and debug_enabled:
 			push_warning("[%s] Parent '%s' is not a Control node" % [name, parent.name])
 		return null
-	return null  # SEQUENCER Phase 5
+	return null  # SEQUENCER resolves per-target dynamically
 
 # =============================================================================
 # AUTO-CONNECT (Override)
@@ -276,9 +276,9 @@ func _post_tick_write() -> void:
 		combined_modulate.a *= app_effect._modulate_factor.a
 		has_appearance = true
 
-	# Phase B: Sibling stacking with metadata-based natural base capture
+	# Sibling stacking with metadata-based natural base capture
 	# JuiceControl writes to self_modulate, so base capture uses self_modulate.
-	# TODO(phase-4): Absorb META_KEY into JuiceLedger as "self_modulate" property.
+	# TODO: Absorb META_KEY into JuiceLedger as "self_modulate" property.
 	const META_KEY := &"juice_modulate_natural"
 	var base_color: Color = ctrl.self_modulate
 	if not ctrl.has_meta(META_KEY):
@@ -349,11 +349,11 @@ func _temporarily_undo_visual() -> void:
 
 	# Restore self_modulate to natural so Appearance effects see the true From state
 	# when _on_animate_start captures references (e.g. during animate_out after a fade-in).
-	# TODO(phase-4): Absorb META_KEY into JuiceLedger as "self_modulate" property.
+	# TODO: Absorb META_KEY into JuiceLedger as "self_modulate" property.
 	const META_KEY := &"juice_modulate_natural"
 	if ctrl.has_meta(META_KEY):
 		ctrl.self_modulate = ctrl.get_meta(META_KEY)
-	# Phase B: Set own contribution to identity so sibling rescan excludes us
+	# Set own contribution to identity so sibling rescan excludes us
 	_own_modulate_contribution = Color.WHITE
 
 

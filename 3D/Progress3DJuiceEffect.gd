@@ -5,7 +5,7 @@
 
 # =============================================================================
 # WHAT: 3D-domain continuous-accumulation (Progress) effect.
-# WHY:  Ports Progress3DJuiceComp to V1 Resource architecture.
+# WHY:  Defines a resource-based progress driver for Node3D targets.
 # SYSTEM: Juice System (addons/Juice_V1/3D/)
 # DOES NOT: Handle Control or Node2D targets.
 # DOES NOT: Handle arbitrary property accumulation -- use ProgressProperty3DJuiceEffect.

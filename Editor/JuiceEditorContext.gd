@@ -1,4 +1,4 @@
-## JuiceEditorContext.gd
+## Manages ephemeral editor state and preview nodes for the Juice plugin.
 ## A static utility script that serves as the central brain for all editor-time
 ## Juice operations. Safely maps sub-resources to their host Nodes at editor time.
 ##

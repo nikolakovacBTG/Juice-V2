@@ -114,13 +114,13 @@ var debug_enabled: bool = false
 # INTERNAL STATE
 # =============================================================================
 
-var _overlay_juice_node: JuiceControl = null  # V1 JuiceControl with ScreenOverlay effect
+var _overlay_juice_node: JuiceControl = null  # JuiceControl with ScreenOverlay effect
 var _overlay_dummy_parent: Control = null       # Dummy Control parent for JuiceControl
 var _transition_canvas: CanvasLayer = null
 var _transition_scene_instance: Node = null
 var _active_overlay_instance: Node = null
 var _active_canvas_layer: CanvasLayer = null
-var _time_juice_node: JuiceControl = null  # V1 JuiceControl with Time effect
+var _time_juice_node: JuiceControl = null  # JuiceControl with Time effect
 var _time_dummy_parent: Control = null      # Dummy Control parent for time JuiceControl
 var _generation: int = 0
 var _removed_nodes: Dictionary = {}
@@ -170,6 +170,7 @@ func execute() -> void:
 # DESTRUCTIVE ACTIONS (SWITCH / RELOAD / QUIT)
 # =============================================================================
 
+# Handles terminal actions like quit or self-destruct that don't need complex sequencing.
 func _execute_destructive_action() -> void:
 	# Inline swap modes: orchestrator manages transition inline
 	if scene_action == SceneAction.SWITCH_SCENE and (
@@ -192,6 +193,7 @@ func _execute_destructive_action() -> void:
 			await _execute_scene_transition()
 
 
+# The final execution step after covers/delays finish. Handles the actual tree mutation (reload, change scene, open overlay).
 func _perform_direct_action() -> void:
 	match scene_action:
 		SceneAction.SWITCH_SCENE:
@@ -220,6 +222,7 @@ func _perform_direct_action() -> void:
 # OVERLAY TRANSITION (SOLID_COLOR / IMAGE)
 # =============================================================================
 
+# Manages the sequence of opening or closing an overlay, including pausing the main tree and triggering in/out animations.
 func _execute_overlay_transition() -> void:
 	var my_gen := _generation
 
@@ -284,6 +287,7 @@ func _execute_overlay_transition() -> void:
 # SCENE TRANSITION (custom animated scene)
 # =============================================================================
 
+# Orchestrates full scene swaps, managing transition animations, asynchronous loading, and the final scene tree swap.
 func _execute_scene_transition() -> void:
 	if transition_scene == null:
 		push_warning("[Orchestrator] transition_scene is null — falling back to NONE")
@@ -366,6 +370,7 @@ func _execute_scene_transition() -> void:
 # INLINE SCENE SWAP (SCENE_IN_TREE / FIRST_SCENE_IN_CONTAINER)
 # =============================================================================
 
+# Swaps a localized child node instead of the entire scene, useful for sub-menus or localized content changes.
 func _execute_child_swap() -> void:
 	var my_gen := _generation
 
@@ -453,6 +458,7 @@ func _execute_child_swap() -> void:
 # OVERLAY SCENE (toggle-friendly)
 # =============================================================================
 
+# Instantiates the overlay scene, pauses the main tree, and plays the reveal animation.
 func _show_overlay() -> void:
 	_active_overlay_orchestrator = self
 
@@ -499,6 +505,7 @@ func _show_overlay() -> void:
 	# Note: orchestrator stays alive for _hide_overlay() call
 
 
+# Triggers the overlay's cover animation before unpausing the tree and destroying the overlay.
 func _hide_overlay() -> void:
 	_generation += 1
 
@@ -541,6 +548,7 @@ func _hide_overlay() -> void:
 # OVERLAY TRANSITION HELPERS
 # =============================================================================
 
+# Spawns the dynamic Juice node to animate the overlay out.
 func _play_overlay_cover() -> void:
 	match overlay_type:
 		TransitionOverlay.SOLID_COLOR, TransitionOverlay.IMAGE:
@@ -554,6 +562,7 @@ func _play_overlay_cover() -> void:
 			await _play_transition_scene_cover()
 
 
+# Spawns the dynamic Juice node to animate the overlay in.
 func _play_overlay_reveal() -> void:
 	match overlay_type:
 		TransitionOverlay.SOLID_COLOR, TransitionOverlay.IMAGE:
@@ -566,6 +575,7 @@ func _play_overlay_reveal() -> void:
 			await _play_transition_scene_reveal()
 
 
+# Instantiates the transition scene layer to visually block the screen before a full scene swap.
 func _play_transition_scene_cover() -> void:
 	if transition_scene == null:
 		push_warning("[Orchestrator] transition_scene is null — skipping SCENE transition")
@@ -589,6 +599,7 @@ func _play_transition_scene_cover() -> void:
 		await get_tree().create_timer(fallback_cover_duration, true, false, true).timeout
 
 
+# Triggers the transition scene to un-block the screen after the new scene has loaded.
 func _play_transition_scene_reveal() -> void:
 	if _transition_scene_instance == null or not is_instance_valid(_transition_scene_instance):
 		return
@@ -609,10 +620,10 @@ func _play_transition_scene_reveal() -> void:
 
 
 # =============================================================================
-# V1 RUNTIME NODE CREATION
+# RUNTIME NODE CREATION
 # =============================================================================
 
-## Creates a V1 JuiceControl + ScreenOverlayControlJuiceEffect configured for cover.
+## Creates a JuiceControl + ScreenOverlayControlJuiceEffect configured for cover.
 ## Returns the JuiceControl node (await its `completed` signal after `animate_in()`).
 func _create_overlay_juice_cover() -> JuiceControl:
 	# Build the effect Resource
@@ -658,7 +669,7 @@ func _create_overlay_juice_cover() -> JuiceControl:
 	await get_tree().process_frame
 
 	if debug_enabled:
-		print("[Orchestrator] V1 cover overlay created (duration=%.2f)" % cover_duration)
+		print("[Orchestrator] Cover overlay created (duration=%.2f)" % cover_duration)
 
 	_overlay_juice_node = juice_node
 	return juice_node
@@ -688,10 +699,10 @@ func _configure_overlay_juice_reveal(juice_node: JuiceControl) -> void:
 		overlay_effect.custom_curve_in = reveal_curve
 
 	if debug_enabled:
-		print("[Orchestrator] V1 reveal overlay configured (duration=%.2f)" % reveal_duration)
+		print("[Orchestrator] Reveal overlay configured (duration=%.2f)" % reveal_duration)
 
 
-## Creates a V1 JuiceControl + TimeControlJuiceEffect for time manipulation.
+## Creates a JuiceControl + TimeControlJuiceEffect for time manipulation.
 func _create_time_juice_node() -> void:
 	# Build the effect Resource
 	var effect := TimeControlJuiceEffect.new()
@@ -741,13 +752,14 @@ func _create_time_juice_node() -> void:
 	_time_juice_node.animate_in()
 
 	if debug_enabled:
-		print("[Orchestrator] V1 time juice node created (mode=%d)" % time_mode)
+		print("[Orchestrator] Time juice node created (mode=%d)" % time_mode)
 
 
 # =============================================================================
 # ASYNC SCENE LOADING
 # =============================================================================
 
+# Kicks off background loading for the next scene so the game doesn't hitch during the transition cover.
 func _start_async_load(path: String) -> void:
 	if path.is_empty():
 		return
@@ -760,6 +772,7 @@ func _start_async_load(path: String) -> void:
 		print("[Orchestrator] Async load started: %s" % path)
 
 
+# Yields execution until the background loader finishes fetching the scene resource.
 func _await_async_load(path: String) -> void:
 	if path.is_empty():
 		return
@@ -777,6 +790,7 @@ func _await_async_load(path: String) -> void:
 		print("[Orchestrator] Async load complete: %s" % path)
 
 
+# Retrieves the fully loaded scene resource from the background loader cache.
 func _get_async_loaded(path: String) -> PackedScene:
 	if path.is_empty():
 		return null
@@ -790,6 +804,7 @@ func _get_async_loaded(path: String) -> PackedScene:
 # CLEANUP
 # =============================================================================
 
+# Tears down the overlay instance, the dynamic Juice node, and unpauses the main game tree.
 func _cleanup_overlay() -> void:
 	if _time_juice_node != null and is_instance_valid(_time_juice_node):
 		_time_juice_node.queue_free()
@@ -808,6 +823,7 @@ func _cleanup_overlay() -> void:
 		_active_overlay_orchestrator = null
 
 
+# Destroys the transition scene layer once the reveal animation completes.
 func _cleanup_transition_resources() -> void:
 	if _overlay_juice_node != null and is_instance_valid(_overlay_juice_node):
 		_overlay_juice_node.queue_free()
@@ -823,6 +839,7 @@ func _cleanup_transition_resources() -> void:
 		_transition_canvas = null
 
 
+# Final cleanup. Frees the orchestrator node since it is designed as an ephemeral, single-use worker.
 func _self_destruct() -> void:
 	_cleanup_overlay()
 	if _active_orchestrator == self:
@@ -844,11 +861,13 @@ func _notification(what: int) -> void:
 # SIGNAL HELPERS
 # =============================================================================
 
+# Signals that the core mutation (scene load/swap) has occurred, but before the reveal animation finishes.
 func _emit_action_executed() -> void:
 	if action_executed_callback.is_valid():
 		action_executed_callback.call()
 
 
+# Signals the absolute end of the orchestration sequence (after reveal).
 func _emit_completed() -> void:
 	if completed_callback.is_valid():
 		completed_callback.call()

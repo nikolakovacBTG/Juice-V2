@@ -1,4 +1,4 @@
-## JuiceTriggerRouter.gd
+## Routes interaction signals to designated Juice nodes based on trigger behaviors.
 ## ============================================================================
 ## WHAT: Stateless signal wiring utilities for JuiceBase.
 ## WHY:  Extracts the signal-routing algorithm out of JuiceBase so it can be

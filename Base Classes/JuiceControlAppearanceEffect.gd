@@ -33,13 +33,13 @@ var _contributes_modulate: bool = false
 var _modulate_factor: Color = Color.WHITE
 
 
-## Reset modulate factor to identity. Called by domain node when effect stops.
+# Reset modulate factor to identity. Called by domain node when effect stops.
 func _clear_modulate() -> void:
 	_modulate_factor = Color.WHITE
 
 
-## Return current modulate contribution as a Dictionary.
-## Used by Sequencer contribution-tracking (generic, no hardcoded channels).
+# Return current modulate contribution as a Dictionary.
+# Used by Sequencer contribution-tracking (generic, no hardcoded channels).
 func _get_seq_contribution() -> Dictionary:
 	var d := {}
 	if _contributes_modulate:

@@ -1,4 +1,4 @@
-## JuiceProjectSettings.gd
+## Handles registration and retrieval of Juice system project settings.
 ## A static utility to interact with Juice-specific Godot ProjectSettings.
 ## Provides safe fallbacks and typed getters for global addon configuration.
 

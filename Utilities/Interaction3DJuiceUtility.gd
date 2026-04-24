@@ -405,9 +405,9 @@ func _find_trigger_zone() -> Area3D:
 # INPUT HANDLING: CLICK PRESETS (via _input_event on this Area3D)
 # =============================================================================
 
-## Godot physics picking callback — fires when the mouse interacts with this
-## Area3D's collision shape. Checks configured click presets and emits their
-## named signals when matched.
+# Godot physics picking callback — fires when the mouse interacts with this
+# Area3D's collision shape. Checks configured click presets and emits their
+# named signals when matched.
 func _input_event(_camera: Camera3D, event: InputEvent, _position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
 	if Engine.is_editor_hint():
 		return
@@ -597,8 +597,8 @@ func _passes_filter(node: Node) -> bool:
 # DYNAMIC SIGNAL MANAGEMENT
 # =============================================================================
 
-## Register user signals based on current action configuration.
-## Called from property setters (editor-time) and _ready() (runtime).
+# Register user signals based on current action configuration.
+# Called from property setters (editor-time) and _ready() (runtime).
 func _sync_user_signals() -> void:
 	var needed: Array[StringName] = []
 	for i in range(mini(action_count, _action_presets.size())):

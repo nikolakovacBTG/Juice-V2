@@ -50,6 +50,7 @@ const _2D_DEFAULT_MAX_ZOOM := 2.0
 @export var max_zoom_offset: float = _3D_DEFAULT_MAX_ZOOM
 
 @export_group("Debug")
+## Prints detailed state changes and logic paths to the console.
 @export var debug_enabled: bool = false
 
 

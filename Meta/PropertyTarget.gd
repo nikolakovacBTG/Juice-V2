@@ -170,8 +170,8 @@ func get_target_warnings() -> Array[String]:
 # TYPE DETECTION (editor-time only)
 # =============================================================================
 
-## Auto-detect the property type from the target node's get_property_list().
-## Only runs in @tool context. Updates _detected_type and triggers inspector refresh.
+# Auto-detect the property type from the target node's get_property_list().
+# Only runs in @tool context. Updates _detected_type and triggers inspector refresh.
 func _detect_type() -> void:
 	if not Engine.is_editor_hint():
 		return
@@ -258,9 +258,9 @@ func _resolve_node(host: Node) -> Node:
 	return host.get_node_or_null(node_path)
 
 
-## Editor-only node resolution. Uses the JuiceEditorContext to robustly map
-## this resource to its host JuiceBase. Falls back to editor selection context.
-## Used by _detect_type() for auto-detecting property types at editor time.
+# Editor-only node resolution. Uses the JuiceEditorContext to robustly map
+# this resource to its host JuiceBase. Falls back to editor selection context.
+# Used by _detect_type() for auto-detecting property types at editor time.
 func _resolve_node_for_editor() -> Node:
 	var scene_root := EditorInterface.get_edited_scene_root()
 	if scene_root == null:
@@ -294,8 +294,8 @@ func _resolve_node_for_editor() -> Node:
 	return scene_root
 
 
-## Find a JuiceBase node from the current editor selection.
-## The selected node is usually the target node (parent of JuiceBase).
+# Find a JuiceBase node from the current editor selection.
+# The selected node is usually the target node (parent of JuiceBase).
 func _find_juice_base_from_selection() -> Node:
 	var selection := EditorInterface.get_selection()
 	var selected_nodes := selection.get_selected_nodes()

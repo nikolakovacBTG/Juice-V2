@@ -5,15 +5,14 @@
 
 # ============================================================================
 # WHAT: Base class for time manipulation effects in the JuiceStack system.
-# WHY:  Ports V0 TimeJuiceComp to V1 Resource architecture. Being an effect
-#       allows time manipulation to be stacked, chained, and sequenced inside
-#       a JuiceBase recipe — the same chainability V0 had via JuiceBase.
+# WHY:  Provides time manipulation capabilities (slomo, stop, hitstop) encapsulated as
+#       a JuiceBase recipe — enabling standard triggering and chainability.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Animate target node properties — this is a meta effect.
 # DOES NOT: Manage audio pitch — use TimeCoordinatorJuiceUtility for that.
 # DOES NOT: Support per-object time scaling — Godot limitation.
 #
-# TIME MANAGEMENT (3-layer hybrid, same as V0):
+# TIME MANAGEMENT (3-layer hybrid):
 #   Layer 1 (default): Built-in static request dict. Multiple TimeJuiceEffects
 #     coordinate automatically — slowest slow-mo wins, no setup required.
 #   Layer 2 (signal): Set use_external_coordinator=true. Emits time_scale_requested
@@ -66,7 +65,7 @@ signal time_scale_requested(scale: float)
 # ENUMS
 # =============================================================================
 
-## Time manipulation modes. Mirrors V0 TimeJuiceComp.TimeMode.
+## Time manipulation modes. Defines the scale strategy applied to the engine.
 enum TimeMode {
 	FREEZE,      ## Instant scale=0 for N frames (hitstop / impact freeze).
 	SLOW_MO,     ## Smooth or instant transition to target_scale.
@@ -230,6 +229,7 @@ func tick(delta: float, target: Node) -> TickResult:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+## Initializes exempt nodes and begins the specific time manipulation phase (freeze, slow-mo, or bullet time).
 func _on_animate_start(target: Node) -> void:
 	# Refresh coordinator reference (may have been added to scene since last play).
 	_coordinator = TimeCoordinatorJuiceUtility.instance
@@ -245,6 +245,7 @@ func _on_animate_start(target: Node) -> void:
 		TimeMode.BULLET_TIME: _start_bullet_time()
 
 
+## Adjusts the time scale based on the easing progress envelope during bullet-time and slow-mo.
 func _apply_effect(progress: float, _target: Node) -> void:
 	if time_mode == TimeMode.FREEZE:
 		return  # FREEZE is timer-based; progress is not used.
@@ -258,6 +259,7 @@ func _apply_effect(progress: float, _target: Node) -> void:
 	_update_time_request(current_scale)
 
 
+## Cleans up engine state immediately when the effect naturally finishes easing out.
 func _on_animate_out_complete(_target: Node) -> void:
 	_release_time_request()
 	match time_mode:
@@ -269,6 +271,7 @@ func _on_animate_out_complete(_target: Node) -> void:
 				bullet_time_ended.emit()
 
 
+## Forces an immediate cleanup of time scale and exempt nodes if the effect is abruptly stopped or interrupted.
 func _restore_to_natural(_target: Node) -> void:
 	# Called by stop(). _is_playing is already false when this runs, so
 	# _on_freeze_complete() will self-cancel via the _is_playing guard.
@@ -282,6 +285,7 @@ func _restore_to_natural(_target: Node) -> void:
 # MODE IMPLEMENTATIONS
 # =============================================================================
 
+# Initiates a zero time scale state for a fixed duration (hitstop) before transitioning to ease-out or normal time.
 func _start_freeze() -> void:
 	var freeze_time := freeze_frames / 60.0
 	_update_time_request(0.0)
@@ -294,6 +298,7 @@ func _start_freeze() -> void:
 		print("[TimeEffect] FREEZE: %d frames (%.3fs)" % [freeze_frames, freeze_time])
 
 
+# Triggered by the unscaled internal timer when hitstop ends, advancing the animation lifecycle.
 func _on_freeze_complete() -> void:
 	_freeze_timer = null
 	if not _is_playing:
@@ -301,6 +306,7 @@ func _on_freeze_complete() -> void:
 	_freeze_complete = true  # tick() will detect this on the next frame.
 
 
+# Jumps directly to the target slowed time scale without easing.
 func _start_slow_mo() -> void:
 	_update_time_request(1.0)  # tick() will interpolate from here.
 	slow_mo_started.emit(target_scale)
@@ -309,6 +315,7 @@ func _start_slow_mo() -> void:
 		print("[TimeEffect] SLOW_MO: target_scale=%.2f smooth=%s" % [target_scale, smooth_transition])
 
 
+# Begins the smooth easing transition into the target time scale.
 func _start_bullet_time() -> void:
 	_setup_exempt_nodes()
 	_update_time_request(1.0)  # tick() will interpolate from here.
@@ -324,6 +331,7 @@ func _start_bullet_time() -> void:
 # TIME REQUEST MANAGEMENT
 # =============================================================================
 
+# Registers this specific effect's time scale request in the global ledger and updates the engine.
 func _update_time_request(scale: float) -> void:
 	if use_external_coordinator:
 		time_scale_requested.emit(scale)
@@ -337,6 +345,7 @@ func _update_time_request(scale: float) -> void:
 	_has_active_request = true
 
 
+# Removes this effect's influence from the global time ledger, allowing other effects or base time to take over.
 func _release_time_request() -> void:
 	if not _has_active_request:
 		return
@@ -350,8 +359,8 @@ func _release_time_request() -> void:
 	_has_active_request = false
 
 
-## Computes effective Engine.time_scale from all active static requests.
-## Slowest slow-mo wins (same resolution as TimeCoordinatorJuiceUtility).
+# Computes effective Engine.time_scale from all active static requests.
+# Slowest slow-mo wins (same resolution as TimeCoordinatorJuiceUtility).
 static func _compute_static_scale() -> float:
 	if _static_requests.is_empty():
 		return 1.0
@@ -373,6 +382,7 @@ static func _compute_static_scale() -> float:
 # EXEMPT NODE MANAGEMENT (BULLET_TIME)
 # =============================================================================
 
+# Temporarily sets specific nodes to process in ALWAYS mode so they ignore the engine time scale (e.g. the player during hitstop).
 func _setup_exempt_nodes() -> void:
 	_exempt_original_modes.clear()
 	for node_path in exempt_nodes:
@@ -387,6 +397,7 @@ func _setup_exempt_nodes() -> void:
 			print("[TimeEffect] Exempt '%s' → PROCESS_MODE_ALWAYS" % node.name)
 
 
+# Reverts exempt nodes back to their original process modes once the effect finishes.
 func _restore_exempt_nodes() -> void:
 	for node_path in exempt_nodes:
 		var node := _host_node.get_node_or_null(node_path) if _host_node != null else null
