@@ -67,10 +67,11 @@ When adding or modifying Juice components, test in ALL THREE domains:
 ## Script Standards
 
 Every script must have:
-1. **Header comment** explaining what it does and what system it belongs to
-2. **Inspector-exposed configuration** for gameplay values
-3. **Debug toggle** (`@export var debug_enabled: bool = false`)
-4. **Comments explaining WHY**, not just what
+1. **Header comment** explaining what it does, what system it belongs to, and what it does NOT handle.
+2. **Inspector-exposed configuration** for gameplay values.
+3. **Debug toggle** (`@export var debug_enabled: bool = false`).
+4. **Method Documentation**: Use `##` for public methods AND virtual override points (`_apply_effect`, `_on_animate_start`, `_needs_sustain`, `_restore_to_natural`, `_on_animate_in_complete`, `_on_animate_out_complete`). Use `#` for internal helpers (private methods that are not meant to be overridden). This ensures F1 Help documents the subclass API while hiding plumbing.
+5. **The Translation Rule (No Historical Baggage):** Transform legacy/versioning comments ('V0', 'V1', 'ported', 'refactor') into structural rationale. Explain *why* the architecture demands a specific approach, without referencing past versions.
 
 ## Script Section Ordering
 
@@ -98,12 +99,18 @@ All Juice addon scripts follow a canonical top-down section order. Each section 
 
 | Syntax | Purpose | Visible In |
 |--------|---------|------------|
-| `## Brief sentence.` | First line = Add Child Node tooltip | Tooltip + Script docs |
+| `## Brief sentence.` | First line = Add Child Node tooltip. MUST be concise, action-oriented. | Tooltip + Script docs |
 | `##` (blank) then `## Paragraph` | Detailed class description | Script docs viewer only |
 | `## @tutorial(Name): URL` | Links to external docs/videos | Script docs "Online Tutorials" |
 | `## @experimental` / `## @deprecated` | Stability markers | Script docs badge |
 | `## Above @export` | Inspector property tooltip | Inspector hover + Script docs |
-| `# Single hash` | Dev notes, architecture, WHY | Source code only (never in editor) |
+| `## Above public func` | Public API documentation & rationale | Script docs viewer only |
+| `## Above virtual func _override` | Subclass API (methods effect authors override) | Script docs viewer only |
+| `# Above private func _helper` | Internal logic documentation & rationale | Source code only |
+| `# Single hash` | Dev notes, architecture, WHY. NEVER use for migration history. | Source code only |
+
+**The `# WHY` Block Standard:**
+The `# WHY:` block must define the class's architectural purpose and the constraints it enforces (e.g. 'Effects are pure delta calculators to prevent write-conflicts'). Do not explain migration history.
 
 ## Shell Commands (PowerShell)
 
@@ -203,8 +210,10 @@ The following skills and workflows form a composable system for quality control:
 
 | Tool | Type | Trigger | Purpose |
 |------|------|---------|---------|
+| `@doc-sweep` | Skill | Auto: documentation work on `addons/Juice_V1/` | Quality standard card + per-file checklist + examples |
 | `@juice-architecture` | Skill | Auto: touching `addons/Juice_V1/` | Architecture rules + code templates |
 | `@verify-claims` | Skill | Auto: about to say "done/fixed/working" | Demands test evidence |
+| `/doc-sweep` | Workflow | Manual | Per-batch documentation sweep with context reset |
 | `/test` | Workflow | Manual | Run test suite, categorize failures |
 | `/bugfix` | Workflow | Manual | Structured fix cycle after test failures |
 | `/port` | Workflow | Manual | Port V0 effect to V1 (batches all 3 domains) |
@@ -212,6 +221,7 @@ The following skills and workflows form a composable system for quality control:
 | `/refactor` | Workflow | Manual | Systematic refactoring with validation |
 
 **Composition chain:** `/port` → `@juice-architecture` + `@verify-claims` → `/test` → `/bugfix` if needed
+**Documentation chain:** `/doc-sweep` → `@doc-sweep` (quality standard re-read per batch)
 
 **When discussing V1 code changes and no skill/workflow has been invoked, remind the user which are available.**
 

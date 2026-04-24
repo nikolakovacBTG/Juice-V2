@@ -398,8 +398,8 @@ func _find_trigger_zone() -> Area2D:
 # INPUT HANDLING: CLICK PRESETS (via _input_event on this Area2D)
 # =============================================================================
 
-## Godot physics picking callback for 2D — fires when the mouse interacts
-## with this Area2D's collision shape.
+# Godot physics picking callback for 2D — fires when the mouse interacts
+# with this Area2D's collision shape.
 func _input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if Engine.is_editor_hint():
 		return

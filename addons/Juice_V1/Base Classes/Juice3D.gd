@@ -72,7 +72,7 @@ var _flicker_noise: FastNoiseLite = null
 # 3D OUTLINE support
 var _outline_material: ShaderMaterial = null
 
-# Phase B: Per-node contribution tracking for sibling stacking
+# Per-node contribution tracking for sibling stacking
 var _own_albedo_contribution: Color = Color.WHITE
 var _own_alpha_contribution: float = 1.0
 
@@ -102,7 +102,7 @@ func _resolve_target() -> Node:
 		if parent != null and debug_enabled:
 			push_warning("[%s] Parent '%s' is not a Node3D node" % [name, parent.name])
 		return null
-	return null  # SEQUENCER Phase 5
+	return null  # SEQUENCER resolves per-target dynamically
 
 # =============================================================================
 # AUTO-CONNECT (Override)
@@ -280,7 +280,7 @@ func _post_tick_write() -> void:
 			outline_color = app_eff._computed_outline_color
 			has_outline = true
 
-	# Phase B: Sibling stacking with metadata-based natural base capture
+	# Sibling stacking with metadata-based natural base capture
 	# Get shared natural base from target metadata (captured by first Juice3D)
 	const META_KEY := &"juice_albedo_natural"
 	var base_albedo: Color = _appearance_natural_albedo
@@ -387,7 +387,7 @@ func _temporarily_reapply_visual() -> void:
 # 3D APPEARANCE HELPERS
 # =============================================================================
 
-## Find the first MeshInstance3D on target or among its direct children.
+# Find the first MeshInstance3D on target or among its direct children.
 func _find_mesh_on(target: Node) -> MeshInstance3D:
 	if target is MeshInstance3D:
 		return target as MeshInstance3D
@@ -397,8 +397,8 @@ func _find_mesh_on(target: Node) -> MeshInstance3D:
 	return null
 
 
-## Lazily set up the shared working material for albedo accumulation.
-## Returns true if a valid StandardMaterial3D working copy was established.
+# Lazily set up the shared working material for albedo accumulation.
+# Returns true if a valid StandardMaterial3D working copy was established.
 func _ensure_appearance_working_mat() -> bool:
 	if _appearance_working_mat != null:
 		return true
@@ -419,7 +419,7 @@ func _ensure_appearance_working_mat() -> bool:
 	return true
 
 
-## Restore natural material and clear working material reference.
+# Restore natural material and clear working material reference.
 func _clear_appearance_working_mat() -> void:
 	if _appearance_mesh != null:
 		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
@@ -430,7 +430,7 @@ func _clear_appearance_working_mat() -> void:
 		_outline_material = null
 
 
-## Create and manage 3D outline material via next_pass
+# Create and manage 3D outline material via next_pass
 func _ensure_outline_material() -> bool:
 	if _outline_material != null:
 		return true

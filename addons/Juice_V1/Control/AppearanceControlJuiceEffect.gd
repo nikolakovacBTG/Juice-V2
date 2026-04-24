@@ -5,7 +5,7 @@
 
 # ============================================================================
 # WHAT: Animates visual appearance properties of Control (UI) node targets.
-# WHY: Correct V1 stackable architecture — effects do not write to target
+# WHY: Maintains stackable invariant — effects do not write to target
 #      directly; the domain node owns the single write per channel per frame.
 # SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Handle Node2D or Node3D targets — use Appearance2D/3DJuiceEffect.
@@ -585,7 +585,7 @@ func _resolve_to_brightness(_ctrl: Control) -> float:
 # FLICKER SYSTEM
 # =============================================================================
 
-# Phase C: Compute flicker multiplier for output delta (not progress)
+# Compute flicker multiplier for output delta (not progress)
 func _compute_flicker_multiplier() -> float:
 	if flicker_mode == FlickerMode.NONE:
 		return 1.0

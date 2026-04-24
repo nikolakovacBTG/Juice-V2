@@ -5,7 +5,7 @@
 
 # =============================================================================
 # WHAT: Control-domain continuous-accumulation (Progress) effect.
-# WHY:  Ports ProgressControlJuiceComp to V1 Resource architecture.
+# WHY:  Defines a resource-based progress driver for Control targets.
 # SYSTEM: Juice System (addons/Juice_V1/Control/)
 # DOES NOT: Handle Node2D or Node3D targets.
 # DOES NOT: Handle arbitrary property accumulation -- use ProgressPropertyJuiceEffectBase.

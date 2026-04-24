@@ -48,6 +48,7 @@ extends Node
 @export_node_path("Node") var signal_bus_path: NodePath = "/root/SignalBus"
 
 @export_group("Debug")
+## Prints detailed state changes and logic paths to the console.
 @export var debug_enabled: bool = false
 
 

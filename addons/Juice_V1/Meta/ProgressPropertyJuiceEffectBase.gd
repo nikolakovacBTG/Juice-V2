@@ -5,7 +5,7 @@
 
 # =============================================================================
 # WHAT: Accumulates any float/Vector2/Vector3/Color property on any node.
-# WHY:  Ports ProgressPropertyJuiceComp to V1 Resource architecture.
+# WHY:  Defines a resource-based progress driver for the Property family.
 #       Domain-agnostic: targets any property via string path on any node.
 #       Examples: "modulate:a", "material:shader_parameter/dissolve", "speed"
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
@@ -69,7 +69,9 @@ var property_type: int = PropertyType.FLOAT:
 		property_type = value
 		notify_property_list_changed()
 
+## Begin accumulating immediately on _ready instead of waiting for a trigger.
 var auto_start: bool = false
+## When true, the accumulated value persists after stop. When false, restores to pre-animation value.
 var hold_on_stop: bool = true
 
 # --- Rate vars (one visible at a time based on property_type) ---
@@ -185,10 +187,12 @@ var _last_delta: float = 0.0
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+## Progress accumulates every frame based on delta, requiring continuous ticking.
 func _needs_sustain() -> bool:
 	return true
 
 
+## Captures base values on first play to establish the starting accumulation point.
 func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_capture_base(target)
@@ -197,6 +201,7 @@ func _on_animate_start(target: Node) -> void:
 			property_path, PropertyType.keys()[property_type], _current_direction])
 
 
+## Restores the target to its pre-accumulation state if hold_on_stop is false.
 func _restore_to_natural(target: Node) -> void:
 	if not hold_on_stop:
 		_reset_accumulated()
@@ -204,6 +209,7 @@ func _restore_to_natural(target: Node) -> void:
 		_write_natural(target)
 
 
+## Intercepts the tick to cache the delta time for _apply_effect, since Resources don't have _process.
 func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 	_last_delta = delta
 	_pending_restart_reversed = false
@@ -218,6 +224,7 @@ func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 # APPLY EFFECT — direct write via set_indexed()
 # =============================================================================
 
+## Accumulates the typed rate * delta * progress and writes it directly to the target via set_indexed.
 func _apply_effect(progress: float, target: Node) -> void:
 	if property_path.is_empty():
 		return
@@ -267,6 +274,7 @@ func _apply_effect(progress: float, target: Node) -> void:
 # BOUND CHECKING
 # =============================================================================
 
+# Applies boundary logic (wrap, reverse, stop) when the accumulated value exceeds the configured bound.
 func _check_bounds(target: Node) -> void:
 	if _awaiting_reverse_eased:
 		return
@@ -300,6 +308,7 @@ func _check_bounds(target: Node) -> void:
 					parent.queue_free()
 
 
+# Evaluates whether the accumulated distance has breached the bound limit across the configured data type.
 func _is_bound_exceeded() -> bool:
 	match property_type:
 		PropertyType.FLOAT:
@@ -316,6 +325,7 @@ func _is_bound_exceeded() -> bool:
 	return false
 
 
+# Snaps the accumulated value exactly to the boundary limit to prevent overshoot drifting on reversal or stop.
 func _clamp_to_bound(target: Node) -> void:
 	if property_path.is_empty():
 		return
@@ -346,6 +356,7 @@ func _clamp_to_bound(target: Node) -> void:
 			))
 
 
+# Resets the accumulation value to zero (or wraps via modulo) for continuous looping effects.
 func _wrap_accumulated() -> void:
 	match property_type:
 		PropertyType.FLOAT:
@@ -362,6 +373,7 @@ func _wrap_accumulated() -> void:
 # HELPERS
 # =============================================================================
 
+# Bakes the current accumulation into the base value before reversing direction to prevent snap-back on ping-pong effects.
 func _absorb_accumulated_into_base() -> void:
 	match property_type:
 		PropertyType.FLOAT:
@@ -381,6 +393,7 @@ func _absorb_accumulated_into_base() -> void:
 			_accumulated_color = Color(0.0, 0.0, 0.0, 0.0)
 
 
+# Clears all active accumulators back to zero.
 func _reset_accumulated() -> void:
 	_accumulated_float = 0.0
 	_accumulated_vec2 = Vector2.ZERO
@@ -388,6 +401,7 @@ func _reset_accumulated() -> void:
 	_accumulated_color = Color(0.0, 0.0, 0.0, 0.0)
 
 
+# Reads the true natural property value directly from the engine before any Juice accumulation starts.
 func _capture_base(target: Node) -> void:
 	if _has_base or property_path.is_empty():
 		return
@@ -406,6 +420,7 @@ func _capture_base(target: Node) -> void:
 		print("[ProgressProperty] Captured base '%s' = %s" % [property_path, value])
 
 
+# Writes the unmodified base value back to the engine property on stop.
 func _write_natural(target: Node) -> void:
 	if property_path.is_empty():
 		return
@@ -424,6 +439,7 @@ func _write_natural(target: Node) -> void:
 # CONFIGURATION WARNINGS
 # =============================================================================
 
+# Warns users if the dynamic property path is empty, which would cause silent failure.
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	if property_path.is_empty():

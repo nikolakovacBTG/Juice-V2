@@ -34,6 +34,12 @@ Authorization is given by a normal positive/negative answer to a direct authoriz
 
 At the top of every script, include a clear comment explaining: What it does, why it exists, its system, and what it does NOT handle.
 
+**The WHY Block Standard & Translation Rule:**
+The `# WHY:` block must define the class's architectural purpose and the constraints it enforces. Do not explain migration history (e.g. no "V0", "V1", "refactored"). Transform legacy comments into pure structural rationale. Explain *why* the architecture demands a specific approach, without referencing past versions.
+
+**Method Documentation Standard:**
+Every method (public and private) must have a brief description and a short rationale (what problem it solves / why it is necessary). Use `##` for public methods to expose them to Godot's built-in docs. Use `#` for internal (`_`) methods to hide plumbing from end-users. Skip trivial overrides unless they contain non-obvious logic.
+
 ---
 
 ## 3. Inspector-Exposed Configuration

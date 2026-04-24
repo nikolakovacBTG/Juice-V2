@@ -514,9 +514,9 @@ func _remove_contribution() -> void:
 # SHAKE OSCILLATOR
 # =============================================================================
 
-## Returns the effective multiplier for the current frame.
-## DETERMINISTIC: returns envelope (0→1→0 curve value).
-## SHAKE: returns envelope × FastNoiseLite sample (decorrelated per channel via seed_offset).
+# Returns the effective multiplier for the current frame.
+# DETERMINISTIC: returns envelope (0→1→0 curve value).
+# SHAKE: returns envelope × FastNoiseLite sample (decorrelated per channel via seed_offset).
 func _sample(envelope: float, seed_offset: float) -> float:
 	match animation_mode:
 		AnimationMode.DETERMINISTIC:
@@ -536,15 +536,15 @@ func _sample(envelope: float, seed_offset: float) -> float:
 # UTILITY DISCOVERY + AUTO-BOOTSTRAP
 # =============================================================================
 
-## Returns the utility instantly if it already exists.
+# Returns the utility instantly if it already exists.
 func _find_utility() -> ScreenJuiceUtility:
 	if is_instance_valid(ScreenJuiceUtility.instance):
 		return ScreenJuiceUtility.instance
 	return null
 
 
-## Returns the utility, bootstrapping one at SceneTree.root if not present.
-## Returns null in editor (would overlay Godot's own UI) or if tree unavailable.
+# Returns the utility, bootstrapping one at SceneTree.root if not present.
+# Returns null in editor (would overlay Godot's own UI) or if tree unavailable.
 func _find_or_create_utility() -> ScreenJuiceUtility:
 	if Engine.is_editor_hint():
 		return null
@@ -553,8 +553,8 @@ func _find_or_create_utility() -> ScreenJuiceUtility:
 	return _bootstrap_utility()
 
 
-## Creates ScreenJuiceUtility + CanvasLayer at SceneTree.root.
-## Persists across scene transitions. Only called on first use.
+# Creates ScreenJuiceUtility + CanvasLayer at SceneTree.root.
+# Persists across scene transitions. Only called on first use.
 func _bootstrap_utility() -> ScreenJuiceUtility:
 	if not is_instance_valid(_host_node):
 		push_warning("[ScreenJuiceEffect] Cannot bootstrap — _host_node is null. Is this effect chained without host?")
@@ -597,7 +597,7 @@ func _bootstrap_utility() -> ScreenJuiceUtility:
 # HELPERS
 # =============================================================================
 
-## Converts screen_offset from the user's chosen unit to UV-normalized.
+# Converts screen_offset from the user's chosen unit to UV-normalized.
 func _offset_to_uv(px_or_uv: Vector2) -> Vector2:
 	if offset_unit == ScreenOffsetUnit.UV_NORMALIZED:
 		return px_or_uv

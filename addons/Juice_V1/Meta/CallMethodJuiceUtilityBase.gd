@@ -8,7 +8,8 @@
 # WHAT: Calls one method per CallMethodEntry when an animation starts or completes.
 #       Domain-agnostic — no visual output.
 # WHY:  Allows designers to wire "when this animation fires → call method X"
-#       purely in the inspector, without writing custom scripts. Replaces V0
+#       purely in the inspector, without writing custom scripts. Integrates natively
+#       with the event orchestration system.
 #       CallMethodJuiceUtility (standalone Node) with a chainable Resource that
 #       participates in the recipe stack: start_delay, chain_to, loop all work.
 #       Upgraded from single-entry to array to match recipe-item paradigm.
@@ -165,7 +166,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
-## Resolve all entry target nodes relative to the host / fallback target.
+# Resolve all entry target nodes relative to the host / fallback target.
 func _resolve_all_targets(fallback_target: Node) -> void:
 	_resolved_targets.clear()
 	for entry: CallMethodEntry in entries:
@@ -184,7 +185,7 @@ func _resolve_all_targets(fallback_target: Node) -> void:
 			_resolved_targets.append(fallback_target)
 
 
-## Call all entries whose call_on matches the given timing.
+# Call all entries whose call_on matches the given timing.
 func _call_entries_for_timing(timing: CallTiming, timing_label: String) -> void:
 	for i: int in entries.size():
 		var entry: CallMethodEntry = entries[i]
@@ -200,6 +201,7 @@ func _call_entries_for_timing(timing: CallTiming, timing_label: String) -> void:
 		_do_call(entry, method_target, timing_label)
 
 
+# Validates the target node and method exist, then dispatches the call with or without arguments.
 func _do_call(entry: CallMethodEntry, method_target: Node, timing_label: String) -> void:
 	if not is_instance_valid(method_target):
 		if debug_enabled:

@@ -96,7 +96,7 @@ signal proximity_exited
 		_update_auto_shape_size()
 
 @export_group("Debug")
-
+## Prints detailed state changes and logic paths to the console.
 @export var debug_enabled: bool = false
 
 
@@ -332,13 +332,13 @@ func _progress_sphere_view_angle() -> float:
 	var edge_fraction := sqrt(maxf(1.0 - centrality * centrality, 0.0))
 
 	if falloff_zone <= 0.0:
-		return 1.0  # No gradient — entire shape is full progress
+		return 1.0 # No gradient — entire shape is full progress
 
 	# Inner boundary: the fraction of the projected radius that's full progress
 	var inner_boundary := 1.0 - falloff_zone
 
 	if edge_fraction <= inner_boundary:
-		return 1.0  # Inside the inner zone
+		return 1.0 # Inside the inner zone
 
 	# Gradient zone: linear ramp from 1 (inner boundary) to 0 (edge)
 	return 1.0 - clampf((edge_fraction - inner_boundary) / falloff_zone, 0.0, 1.0)

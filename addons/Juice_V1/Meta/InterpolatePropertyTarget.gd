@@ -143,9 +143,9 @@ func _get_property_list() -> Array[Dictionary]:
 	return props
 
 
-## Returns value fields for the given prefix ("from"/"to") keyed by detected type.
-## Returns [] when TYPE_NIL (no property picked yet) — hides all value fields
-## until the user picks a property and the type is auto-detected.
+# Returns inspector value fields for the given prefix ("from"/"to") keyed by detected type.
+# Returns [] when TYPE_NIL (no property picked yet) — hides all value fields
+# until the user picks a property and the type is auto-detected.
 func _value_props(prefix: String, label: String) -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 	var t := _detected_type
@@ -309,6 +309,8 @@ func _capture_to_in_editor_now() -> void:
 	notify_property_list_changed()
 
 
+# Resolves the target node at editor time for Capture button.
+# Uses JuiceEditorContext first (robust), then falls back to selection walking (fragile).
 func _resolve_editor_node() -> Node:
 	# Robust Context Discovery
 	var context_host: Node = JuiceEditorContext.get_host_node(self)

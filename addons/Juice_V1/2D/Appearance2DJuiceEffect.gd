@@ -5,7 +5,7 @@
 
 # ============================================================================
 # WHAT: Animates visual appearance properties of Node2D targets.
-# WHY: Correct V1 stackable architecture — effects do not write to target
+# WHY: Maintains stackable invariant — effects do not write to target
 #      directly; the domain node owns the single write per channel per frame.
 # SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Handle Control or Node3D targets — use AppearanceControl/3DJuiceEffect.
@@ -556,7 +556,7 @@ func _get_interrupt_identity() -> Variant:
 # FLICKER SYSTEM
 # =============================================================================
 
-# Phase C: Compute flicker multiplier for output delta (not progress)
+# Compute flicker multiplier for output delta (not progress)
 func _compute_flicker_multiplier() -> float:
 	if flicker_mode == FlickerMode.NONE:
 		return 1.0

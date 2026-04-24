@@ -88,7 +88,7 @@ signal proximity_exited
 		_update_auto_shape_size()
 
 @export_group("Debug")
-
+## Prints detailed state changes and logic paths to the console.
 @export var debug_enabled: bool = false
 
 

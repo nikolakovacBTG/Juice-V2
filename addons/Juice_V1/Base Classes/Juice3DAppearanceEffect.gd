@@ -41,14 +41,14 @@ var _albedo_factor: Color = Color.WHITE
 var _alpha_factor: float = 1.0
 
 
-## Reset appearance factors to identity. Called by domain node when effect stops.
+# Reset appearance factors to identity. Called by domain node when effect stops.
 func _clear_appearance() -> void:
 	_albedo_factor = Color.WHITE
 	_alpha_factor = 1.0
 
 
-## Return current appearance contribution as a Dictionary.
-## Used by Sequencer contribution-tracking (generic, no hardcoded channels).
+# Return current appearance contribution as a Dictionary.
+# Used by Sequencer contribution-tracking (generic, no hardcoded channels).
 func _get_seq_contribution() -> Dictionary:
 	var d := {}
 	if _contributes_appearance:

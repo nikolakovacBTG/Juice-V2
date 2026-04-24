@@ -421,6 +421,7 @@ var _ledger_base_snapshot: Dictionary = {}
 
 ## Start animating this effect. play_in = true for animate_in, false for animate_out.
 ## use_start_delay: if false, skip this effect's start_delay (e.g. chained effects).
+## Separates initialization from playback to support staggered chaining and external orchestration without relying on a central timeline.
 func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node = null) -> void:
 	# Determine direction based on play_in and trigger_behaviour
 	if play_in:
@@ -474,6 +475,7 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 
 
 ## Advance animation by one frame. Returns PLAYING or COMPLETED.
+## Allows the domain host (e.g. JuiceControl) to drive effects synchronously. This ensures all active effects complete their math before a single combined write occurs per frame.
 func tick(delta: float, target: Node) -> TickResult:
 	# Keep _current_delta fresh for all _apply_effect calls this frame.
 	# Subclasses read _current_delta instead of maintaining their own _tick_delta.
@@ -547,6 +549,7 @@ func tick(delta: float, target: Node) -> TickResult:
 
 
 ## Stop immediately and restore to natural state.
+## Provides a hard reset for sequence cancellation or target node cleanup, ensuring no visual residue is left behind.
 func stop(target: Node) -> void:
 	_is_playing = false
 	_in_start_delay = false
@@ -559,6 +562,7 @@ func stop(target: Node) -> void:
 
 
 ## Stop but keep current visual state.
+## Required for PLAY_IN_ONLY behaviors where the effect must freeze at peak and wait indefinitely for a reverse trigger.
 func stop_and_hold() -> void:
 	_is_playing = false
 	_in_start_delay = false
@@ -569,6 +573,7 @@ func stop_and_hold() -> void:
 
 
 ## Directly set progress (for editor preview scrubbing).
+## Exposes the internal math to the editor tools so designers can scrub the timeline without running the scene or triggering lifecycle events.
 func set_progress(value: float, target: Node) -> void:
 	_animation_progress = clampf(value, 0.0, 1.0)
 	_apply_effect(_animation_progress, target)
@@ -586,6 +591,7 @@ func get_progress() -> float:
 
 ## Estimate seconds remaining until this effect returns COMPLETED.
 ## Used by the host node to trigger chained_preroll at the right time.
+# Required to support negative chained_preroll values, allowing subsequent effects in the sequence to overlap before this one finishes.
 func _get_time_to_completion() -> float:
 	if not _is_playing:
 		return 0.0
@@ -892,6 +898,8 @@ func _reverse_curve_time(curve: Curve) -> Curve:
 # EDITOR PREVIEW HELPERS
 # =============================================================================
 
+## Calculates the visual progress (0.0 to 1.0) at an exact point in time.
+## Enables the Editor Transport to scrub the animation timeline deterministically without running physics ticks or scene lifecycle methods.
 func get_progress_at_time(time: float) -> float:
 	var has_out := trigger_behaviour == TriggerBehaviour.PLAY_IN_AND_OUT
 	if time < start_delay: return 0.0
@@ -910,6 +918,8 @@ func get_progress_at_time(time: float) -> float:
 	return 1.0
 
 
+## Calculates the full timeline length of the effect including delays and holds.
+## Allows the editor preview sequencer to know the total duration of the animation for UI scaling.
 func get_total_preview_duration() -> float:
 	var total := start_delay + duration_in
 	if trigger_behaviour == TriggerBehaviour.PLAY_IN_AND_OUT:
@@ -918,6 +928,7 @@ func get_total_preview_duration() -> float:
 
 ## Returns the maximum sensible chained_preroll value — the total duration
 ## from start to completion for this effect's trigger_behaviour.
+# Prevents users from setting a preroll that triggers chained effects before this effect even starts.
 func _get_max_chained_preroll() -> float:
 	match trigger_behaviour:
 		TriggerBehaviour.PLAY_IN_AND_OUT:

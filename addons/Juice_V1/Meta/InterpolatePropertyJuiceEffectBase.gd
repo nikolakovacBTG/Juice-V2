@@ -7,7 +7,7 @@
 # =============================================================================
 # WHAT: Drives a list of arbitrary properties from configurable From to To
 #       values using the JuiceEffectBase animate_in/out envelope for easing.
-# WHY:  Ports the Property family's From/To effect to V1. Domain-agnostic.
+# WHY:  Provides a domain-agnostic generic From/To interpolation effect for the Property family.
 #       Any exported property on any node can be tweened: energy, modulate:a,
 #       shader_parameter paths, custom vars — all via set_indexed().
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
@@ -37,6 +37,7 @@ func _init() -> void:
 # =============================================================================
 
 ## Tell the base class which resource type to use for the typed array hint.
+# Required to support strongly-typed property inspector rendering for different concrete effects.
 func _get_target_resource_type() -> String:
 	return "InterpolatePropertyTarget"
 
@@ -55,6 +56,7 @@ func _needs_sustain() -> bool:
 	return false
 
 
+## Captures dynamic ON_TRIGGER From/To values at the exact moment of playback, ensuring accurate start points when interrupted or chained.
 func _on_animate_start(target: Node) -> void:
 	# Capture base values (restore target) and resolve nodes.
 	super._on_animate_start(target)
@@ -64,6 +66,7 @@ func _on_animate_start(target: Node) -> void:
 			entry.capture_runtime_values()
 
 
+## Iterates over the target entries and performs polymorphic interpolation (lerp), mapping 0-1 progress to property values directly on the engine target.
 func _apply_effect(progress: float, _target: Node) -> void:
 	for entry: InterpolatePropertyTarget in property_targets:
 		if entry == null or not entry.is_configured():
@@ -80,8 +83,8 @@ func _apply_effect(progress: float, _target: Node) -> void:
 # LERP CORE
 # =============================================================================
 
-## Compute the interpolated value for one entry at the given progress (0–1).
-## Returns null for TYPE_NIL (unknown) or mismatched from/to types.
+# Compute the interpolated value for one entry at the given progress (0–1).
+# Returns null for TYPE_NIL (unknown) or mismatched from/to types.
 func _compute_lerp(entry: InterpolatePropertyTarget, progress: float) -> Variant:
 	var from_val: Variant = entry.get_from()
 	var to_val:   Variant = entry.get_to()

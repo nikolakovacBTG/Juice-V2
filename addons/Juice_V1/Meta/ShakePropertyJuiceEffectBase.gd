@@ -8,7 +8,7 @@
 #       Uses sin(time * frequency) blended with per-frame randomness.
 #       A per-entry phase offset makes each property move independently.
 #       Progress envelope (inherited from JuiceEffectBase) scales intensity.
-# WHY:  Ports the Property family's shake effect to V1. Domain-agnostic.
+# WHY:  Provides a domain-agnostic procedural shake effect for the Property family.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Use domain delta aggregation — writes via set_indexed() directly.
 # NOTE: Shake algorithm mirrors Shake2DJuiceEffect — intentional duplication
@@ -35,6 +35,7 @@ var randomness: float = 0.5
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
+# Required to support strongly-typed property inspector rendering for different concrete effects.
 func _get_target_resource_type() -> String:
 	return "ShakePropertyTarget"
 
@@ -98,10 +99,12 @@ var _shake_seed: float = 0.0
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+## Shake is a continuous procedural effect that must keep ticking even when progress reaches 1.0 (peak hold).
 func _needs_sustain() -> bool:
 	return true
 
 
+## Captures base values and resets the discrete tick timer before the first frame.
 func _on_animate_start(target: Node) -> void:
 	super._on_animate_start(target)
 	# Fresh randomized seed each trigger — each play sounds different.
@@ -109,6 +112,7 @@ func _on_animate_start(target: Node) -> void:
 	_shake_time = 0.0
 
 
+## Samples random noise discretely based on the frequency timer and writes the resulting delta to the engine property.
 func _apply_effect(progress: float, _target: Node) -> void:
 	_shake_time += _current_delta  # Same pattern as Shake2DJuiceEffect._apply_effect
 
@@ -132,6 +136,7 @@ func _apply_effect(progress: float, _target: Node) -> void:
 			entry.property_path, entry._base_value + delta)
 
 
+## Undoes the shake delta from the target property to cleanly reset it on stop.
 func _restore_to_natural(target: Node) -> void:
 	super._restore_to_natural(target)
 	_shake_time = 0.0
@@ -143,8 +148,8 @@ func _restore_to_natural(target: Node) -> void:
 #  Keep in sync with Shake2D/3D if the algorithm changes.)
 # =============================================================================
 
-## Compute the shake delta for one entry at the given progress (0–1).
-## phase_offset: unique per-entry value so properties shake out of phase.
+# Compute the shake delta for one entry at the given progress (0–1).
+# phase_offset: unique per-entry value so properties shake out of phase.
 func _compute_shake_delta(
 	entry: ShakePropertyTarget, progress: float, phase_offset: float
 ) -> Variant:

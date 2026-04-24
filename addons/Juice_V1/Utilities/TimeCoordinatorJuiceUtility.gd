@@ -132,12 +132,11 @@ func _exit_tree() -> void:
 # PUBLIC API
 # =============================================================================
 
+## Register a time scale request.
+## The effective scale is computed from all active requests.
+## requester: The object making the request (Node or Resource) — used as identifier.
+## scale: Desired time scale (0.0 = freeze, <1.0 = slow, >1.0 = fast)
 func request_time_scale(requester: Object, scale: float) -> void:
-	## Register a time scale request.
-	## The effective scale is computed from all active requests.
-	##
-	## @param requester: The object making the request (Node or Resource) — used as identifier.
-	## @param scale: Desired time scale (0.0 = freeze, <1.0 = slow, >1.0 = fast)
 
 	if not is_instance_valid(requester):
 		push_warning("[TimeCoordinatorJuiceUtility] Invalid requester")
@@ -155,11 +154,10 @@ func request_time_scale(requester: Object, scale: float) -> void:
 	_update_effective_scale()
 
 
+## Release a time scale request.
+## Called when the requesting system no longer needs time manipulation.
+## requester: The object (Node or Resource) that made the original request.
 func release_time_scale(requester: Object) -> void:
-	## Release a time scale request.
-	## Called when the requesting system no longer needs time manipulation.
-	##
-	## @param requester: The object (Node or Resource) that made the original request.
 
 	if not is_instance_valid(requester):
 		return
@@ -178,18 +176,18 @@ func release_time_scale(requester: Object) -> void:
 		_update_effective_scale()
 
 
+## Returns the current effective time scale.
 func get_effective_scale() -> float:
-	## Returns the current effective time scale.
 	return _effective_scale
 
 
+## Returns true if any system is currently requesting time manipulation.
 func has_active_requests() -> bool:
-	## Returns true if any system is currently requesting time manipulation.
 	return not _requests.is_empty()
 
 
+## Emergency clear of all requests. Use for scene transitions or recovery.
 func clear_all_requests() -> void:
-	## Emergency clear of all requests. Use for scene transitions or recovery.
 	_requests.clear()
 	_update_effective_scale()
 
@@ -201,8 +199,8 @@ func clear_all_requests() -> void:
 # INTERNAL LOGIC
 # =============================================================================
 
+# Computes the effective time scale from all active requests and applies it.
 func _update_effective_scale() -> void:
-	## Computes the effective time scale from all active requests and applies it.
 
 	var old_scale := _effective_scale
 
@@ -236,8 +234,8 @@ func _update_effective_scale() -> void:
 		time_scale_changed.emit(_effective_scale, old_scale)
 
 
+# Searches for a PitchShift effect on the configured audio bus.
 func _find_pitch_effect() -> void:
-	## Searches for a PitchShift effect on the configured audio bus.
 	if _audio_bus_index < 0:
 		return
 
@@ -254,8 +252,8 @@ func _find_pitch_effect() -> void:
 		push_warning("[TimeCoordinatorJuiceUtility] No PitchShift effect on bus '%s'" % affect_audio_bus)
 
 
+# Adjusts the pitch effect on the configured audio bus to match time scale.
 func _apply_audio_pitch() -> void:
-	## Adjusts the pitch effect on the configured audio bus to match time scale.
 	if _audio_bus_index < 0 or _pitch_effect_index < 0:
 		return
 

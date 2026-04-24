@@ -8,7 +8,7 @@
 # WHAT: Noise-drives a list of arbitrary properties on any nodes.
 #       Uses FastNoiseLite with multi-channel sampling (Y offset per axis).
 #       Progress envelope (inherited from JuiceEffectBase) scales intensity.
-# WHY:  Ports the Property family's noise effect to V1. Domain-agnostic:
+# WHY:  Provides a domain-agnostic continuous noise perturbation effect for the Property family.
 #       targets any property on any node — not bound to position/rotation/scale.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Use domain delta aggregation — writes via set_indexed() directly.
@@ -81,6 +81,7 @@ var clamp_max: float = 1.0
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
+# Required to support strongly-typed property inspector rendering for different concrete effects.
 func _get_target_resource_type() -> String:
 	return "NoisePropertyTarget"
 
@@ -217,6 +218,7 @@ func _needs_sustain() -> bool:
 	return true
 
 
+## Captures base values and initializes the FastNoiseLite generator with current seed/frequency before the first tick.
 func _on_animate_start(target: Node) -> void:
 	super._on_animate_start(target)
 	# Only reset time and rebuild noise on a fresh start.
@@ -226,6 +228,7 @@ func _on_animate_start(target: Node) -> void:
 		_setup_noise()
 
 
+## Samples the 1D noise space for each target entry and writes the resulting delta to the engine property.
 func _apply_effect(progress: float, _target: Node) -> void:
 	# _current_delta is set by JuiceEffectBase.tick() each frame.
 	# Same pattern as Noise2DJuiceEffect._advance_noise_time(_current_delta).
@@ -247,6 +250,7 @@ func _apply_effect(progress: float, _target: Node) -> void:
 			entry.property_path, entry._base_value + delta)
 
 
+## Undoes the noise delta from the target property to cleanly reset it on stop.
 func _restore_to_natural(target: Node) -> void:
 	super._restore_to_natural(target)
 	_noise_time = 0.0
@@ -258,12 +262,14 @@ func _restore_to_natural(target: Node) -> void:
 #  has no mixins. Keep in sync with Noise2D/3D if algorithm changes.)
 # =============================================================================
 
+# Drives the 1D noise sample position forward based on frame delta and user speed multiplier.
 func _advance_noise_time(delta: float) -> void:
 	# Guard: only advance when actually playing (same guard as Noise2D).
 	if _target_progress > 0.0:
 		_noise_time += delta
 
 
+# Instantiates and configures the FastNoiseLite resource if missing or dirty.
 func _setup_noise() -> void:
 	if _noise == null:
 		_noise = FastNoiseLite.new()
@@ -282,8 +288,8 @@ func _setup_noise() -> void:
 		_noise.domain_warp_enabled = false
 
 
-## Sample a single noise value at the current time.
-## y_offset separates channels: 0.0 = X, 100.0 = Y, 200.0 = Z, 300.0 = W.
+# Sample a single noise value at the current time.
+# y_offset separates channels: 0.0 = X, 100.0 = Y, 200.0 = Z, 300.0 = W.
 func _sample_noise(y_offset: float) -> float:
 	if _noise == null:
 		return 0.0
@@ -295,8 +301,8 @@ func _sample_noise(y_offset: float) -> float:
 	return clampf(raw, clamp_min, clamp_max)
 
 
-## Compute the noise delta for one entry at the given progress (0–1).
-## Returns Variant typed to match the entry's _detected_type, or null if unknown.
+# Compute the noise delta for one entry at the given progress (0–1).
+# Returns Variant typed to match the entry's _detected_type, or null if unknown.
 func _compute_noise_delta(entry: NoisePropertyTarget, progress: float) -> Variant:
 	if progress <= 0.0:
 		return null

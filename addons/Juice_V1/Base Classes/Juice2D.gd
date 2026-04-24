@@ -56,9 +56,9 @@ var _own_modulate_contribution: Color = Color.WHITE
 func _ready() -> void:
 	super._ready()
 	if debug_enabled:
-		print("[DEBUG] Phase B: Juice2D _ready() called")
-		print("[DEBUG] Phase B: Mode: ", mode)
-		print("[DEBUG] Phase B: Target node: ", _target_node)
+		print("[DEBUG] Juice2D _ready() called")
+		print("[DEBUG] Mode: ", mode)
+		print("[DEBUG] Target node: ", _target_node)
 
 
 func _exit_tree() -> void:
@@ -69,7 +69,7 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	if debug_enabled:
-		print("[DEBUG] Phase B: Juice2D _process() called with delta: ", delta)
+		print("[DEBUG] Juice2D _process() called with delta: ", delta)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -84,7 +84,7 @@ func _resolve_target() -> Node:
 		if parent != null and debug_enabled:
 			push_warning("[%s] Parent '%s' is not a Node2D node" % [name, parent.name])
 		return null
-	return null  # SEQUENCER Phase 5
+	return null  # SEQUENCER resolves per-target dynamically
 
 # =============================================================================
 # AUTO-CONNECT (Override)
@@ -248,7 +248,7 @@ func _post_tick_write() -> void:
 		combined_modulate.a *= app_eff._modulate_factor.a
 		has_appearance = true
 
-	# Phase B: Sibling stacking with metadata-based natural base capture
+	# Sibling stacking with metadata-based natural base capture
 	# Get shared natural base from target metadata (captured by first Juice2D)
 	const META_KEY := &"juice_modulate_natural"
 	var base_color: Color = n2d.modulate

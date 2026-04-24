@@ -8,7 +8,8 @@
 # WHAT: Emits one juice_signal per SignalEmitEntry when an animation
 #       starts or completes. Domain-agnostic — no visual output.
 # WHY:  Allows designers to wire "when this animation fires → notify system X"
-#       purely in the inspector, without writing custom scripts. Replaces V0
+#       purely in the inspector, without writing custom scripts. Integrates natively
+#       with the event orchestration system.
 #       SignalEmitJuiceUtility (standalone Node) with a chainable Resource that
 #       participates in the recipe stack: start_delay, chain_to, loop all work.
 #       Upgraded from single-entry to array to match recipe-item paradigm.
@@ -155,7 +156,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
-## Fire all entries whose emit_on matches the given timing.
+# Fire all entries whose emit_on matches the given timing.
 func _emit_for_timing(timing: EmitTiming, timing_label: String) -> void:
 	for entry: SignalEmitEntry in entries:
 		if entry == null:

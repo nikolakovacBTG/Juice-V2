@@ -192,7 +192,6 @@ func _invalidate_base_cache() -> void:
 
 # TODO: Override _get_interrupt_identity() to share identity with future
 # TransformControlJuiceEffect SCALE mode once that effect is ported.
-# V0 did: return [load("TransformControlJuiceComp.gd"), TransformTarget.SCALE]
 
 
 # =============================================================================

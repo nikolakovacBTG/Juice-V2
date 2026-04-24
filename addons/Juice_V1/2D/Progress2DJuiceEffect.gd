@@ -5,7 +5,7 @@
 
 # =============================================================================
 # WHAT: 2D-domain continuous-accumulation (Progress) effect.
-# WHY:  Ports Progress2DJuiceComp to V1 Resource architecture.
+# WHY:  Defines a resource-based progress driver for Node2D targets.
 #       Uses Juice2DTransformEffect delta system for stackable, host-written output.
 #       progress = speed multiplier (not lerp factor):
 #       value += rate * delta * progress * direction
