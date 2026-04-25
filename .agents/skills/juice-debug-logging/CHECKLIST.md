@@ -21,7 +21,7 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 
 ## Phase 3: Base Classes
 
-### Batch 3A: Domain Nodes
+### Batch 3A: Domain Nodes ✅ (gap-fill pass complete)
 - [x] `JuiceControl.gd` — capture, pre_tick, post_tick_write
 - [x] `Juice2D.gd` — capture, pre_tick, post_tick_write
 - [x] `Juice3D.gd` — capture, pre_tick, post_tick_write

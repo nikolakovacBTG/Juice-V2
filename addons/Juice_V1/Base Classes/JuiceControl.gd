@@ -194,6 +194,10 @@ func _capture_base_values() -> void:
 	var ctrl := _target_node as Control
 	JuiceLedger.ensure(ctrl, ["position", "rotation", "scale", "self_modulate"])
 	_base_captured = true
+	JuiceLogger.log_capture(self, "Control", "position", ctrl.position, debug_enabled)
+	JuiceLogger.log_capture(self, "Control", "rotation", ctrl.rotation, debug_enabled)
+	JuiceLogger.log_capture(self, "Control", "scale", ctrl.scale, debug_enabled)
+	JuiceLogger.log_capture(self, "Control", "self_modulate", ctrl.self_modulate, debug_enabled)
 
 ## Detect external displacement of the target (Container re-sort, game logic, tweens).
 ## Updates the Shared Target Ledger baseline so animation deltas ride cleanly.
@@ -201,7 +205,12 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	var old_pos: Vector2 = JuiceLedger.get_base(ctrl, "position", ctrl.position)
 	JuiceLedger.sync_base_if_moved(ctrl, ["position", "rotation", "scale", "self_modulate"])
+	var new_pos: Vector2 = JuiceLedger.get_base(ctrl, "position", ctrl.position)
+	if old_pos != new_pos:
+		JuiceLogger.log_aggregation("Control", ctrl.name, "external_move",
+				old_pos, new_pos - old_pos, new_pos, debug_enabled)
 
 
 ## Contribution-tracking write: subtract old contribution, add new contribution.
@@ -236,6 +245,16 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(ctrl, self, "rotation", new_rot)
 	JuiceLedger.register_delta(ctrl, self, "scale", new_scale)
 
+	JuiceLogger.log_aggregation("Control", ctrl.name, "position",
+			JuiceLedger.get_base(ctrl, "position", Vector2.ZERO),
+			new_pos,
+			JuiceLedger.get_total(ctrl, "position", Vector2.ZERO),
+			debug_enabled)
+	JuiceLogger.log_aggregation("Control", ctrl.name, "rotation",
+			JuiceLedger.get_base(ctrl, "rotation", 0.0),
+			new_rot,
+			JuiceLedger.get_total(ctrl, "rotation", 0.0),
+			debug_enabled)
 	JuiceLogger.log_aggregation("Control", ctrl.name, "scale",
 			JuiceLedger.get_base(ctrl, "scale", Vector2.ONE),
 			new_scale,
@@ -271,6 +290,7 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	JuiceLogger.log_info(self, "Control", "Temporarily undoing visual contributions", debug_enabled)
 
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(ctrl, self, false)
