@@ -557,7 +557,9 @@ func _find_or_create_utility() -> ScreenJuiceUtility:
 # Persists across scene transitions. Only called on first use.
 func _bootstrap_utility() -> ScreenJuiceUtility:
 	if not is_instance_valid(_host_node):
-		push_warning("[ScreenJuiceEffect] Cannot bootstrap — _host_node is null. Is this effect chained without host?")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"cannot bootstrap — _host_node is null (chained without host?)",
+				debug_enabled)
 		return null
 
 	var tree := _host_node.get_tree()
@@ -587,8 +589,9 @@ func _bootstrap_utility() -> ScreenJuiceUtility:
 	ScreenJuiceUtility.instance = util
 	util._ready()
 
-	if debug_enabled:
-		print("[ScreenJuiceEffect] Auto-bootstrapped ScreenJuiceUtility at root")
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"auto-bootstrapped ScreenJuiceUtility at root",
+			debug_enabled)
 
 	return util
 
@@ -606,5 +609,7 @@ func _offset_to_uv(px_or_uv: Vector2) -> Vector2:
 		var vp_size := _host_node.get_viewport().get_visible_rect().size
 		if vp_size.x > 0.0 and vp_size.y > 0.0:
 			return Vector2(px_or_uv.x / vp_size.x, px_or_uv.y / vp_size.y)
-	push_warning("[ScreenJuiceEffect] Could not convert pixels to UV — viewport unavailable, using raw value")
+	JuiceLogger.warn(self, _get_domain_tag(),
+			"could not convert pixels to UV — viewport unavailable, using raw value",
+			debug_enabled)
 	return px_or_uv

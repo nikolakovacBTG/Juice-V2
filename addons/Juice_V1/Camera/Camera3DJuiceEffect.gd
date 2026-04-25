@@ -329,8 +329,9 @@ func _bootstrap_utility_on(cam: Camera3D) -> CameraJuiceUtility:
 	cam.add_child(util)
 	util._initialize_camera()
 
-	if debug_enabled:
-		print("[Camera3DJuiceEffect] Auto-bootstrapped CameraJuiceUtility on '%s'" % cam.name)
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"auto-bootstrapped CameraJuiceUtility on '%s'" % cam.name,
+			debug_enabled)
 
 	return util
 
@@ -342,6 +343,7 @@ func _find_camera_3d() -> Camera3D:
 	if not vp:
 		return null
 	var cam := vp.get_camera_3d()
-	if not cam and debug_enabled:
-		push_warning("[Camera3DJuiceEffect] No active Camera3D found in viewport")
+	if not cam:
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"no active Camera3D found in viewport", debug_enabled)
 	return cam

@@ -163,7 +163,9 @@ var _overlay_texture_rect: TextureRect = null
 func _on_animate_start(_target: Node) -> void:
 	_overlay = JuiceScreenOverlayProvider.get_overlay()
 	if not is_instance_valid(_overlay):
-		push_warning("[ScreenOverlay] Could not get screen overlay from provider.")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"could not get screen overlay from provider",
+				debug_enabled)
 		return
 
 	# Skip resetting state during auto-reverse phase to prevent visible flicker.
@@ -173,12 +175,13 @@ func _on_animate_start(_target: Node) -> void:
 	_apply_texture_settings_to_overlay()
 	_apply_blend_mode_to_overlay()
 
-	if debug_enabled:
-		print("[ScreenOverlay] Start: color=%s, max_alpha=%.2f, direction=%s, blend=%s" % [
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"start: color=%s max_alpha=%.2f direction=%s blend=%s" % [
 			overlay_color,
 			max_alpha,
 			OverlayDirection.keys()[direction],
-			OverlayBlendMode.keys()[blend_mode]])
+			OverlayBlendMode.keys()[blend_mode]],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, _target: Node) -> void:

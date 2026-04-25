@@ -108,17 +108,17 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `ProgressProperty3DJuiceEffect.gd` — N/A
 - [x] `Time3DJuiceEffect.gd` — N/A
 
-### Batch 4K: Camera + Screen (5 files)
-- [ ] `Camera2DJuiceEffect.gd`
-- [ ] `Camera3DJuiceEffect.gd`
-- [ ] `ScreenJuiceEffect.gd`
-- [ ] `ScreenOverlayJuiceEffectBase.gd`
-- [ ] `CameraJuiceUtility.gd`
+### Batch 4K: Camera + Screen (5 files) ✅
+- [x] `Camera2DJuiceEffect.gd` — 1 push_warning → warn, 1 print → log_info
+- [x] `Camera3DJuiceEffect.gd` — 1 push_warning → warn, 1 print → log_info
+- [x] `ScreenJuiceEffect.gd` — 2 push_warning → warn, 1 print → log_info
+- [x] `ScreenOverlayJuiceEffectBase.gd` — 1 push_warning → warn, 1 print → log_info
+- [x] `CameraJuiceUtility.gd` — 1 push_warning → warn, 3 prints → log_info
 
-### Batch 4L: Screen Overlay Concrete (3 files)
-- [ ] `ScreenOverlayControlJuiceEffect.gd`
-- [ ] `ScreenOverlay2DJuiceEffect.gd`
-- [ ] `ScreenOverlay3DJuiceEffect.gd`
+### Batch 4L: Screen Overlay Concrete (3 files) ✅ (no prints — already clean)
+- [x] `ScreenOverlayControlJuiceEffect.gd` — N/A
+- [x] `ScreenOverlay2DJuiceEffect.gd` — N/A
+- [x] `ScreenOverlay3DJuiceEffect.gd` — N/A
 
 ### Batch 4M: Meta Utilities (5 files, simple)
 - [ ] `CallMethodJuiceUtilityBase.gd`

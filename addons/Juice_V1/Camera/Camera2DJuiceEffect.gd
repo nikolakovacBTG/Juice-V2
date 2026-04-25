@@ -360,9 +360,9 @@ func _find_or_create_utility() -> CameraJuiceUtility:
 
 	var cam := vp.get_camera_2d()
 	if not is_instance_valid(cam):
-		if debug_enabled:
-			push_warning("[Camera2DJuiceEffect] No enabled Camera2D found in viewport. " +
-				"Add a Camera2D to the scene and set Enabled = true.")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"no enabled Camera2D found in viewport — add a Camera2D and set Enabled = true",
+				debug_enabled)
 		return null
 
 	# Fast path — utility already exists
@@ -380,7 +380,8 @@ func _bootstrap_utility_on(cam: Camera2D) -> CameraJuiceUtility:
 	cam.add_child(util)
 	util._initialize_camera()
 
-	if debug_enabled:
-		print("[Camera2DJuiceEffect] Auto-bootstrapped CameraJuiceUtility on '%s'" % cam.name)
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"auto-bootstrapped CameraJuiceUtility on '%s'" % cam.name,
+			debug_enabled)
 
 	return util
