@@ -392,8 +392,9 @@ func _on_animate_start(target: Node) -> void:
 	tree_root.add_child.call_deferred(orchestrator)
 	orchestrator.execute.call_deferred()
 
-	if debug_enabled:
-		print("[SceneAction] Orchestrator spawn deferred to root — fire and forget")
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"orchestrator spawn deferred to root — fire and forget",
+			debug_enabled)
 
 
 func _apply_effect(_progress: float, _target: Node) -> void:

@@ -120,12 +120,12 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `ScreenOverlay2DJuiceEffect.gd` — N/A
 - [x] `ScreenOverlay3DJuiceEffect.gd` — N/A
 
-### Batch 4M: Meta Utilities (5 files, simple)
-- [ ] `CallMethodJuiceUtilityBase.gd`
-- [ ] `SignalEmitJuiceUtilityBase.gd`
-- [ ] `SceneActionJuiceUtilityBase.gd`
-- [ ] `TimeJuiceEffectBase.gd`
-- [ ] `_JuiceSceneActionOrchestrator.gd`
+### Batch 4M: Meta Utilities (5 files) ✅
+- [x] `CallMethodJuiceUtilityBase.gd` — 4 push_warning → warn, 1 print → log_info
+- [x] `SignalEmitJuiceUtilityBase.gd` — 1 print → log_info
+- [x] `SceneActionJuiceUtilityBase.gd` — 1 print → log_info
+- [x] `TimeJuiceEffectBase.gd` — 1 push_warning → warn, 6 prints → log_info
+- [x] `_JuiceSceneActionOrchestrator.gd` — 8 push_warning/error → warn, 14 prints → log_info, 6 push_error → warn
 
 ### Batch 4N: Meta Utility Concrete (5 files, simple)
 - [ ] `CallMethodControlJuiceUtility.gd`
