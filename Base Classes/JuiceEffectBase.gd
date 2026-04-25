@@ -473,6 +473,11 @@ func start(target: Node, play_in: bool, use_start_delay: bool = true, host: Node
 		_start_delay_duration = delay
 		_delay_elapsed = 0.0
 
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"start: play_in=%s target=%s delay=%.2f" % [
+			play_in, target.name if target else "null", delay],
+			debug_enabled)
+
 
 ## Advance animation by one frame. Returns PLAYING or COMPLETED.
 ## Allows the domain host (e.g. JuiceControl) to drive effects synchronously. This ensures all active effects complete their math before a single combined write occurs per frame.
@@ -559,6 +564,9 @@ func stop(target: Node) -> void:
 	_animation_progress = 0.0
 	_reset_ping_pong()
 	_restore_to_natural(target)
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"stop: target=%s" % [target.name if target else "null"],
+			debug_enabled)
 
 
 ## Stop but keep current visual state.
@@ -1024,3 +1032,10 @@ func _on_editor_pre_save(_target: Node) -> void:
 ## Whether this effect type supports editor preview.
 func _supports_editor_preview() -> bool:
 	return true
+
+
+## Domain tag for structured log output. Subclasses override to return
+## their domain ("Control", "2D", "3D"). Used by JuiceLogger to format
+## the [Juice][Domain][EffectType] prefix.
+func _get_domain_tag() -> String:
+	return "Base"
