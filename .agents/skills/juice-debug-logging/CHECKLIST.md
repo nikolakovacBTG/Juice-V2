@@ -4,8 +4,8 @@ Track progress file-by-file. Status: `[ ]` pending, `[/]` in progress, `[x]` don
 
 ## Phase 2: Infrastructure
 
-- [ ] `JuiceLogger.gd` — NEW static utility class
-- [ ] `JuiceProjectSettings.gd` — add master switch + log_to_file settings
+- [x] `JuiceLogger.gd` — NEW static utility class
+- [x] `JuiceProjectSettings.gd` — add master switch + log_to_file settings
 - [ ] `JuiceDebugReport.gd` — NEW bug report exporter
 
 ---
@@ -14,17 +14,17 @@ Track progress file-by-file. Status: `[ ]` pending, `[/]` in progress, `[x]` don
 
 Audit existing ~44 prints. Decide keep/remove per call, then convert.
 
-- [ ] `JuiceBase.gd` — audit pass (sub-batch 1: lines 1-1000)
-- [ ] `JuiceBase.gd` — audit pass (sub-batch 2: lines 1000-2075)
+- [x] `JuiceBase.gd` — audit pass (sub-batch 1: lines 1-1000)
+- [x] `JuiceBase.gd` — audit pass (sub-batch 2: lines 1000-2075)
 
 ---
 
 ## Phase 3: Base Classes
 
 ### Batch 3A: Domain Nodes
-- [ ] `JuiceControl.gd` — capture, pre_tick, post_tick_write
-- [ ] `Juice2D.gd` — capture, pre_tick, post_tick_write
-- [ ] `Juice3D.gd` — capture, pre_tick, post_tick_write
+- [x] `JuiceControl.gd` — capture, pre_tick, post_tick_write
+- [x] `Juice2D.gd` — capture, pre_tick, post_tick_write
+- [x] `Juice3D.gd` — capture, pre_tick, post_tick_write
 
 ### Batch 3B: Core Infrastructure
 - [ ] `JuiceLedger.gd` — aggregation trace
@@ -147,15 +147,15 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 ### Batch 4P: Interaction + SoftTrigger (3 files, complex)
 - [ ] `Interaction2DJuiceUtility.gd`
 - [ ] `Interaction3DJuiceUtility.gd`
-- [ ] `SoftTriggerControlJuiceUtility.gd`
+- [x] `SoftTriggerControlJuiceUtility.gd`
 
 ### Batch 4Q: SoftTrigger + Coordinator (3 files, complex)
-- [ ] `SoftTrigger2DJuiceUtility.gd`
-- [ ] `SoftTrigger3DJuiceUtility.gd`
-- [ ] `TimeCoordinatorJuiceUtility.gd`
+- [x] `SoftTrigger2DJuiceUtility.gd`
+- [x] `SoftTrigger3DJuiceUtility.gd`
+- [x] `TimeCoordinatorJuiceUtility.gd`
 
 ### Batch 4R: Support (3 files)
-- [ ] `_JuiceTransitionHandler.gd`
+- [x] `_JuiceTransitionHandler.gd`
 - [ ] `SignalRelayJuiceUtility.gd`
 - [ ] `JuiceScreenOverlayProvider.gd`
 
