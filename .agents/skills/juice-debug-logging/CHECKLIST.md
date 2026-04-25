@@ -31,10 +31,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `JuiceEffectBase.gd` — start/stop lifecycle + _get_domain_tag() virtual
 - [x] `JuiceRecipe.gd` — NO CHANGES (data container; no logging insertion points)
 
-### Batch 3C: Domain Effect Bases
-- [ ] `JuiceControlEffectBase.gd` — _get_domain_tag()
-- [ ] `Juice2DEffectBase.gd` — _get_domain_tag()
-- [ ] `Juice3DEffectBase.gd` — _get_domain_tag()
+### Batch 3C: Domain Effect Bases ✅
+- [x] `JuiceControlEffectBase.gd` — _get_domain_tag() → "Control"
+- [x] `Juice2DEffectBase.gd` — _get_domain_tag() → "2D"
+- [x] `Juice3DEffectBase.gd` — _get_domain_tag() → "3D"
 
 ### Batch 3D: Transform Effect Bases
 - [ ] `JuiceControlTransformEffect.gd` — delta trace in _apply_effect()

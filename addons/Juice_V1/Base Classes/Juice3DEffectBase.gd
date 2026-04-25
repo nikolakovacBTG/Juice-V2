@@ -23,3 +23,7 @@
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
 class_name Juice3DEffectBase
 extends JuiceEffectBase
+
+
+func _get_domain_tag() -> String:
+	return "3D"
