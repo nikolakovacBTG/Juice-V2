@@ -195,6 +195,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 	var n3d := target as Node3D
 	if n3d:
 		_compute_shake_deltas(progress, n3d)
+		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+				{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+				n3d.name, debug_enabled)
 
 
 func _on_animate_in_complete(_target: Node) -> void:

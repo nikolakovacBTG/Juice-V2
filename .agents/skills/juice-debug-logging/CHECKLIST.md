@@ -161,6 +161,69 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 
 ---
 
+## Phase 4-Remediation: Gap-Fill (LOG_POINTS.md compliance)
+
+Previous batches (4G–4R) only converted existing prints but did NOT add new
+log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
+
+### Batch R-A: Cat 3 — Delta logging in Shake effects (3 files) ✅
+- [x] `ShakeControlJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
+- [x] `Shake2DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
+- [x] `Shake3DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
+
+### Batch R-B: Cat 3 — Delta logging in Noise effects (3 files)
+- [ ] `NoiseControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `Noise2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `Noise3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+
+### Batch R-C: Cat 3 — Delta logging in SquashStretch effects (3 files)
+- [ ] `SquashStretchControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `SquashStretch2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `SquashStretch3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+
+### Batch R-D: Cat 3 — Delta logging in Transform effects (3 files, complex)
+- [ ] `TransformControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `Transform2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `Transform3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+
+### Batch R-E: Cat 3+2 — Delta + Capture in Appearance effects (3 files, complex)
+- [ ] `AppearanceControlJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
+- [ ] `Appearance2DJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
+- [ ] `Appearance3DJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
+
+### Batch R-F: Cat 4 — Shader diagnostics in Appearance effects (3 files, complex)
+- [ ] `AppearanceControlJuiceEffect.gd` — shader uniform writes need `log_shader`
+- [ ] `Appearance2DJuiceEffect.gd` — shader uniform writes need `log_shader`
+- [ ] `Appearance3DJuiceEffect.gd` — shader uniform writes need `log_shader`
+
+### Batch R-G: Cat 3+2 — Delta + Capture in Property Meta effects (3 files)
+- [ ] `InterpolatePropertyJuiceEffectBase.gd` — `_apply_effect()` needs `log_delta`, `_on_animate_start()` needs `log_capture`
+- [ ] `NoisePropertyJuiceEffectBase.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `ShakePropertyJuiceEffectBase.gd` — `_apply_effect()` needs `log_delta`
+
+### Batch R-H: Cat 2 — Capture logging in Shake/Noise/SquashStretch _on_animate_start (5 files, simple)
+- [ ] `ShakeControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `Shake2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `Shake3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `NoiseControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `Noise2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+
+### Batch R-I: Cat 2 continued + Cat 3 Progress (5 files, simple)
+- [ ] `Noise3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `SquashStretchControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `SquashStretch2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `SquashStretch3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+- [ ] `ProgressControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+
+### Batch R-J: Cat 3 — Progress deltas + Cat 6 domain guardrails (5 files, simple)
+- [ ] `Progress2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `Progress3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `ProgressPropertyJuiceEffectBase.gd` — `_apply_effect()` needs `log_delta`
+- [ ] `JuiceBase.gd` — `_ready()` or `_start_effects()` needs `warn_domain_mismatch` (Cat 6)
+- [ ] `JuiceRecipe.gd` — validation path needs `warn_domain_mismatch` (Cat 6)
+
+---
+
 ## Phase 5: Bug Report System
 
 - [ ] `JuiceDebugReport.gd` — state snapshot + log export
