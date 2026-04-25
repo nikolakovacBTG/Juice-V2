@@ -279,9 +279,10 @@ func _on_animate_start(target: Node) -> void:
 		# Re-evaluate position contribution after pivot is known
 		_contributes_position = (transform_target == TransformTarget.POSITION or _pivot_offset != Vector2.ZERO)
 
-	if debug_enabled:
-		print("[Noise2D] Start: %s, speed=%.2f" % [
-			TransformTarget.keys()[transform_target], noise_speed])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s speed=%.2f" % [
+			TransformTarget.keys()[transform_target], noise_speed],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:

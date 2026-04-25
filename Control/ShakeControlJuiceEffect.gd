@@ -186,9 +186,10 @@ func _on_animate_start(target: Node) -> void:
 		_apply_pivot_mode(target)
 		_pivot_applied = true
 
-	if debug_enabled:
-		print("[ShakeCtrl] Start: %s, freq=%.1f Hz" % [
-			TransformTarget.keys()[transform_target], shake_frequency])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s freq=%.1f Hz" % [
+			TransformTarget.keys()[transform_target], shake_frequency],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:

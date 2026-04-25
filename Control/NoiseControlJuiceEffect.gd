@@ -292,9 +292,10 @@ func _on_animate_start(target: Node) -> void:
 		_apply_pivot_mode(target)
 		_pivot_applied = true
 
-	if debug_enabled:
-		print("[NoiseCtrl] Start: %s, speed=%.2f" % [
-			TransformTarget.keys()[transform_target], noise_speed])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s speed=%.2f" % [
+			TransformTarget.keys()[transform_target], noise_speed],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
