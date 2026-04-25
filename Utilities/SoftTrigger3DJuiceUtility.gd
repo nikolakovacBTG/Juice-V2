@@ -171,12 +171,13 @@ func _ready() -> void:
 	if get_parent():
 		get_parent().child_order_changed.connect(_mark_siblings_dirty)
 
-	if debug_enabled:
-		var modes := []
-		if detect_mouse: modes.append("Mouse")
-		if detect_bodies: modes.append("Bodies")
-		if detect_areas: modes.append("Areas")
-		print("[%s] SoftTrigger3D ready. Detecting: %s" % [name, ", ".join(modes) if not modes.is_empty() else "nothing"])
+	var modes := []
+	if detect_mouse: modes.append("Mouse")
+	if detect_bodies: modes.append("Bodies")
+	if detect_areas: modes.append("Areas")
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"SoftTrigger3D ready. Detecting: %s" % [", ".join(modes) if not modes.is_empty() else "nothing"],
+			debug_enabled)
 
 
 func _process(_delta: float) -> void:
@@ -240,8 +241,7 @@ func _on_mouse_entered() -> void:
 	_has_hit_point = false
 	set_process(true)
 	proximity_entered.emit()
-	if debug_enabled:
-		print("[%s] Mouse entered" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse entered", debug_enabled)
 
 
 func _on_mouse_exited() -> void:
@@ -249,8 +249,7 @@ func _on_mouse_exited() -> void:
 	_last_hit_normal = Vector3.ZERO
 	_last_camera = null
 	_release_all()
-	if debug_enabled:
-		print("[%s] Mouse exited" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse exited", debug_enabled)
 
 
 func _on_object_entered(object: Node3D) -> void:
@@ -259,16 +258,16 @@ func _on_object_entered(object: Node3D) -> void:
 		_is_inside = true
 		set_process(true)
 		proximity_entered.emit()
-		if debug_enabled:
-			print("[%s] Object entered: %s" % [name, object.name])
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"Object entered: %s" % object.name, debug_enabled)
 
 
 func _on_object_exited(object: Node3D) -> void:
 	if object == _tracked_node:
 		_tracked_node = null
 		_release_all()
-		if debug_enabled:
-			print("[%s] Object exited: %s" % [name, object.name])
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"Object exited: %s" % object.name, debug_enabled)
 
 
 func _release_all() -> void:
@@ -305,8 +304,9 @@ func _calculate_mouse_progress(local_pos: Vector3) -> float:
 	elif shape is BoxShape3D:
 		return _progress_box_face(local_pos, (shape as BoxShape3D).size)
 	else:
-		if debug_enabled:
-			push_warning("[%s] Unsupported shape type '%s' for mouse mode" % [name, shape.get_class()])
+		JuiceLogger.warn(self, "SoftTrigger",
+				"Unsupported shape type '%s' for mouse mode" % shape.get_class(),
+				debug_enabled)
 		return 0.0
 
 
@@ -418,8 +418,9 @@ func _calculate_shape_progress(local_pos: Vector3) -> float:
 	elif shape is SphereShape3D:
 		return _progress_sphere(local_pos, (shape as SphereShape3D).radius)
 	else:
-		if debug_enabled:
-			push_warning("[%s] Unsupported shape type '%s', using sphere fallback" % [name, shape.get_class()])
+		JuiceLogger.warn(self, "SoftTrigger",
+				"Unsupported shape type '%s', using sphere fallback" % shape.get_class(),
+				debug_enabled)
 		return _progress_sphere(local_pos, 1.0)
 
 
@@ -487,7 +488,8 @@ func _ensure_collision_shape() -> void:
 
 	if not auto_create_shape:
 		if not Engine.is_editor_hint():
-			push_warning("[%s] No CollisionShape3D child. Detection will not work." % name)
+			JuiceLogger.warn(self, "SoftTrigger",
+					"No CollisionShape3D child. Detection will not work.", debug_enabled)
 		return
 
 	var col := CollisionShape3D.new()
@@ -502,8 +504,9 @@ func _ensure_collision_shape() -> void:
 		if scene_root:
 			col.owner = scene_root
 
-	if debug_enabled:
-		print("[%s] Auto-created CollisionShape3D with size %s" % [name, detection_size])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Auto-created CollisionShape3D with size %s" % str(detection_size),
+			debug_enabled)
 
 
 func _update_auto_shape_size() -> void:
@@ -534,8 +537,8 @@ func _ensure_juice_siblings() -> void:
 
 	_juice_siblings_dirty = false
 
-	if debug_enabled:
-		print("[%s] Discovered %d juice siblings" % [name, _juice_siblings.size()])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Discovered %d juice siblings" % _juice_siblings.size(), debug_enabled)
 
 
 func _mark_siblings_dirty() -> void:
