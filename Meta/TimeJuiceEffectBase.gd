@@ -294,8 +294,9 @@ func _start_freeze() -> void:
 	_freeze_timer = _host_node.get_tree().create_timer(freeze_time, true, false, true)
 	_freeze_timer.timeout.connect(_on_freeze_complete)
 
-	if debug_enabled:
-		print("[TimeEffect] FREEZE: %d frames (%.3fs)" % [freeze_frames, freeze_time])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"FREEZE: %d frames (%.3fs)" % [freeze_frames, freeze_time],
+			debug_enabled)
 
 
 # Triggered by the unscaled internal timer when hitstop ends, advancing the animation lifecycle.
@@ -311,8 +312,9 @@ func _start_slow_mo() -> void:
 	_update_time_request(1.0)  # tick() will interpolate from here.
 	slow_mo_started.emit(target_scale)
 
-	if debug_enabled:
-		print("[TimeEffect] SLOW_MO: target_scale=%.2f smooth=%s" % [target_scale, smooth_transition])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"SLOW_MO: target_scale=%.2f smooth=%s" % [target_scale, smooth_transition],
+			debug_enabled)
 
 
 # Begins the smooth easing transition into the target time scale.
@@ -322,9 +324,10 @@ func _start_bullet_time() -> void:
 	if emit_compensation_signal and target_scale > 0.0:
 		bullet_time_started.emit(1.0 / target_scale)
 
-	if debug_enabled:
-		print("[TimeEffect] BULLET_TIME: target_scale=%.2f, %d exempt nodes" % [
-			target_scale, exempt_nodes.size()])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"BULLET_TIME: target_scale=%.2f, %d exempt nodes" % [
+			target_scale, exempt_nodes.size()],
+			debug_enabled)
 
 
 # =============================================================================
@@ -388,13 +391,15 @@ func _setup_exempt_nodes() -> void:
 	for node_path in exempt_nodes:
 		var node := _host_node.get_node_or_null(node_path)
 		if node == null:
-			if debug_enabled:
-				push_warning("[TimeEffect] Exempt node not found: %s" % node_path)
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"exempt node not found: %s" % node_path,
+					debug_enabled)
 			continue
 		_exempt_original_modes[node.get_instance_id()] = node.process_mode
 		node.process_mode = Node.PROCESS_MODE_ALWAYS
-		if debug_enabled:
-			print("[TimeEffect] Exempt '%s' → PROCESS_MODE_ALWAYS" % node.name)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"exempt '%s' → PROCESS_MODE_ALWAYS" % node.name,
+				debug_enabled)
 
 
 # Reverts exempt nodes back to their original process modes once the effect finishes.
@@ -406,6 +411,7 @@ func _restore_exempt_nodes() -> void:
 		var nid := node.get_instance_id()
 		if _exempt_original_modes.has(nid):
 			node.process_mode = _exempt_original_modes[nid]
-			if debug_enabled:
-				print("[TimeEffect] Restored '%s' process_mode" % node.name)
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"restored '%s' process_mode" % node.name,
+					debug_enabled)
 	_exempt_original_modes.clear()

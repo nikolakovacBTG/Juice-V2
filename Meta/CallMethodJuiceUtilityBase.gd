@@ -177,9 +177,10 @@ func _resolve_all_targets(fallback_target: Node) -> void:
 			var resolved: Node = null
 			if _host_node != null:
 				resolved = _host_node.get_node_or_null(entry.target_node_path)
-			if resolved == null and debug_enabled:
-				push_warning("[CallMethod] entry target_node_path '%s' not found from host"
-					% entry.target_node_path)
+			if resolved == null:
+				JuiceLogger.warn(self, _get_domain_tag(),
+						"entry target_node_path '%s' not found from host" % entry.target_node_path,
+						debug_enabled)
 			_resolved_targets.append(resolved)
 		else:
 			_resolved_targets.append(fallback_target)
@@ -204,18 +205,21 @@ func _call_entries_for_timing(timing: CallTiming, timing_label: String) -> void:
 # Validates the target node and method exist, then dispatches the call with or without arguments.
 func _do_call(entry: CallMethodEntry, method_target: Node, timing_label: String) -> void:
 	if not is_instance_valid(method_target):
-		if debug_enabled:
-			push_warning("[CallMethod] No valid target node to call '%s'" % entry.method_name)
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"no valid target node to call '%s'" % entry.method_name,
+				debug_enabled)
 		return
 
 	if entry.method_name.is_empty():
-		if debug_enabled:
-			push_warning("[CallMethod] method_name is empty for entry")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"method_name is empty for entry", debug_enabled)
 		return
 
 	if not method_target.has_method(entry.method_name):
-		push_warning("[CallMethod] '%s' doesn't have method '%s'" % [
-			method_target.name, entry.method_name])
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"'%s' doesn't have method '%s'" % [
+				method_target.name, entry.method_name],
+				debug_enabled)
 		return
 
 	if entry.arguments.is_empty():
@@ -223,7 +227,8 @@ func _do_call(entry: CallMethodEntry, method_target: Node, timing_label: String)
 	else:
 		method_target.callv(entry.method_name, entry.arguments)
 
-	if debug_enabled:
-		var args_str := str(entry.arguments) if not entry.arguments.is_empty() else "()"
-		print("[CallMethod] [%s] Called %s.%s%s" % [
-			timing_label, method_target.name, entry.method_name, args_str])
+	var args_str := str(entry.arguments) if not entry.arguments.is_empty() else "()"
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"[%s] called %s.%s%s" % [
+			timing_label, method_target.name, entry.method_name, args_str],
+			debug_enabled)

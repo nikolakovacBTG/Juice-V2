@@ -148,16 +148,17 @@ func execute() -> void:
 
 	# Singleton guard
 	if _active_orchestrator != null and is_instance_valid(_active_orchestrator):
-		if debug_enabled:
-			push_warning("[Orchestrator] Another orchestrator is active — aborting")
+			JuiceLogger.warn(self, "SceneAction",
+				"another orchestrator is active — aborting", debug_enabled)
 		queue_free()
 		return
 
 	_active_orchestrator = self
 	_generation += 1
 
-	if debug_enabled:
-		print("[Orchestrator] Starting: action=%d, overlay=%d" % [scene_action, overlay_type])
+	JuiceLogger.log_info(self, "SceneAction",
+			"starting: action=%d overlay=%d" % [scene_action, overlay_type],
+			debug_enabled)
 
 	match scene_action:
 		SceneAction.SWITCH_SCENE, SceneAction.RELOAD_SCENE, SceneAction.QUIT_GAME:
@@ -198,23 +199,25 @@ func _perform_direct_action() -> void:
 	match scene_action:
 		SceneAction.SWITCH_SCENE:
 			if target_scene == null:
-				push_error("[Orchestrator] Cannot switch — target_scene is null")
+				JuiceLogger.warn(self, "SceneAction",
+					"cannot switch — target_scene is null", debug_enabled)
 				return
 			var loaded: PackedScene = _get_async_loaded(target_scene.resource_path)
 			if loaded == null:
 				loaded = target_scene
 			get_tree().change_scene_to_packed(loaded)
-			if debug_enabled:
-				print("[Orchestrator] Scene switched to: %s" % target_scene.resource_path)
+			JuiceLogger.log_info(self, "SceneAction",
+					"scene switched to: %s" % target_scene.resource_path,
+					debug_enabled)
 
 		SceneAction.RELOAD_SCENE:
 			get_tree().reload_current_scene()
-			if debug_enabled:
-				print("[Orchestrator] Scene reloaded")
+			JuiceLogger.log_info(self, "SceneAction",
+					"scene reloaded", debug_enabled)
 
 		SceneAction.QUIT_GAME:
-			if debug_enabled:
-				print("[Orchestrator] Quitting game")
+			JuiceLogger.log_info(self, "SceneAction",
+					"quitting game", debug_enabled)
 			get_tree().quit()
 
 
@@ -233,7 +236,8 @@ func _execute_overlay_transition() -> void:
 	# Phase 2: Cover
 	var juice_node := await _create_overlay_juice_cover()
 	if juice_node == null:
-		push_warning("[Orchestrator] Failed to create overlay — aborting")
+		JuiceLogger.warn(self, "SceneAction",
+				"failed to create overlay — aborting", debug_enabled)
 		_emit_completed()
 		_self_destruct()
 		return
@@ -241,14 +245,14 @@ func _execute_overlay_transition() -> void:
 	juice_node.animate_in()
 	await juice_node.completed
 
-	if debug_enabled:
-		print("[Orchestrator] Cover complete")
+	JuiceLogger.log_info(self, "SceneAction",
+			"cover complete", debug_enabled)
 
 	# Phase 3: Hold at peak (covered pause)
 	if hold_duration > 0.0:
 		await get_tree().create_timer(hold_duration, true, false, true).timeout
-		if debug_enabled:
-			print("[Orchestrator] Hold complete (%.2fs)" % hold_duration)
+		JuiceLogger.log_info(self, "SceneAction",
+				"hold complete (%.2fs)" % hold_duration, debug_enabled)
 
 	# Phase 4: Ensure async load is ready
 	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
@@ -270,8 +274,8 @@ func _execute_overlay_transition() -> void:
 	juice_node.animate_in()
 	await juice_node.completed
 
-	if debug_enabled:
-		print("[Orchestrator] Reveal complete")
+	JuiceLogger.log_info(self, "SceneAction",
+			"reveal complete", debug_enabled)
 
 	# Phase 8: Cleanup
 	if is_instance_valid(_overlay_dummy_parent):
@@ -290,7 +294,8 @@ func _execute_overlay_transition() -> void:
 # Orchestrates full scene swaps, managing transition animations, asynchronous loading, and the final scene tree swap.
 func _execute_scene_transition() -> void:
 	if transition_scene == null:
-		push_warning("[Orchestrator] transition_scene is null — falling back to NONE")
+		JuiceLogger.warn(self, "SceneAction",
+				"transition_scene is null — falling back to NONE", debug_enabled)
 		_emit_action_executed()
 		_perform_direct_action()
 		_emit_completed()
@@ -312,19 +317,21 @@ func _execute_scene_transition() -> void:
 	_transition_scene_instance.process_mode = Node.PROCESS_MODE_ALWAYS
 	_transition_canvas.add_child(_transition_scene_instance)
 
-	if debug_enabled:
-		print("[Orchestrator] Transition scene instanced")
+	JuiceLogger.log_info(self, "SceneAction",
+			"transition scene instanced", debug_enabled)
 
 	# Phase 3: Wait for cover
 	if use_scene_timing and _transition_scene_instance.has_signal("screen_covered"):
 		await _transition_scene_instance.screen_covered
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("screen_covered"):
-			push_warning("[Orchestrator] Transition scene missing 'screen_covered' signal — using fallback")
+			JuiceLogger.warn(self, "SceneAction",
+					"transition scene missing 'screen_covered' signal — using fallback",
+					debug_enabled)
 		await get_tree().create_timer(fallback_cover_duration, true, false, true).timeout
 
-	if debug_enabled:
-		print("[Orchestrator] Cover phase complete (scene transition)")
+	JuiceLogger.log_info(self, "SceneAction",
+			"cover phase complete (scene transition)", debug_enabled)
 
 	# Phase 3b: Hold at peak
 	if hold_duration > 0.0:
@@ -348,11 +355,13 @@ func _execute_scene_transition() -> void:
 		await _transition_scene_instance.transition_finished
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("transition_finished"):
-			push_warning("[Orchestrator] Transition scene missing 'transition_finished' signal — using fallback")
+			JuiceLogger.warn(self, "SceneAction",
+					"transition scene missing 'transition_finished' signal — using fallback",
+					debug_enabled)
 		await get_tree().create_timer(fallback_reveal_duration, true, false, true).timeout
 
-	if debug_enabled:
-		print("[Orchestrator] Reveal phase complete (scene transition)")
+	JuiceLogger.log_info(self, "SceneAction",
+			"reveal phase complete (scene transition)", debug_enabled)
 
 	# Phase 7: Cleanup
 	if is_instance_valid(_transition_scene_instance):
@@ -380,26 +389,31 @@ func _execute_child_swap() -> void:
 	if switch_from_mode == SwitchFrom.SCENE_IN_TREE:
 		from_scene = switch_from_node
 		if from_scene == null:
-			push_error("[Orchestrator] Cannot swap — switch_from_node not resolved")
+			JuiceLogger.warn(self, "SceneAction",
+					"cannot swap — switch_from_node not resolved", debug_enabled)
 			_emit_completed()
 			_self_destruct()
 			return
 
 	elif switch_from_mode == SwitchFrom.FIRST_SCENE_IN_CONTAINER:
 		if container_node == null:
-			push_error("[Orchestrator] Cannot swap — container_node not resolved")
+			JuiceLogger.warn(self, "SceneAction",
+					"cannot swap — container_node not resolved", debug_enabled)
 			_emit_completed()
 			_self_destruct()
 			return
 		if container_node.get_child_count() == 0:
-			push_error("[Orchestrator] Cannot swap — container '%s' has no children" % container_node.name)
+			JuiceLogger.warn(self, "SceneAction",
+					"cannot swap — container '%s' has no children" % container_node.name,
+					debug_enabled)
 			_emit_completed()
 			_self_destruct()
 			return
 		from_scene = container_node.get_child(0)
 
 	if target_scene == null:
-		push_error("[Orchestrator] Cannot swap — target_scene is null")
+		JuiceLogger.warn(self, "SceneAction",
+				"cannot swap — target_scene is null", debug_enabled)
 		_emit_completed()
 		_self_destruct()
 		return
@@ -434,10 +448,11 @@ func _execute_child_swap() -> void:
 	parent.add_child(new_instance)
 	parent.move_child(new_instance, child_index)
 
-	if debug_enabled:
-		print("[Orchestrator] Scene swap: '%s' → '%s' (post_action=%s)" % [
+	JuiceLogger.log_info(self, "SceneAction",
+			"scene swap: '%s' → '%s' (post_action=%s)" % [
 			from_scene.name, new_instance.name,
-			OldScenePostSwitchAction.keys()[old_scene_post_switch_action]])
+			OldScenePostSwitchAction.keys()[old_scene_post_switch_action]],
+			debug_enabled)
 
 	_emit_action_executed()
 
@@ -468,7 +483,8 @@ func _show_overlay() -> void:
 
 	# Phase 2: Instance overlay on CanvasLayer
 	if target_scene == null:
-		push_error("[Orchestrator] Cannot overlay — target_scene is null")
+		JuiceLogger.warn(self, "SceneAction",
+				"cannot overlay — target_scene is null", debug_enabled)
 		_emit_completed()
 		_self_destruct()
 		return
@@ -483,8 +499,9 @@ func _show_overlay() -> void:
 	_active_overlay_instance.process_mode = Node.PROCESS_MODE_ALWAYS
 	_active_canvas_layer.add_child(_active_overlay_instance)
 
-	if debug_enabled:
-		print("[Orchestrator] Overlay scene instanced on CanvasLayer %d" % overlay_canvas_layer)
+	JuiceLogger.log_info(self, "SceneAction",
+			"overlay scene instanced on CanvasLayer %d" % overlay_canvas_layer,
+			debug_enabled)
 
 	# Phase 3: Time effect
 	if use_time_effect:
@@ -499,8 +516,8 @@ func _show_overlay() -> void:
 
 	_emit_completed()
 
-	if debug_enabled:
-		print("[Orchestrator] Overlay show complete")
+	JuiceLogger.log_info(self, "SceneAction",
+			"overlay show complete", debug_enabled)
 
 	# Note: orchestrator stays alive for _hide_overlay() call
 
@@ -538,8 +555,8 @@ func _hide_overlay() -> void:
 	_cleanup_transition_resources()
 	_active_overlay_orchestrator = null
 
-	if debug_enabled:
-		print("[Orchestrator] Overlay hide complete")
+	JuiceLogger.log_info(self, "SceneAction",
+			"overlay hide complete", debug_enabled)
 
 	_self_destruct()
 
@@ -578,7 +595,8 @@ func _play_overlay_reveal() -> void:
 # Instantiates the transition scene layer to visually block the screen before a full scene swap.
 func _play_transition_scene_cover() -> void:
 	if transition_scene == null:
-		push_warning("[Orchestrator] transition_scene is null — skipping SCENE transition")
+		JuiceLogger.warn(self, "SceneAction",
+				"transition_scene is null — skipping SCENE transition", debug_enabled)
 		return
 
 	_transition_canvas = CanvasLayer.new()
@@ -595,7 +613,9 @@ func _play_transition_scene_cover() -> void:
 		await _transition_scene_instance.screen_covered
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("screen_covered"):
-			push_warning("[Orchestrator] Transition scene missing 'screen_covered' signal — using fallback")
+			JuiceLogger.warn(self, "SceneAction",
+					"transition scene missing 'screen_covered' signal — using fallback",
+					debug_enabled)
 		await get_tree().create_timer(fallback_cover_duration, true, false, true).timeout
 
 
@@ -608,7 +628,9 @@ func _play_transition_scene_reveal() -> void:
 		await _transition_scene_instance.transition_finished
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("transition_finished"):
-			push_warning("[Orchestrator] Transition scene missing 'transition_finished' signal — using fallback")
+			JuiceLogger.warn(self, "SceneAction",
+					"transition scene missing 'transition_finished' signal — using fallback",
+					debug_enabled)
 		await get_tree().create_timer(fallback_reveal_duration, true, false, true).timeout
 
 	if is_instance_valid(_transition_scene_instance):
@@ -668,8 +690,9 @@ func _create_overlay_juice_cover() -> JuiceControl:
 	# Wait one frame for _ready to resolve target and clone effects
 	await get_tree().process_frame
 
-	if debug_enabled:
-		print("[Orchestrator] Cover overlay created (duration=%.2f)" % cover_duration)
+	JuiceLogger.log_info(self, "SceneAction",
+			"cover overlay created (duration=%.2f)" % cover_duration,
+			debug_enabled)
 
 	_overlay_juice_node = juice_node
 	return juice_node
@@ -698,8 +721,9 @@ func _configure_overlay_juice_reveal(juice_node: JuiceControl) -> void:
 		overlay_effect.ease_in = reveal_ease
 		overlay_effect.custom_curve_in = reveal_curve
 
-	if debug_enabled:
-		print("[Orchestrator] Reveal overlay configured (duration=%.2f)" % reveal_duration)
+	JuiceLogger.log_info(self, "SceneAction",
+			"reveal overlay configured (duration=%.2f)" % reveal_duration,
+			debug_enabled)
 
 
 ## Creates a JuiceControl + TimeControlJuiceEffect for time manipulation.
@@ -751,8 +775,9 @@ func _create_time_juice_node() -> void:
 	await get_tree().process_frame
 	_time_juice_node.animate_in()
 
-	if debug_enabled:
-		print("[Orchestrator] Time juice node created (mode=%d)" % time_mode)
+	JuiceLogger.log_info(self, "SceneAction",
+			"time juice node created (mode=%d)" % time_mode,
+			debug_enabled)
 
 
 # =============================================================================
@@ -764,12 +789,12 @@ func _start_async_load(path: String) -> void:
 	if path.is_empty():
 		return
 	if ResourceLoader.has_cached(path):
-		if debug_enabled:
-			print("[Orchestrator] Scene already cached: %s" % path)
+		JuiceLogger.log_info(self, "SceneAction",
+				"scene already cached: %s" % path, debug_enabled)
 		return
 	ResourceLoader.load_threaded_request(path)
-	if debug_enabled:
-		print("[Orchestrator] Async load started: %s" % path)
+	JuiceLogger.log_info(self, "SceneAction",
+			"async load started: %s" % path, debug_enabled)
 
 
 # Yields execution until the background loader finishes fetching the scene resource.
@@ -783,11 +808,14 @@ func _await_async_load(path: String) -> void:
 		await get_tree().process_frame
 		status = ResourceLoader.load_threaded_get_status(path)
 	if status == ResourceLoader.THREAD_LOAD_FAILED:
-		push_error("[Orchestrator] Async load FAILED: %s" % path)
+		JuiceLogger.warn(self, "SceneAction",
+				"async load FAILED: %s" % path, debug_enabled)
 	elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-		push_error("[Orchestrator] Invalid resource: %s" % path)
-	elif debug_enabled:
-		print("[Orchestrator] Async load complete: %s" % path)
+		JuiceLogger.warn(self, "SceneAction",
+				"invalid resource: %s" % path, debug_enabled)
+	else:
+		JuiceLogger.log_info(self, "SceneAction",
+				"async load complete: %s" % path, debug_enabled)
 
 
 # Retrieves the fully loaded scene resource from the background loader cache.

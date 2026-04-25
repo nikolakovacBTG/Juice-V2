@@ -164,6 +164,7 @@ func _emit_for_timing(timing: EmitTiming, timing_label: String) -> void:
 		# 2 = ON_BOTH — fires on both start and complete.
 		if entry.emit_on == timing or entry.emit_on == EmitTiming.ON_BOTH:
 			juice_signal.emit(entry.payload)
-			if debug_enabled:
-				print("[SignalEmit] '%s' emitted at %s. Payload: %s" % [
-					entry.signal_description, timing_label, entry.payload])
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"'%s' emitted at %s, payload=%s" % [
+					entry.signal_description, timing_label, entry.payload],
+					debug_enabled)
