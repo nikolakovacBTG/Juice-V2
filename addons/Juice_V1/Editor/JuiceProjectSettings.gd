@@ -15,6 +15,14 @@ extends RefCounted
 
 const AUTO_LOCAL_TO_SCENE_KEY := "juice/config/auto_local_to_scene"
 
+## Project Settings key for the global debug master switch.
+## When enabled, all JuiceBase nodes log regardless of their per-node debug_enabled flag.
+const DEBUG_ENABLED_KEY := "juice/debug/enabled"
+
+## Project Settings key for writing debug logs to a file.
+## When enabled, JuiceLogger writes to user://juice_debug.log in addition to console.
+const DEBUG_LOG_TO_FILE_KEY := "juice/debug/log_to_file"
+
 ## Returns whether the plugin should aggressively force resources to be
 ## local to the scene to prevent shared-state preset bugs.
 ## Default is true for safety.
@@ -23,21 +31,49 @@ static func get_auto_local_to_scene() -> bool:
 		return ProjectSettings.get_setting(AUTO_LOCAL_TO_SCENE_KEY)
 	return true
 
+## Returns whether the global debug master switch is enabled.
+static func get_debug_enabled() -> bool:
+	return ProjectSettings.get_setting(DEBUG_ENABLED_KEY, false)
+
+## Returns whether file logging is enabled.
+static func get_debug_log_to_file() -> bool:
+	return ProjectSettings.get_setting(DEBUG_LOG_TO_FILE_KEY, false)
+
 ## Register all Juice-specific settings into the ProjectSettings menu.
 ## Called by juice_plugin.gd's _enter_tree().
 static func register_settings() -> void:
+	# --- Config settings ---
 	if not ProjectSettings.has_setting(AUTO_LOCAL_TO_SCENE_KEY):
 		ProjectSettings.set_setting(AUTO_LOCAL_TO_SCENE_KEY, true)
 	
 	ProjectSettings.set_initial_value(AUTO_LOCAL_TO_SCENE_KEY, true)
-	# Optional: you can set hints using ProjectSettings.add_property_info()
-	var info = {
+	ProjectSettings.add_property_info({
 		"name": AUTO_LOCAL_TO_SCENE_KEY,
 		"type": TYPE_BOOL,
 		"hint": PROPERTY_HINT_NONE,
 		"hint_string": "Automatically duplicate preset resources on assign to prevent shared-state modifications."
-	}
-	ProjectSettings.add_property_info(info)
+	})
 	
-	# Make sure the settings are saved if they were just created.
-	# We don't want to call save() needlessly, but it's fine on first init.
+	# --- Debug settings ---
+	if not ProjectSettings.has_setting(DEBUG_ENABLED_KEY):
+		ProjectSettings.set_setting(DEBUG_ENABLED_KEY, false)
+	
+	ProjectSettings.set_initial_value(DEBUG_ENABLED_KEY, false)
+	ProjectSettings.add_property_info({
+		"name": DEBUG_ENABLED_KEY,
+		"type": TYPE_BOOL,
+		"hint": PROPERTY_HINT_NONE,
+		"hint_string": "Enable debug logging for ALL Juice nodes. Overrides per-node debug_enabled."
+	})
+	
+	if not ProjectSettings.has_setting(DEBUG_LOG_TO_FILE_KEY):
+		ProjectSettings.set_setting(DEBUG_LOG_TO_FILE_KEY, false)
+	
+	ProjectSettings.set_initial_value(DEBUG_LOG_TO_FILE_KEY, false)
+	ProjectSettings.add_property_info({
+		"name": DEBUG_LOG_TO_FILE_KEY,
+		"type": TYPE_BOOL,
+		"hint": PROPERTY_HINT_NONE,
+		"hint_string": "Write debug logs to user://juice_debug.log in addition to console output."
+	})
+
