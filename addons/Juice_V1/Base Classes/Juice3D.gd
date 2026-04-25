@@ -95,8 +95,10 @@ func _resolve_target() -> Node:
 		var parent := get_parent()
 		if parent is Node3D:
 			return parent
-		if parent != null and debug_enabled:
-			push_warning("[%s] Parent '%s' is not a Node3D node" % [name, parent.name])
+		if parent != null:
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"Parent '%s' is not a Node3D node" % parent.name,
+					debug_enabled)
 		return null
 	return null  # SEQUENCER resolves per-target dynamically
 
@@ -182,13 +184,19 @@ func _connect_collision_object_3d_signals(col_obj: CollisionObject3D) -> void:
 			if col_obj is Area3D:
 				if not col_obj.area_exited.is_connected(_on_area_area_exited):
 					col_obj.area_exited.connect(_on_area_area_exited)
-	if debug_enabled:
-		print("[%s] Auto-connected to %s '%s' on %s" % [
-			name, col_obj.get_class(), col_obj.name, TriggerEvent.keys()[trigger_on]])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Auto-connected to %s '%s' on %s" % [
+			col_obj.get_class(), col_obj.name, TriggerEvent.keys()[trigger_on]],
+			debug_enabled)
 
 # =============================================================================
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
+
+## Returns "3D" for structured log output.
+func _get_domain_tag() -> String:
+	return "3D"
+
 
 ## Capture target's natural position/rotation/scale and appearance base.
 ## Transform and appearance factor tracking go through the Shared Target Ledger.

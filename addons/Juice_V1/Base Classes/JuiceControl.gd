@@ -65,8 +65,10 @@ func _resolve_target() -> Node:
 		var parent := get_parent()
 		if parent is Control:
 			return parent
-		if parent != null and debug_enabled:
-			push_warning("[%s] Parent '%s' is not a Control node" % [name, parent.name])
+		if parent != null:
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"Parent '%s' is not a Control node" % parent.name,
+					debug_enabled)
 		return null
 	return null  # SEQUENCER resolves per-target dynamically
 
@@ -132,9 +134,10 @@ func _connect_button_signals(button: BaseButton) -> void:
 		TriggerEvent.ON_LEFT_CLICK, TriggerEvent.ON_RIGHT_CLICK, TriggerEvent.ON_MIDDLE_CLICK:
 			if not button.gui_input.is_connected(_on_control_gui_input_filtered):
 				button.gui_input.connect(_on_control_gui_input_filtered)
-	if debug_enabled:
-		print("[%s] Auto-connected to Button '%s' on %s" % [
-			name, button.name, TriggerEvent.keys()[trigger_on]])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Auto-connected to Button '%s' on %s" % [
+			button.name, TriggerEvent.keys()[trigger_on]],
+			debug_enabled)
 
 
 func _connect_control_signals(control: Control) -> void:
@@ -169,13 +172,19 @@ func _connect_control_signals(control: Control) -> void:
 		TriggerEvent.ON_LEFT_CLICK, TriggerEvent.ON_RIGHT_CLICK, TriggerEvent.ON_MIDDLE_CLICK:
 			if not control.gui_input.is_connected(_on_control_gui_input_filtered):
 				control.gui_input.connect(_on_control_gui_input_filtered)
-	if debug_enabled:
-		print("[%s] Auto-connected to Control '%s' on %s" % [
-			name, control.name, TriggerEvent.keys()[trigger_on]])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Auto-connected to Control '%s' on %s" % [
+			control.name, TriggerEvent.keys()[trigger_on]],
+			debug_enabled)
 
 # =============================================================================
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
+
+## Returns "Control" for structured log output.
+func _get_domain_tag() -> String:
+	return "Control"
+
 
 ## Capture target's natural position/rotation/scale/self_modulate.
 ## All properties are tracked through the Shared Target Ledger.
@@ -227,13 +236,11 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(ctrl, self, "rotation", new_rot)
 	JuiceLedger.register_delta(ctrl, self, "scale", new_scale)
 
-	if debug_enabled:
-		print("[%s] POST_TICK base_scale=%s, new_scale_delta=%s, total_scale=%s, ctrl_scale=%s" % [
-			name,
+	JuiceLogger.log_aggregation("Control", ctrl.name, "scale",
 			JuiceLedger.get_base(ctrl, "scale", Vector2.ONE),
 			new_scale,
 			JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO),
-			ctrl.scale])
+			debug_enabled)
 
 	# Accumulate modulate factors from JuiceControlAppearanceEffect effects.
 	# Each effect contributes a multiplicative factor; the Ledger handles
