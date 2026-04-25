@@ -14,8 +14,8 @@ Track progress file-by-file. Status: `[ ]` pending, `[/]` in progress, `[x]` don
 
 Audit existing ~44 prints. Decide keep/remove per call, then convert.
 
-- [x] `JuiceBase.gd` — audit pass (sub-batch 1: lines 1-1000)
-- [x] `JuiceBase.gd` — audit pass (sub-batch 2: lines 1000-2075)
+- [x] `JuiceBase.gd` — audit pass (sub-batch 1: lines 1-1000) ✅
+- [x] `JuiceBase.gd` — audit pass (sub-batch 2: lines 1000-2075) ✅
 
 ---
 
@@ -149,10 +149,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [ ] `Interaction3DJuiceUtility.gd`
 - [x] `SoftTriggerControlJuiceUtility.gd`
 
-### Batch 4Q: SoftTrigger + Coordinator (3 files, complex)
+### Batch 4Q: SoftTrigger + Coordinator (3 files, complex) ✅
 - [x] `SoftTrigger2DJuiceUtility.gd`
 - [x] `SoftTrigger3DJuiceUtility.gd`
-- [x] `TimeCoordinatorJuiceUtility.gd`
+- [x] `TimeCoordinatorJuiceUtility.gd` ✅ (compliant)
 
 ### Batch 4R: Support (3 files)
 - [x] `_JuiceTransitionHandler.gd`

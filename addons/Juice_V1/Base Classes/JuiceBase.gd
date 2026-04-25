@@ -762,6 +762,9 @@ func set_external_progress(value: float) -> void:
 	# Write deltas to target node directly — no _process dependency
 	_pre_tick()
 	_post_tick_write()
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"External progress=%.3f (initialized=%s)" % [value, _external_progress_initialized],
+			debug_enabled)
 
 # =============================================================================
 # TRIGGER HANDLING

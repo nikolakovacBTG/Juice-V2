@@ -211,6 +211,11 @@ func _process(_delta: float) -> void:
 	progress = new_progress
 	progress_changed.emit(progress)
 
+	JuiceLogger.log_delta(self, "SoftTrigger", new_progress,
+			{"mode": "mouse" if (_tracked_node == null and detect_mouse) else "volume",
+			"curve": "yes" if falloff_curve != null else "none"},
+			name, debug_enabled)
+
 	# Drive all discovered juice siblings
 	_ensure_juice_siblings()
 	for juice in _juice_siblings:

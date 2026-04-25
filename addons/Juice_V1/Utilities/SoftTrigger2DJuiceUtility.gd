@@ -197,11 +197,10 @@ func _process(_delta: float) -> void:
 	if falloff_curve != null and new_progress > 0.0 and new_progress < 1.0:
 		new_progress = falloff_curve.sample(new_progress)
 
-	JuiceLogger.log_info(self, "SoftTrigger",
-			"raw_progress=%.3f | after_curve=%.3f | falloff_zone=%.2f | curve=%s" % [
-			raw_progress, new_progress, falloff_zone,
-			"yes" if falloff_curve != null else "none"],
-			debug_enabled)
+	JuiceLogger.log_delta(self, "SoftTrigger", new_progress,
+			{"raw": raw_progress, "falloff_zone": falloff_zone,
+			"curve": "yes" if falloff_curve != null else "none"},
+			name, debug_enabled)
 
 	progress = new_progress
 	progress_changed.emit(progress)
