@@ -213,15 +213,18 @@ The following skills and workflows form a composable system for quality control:
 | `@doc-sweep` | Skill | Auto: documentation work on `addons/Juice_V1/` | Quality standard card + per-file checklist + examples |
 | `@juice-architecture` | Skill | Auto: touching `addons/Juice_V1/` | Architecture rules + code templates |
 | `@verify-claims` | Skill | Auto: about to say "done/fixed/working" | Demands test evidence |
+| `@juice-debug-logging` | Skill | Auto: adding logging to `addons/Juice_V1/` | Log points, templates, checklist |
 | `/doc-sweep` | Workflow | Manual | Per-batch documentation sweep with context reset |
 | `/test` | Workflow | Manual | Run test suite, categorize failures |
 | `/bugfix` | Workflow | Manual | Structured fix cycle after test failures |
 | `/port` | Workflow | Manual | Port V0 effect to V1 (batches all 3 domains) |
 | `/review` | Workflow | Manual | Code review against project standards |
 | `/refactor` | Workflow | Manual | Systematic refactoring with validation |
+| `/add-logging` | Workflow | Manual | Batch-oriented debug logging instrumentation |
 
 **Composition chain:** `/port` → `@juice-architecture` + `@verify-claims` → `/test` → `/bugfix` if needed
 **Documentation chain:** `/doc-sweep` → `@doc-sweep` (quality standard re-read per batch)
+**Logging chain:** `/add-logging` → `@juice-debug-logging` + `@verify-claims` → `/test`
 
 **When discussing V1 code changes and no skill/workflow has been invoked, remind the user which are available.**
 
