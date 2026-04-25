@@ -215,6 +215,9 @@ func _capture_base_values() -> void:
 		# For now, seed with WHITE — _ensure_appearance_working_mat() will update.
 		ledger["base"]["_appearance_factor"] = Color.WHITE
 	_base_captured = true
+	JuiceLogger.log_capture(self, "3D", "position", n3d.position, debug_enabled)
+	JuiceLogger.log_capture(self, "3D", "rotation", n3d.rotation, debug_enabled)
+	JuiceLogger.log_capture(self, "3D", "scale", n3d.scale, debug_enabled)
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
 ## The Metadata Ledger's external-displacement check handles all tracked props.
@@ -222,7 +225,12 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
+	var old_pos: Vector3 = JuiceLedger.get_base(n3d, "position", n3d.position)
 	JuiceLedger.sync_base_if_moved(n3d, ["position", "rotation", "scale"])
+	var new_pos: Vector3 = JuiceLedger.get_base(n3d, "position", n3d.position)
+	if old_pos != new_pos:
+		JuiceLogger.log_aggregation("3D", n3d.name, "external_move",
+				old_pos, new_pos - old_pos, new_pos, debug_enabled)
 
 
 ## Contribution-tracking write: register this node's deltas into the shared target ledger,
@@ -259,6 +267,22 @@ func _post_tick_write() -> void:
 	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
 	# Only flushes transform properties; appearance uses multiplicative accumulation below.
 	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
+
+	JuiceLogger.log_aggregation("3D", n3d.name, "position",
+			JuiceLedger.get_base(n3d, "position", Vector3.ZERO),
+			new_pos,
+			JuiceLedger.get_total(n3d, "position", Vector3.ZERO),
+			debug_enabled)
+	JuiceLogger.log_aggregation("3D", n3d.name, "rotation",
+			JuiceLedger.get_base(n3d, "rotation", Vector3.ZERO),
+			new_rot,
+			JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO),
+			debug_enabled)
+	JuiceLogger.log_aggregation("3D", n3d.name, "scale",
+			JuiceLedger.get_base(n3d, "scale", Vector3.ONE),
+			new_scale,
+			JuiceLedger.get_total(n3d, "scale", Vector3.ZERO),
+			debug_enabled)
 
 	# Appearance: accumulate albedo/alpha factors from Juice3DAppearanceEffect effects.
 	# Domain node owns one working material; effects only contribute factors.
@@ -338,6 +362,7 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
+	JuiceLogger.log_info(self, "3D", "Temporarily undoing visual contributions", debug_enabled)
 
 	# Strip our transform deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n3d, self, false)

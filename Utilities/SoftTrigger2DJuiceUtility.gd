@@ -416,8 +416,8 @@ func _ensure_collision_shape() -> void:
 
 	if not auto_create_shape:
 		if not Engine.is_editor_hint():
-		JuiceLogger.warn(self, "SoftTrigger",
-				"No CollisionShape2D child. Detection will not work.", debug_enabled)
+			JuiceLogger.warn(self, "SoftTrigger",
+					"No CollisionShape2D child. Detection will not work.", debug_enabled)
 		return
 
 	# Auto-create a CollisionShape2D with RectangleShape2D

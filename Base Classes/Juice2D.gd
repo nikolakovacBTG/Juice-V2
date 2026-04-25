@@ -181,6 +181,10 @@ func _capture_base_values() -> void:
 	var n2d := _target_node as Node2D
 	JuiceLedger.ensure(n2d, ["position", "rotation", "scale", "modulate"])
 	_base_captured = true
+	JuiceLogger.log_capture(self, "2D", "position", n2d.position, debug_enabled)
+	JuiceLogger.log_capture(self, "2D", "rotation", n2d.rotation, debug_enabled)
+	JuiceLogger.log_capture(self, "2D", "scale", n2d.scale, debug_enabled)
+	JuiceLogger.log_capture(self, "2D", "modulate", n2d.modulate, debug_enabled)
 
 ## Detect external displacement of the target (game logic, tweens, etc.).
 ## The Ledger handles external-displacement for all tracked properties.
@@ -188,7 +192,12 @@ func _pre_tick() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
+	var old_pos: Vector2 = JuiceLedger.get_base(n2d, "position", n2d.position)
 	JuiceLedger.sync_base_if_moved(n2d, ["position", "rotation", "scale", "modulate"])
+	var new_pos: Vector2 = JuiceLedger.get_base(n2d, "position", n2d.position)
+	if old_pos != new_pos:
+		JuiceLogger.log_aggregation("2D", n2d.name, "external_move",
+				old_pos, new_pos - old_pos, new_pos, debug_enabled)
 
 
 ## Contribution-tracking write: register this node's deltas into the shared target ledger,
@@ -222,6 +231,22 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(n2d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n2d, self, "scale", new_scale)
 
+	JuiceLogger.log_aggregation("2D", n2d.name, "position",
+			JuiceLedger.get_base(n2d, "position", Vector2.ZERO),
+			new_pos,
+			JuiceLedger.get_total(n2d, "position", Vector2.ZERO),
+			debug_enabled)
+	JuiceLogger.log_aggregation("2D", n2d.name, "rotation",
+			JuiceLedger.get_base(n2d, "rotation", 0.0),
+			new_rot,
+			JuiceLedger.get_total(n2d, "rotation", 0.0),
+			debug_enabled)
+	JuiceLogger.log_aggregation("2D", n2d.name, "scale",
+			JuiceLedger.get_base(n2d, "scale", Vector2.ONE),
+			new_scale,
+			JuiceLedger.get_total(n2d, "scale", Vector2.ZERO),
+			debug_enabled)
+
 	# Accumulate modulate factors from Juice2DAppearanceEffect effects.
 	# Each effect contributes a multiplicative factor; the Ledger handles
 	# base × Πfactors for Color properties automatically.
@@ -251,6 +276,7 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
+	JuiceLogger.log_info(self, "2D", "Temporarily undoing visual contributions", debug_enabled)
 
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n2d, self, false)
