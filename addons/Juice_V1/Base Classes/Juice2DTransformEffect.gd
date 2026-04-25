@@ -435,8 +435,11 @@ func _on_animate_start(target: Node) -> void:
 	if transform_target != TransformTarget.POSITION and _pivot_contributes_position():
 		_contributes_position = true
 
-	if debug_enabled:
-		print("[Transform2D] Start: %s" % TransformTarget.keys()[transform_target])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s channels=pos:%s rot:%s scale:%s" % [
+			TransformTarget.keys()[transform_target],
+			_contributes_position, _contributes_rotation, _contributes_scale],
+			debug_enabled)
 
 
 # =============================================================================

@@ -36,10 +36,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Juice2DEffectBase.gd` — _get_domain_tag() → "2D"
 - [x] `Juice3DEffectBase.gd` — _get_domain_tag() → "3D"
 
-### Batch 3D: Transform Effect Bases
-- [ ] `JuiceControlTransformEffect.gd` — delta trace in _apply_effect()
-- [ ] `Juice2DTransformEffect.gd` — delta trace in _apply_effect()
-- [ ] `Juice3DTransformEffect.gd` — delta trace in _apply_effect()
+### Batch 3D: Transform Effect Bases ✅
+- [x] `JuiceControlTransformEffect.gd` — 4 prints → log_info (FROMTO_DBG removed)
+- [x] `Juice2DTransformEffect.gd` — 1 print → log_info
+- [x] `Juice3DTransformEffect.gd` — 1 print → log_info
 
 ### Batch 3E: Appearance Effect Bases
 - [ ] `JuiceControlAppearanceEffect.gd` — shader diagnostics
