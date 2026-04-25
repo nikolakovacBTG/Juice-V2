@@ -55,15 +55,15 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Transform2DJuiceEffect.gd` — 10 prints → JuiceLogger (captures), 3 push_warning → warn
 - [x] `Transform3DJuiceEffect.gd` — 9 prints → JuiceLogger (captures), 3 push_warning → warn
 
-### Batch 4B: Shake
-- [ ] `ShakeControlJuiceEffect.gd`
-- [ ] `Shake2DJuiceEffect.gd`
-- [ ] `Shake3DJuiceEffect.gd`
+### Batch 4B: Shake ✅
+- [x] `ShakeControlJuiceEffect.gd` — 1 print → log_info
+- [x] `Shake2DJuiceEffect.gd` — 1 print → log_info
+- [x] `Shake3DJuiceEffect.gd` — 1 print → log_info
 
-### Batch 4C: Noise
-- [ ] `NoiseControlJuiceEffect.gd`
-- [ ] `Noise2DJuiceEffect.gd`
-- [ ] `Noise3DJuiceEffect.gd`
+### Batch 4C: Noise ✅
+- [x] `NoiseControlJuiceEffect.gd` — 1 print → log_info
+- [x] `Noise2DJuiceEffect.gd` — 1 print → log_info
+- [x] `Noise3DJuiceEffect.gd` — 1 print → log_info
 
 ### Batch 4D: Progress
 - [ ] `ProgressControlJuiceEffect.gd`

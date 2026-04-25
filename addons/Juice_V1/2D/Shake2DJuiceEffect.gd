@@ -185,9 +185,10 @@ func _on_animate_start(target: Node) -> void:
 		_compute_pivot_offset(target)
 		_contributes_position = (_contributes_position or _pivot_offset != Vector2.ZERO)
 
-	if debug_enabled:
-		print("[Shake2D] Start: %s, freq=%.1f Hz" % [
-			TransformTarget.keys()[transform_target], shake_frequency])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s freq=%.1f Hz" % [
+			TransformTarget.keys()[transform_target], shake_frequency],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
