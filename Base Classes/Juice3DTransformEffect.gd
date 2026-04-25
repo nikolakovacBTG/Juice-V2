@@ -465,8 +465,11 @@ func _on_animate_start(target: Node) -> void:
 		_do_resolve_scale_pivot(target)
 		_scale_pivot_resolved = true
 
-	if debug_enabled:
-		print("[Transform3D] Start: %s" % TransformTarget.keys()[transform_target])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s channels=pos:%s rot:%s scale:%s" % [
+			TransformTarget.keys()[transform_target],
+			_contributes_position, _contributes_rotation, _contributes_scale],
+			debug_enabled)
 
 
 # =============================================================================

@@ -397,8 +397,10 @@ func _on_editor_pre_save(target: Node) -> void:
 
 
 func _on_animate_start(target: Node) -> void:
-	if debug_enabled:
-		print("[FROMTO_DBG] TransformCtrl._on_animate_start: _has_base=%s" % _has_base)
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: has_base=%s target=%s" % [
+			_has_base, TransformTarget.keys()[transform_target]],
+			debug_enabled)
 
 	if not _has_base:
 		_do_capture_base(target)
@@ -414,16 +416,16 @@ func _on_animate_start(target: Node) -> void:
 	var uses_to_self   := to_reference   == TransformReference.SELF
 
 	if uses_from_self and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._on_animate_start: capturing from_self snapshot")
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"capturing from_self snapshot", debug_enabled)
 		match transform_target:
 			TransformTarget.POSITION: _capture_from_self_position_snapshot(target)
 			TransformTarget.ROTATION: _capture_from_self_rotation_snapshot(target)
 			TransformTarget.SCALE:    _capture_from_self_scale_snapshot(target)
 
 	if uses_to_self and (to_capture_at == CaptureAt.TRIGGER or to_capture_at == CaptureAt.IN_EDITOR):
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._on_animate_start: capturing to_self snapshot")
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"capturing to_self snapshot", debug_enabled)
 		match transform_target:
 			TransformTarget.POSITION: _capture_to_self_position_snapshot(target)
 			TransformTarget.ROTATION: _capture_to_self_rotation_snapshot(target)
@@ -434,8 +436,10 @@ func _on_animate_start(target: Node) -> void:
 		_do_apply_pivot_mode(target)
 		_pivot_applied = true
 
-	if debug_enabled:
-		print("[FROMTO_DBG] TransformCtrl._on_animate_start DONE")
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start complete: channels=pos:%s rot:%s scale:%s" % [
+			_contributes_position, _contributes_rotation, _contributes_scale],
+			debug_enabled)
 
 
 # =============================================================================
