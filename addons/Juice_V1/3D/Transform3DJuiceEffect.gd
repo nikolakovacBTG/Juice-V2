@@ -207,8 +207,9 @@ func _do_capture_base(target: Node) -> void:
 	# Pre-compute fixed pivot position in parent space for rotation compensation
 	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
 	_has_base = true
-	if debug_enabled:
-		print("[Transform3D] Base captured: pos=%s, scale=%s" % [_base_position, _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s scale=%s" % [_base_position, _base_scale],
+			debug_enabled)
 
 
 func _do_update_editor_cache(target: Node) -> void:
@@ -225,9 +226,10 @@ func _do_update_editor_cache(target: Node) -> void:
 		_to_editor_cached_position = n3d.position
 		_to_editor_cached_rotation = n3d.rotation
 		_to_editor_cached_scale = n3d.scale
-	if debug_enabled:
-		print("[Transform3D] Editor cache updated: pos=%s, rot=%s, scale=%s" % [
-			n3d.position, n3d.rotation, n3d.scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "editor_cache",
+			"pos=%s rot=%s scale=%s" % [
+			n3d.position, n3d.rotation, n3d.scale],
+			debug_enabled)
 
 
 func _clear_from_editor_cache_typed() -> void:
@@ -257,9 +259,10 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_from_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self position snapshot: %s (mode=%s)" % [
-			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_pos",
+			"%s (mode=%s)" % [
+			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_from_self_rotation_snapshot(target: Node) -> void:
@@ -272,9 +275,10 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_from_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self rotation snapshot: %s (mode=%s)" % [
-			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_rot",
+			"%s (mode=%s)" % [
+			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_from_self_scale_snapshot(target: Node) -> void:
@@ -287,9 +291,10 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_from_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] From Self scale snapshot: %s (mode=%s)" % [
-			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_scale",
+			"%s (mode=%s)" % [
+			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_position_snapshot(target: Node) -> void:
@@ -303,9 +308,10 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_to_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self position snapshot: %s (mode=%s)" % [
-			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_pos",
+			"%s (mode=%s)" % [
+			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_rotation_snapshot(target: Node) -> void:
@@ -318,9 +324,10 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_to_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self rotation snapshot: %s (mode=%s)" % [
-			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_rot",
+			"%s (mode=%s)" % [
+			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_scale_snapshot(target: Node) -> void:
@@ -333,9 +340,10 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_to_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform3D] To Self scale snapshot: %s (mode=%s)" % [
-			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_scale",
+			"%s (mode=%s)" % [
+			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _scale_pivot_point_is_nonzero() -> bool:
@@ -351,8 +359,9 @@ func _do_resolve_scale_pivot(target: Node) -> void:
 				if bounds.size == Vector3.ZERO:
 					bounds = _infer_node3d_bounds_recursive(n3d)
 				_scale_pivot_point = bounds.get_center() if bounds.size != Vector3.ZERO else Vector3.ZERO
-				if debug_enabled:
-					print("[Transform3D] Auto-center scale pivot: bounds=%s, center=%s" % [bounds, _scale_pivot_point])
+				JuiceLogger.log_capture(self, _get_domain_tag(), "scale_pivot_auto",
+						"bounds=%s center=%s" % [bounds, _scale_pivot_point],
+						debug_enabled)
 			else:
 				_scale_pivot_point = Vector3.ZERO
 		PivotMode.INHERIT:
@@ -538,15 +547,18 @@ func _resolve_node_path_to_node3d(path: NodePath, path_name: String) -> Node3D:
 		return null
 	if _host_node == null or not is_instance_valid(_host_node):
 		if debug_enabled:
-			push_warning("[Transform3D] Cannot resolve %s — no host node" % path_name)
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"cannot resolve %s — no host node" % path_name, debug_enabled)
 		return null
 	var resolved := _host_node.get_node_or_null(path)
 	if resolved == null:
 		if debug_enabled:
-			push_warning("[Transform3D] %s path '%s' could not be resolved" % [path_name, path])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s path '%s' could not be resolved" % [path_name, path], debug_enabled)
 		return null
 	if not (resolved is Node3D):
 		if debug_enabled:
-			push_warning("[Transform3D] %s '%s' is not a Node3D (is %s)" % [path_name, resolved.name, resolved.get_class()])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s '%s' is not a Node3D (is %s)" % [path_name, resolved.name, resolved.get_class()], debug_enabled)
 		return null
 	return resolved as Node3D

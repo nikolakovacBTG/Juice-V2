@@ -154,8 +154,9 @@ var _to_self_scale_snapshot: Vector2 = Vector2.ONE
 
 func _do_capture_base(target: Node) -> void:
 	if _has_base:
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._do_capture_base: SKIPPED (already has _base_pos=%s)" % [_base_position])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"capture_base: SKIPPED (already has base_pos=%s)" % [_base_position],
+				debug_enabled)
 		return
 	var ctrl := target as Control
 	if ctrl == null:
@@ -165,9 +166,10 @@ func _do_capture_base(target: Node) -> void:
 	_base_rotation_radians = JuiceLedger.get_base(ctrl, "rotation", ctrl.rotation)
 	_base_scale = JuiceLedger.get_base(ctrl, "scale", ctrl.scale)
 	_has_base = true
-	if debug_enabled:
-		print("[FROMTO_DBG] TransformCtrl._do_capture_base: pos=%s, rot=%.1f°, scale=%s" % [
-			_base_position, rad_to_deg(_base_rotation_radians), _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s rot=%.1f° scale=%s" % [
+			_base_position, rad_to_deg(_base_rotation_radians), _base_scale],
+			debug_enabled)
 
 
 func _do_update_editor_cache(target: Node) -> void:
@@ -184,9 +186,10 @@ func _do_update_editor_cache(target: Node) -> void:
 		_to_editor_cached_position = ctrl.position
 		_to_editor_cached_rotation = ctrl.rotation
 		_to_editor_cached_scale = ctrl.scale
-	if debug_enabled:
-		print("[TransformCtrl] Editor cache updated: pos=%s, rot=%.1f°, scale=%s" % [
-			ctrl.position, rad_to_deg(ctrl.rotation), ctrl.scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "editor_cache",
+			"pos=%s rot=%.1f° scale=%s" % [
+			ctrl.position, rad_to_deg(ctrl.rotation), ctrl.scale],
+			debug_enabled)
 
 
 func _clear_from_editor_cache_typed() -> void:
@@ -203,8 +206,9 @@ func _clear_to_editor_cache_typed() -> void:
 
 func _capture_from_self_position_snapshot(target: Node) -> void:
 	if _has_from_self_position_snapshot:
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: SKIPPED (snap=%s)" % [_from_self_position_snapshot])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"from_self_pos: SKIPPED (snap=%s)" % [_from_self_position_snapshot],
+				debug_enabled)
 		return
 	# IN_EDITOR: prefer the per-target ledger base when available.
 	# The ledger holds the natural position captured at ready-time — identical to the editor
@@ -214,14 +218,16 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 	if from_capture_at == CaptureAt.IN_EDITOR:
 		var ledger_pos: Variant = _ledger_base_snapshot.get("position", null)
 		_from_self_position_snapshot = ledger_pos if ledger_pos != null else _from_editor_cached_position
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: IN_EDITOR → snap=%s (ledger=%s)" % [_from_self_position_snapshot, ledger_pos != null])
+		JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_pos",
+				"IN_EDITOR → snap=%s (ledger=%s)" % [_from_self_position_snapshot, ledger_pos != null],
+				debug_enabled)
 	else:
 		var ctrl := target as Control
 		_from_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_from_self_position: %s → snap=%s (ledger=%s)" % [
-				CaptureAt.keys()[from_capture_at], _from_self_position_snapshot, not _ledger_base_snapshot.is_empty()])
+		JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_pos",
+				"%s → snap=%s (ledger=%s)" % [
+				CaptureAt.keys()[from_capture_at], _from_self_position_snapshot, not _ledger_base_snapshot.is_empty()],
+				debug_enabled)
 	_has_from_self_position_snapshot = true
 
 
@@ -235,9 +241,10 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		var ctrl := target as Control
 		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
 	_has_from_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[TransformCtrl] From Self rotation snapshot: %s rad (mode=%s)" % [
-			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_rot",
+			"%s rad (mode=%s)" % [
+			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_from_self_scale_snapshot(target: Node) -> void:
@@ -250,28 +257,32 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		var ctrl := target as Control
 		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)
 	_has_from_self_scale_snapshot = true
-	if debug_enabled:
-		print("[TransformCtrl] From Self scale snapshot: %s (mode=%s)" % [
-			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_scale",
+			"%s (mode=%s)" % [
+			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_position_snapshot(target: Node) -> void:
 	if _has_to_self_position_snapshot:
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: SKIPPED (snap=%s)" % [_to_self_position_snapshot])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"to_self_pos: SKIPPED (snap=%s)" % [_to_self_position_snapshot],
+				debug_enabled)
 		return
 	# IN_EDITOR: prefer the per-target ledger base when available (see _capture_from_self_position_snapshot).
 	if to_capture_at == CaptureAt.IN_EDITOR:
 		var ledger_pos: Variant = _ledger_base_snapshot.get("position", null)
 		_to_self_position_snapshot = ledger_pos if ledger_pos != null else _to_editor_cached_position
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: IN_EDITOR → snap=%s (ledger=%s)" % [_to_self_position_snapshot, ledger_pos != null])
+		JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_pos",
+				"IN_EDITOR → snap=%s (ledger=%s)" % [_to_self_position_snapshot, ledger_pos != null],
+				debug_enabled)
 	else:
 		var ctrl := target as Control
 		_to_self_position_snapshot = _ledger_base_snapshot.get("position", ctrl.position if ctrl else Vector2.ZERO)
-		if debug_enabled:
-			print("[FROMTO_DBG] TransformCtrl._capture_to_self_position: %s → snap=%s (ledger=%s)" % [
-				CaptureAt.keys()[to_capture_at], _to_self_position_snapshot, not _ledger_base_snapshot.is_empty()])
+		JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_pos",
+				"%s → snap=%s (ledger=%s)" % [
+				CaptureAt.keys()[to_capture_at], _to_self_position_snapshot, not _ledger_base_snapshot.is_empty()],
+				debug_enabled)
 	_has_to_self_position_snapshot = true
 
 
@@ -285,9 +296,10 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		var ctrl := target as Control
 		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", ctrl.rotation if ctrl else 0.0)
 	_has_to_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[TransformCtrl] To Self rotation snapshot: %s rad (mode=%s)" % [
-			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_rot",
+			"%s rad (mode=%s)" % [
+			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_scale_snapshot(target: Node) -> void:
@@ -300,9 +312,10 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		var ctrl := target as Control
 		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", ctrl.scale if ctrl else Vector2.ONE)
 	_has_to_self_scale_snapshot = true
-	if debug_enabled:
-		print("[TransformCtrl] To Self scale snapshot: %s (mode=%s)" % [
-			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_scale",
+			"%s (mode=%s)" % [
+			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _do_apply_pivot_mode(target: Node) -> void:
@@ -329,9 +342,7 @@ func _apply_position_effect(progress: float, target: Node) -> void:
 	var to_value   := _resolve_to_position(ctrl)
 	var desired_absolute := from_value.lerp(to_value, progress)
 	_pos_delta = desired_absolute - _base_position
-	if debug_enabled and (progress < 0.01 or progress > 0.99):
-		print("[FROMTO_DBG] TransformCtrl._apply_position_effect: p=%.3f from=%s to=%s desired=%s _base=%s => _pos_delta=%s" % [
-			progress, from_value, to_value, desired_absolute, _base_position, _pos_delta])
+
 
 
 func _apply_rotation_effect(progress: float, target: Node) -> void:
@@ -487,15 +498,18 @@ func _resolve_node_path_to_control(path: NodePath, path_name: String) -> Control
 		return null
 	if _host_node == null or not is_instance_valid(_host_node):
 		if debug_enabled:
-			push_warning("[TransformCtrl] Cannot resolve %s — no host node" % path_name)
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"cannot resolve %s — no host node" % path_name, debug_enabled)
 		return null
 	var resolved := _host_node.get_node_or_null(path)
 	if resolved == null:
 		if debug_enabled:
-			push_warning("[TransformCtrl] %s path '%s' could not be resolved" % [path_name, path])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s path '%s' could not be resolved" % [path_name, path], debug_enabled)
 		return null
 	if not (resolved is Control):
 		if debug_enabled:
-			push_warning("[TransformCtrl] %s '%s' is not a Control (is %s)" % [path_name, resolved.name, resolved.get_class()])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s '%s' is not a Control (is %s)" % [path_name, resolved.name, resolved.get_class()], debug_enabled)
 		return null
 	return resolved as Control

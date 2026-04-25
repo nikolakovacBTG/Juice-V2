@@ -50,10 +50,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 
 ## Phase 4: Concrete Effects
 
-### Batch 4A: Transform (concrete)
-- [ ] `TransformControlJuiceEffect.gd`
-- [ ] `Transform2DJuiceEffect.gd`
-- [ ] `Transform3DJuiceEffect.gd`
+### Batch 4A: Transform (concrete) ✅
+- [x] `TransformControlJuiceEffect.gd` — 13 prints → JuiceLogger (captures/info), 1 removed (per-frame), 3 push_warning → warn
+- [x] `Transform2DJuiceEffect.gd` — 10 prints → JuiceLogger (captures), 3 push_warning → warn
+- [x] `Transform3DJuiceEffect.gd` — 9 prints → JuiceLogger (captures), 3 push_warning → warn
 
 ### Batch 4B: Shake
 - [ ] `ShakeControlJuiceEffect.gd`
