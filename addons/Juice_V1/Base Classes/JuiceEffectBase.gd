@@ -589,8 +589,8 @@ func get_progress() -> float:
 	return _animation_progress
 
 
-## Estimate seconds remaining until this effect returns COMPLETED.
-## Used by the host node to trigger chained_preroll at the right time.
+# Estimate seconds remaining until this effect returns COMPLETED.
+# Used by the host node to trigger chained_preroll at the right time.
 # Required to support negative chained_preroll values, allowing subsequent effects in the sequence to overlap before this one finishes.
 func _get_time_to_completion() -> float:
 	if not _is_playing:
@@ -619,7 +619,7 @@ func _get_time_to_completion() -> float:
 # CORE LOGIC
 # =============================================================================
 
-## Start the auto-reverse OUT phase (for IN_AND_OUT effects).
+# Start the auto-reverse OUT phase (for IN_AND_OUT effects).
 func _start_animate_out_internal(target: Node) -> void:
 	_start_progress = _animation_progress
 	_target_progress = 0.0
@@ -628,7 +628,7 @@ func _start_animate_out_internal(target: Node) -> void:
 	_on_animate_start(target)
 
 
-## Handle cycle completion: ping-pong, auto-reverse, loops.
+# Handle cycle completion: ping-pong, auto-reverse, loops.
 func _handle_cycle_complete(target: Node) -> TickResult:
 	# --- Ping-pong phase advancement ---
 	if ping_pong:
@@ -686,7 +686,7 @@ func _handle_cycle_complete(target: Node) -> TickResult:
 	return _finish(target)
 
 
-## Finalize the animation.
+# Finalize the animation.
 func _finish(target: Node) -> TickResult:
 	# Snap to exact final progress
 	if ping_pong and _pp_reversed:
@@ -926,8 +926,8 @@ func get_total_preview_duration() -> float:
 		total += hold_at_peak + duration_out
 	return total
 
-## Returns the maximum sensible chained_preroll value — the total duration
-## from start to completion for this effect's trigger_behaviour.
+# Returns the maximum sensible chained_preroll value — the total duration
+# from start to completion for this effect's trigger_behaviour.
 # Prevents users from setting a preroll that triggers chained effects before this effect even starts.
 func _get_max_chained_preroll() -> float:
 	match trigger_behaviour:

@@ -1,4 +1,4 @@
-## Control-domain wrapper for ShakePropertyJuiceEffectBase.
+## Control-domain wrapper for [PropertyShakeJuiceEffectBase]. Drives properties with sine-wave + random shake.
 
 # ============================================================================
 # WHAT: Control-domain wrapper for ShakePropertyJuiceEffectBase.

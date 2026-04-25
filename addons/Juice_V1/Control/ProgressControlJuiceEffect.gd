@@ -197,7 +197,7 @@ var _pivot_resolved: bool = false
 var _connected_control: Control = null
 var _awaiting_reverse_eased: bool = false
 var _pending_restart_reversed: bool = false
-## Stores delta from tick() for use in _apply_effect() -- Resources have no process()
+# Stores delta from tick() for use in _apply_effect() — Resources have no process()
 var _last_delta: float = 0.0
 
 

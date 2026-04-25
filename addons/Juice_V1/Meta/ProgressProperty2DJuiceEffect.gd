@@ -1,4 +1,4 @@
-## 2D-domain wrapper for ProgressPropertyJuiceEffectBase.
+## 2D-domain wrapper for [PropertyProgressJuiceEffectBase]. Continuously accumulates properties over time.
 ##
 ## Registers the effect in Juice2DRecipe._CONCRETE_EFFECTS so it
 ## appears in the inspector dropdown on Juice2D nodes.

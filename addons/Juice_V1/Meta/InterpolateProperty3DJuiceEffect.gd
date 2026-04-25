@@ -1,4 +1,4 @@
-## 3D-domain wrapper for InterpolatePropertyJuiceEffectBase.
+## 3D-domain wrapper for [PropertyInterpolateJuiceEffectBase]. Interpolates arbitrary properties from a FROM to a TO value.
 
 # ============================================================================
 # WHAT: 3D-domain wrapper for InterpolatePropertyJuiceEffectBase.

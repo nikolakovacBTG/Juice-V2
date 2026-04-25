@@ -13,23 +13,23 @@ Generated: 2026-04-24
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
-| `Appearance2DJuiceEffect.gd` | 28 | 21 | TODO | — |
-| `Noise2DJuiceEffect.gd` | 19 | 19 | TODO | — |
-| `Progress2DJuiceEffect.gd` | 23 | 17 | TODO | — |
-| `Shake2DJuiceEffect.gd` | 16 | 16 | TODO | — |
-| `SquashStretch2DJuiceEffect.gd` | 10 | 4 | TODO | — |
-| `Transform2DJuiceEffect.gd` | 37 | 37 | TODO | — |
+| `Appearance2DJuiceEffect.gd` | 28 | 21 | DONE | Removed dead "CRITICAL FIX" comments (L419-425), verbose debug blocks noted |
+| `Noise2DJuiceEffect.gd` | 19 | 19 | DONE | Already clean — all overrides/helpers self-documenting |
+| `Progress2DJuiceEffect.gd` | 23 | 17 | DONE | Downgraded 1 private ##→# (_infer_node2d_center) |
+| `Shake2DJuiceEffect.gd` | 16 | 16 | DONE | Already clean — all overrides/helpers self-documenting |
+| `SquashStretch2DJuiceEffect.gd` | 10 | 4 | DONE | Downgraded 1 private ##→# (_capture_base) |
+| `Transform2DJuiceEffect.gd` | 37 | 37 | DONE | Already clean — all hook impls/resolvers self-documenting |
 
 ## 3D
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
-| `Appearance3DJuiceEffect.gd` | 26 | 20 | TODO | — |
-| `Noise3DJuiceEffect.gd` | 18 | 18 | TODO | — |
-| `Progress3DJuiceEffect.gd` | 25 | 22 | TODO | — |
-| `Shake3DJuiceEffect.gd` | 16 | 16 | TODO | — |
-| `SquashStretch3DJuiceEffect.gd` | 10 | 4 | TODO | — |
-| `Transform3DJuiceEffect.gd` | 38 | 38 | TODO | — |
+| `Appearance3DJuiceEffect.gd` | 26 | 20 | DONE | Already clean — mirrors Appearance2D pattern (no CRITICAL FIX debris) |
+| `Noise3DJuiceEffect.gd` | 18 | 18 | DONE | Already clean — mirrors Noise2D pattern |
+| `Progress3DJuiceEffect.gd` | 25 | 22 | DONE | Downgraded 1 private ##→# (_infer_node3d_center) |
+| `Shake3DJuiceEffect.gd` | 16 | 16 | DONE | Already clean — mirrors Shake2D pattern |
+| `SquashStretch3DJuiceEffect.gd` | 10 | 4 | DONE | Downgraded 1 private ##→# (_capture_base) |
+| `Transform3DJuiceEffect.gd` | 38 | 38 | DONE | Already clean — all hook impls/resolvers self-documenting |
 
 ## Base Classes
 
@@ -39,19 +39,19 @@ Generated: 2026-04-24
 | `Juice2DAppearanceEffect.gd` | 2 | 0 | DONE | Downgraded _clear_modulate and _get_seq_contribution ##→# |
 | `Juice2DEffectBase.gd` | 0 | 0 | SKIP | No methods |
 | `Juice2DRecipe.gd` | 1 | 0 | DONE | Already clean, no changes needed |
-| `Juice2DTransformEffect.gd` | 47 | 33 | TODO | — |
+| `Juice2DTransformEffect.gd` | 47 | 33 | DONE | Already clean — all virtuals ##, lifecycle/helpers self-documenting |
 | `Juice3D.gd` | 17 | 6 | DONE | Downgraded 4 internal 3D appearance helpers ##→# |
 | `Juice3DAppearanceEffect.gd` | 2 | 0 | DONE | Downgraded _clear_appearance and _get_seq_contribution ##→# |
 | `Juice3DEffectBase.gd` | 0 | 0 | SKIP | No methods |
 | `Juice3DRecipe.gd` | 1 | 0 | DONE | Already clean, no changes needed |
-| `Juice3DTransformEffect.gd` | 48 | 35 | TODO | — |
-| `JuiceBase.gd` | 73 | 28 | PARTIAL | Gemini added comments to Public API section, needs validation |
-| `JuiceControl.gd` | 25 | 12 | TODO | ✅ META_KEY TODOs resolved — modulate now uses JuiceLedger |
+| `Juice3DTransformEffect.gd` | 48 | 35 | DONE | Already clean — all virtuals ##, lifecycle/helpers self-documenting |
+| `JuiceBase.gd` | 73 | 28 | DONE | Validated Gemini work; downgraded 23 private methods + 21 internal state vars ##→# |
+| `JuiceControl.gd` | 25 | 12 | DONE | Post-refactor sweep: tightened redundant comment in _temporarily_reapply_visual |
 | `JuiceControlAppearanceEffect.gd` | 2 | 0 | DONE | Downgraded _clear_modulate and _get_seq_contribution ##→# |
 | `JuiceControlEffectBase.gd` | 0 | 0 | SKIP | No methods |
 | `JuiceControlRecipe.gd` | 1 | 0 | DONE | Already clean, no changes needed |
-| `JuiceControlTransformEffect.gd` | 42 | 30 | TODO | — |
-| `JuiceEffectBase.gd` | 46 | 16 | PARTIAL | Gemini added comments, RATIONALE: stripped, needs validation |
+| `JuiceControlTransformEffect.gd` | 42 | 30 | DONE | Already clean — all virtuals ##, lifecycle/helpers self-documenting |
+| `JuiceEffectBase.gd` | 46 | 16 | DONE | Validated Gemini work; downgraded 5 private methods ##→# |
 | `JuiceLedger.gd` | 10 | 0 | DONE | Validated Gemini work, tightened 3 redundant comments |
 | `JuiceRecipe.gd` | 4 | 0 | DONE | Chain-walk TODO resolved — recursive duration walk implemented |
 | `JuiceTriggerRouter.gd` | 3 | 0 | DONE | Already clean, no changes needed |
@@ -61,29 +61,29 @@ Generated: 2026-04-24
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
-| `Camera2DJuiceEffect.gd` | 17 | 13 | TODO | — |
-| `Camera3DJuiceEffect.gd` | 17 | 15 | TODO | — |
-| `CameraJuiceUtility.gd` | 6 | 5 | TODO | — |
+| `Camera2DJuiceEffect.gd` | 17 | 13 | DONE | Downgraded 4 privates ##→#, stripped 1 historical ref |
+| `Camera3DJuiceEffect.gd` | 17 | 15 | DONE | Downgraded 2 privates ##→#, stripped 1 historical ref |
+| `CameraJuiceUtility.gd` | 6 | 5 | DONE | Already clean, excellent documentation |
 
 ## Control
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
-| `AppearanceControlJuiceEffect.gd` | 28 | 22 | TODO | — |
-| `NoiseControlJuiceEffect.gd` | 18 | 16 | TODO | — |
-| `ProgressControlJuiceEffect.gd` | 24 | 24 | TODO | — |
-| `ShakeControlJuiceEffect.gd` | 14 | 14 | TODO | — |
-| `SquashStretchControlJuiceEffect.gd` | 11 | 4 | TODO | ✅ _get_interrupt_identity sharing resolved (all 3 domains) |
-| `TransformControlJuiceEffect.gd` | 35 | 35 | TODO | — |
+| `AppearanceControlJuiceEffect.gd` | 28 | 22 | DONE | Already clean, excellent documentation |
+| `NoiseControlJuiceEffect.gd` | 18 | 16 | DONE | Downgraded 2 privates ##→# (_advance_noise_time, _compute_noise_deltas) |
+| `ProgressControlJuiceEffect.gd` | 24 | 24 | DONE | Downgraded 1 internal state ##→# (_last_delta) |
+| `ShakeControlJuiceEffect.gd` | 14 | 14 | DONE | Already clean, all overrides self-documenting |
+| `SquashStretchControlJuiceEffect.gd` | 11 | 4 | DONE | Downgraded 2 helpers ##→# (_capture_base, _apply_pivot_mode) |
+| `TransformControlJuiceEffect.gd` | 35 | 35 | DONE | Already clean, all hooks/resolvers self-documenting |
 
 ## Editor
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
-| `JuiceEditorContext.gd` | 2 | 0 | TODO | — |
-| `JuiceProjectSettings.gd` | 2 | 0 | TODO | — |
-| `PropertyPickerDialog.gd` | 8 | 5 | TODO | — |
-| `PropertyPickerPlugin.gd` | 12 | 7 | TODO | — |
+| `JuiceEditorContext.gd` | 2 | 0 | DONE | Already clean, excellent documentation |
+| `JuiceProjectSettings.gd` | 2 | 0 | DONE | Already clean, no changes needed |
+| `PropertyPickerDialog.gd` | 8 | 5 | DONE | Downgraded 2 shader helpers ##→# |
+| `PropertyPickerPlugin.gd` | 12 | 7 | DONE | Downgraded 3 inner-class private helpers ##→# |
 
 ## Juice_V1
 

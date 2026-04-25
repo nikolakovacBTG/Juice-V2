@@ -1,4 +1,4 @@
-## 2D-domain wrapper for NoisePropertyJuiceEffectBase.
+## 2D-domain wrapper for [PropertyNoiseJuiceEffectBase]. Drives properties with procedural noise oscillation.
 ##
 ## Registers the effect in Juice2DRecipe._CONCRETE_EFFECTS so it
 ## appears in the inspector dropdown on Juice2D nodes.

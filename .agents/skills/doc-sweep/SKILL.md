@@ -1,6 +1,6 @@
 ---
 name: doc-sweep
-description: In-script documentation quality sweep for Juice V1. Ensures method comments, class tooltips, export tooltips, and history sanitization meet marketplace standards. Use when documenting scripts or reviewing documentation quality.
+description: "Skill: In-script documentation quality sweep for Juice V1. Ensures method comments, class tooltips, export tooltips, and history sanitization meet marketplace standards."
 ---
 
 # Documentation Sweep Skill

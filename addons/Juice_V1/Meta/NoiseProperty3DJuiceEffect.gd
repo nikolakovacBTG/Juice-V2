@@ -1,4 +1,4 @@
-## 3D-domain wrapper for NoisePropertyJuiceEffectBase.
+## 3D-domain wrapper for [PropertyNoiseJuiceEffectBase]. Drives properties with procedural noise oscillation.
 ##
 ## Registers the effect in Juice3DRecipe._CONCRETE_EFFECTS so it
 ## appears in the inspector dropdown on Juice3D nodes.

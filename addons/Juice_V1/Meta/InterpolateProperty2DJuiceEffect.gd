@@ -1,4 +1,4 @@
-## 2D-domain wrapper for InterpolatePropertyJuiceEffectBase.
+## 2D-domain wrapper for [PropertyInterpolateJuiceEffectBase]. Interpolates arbitrary properties from a FROM to a TO value.
 
 # ============================================================================
 # WHAT: 2D-domain wrapper for InterpolatePropertyJuiceEffectBase.

@@ -170,7 +170,7 @@ func _get_interrupt_identity() -> Variant:
 # HELPERS
 # =============================================================================
 
-## Capture base scale from target (once per animation cycle).
+# Capture base scale from target (once per animation cycle).
 func _capture_base(target: Node) -> void:
 	if _has_base:
 		return

@@ -168,16 +168,16 @@ class PropertyPathEditorProperty extends EditorProperty:
 		_current_target = null
 		_parent_effect = null
 
-	## Find the PropertyJuiceEffectBase that owns the current PropertyTarget.
-	## Returns null if the top-level inspected object isn't a PropertyJuiceEffectBase.
+	# Find the PropertyJuiceEffectBase that owns the current PropertyTarget.
+	# Returns null if the top-level inspected object isn't a PropertyJuiceEffectBase.
 	func _find_parent_effect() -> PropertyJuiceEffectBase:
 		var obj := EditorInterface.get_inspector().get_edited_object()
 		if obj is PropertyJuiceEffectBase:
 			return obj as PropertyJuiceEffectBase
 		return null
 
-	## Resolve the target node from the PropertyTarget's node_path.
-	## node_path is relative to the JuiceBase node that owns the effect chain.
+	# Resolve the target node from the PropertyTarget's node_path.
+	# node_path is relative to the JuiceBase node that owns the effect chain.
 	func _resolve_target_node(target: PropertyTarget) -> Node:
 		var scene_root := EditorInterface.get_edited_scene_root()
 		if scene_root == null:
@@ -216,9 +216,9 @@ class PropertyPathEditorProperty extends EditorProperty:
 			+ "Showing scene root properties. Set node_path to the correct target node.")
 		return scene_root
 
-	## Find the JuiceBase node from the current editor selection.
-	## The selected node is usually the target node (parent of JuiceBase) or
-	## the JuiceBase itself.
+	# Find the JuiceBase node from the current editor selection.
+	# The selected node is usually the target node (parent of JuiceBase) or
+	# the JuiceBase itself.
 	func _find_juice_base_from_selection() -> Node:
 		var selection := EditorInterface.get_selection()
 		var selected_nodes := selection.get_selected_nodes()

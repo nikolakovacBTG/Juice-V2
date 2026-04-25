@@ -330,13 +330,13 @@ func _get_interrupt_identity() -> Variant:
 # NOISE CORE
 # =============================================================================
 
-## Advance noise time — freeze during fade-out for smooth return to zero
+# Advance noise time — freeze during fade-out for smooth return to zero
 func _advance_noise_time(delta: float) -> void:
 	if _target_progress > 0.0:
 		_noise_time += delta
 
 
-## Compute noise deltas at the given intensity (progress envelope).
+# Compute noise deltas at the given intensity (progress envelope).
 func _compute_noise_deltas(intensity: float, target: Control) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector2.ZERO

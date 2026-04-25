@@ -1,4 +1,4 @@
-## Control-domain wrapper for InterpolatePropertyJuiceEffectBase.
+## Control-domain wrapper for [PropertyInterpolateJuiceEffectBase]. Interpolates arbitrary properties from a FROM to a TO value.
 
 # ============================================================================
 # WHAT: Control-domain wrapper for InterpolatePropertyJuiceEffectBase.

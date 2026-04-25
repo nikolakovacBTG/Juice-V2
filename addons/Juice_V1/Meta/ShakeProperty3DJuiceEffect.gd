@@ -1,4 +1,4 @@
-## 3D-domain wrapper for ShakePropertyJuiceEffectBase.
+## 3D-domain wrapper for [PropertyShakeJuiceEffectBase]. Drives properties with sine-wave + random shake.
 
 # ============================================================================
 # WHAT: 3D-domain wrapper for ShakePropertyJuiceEffectBase.
