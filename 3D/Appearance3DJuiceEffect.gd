@@ -403,8 +403,11 @@ func _on_animate_start(target: Node) -> void:
 	# 3D OUTLINE: domain node (Juice3D) owns the outline material via next_pass.
 	# No effect-side setup needed — Juice3D reads _computed_outline_amount/_color.
 
-	if debug_enabled:
-		print("[Appearance3D] Start: %s" % AppearanceEffect.keys()[effect_type])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: effect=%s flicker=%s" % [
+			AppearanceEffect.keys()[effect_type],
+			FlickerMode.keys()[flicker_mode]],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
