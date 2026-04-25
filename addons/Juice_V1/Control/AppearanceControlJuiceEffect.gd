@@ -411,10 +411,11 @@ func _on_animate_start(target: Node) -> void:
 			mat.set_shader_parameter("outline_width", 0.0)
 			_install_material(ctrl, mat)
 
-	if debug_enabled:
-		print("[AppearanceControl] Start: %s, flicker=%s" % [
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: effect=%s flicker=%s" % [
 			AppearanceEffect.keys()[effect_type],
-			FlickerMode.keys()[flicker_mode]])
+			FlickerMode.keys()[flicker_mode]],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
@@ -622,7 +623,8 @@ func _setup_flicker_noise() -> void:
 func _create_shader_material(shader_path: String) -> ShaderMaterial:
 	var shader := load(shader_path) as Shader
 	if shader == null:
-		push_warning("[AppearanceControl] Shader not found: %s" % shader_path)
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"shader not found: %s" % shader_path, debug_enabled)
 		return null
 	var mat := ShaderMaterial.new()
 	mat.shader = shader

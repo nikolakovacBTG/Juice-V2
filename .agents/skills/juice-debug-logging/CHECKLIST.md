@@ -41,10 +41,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Juice2DTransformEffect.gd` — 1 print → log_info
 - [x] `Juice3DTransformEffect.gd` — 1 print → log_info
 
-### Batch 3E: Appearance Effect Bases
-- [ ] `JuiceControlAppearanceEffect.gd` — shader diagnostics
-- [ ] `Juice2DAppearanceEffect.gd` — shader diagnostics
-- [ ] `Juice3DAppearanceEffect.gd` — shader diagnostics
+### Batch 3E: Appearance Effect Bases ✅
+- [x] `AppearanceControlJuiceEffect.gd` — 1 print → log_info, 1 push_warning → warn
+- [x] `Appearance2DJuiceEffect.gd` — 14 dev leftovers REMOVED, 2 prints → log_info, 1 push_warning → warn, 6 resolvers simplified
+- [x] `Appearance3DJuiceEffect.gd` — 1 print → log_info
 
 ---
 

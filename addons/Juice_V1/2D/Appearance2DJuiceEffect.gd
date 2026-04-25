@@ -386,35 +386,10 @@ func _on_host_ready(target: Node, host: Node) -> void:
 func _on_animate_start(target: Node) -> void:
 	var n2d := target as Node2D
 	if n2d == null:
-		if debug_enabled:
-			print("[DEBUG] Phase A: _on_animate_start - target is not Node2D: ", target)
 		return
-
-	if debug_enabled:
-		print("[DEBUG] Phase A: _on_animate_start called with target: ", n2d)
-		print("[DEBUG] Phase A: Target parent: ", n2d.get_parent())
-		# Check what Juice nodes exist
-		var juice_nodes := []
-		if n2d.get_parent() != null:
-			for child in n2d.get_parent().get_children():
-				if "Juice" in child.get_class():
-					juice_nodes.append(child)
-		print("[DEBUG] Phase A: Found Juice nodes: ", juice_nodes)
-		# Check if Juice2D node exists as sibling
-		var juice2d_found := false
-		if n2d.get_parent() != null:
-			for child in n2d.get_parent().get_children():
-				if child is Juice2D:
-					juice2d_found = true
-					print("[DEBUG] Phase A: Found Juice2D sibling: ", child)
-					break
-		if not juice2d_found:
-			print("[DEBUG] Phase A: NO Juice2D node found as sibling!")
 
 	# Modulate effects contribute a factor; OUTLINE owns target.material directly.
 	_contributes_modulate = (effect_type != AppearanceEffect.OUTLINE)
-	if debug_enabled:
-		print("[DEBUG] Phase A: _contributes_modulate set to: ", _contributes_modulate)
 
 	# Capture From/To references based on capture_at setting
 	if from_reference == AppearanceReference.SELF and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
@@ -436,18 +411,18 @@ func _on_animate_start(target: Node) -> void:
 			mat.set_shader_parameter("outline_width", 0.0)
 			_install_material(n2d, mat)
 
-	if debug_enabled:
-		print("[Appearance2D] Start: %s, flicker=%s" % [
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: effect=%s flicker=%s" % [
 			AppearanceEffect.keys()[effect_type],
-			FlickerMode.keys()[flicker_mode]])
+			FlickerMode.keys()[flicker_mode]],
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_flicker_time()
 	var f := _compute_flicker_multiplier()
 
-	if debug_enabled:
-		print("[DEBUG] _apply_effect: progress=", progress, " f=", f, " type=", AppearanceEffect.keys()[effect_type])
+
 
 	if target == null:
 		return
@@ -509,8 +484,8 @@ func _restore_to_natural(target: Node) -> void:
 	_has_natural = false
 	_flicker_time = 0.0
 
-	if debug_enabled:
-		print("[Appearance2D] Restored natural state.")
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restored natural state", debug_enabled)
 
 
 func _invalidate_base_cache() -> void:
@@ -564,8 +539,7 @@ func _compute_flicker_multiplier() -> float:
 				multiplier = lerpf(flicker_min, flicker_max, flicker_curve.sample(phase))
 	if hard_flicker:
 		multiplier = 1.0 if multiplier >= (flicker_min + flicker_max) * 0.5 else 0.0
-	if debug_enabled:
-		print("[DEBUG] Phase C: Flicker multiplier: ", multiplier)
+
 	return multiplier
 
 func _advance_flicker_time() -> void:
@@ -587,7 +561,8 @@ func _setup_flicker_noise() -> void:
 func _create_shader_material(shader_path: String) -> ShaderMaterial:
 	var shader := load(shader_path) as Shader
 	if shader == null:
-		push_warning("[Appearance2D] Shader not found: %s" % shader_path)
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"shader not found: %s" % shader_path, debug_enabled)
 		return null
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
@@ -633,66 +608,42 @@ func _perform_to_capture(n2d: Node2D) -> void:
 
 # TINT resolvers
 func _resolve_from_tint(_n2d: Node2D) -> Color:
-	var result: Color
 	if from_reference == AppearanceReference.SELF:
-		result = lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
+		return lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
 	else:  # CUSTOM
-		result = lerp(Color.WHITE, from_tint_color, from_tint_blend)
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_from_tint returning: ", result)
-	return result
+		return lerp(Color.WHITE, from_tint_color, from_tint_blend)
 
 func _resolve_to_tint(_n2d: Node2D) -> Color:
-	var result: Color
 	if to_reference == AppearanceReference.SELF:
-		result = lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
+		return lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
 	else:  # CUSTOM
-		result = lerp(Color.WHITE, tint_color, tint_blend)
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_to_tint returning: ", result)
-	return result
+		return lerp(Color.WHITE, tint_color, tint_blend)
 
 # FADE resolvers
 func _resolve_from_alpha(_n2d: Node2D) -> float:
-	var result: float
 	if from_reference == AppearanceReference.SELF:
-		result = _captured_from_alpha
+		return _captured_from_alpha
 	else:  # CUSTOM
-		result = from_alpha
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_from_alpha returning: ", result)
-	return result
+		return from_alpha
 
 func _resolve_to_alpha(_n2d: Node2D) -> float:
-	var result: float
 	if to_reference == AppearanceReference.SELF:
-		result = _captured_to_alpha
+		return _captured_to_alpha
 	else:  # CUSTOM
-		result = fade_target_alpha
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_to_alpha returning: ", result)
-	return result
+		return fade_target_alpha
 
 # OVERBRIGHT resolvers
 func _resolve_from_brightness(_n2d: Node2D) -> float:
-	var result: float
 	if from_reference == AppearanceReference.SELF:
-		result = _captured_from_brightness
+		return _captured_from_brightness
 	else:  # CUSTOM
-		result = from_brightness
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_from_brightness returning: ", result)
-	return result
+		return from_brightness
 
 func _resolve_to_brightness(_n2d: Node2D) -> float:
-	var result: float
 	if to_reference == AppearanceReference.SELF:
-		result = _captured_to_brightness
+		return _captured_to_brightness
 	else:  # CUSTOM
-		result = overbright_strength
-	if debug_enabled:
-		print("[DEBUG] Phase A: _resolve_to_brightness returning: ", result)
-	return result
+		return overbright_strength
 
 # =============================================================================
 # CONFIGURATION WARNINGS
