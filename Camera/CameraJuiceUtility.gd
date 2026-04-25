@@ -96,8 +96,10 @@ func _ready() -> void:
 	# Register to group so editor tooling can discover CameraJuiceUtility nodes.
 	add_to_group("juice_camera", true)
 
-	if debug_enabled and _initialized:
-		print("[%s] Ready on %s (%s)" % [name, _camera.name, "3D" if _is_3d else "2D"])
+	if _initialized:
+		JuiceLogger.log_info(self, "Camera",
+				"ready on %s (%s)" % [_camera.name, "3D" if _is_3d else "2D"],
+				debug_enabled)
 
 
 func _initialize_camera() -> void:
@@ -121,10 +123,10 @@ func _initialize_camera() -> void:
 			max_zoom_offset = _2D_DEFAULT_MAX_ZOOM
 
 	else:
-		push_warning("[%s] Parent is not a Camera2D or Camera3D (got %s). Must be a direct camera child." % [
-			name,
-			parent.get_class() if parent else "null"
-		])
+		JuiceLogger.warn(self, "Camera",
+				"parent is not a Camera2D or Camera3D (got %s) — must be a direct camera child" % (
+				parent.get_class() if parent else "null"),
+				debug_enabled)
 		_initialized = false
 
 
@@ -144,8 +146,10 @@ func _physics_process(_delta: float) -> void:
 	else:
 		_apply_to_2d()
 
-	if debug_enabled and has_offset:
-		print("[%s] pos=%s rot=%s zoom=%.4f" % [name, position_offset, rotation_offset, zoom_offset])
+	if has_offset:
+		JuiceLogger.log_info(self, "Camera",
+				"pos=%s rot=%s zoom=%.4f" % [position_offset, rotation_offset, zoom_offset],
+				debug_enabled)
 
 
 # =============================================================================
@@ -234,5 +238,5 @@ func reset_offsets() -> void:
 	_applied_rotation_offset = Vector3.ZERO
 	_applied_zoom_offset     = 0.0
 
-	if debug_enabled:
-		print("[%s] Offsets reset" % name)
+	JuiceLogger.log_info(self, "Camera",
+			"offsets reset", debug_enabled)
