@@ -26,10 +26,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Juice2D.gd` — capture, pre_tick, post_tick_write
 - [x] `Juice3D.gd` — capture, pre_tick, post_tick_write
 
-### Batch 3B: Core Infrastructure
-- [ ] `JuiceLedger.gd` — aggregation trace
-- [ ] `JuiceEffectBase.gd` — start/tick/stop lifecycle + _get_domain_tag()
-- [ ] `JuiceRecipe.gd` — domain guardrails (Category 6)
+### Batch 3B: Core Infrastructure ✅
+- [x] `JuiceLedger.gd` — NO CHANGES (static utility; callers log aggregation)
+- [x] `JuiceEffectBase.gd` — start/stop lifecycle + _get_domain_tag() virtual
+- [x] `JuiceRecipe.gd` — NO CHANGES (data container; no logging insertion points)
 
 ### Batch 3C: Domain Effect Bases
 - [ ] `JuiceControlEffectBase.gd` — _get_domain_tag()
