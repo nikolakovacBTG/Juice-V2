@@ -171,10 +171,10 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `Shake2DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
 - [x] `Shake3DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
 
-### Batch R-B: Cat 3 — Delta logging in Noise effects (3 files)
-- [ ] `NoiseControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `Noise2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `Noise3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+### Batch R-B: Cat 3 — Delta logging in Noise effects (3 files) ✅
+- [x] `NoiseControlJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
+- [x] `Noise2DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
+- [x] `Noise3DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
 
 ### Batch R-C: Cat 3 — Delta logging in SquashStretch effects (3 files)
 - [ ] `SquashStretchControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
