@@ -451,8 +451,7 @@ func _ready() -> void:
 	# STACK: single parent target. SEQUENCER: null here (targets resolved per-sequence).
 	_target_node = _resolve_target()
 	if _target_node == null and mode == Mode.STACK:
-		if debug_enabled:
-			push_warning("[%s] No valid target node found" % name)
+		JuiceLogger.warn(self, _get_domain_tag(), "No valid target node found", debug_enabled)
 		return
 
 	# Resolve trigger source (where signals come from)
@@ -473,20 +472,24 @@ func _ready() -> void:
 						sibling_sources.append(sibling)
 				if sibling_sources.size() == 1:
 					_trigger_source_node = sibling_sources[0]
-					if debug_enabled:
-						print("[%s] Sibling auto-connect: using '%s' (%s)" % [
-							name, _trigger_source_node.name, _trigger_source_node.get_class()])
+					JuiceLogger.log_info(self, _get_domain_tag(),
+						"Sibling auto-connect: using '%s' (%s)" % [
+						_trigger_source_node.name, _trigger_source_node.get_class()],
+						debug_enabled)
 				elif sibling_sources.size() > 1:
-					if debug_enabled:
-						var names := PackedStringArray()
-						for s in sibling_sources:
-							names.append(s.name)
-						push_warning("[%s] Multiple sibling trigger sources (%s). Set trigger_source_path." % [
-							name, ", ".join(names)])
+					var names := PackedStringArray()
+					for s in sibling_sources:
+						names.append(s.name)
+					JuiceLogger.warn(self, _get_domain_tag(),
+							"Multiple sibling trigger sources (%s). Set trigger_source_path." % [
+							", ".join(names)],
+							debug_enabled)
 		TriggerSource.NODE:
 			_trigger_source_node = get_node_or_null(trigger_source_path)
-			if _trigger_source_node == null and debug_enabled:
-				push_warning("[%s] Trigger source node not found: %s" % [name, trigger_source_path])
+			if _trigger_source_node == null:
+				JuiceLogger.warn(self, _get_domain_tag(),
+						"Trigger source node not found: %s" % trigger_source_path,
+						debug_enabled)
 
 	# Clone recipe effects for independent state
 	_invalidate_runtime_effects()
@@ -503,8 +506,9 @@ func _ready() -> void:
 					manual_source, manual_trigger_signal,
 					_on_trigger_momentary, set_external_progress,
 					name if debug_enabled else "")
-			elif debug_enabled:
-				push_warning("[%s] Manual trigger source not found" % name)
+			else:
+				JuiceLogger.warn(self, _get_domain_tag(),
+						"Manual trigger source not found", debug_enabled)
 	elif trigger_source == TriggerSource.PARENT and auto_connect_parent:
 		_try_auto_connect()
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
@@ -594,9 +598,10 @@ func _process(delta: float) -> void:
 						chained.start(_target_node, play_in, false, self)
 						_active_effect_indices.append(chain_idx)
 			effect._chained_preroll_triggered = true
-			if debug_enabled:
-				print("[%s] Chained preroll: effect %d → %d effects (%.2fs early)" % [
-					name, idx, effect.chain_to.size(), effect.chained_preroll])
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"Chained preroll: effect %d → %d effects (%.2fs early)" % [
+					idx, effect.chain_to.size(), effect.chained_preroll],
+					debug_enabled)
 
 	# --- Post-tick: domain-specific aggregation + write once ---
 	_post_tick_write()
@@ -700,8 +705,7 @@ func stop() -> void:
 	# Write natural state (all effect contributions now cleared)
 	_post_tick_write()
 	set_process(false)
-	if debug_enabled:
-		print("[%s] Stopped" % name)
+	JuiceLogger.log_info(self, _get_domain_tag(), "Stopped", debug_enabled)
 
 
 ## Stop all effects but keep current visual state.
@@ -804,13 +808,11 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 	if _is_playing or _in_node_start_delay:
 		match retrigger_policy:
 			RetriggerPolicy.IGNORE:
-				if debug_enabled:
-					print("[%s] Trigger ignored (playing)" % name)
+				JuiceLogger.log_info(self, _get_domain_tag(), "Trigger ignored (playing)", debug_enabled)
 				return
 			RetriggerPolicy.QUEUE:
 				_queued_trigger = trigger_info
-				if debug_enabled:
-					print("[%s] Trigger queued" % name)
+				JuiceLogger.log_info(self, _get_domain_tag(), "Trigger queued", debug_enabled)
 				return
 			RetriggerPolicy.RESTART:
 				_in_node_start_delay = false
@@ -860,12 +862,14 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 	if start_delay > 0.0:
 		_in_node_start_delay = true
 		_node_delay_elapsed = 0.0
-		if debug_enabled:
-			print("[%s] Node start_delay=%.2f, holding at From state" % [name, start_delay])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"Node start_delay=%.2f, holding at From state" % start_delay,
+				debug_enabled)
 
-	if debug_enabled:
-		print("[%s] Trigger handled: play_in=%s, behaviour=%s" % [
-			name, play_in, JuiceEffectBase.TriggerBehaviour.keys()[trigger_behaviour]])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Trigger handled: play_in=%s, behaviour=%s" % [
+			play_in, JuiceEffectBase.TriggerBehaviour.keys()[trigger_behaviour]],
+			debug_enabled)
 
 # =============================================================================
 # CORE LOGIC
@@ -873,8 +877,7 @@ func _handle_trigger(trigger_info: Dictionary) -> void:
 
 func _start_effects(play_in: bool) -> void:
 	if recipe == null or _runtime_effects.is_empty():
-		if debug_enabled:
-			push_warning("[%s] No recipe or effects to play" % name)
+		JuiceLogger.warn(self, _get_domain_tag(), "No recipe or effects to play", debug_enabled)
 		return
 
 	if _target_node == null:
@@ -910,24 +913,21 @@ func _start_effects(play_in: bool) -> void:
 	# Reapply visuals after effects have captured their From/To references
 	_temporarily_reapply_visual()
 
-	if debug_enabled and _target_node is Control:
-		var c := _target_node as Control
-		print("[FROMTO_DBG] %s._start_effects: AFTER reapply: ctrl.pos=%s" % [name, c.position])
+
 
 	# Write immediately so first-frame state is correct. With contribution
 	# tracking this applies: target = target - old(0) + new(first_delta),
 	# ensuring the target is at the correct position before the first _process.
 	_post_tick_write()
 
-	if debug_enabled and _target_node is Control:
-		var c := _target_node as Control
-		print("[FROMTO_DBG] %s._start_effects: AFTER post_tick_write: ctrl.pos=%s" % [name, c.position])
+
 
 	set_process(true)
 
-	if debug_enabled:
-		print("[%s] Started %d root effects (play_in=%s)" % [
-			name, root_indices.size(), play_in])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Started %d root effects (play_in=%s)" % [
+			root_indices.size(), play_in],
+			debug_enabled)
 
 
 func _on_effect_completed(idx: int) -> void:
@@ -938,8 +938,7 @@ func _on_effect_completed(idx: int) -> void:
 	if effect == null:
 		return
 
-	if debug_enabled:
-		print("[%s] Effect %d completed" % [name, idx])
+	JuiceLogger.log_info(self, _get_domain_tag(), "Effect %d completed" % idx, debug_enabled)
 
 	# Follow chain_to (skip if chained_preroll already started it)
 	if not effect.chain_to.is_empty() and not effect._chained_preroll_triggered:
@@ -951,8 +950,9 @@ func _on_effect_completed(idx: int) -> void:
 					var play_in := effect._animation_progress >= 0.5
 					chained.start(_target_node, play_in, false)
 					_active_effect_indices.append(chain_idx)
-		if debug_enabled:
-			print("[%s] Chained to %d effects from effect %d" % [name, effect.chain_to.size(), idx])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"Chained to %d effects from effect %d" % [effect.chain_to.size(), idx],
+				debug_enabled)
 
 
 func _on_all_effects_completed() -> void:
@@ -980,8 +980,9 @@ func _on_all_effects_completed() -> void:
 
 	completed.emit()
 
-	if debug_enabled:
-		print("[%s] All effects completed (iterations=%d)" % [name, _current_iteration])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"All effects completed (iterations=%d)" % _current_iteration,
+			debug_enabled)
 
 	# Execute queued trigger
 	if not _queued_trigger.is_empty():
@@ -1021,8 +1022,9 @@ func _stop_matching_siblings() -> void:
 			for my_id in my_identities:
 				if typeof(sib_identity) == typeof(my_id) and sib_identity == my_id:
 					juice_sibling.stop_and_hold()
-					if debug_enabled:
-						print("[%s] Interrupted sibling '%s'" % [name, sibling.name])
+					JuiceLogger.log_info(self, _get_domain_tag(),
+							"Interrupted sibling '%s'" % sibling.name,
+							debug_enabled)
 					break
 
 
@@ -1042,17 +1044,14 @@ func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -
 	if _is_playing:
 		match retrigger_policy:
 			RetriggerPolicy.IGNORE:
-				if debug_enabled:
-					print("[%s] Seq retrigger IGNORED" % name)
+				JuiceLogger.log_info(self, _get_domain_tag(), "Seq retrigger IGNORED", debug_enabled)
 				return
 			RetriggerPolicy.QUEUE:
 				_queued_trigger = {"play_in": not is_reverse, "is_one_shot_return": is_one_shot_return}
-				if debug_enabled:
-					print("[%s] Seq retrigger QUEUED" % name)
+				JuiceLogger.log_info(self, _get_domain_tag(), "Seq retrigger QUEUED", debug_enabled)
 				return
 			RetriggerPolicy.RESTART:
-				if debug_enabled:
-					print("[%s] Seq retrigger RESTART" % name)
+				JuiceLogger.log_info(self, _get_domain_tag(), "Seq retrigger RESTART", debug_enabled)
 				_seq_stop()
 
 	# Initialize loop/ping-pong state on fresh triggers (not internal restarts)
@@ -1104,8 +1103,7 @@ func _seq_stop() -> void:
 
 	set_process(false)
 
-	if debug_enabled:
-		print("[%s] Seq stopped" % name)
+	JuiceLogger.log_info(self, _get_domain_tag(), "Seq stopped", debug_enabled)
 
 
 # Core sequencing coroutine — staggers animation across targets.
@@ -1121,8 +1119,7 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	var targets := _get_seq_targets()
 
 	if targets.is_empty():
-		if debug_enabled:
-			print("[%s] Seq: no targets found" % name)
+		JuiceLogger.log_info(self, _get_domain_tag(), "Seq: no targets found", debug_enabled)
 		_is_playing = false
 		completed.emit()
 		return
@@ -1151,9 +1148,10 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 		else:
 			animate_in_started.emit()
 
-	if debug_enabled:
-		print("[%s] Seq starting with %d targets, delay=%.2f, reverse=%s" % [
-			name, targets.size(), seq_stagger_delay, is_reverse])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Seq starting with %d targets, delay=%.2f, reverse=%s" % [
+			targets.size(), seq_stagger_delay, is_reverse],
+			debug_enabled)
 
 	# Animate each target with stagger delay
 	for i in range(targets.size()):
@@ -1234,16 +1232,18 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 
 	set_process(true)
 
-	if debug_enabled:
-		print("[%s] Seq RECIPE: started %d roots on '%s'" % [name, root_indices.size(), target.name])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Seq RECIPE: started %d roots on '%s'" % [root_indices.size(), target.name],
+			debug_enabled)
 
 
 # TARGETS_STACK mode: find JuiceBase nodes inside a named container on target.
 func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
 	var stack := target.get_node_or_null(seq_stack_name)
 	if stack == null:
-		if debug_enabled:
-			print("[%s] Seq STACK: target '%s' has no stack '%s'" % [name, target.name, seq_stack_name])
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"Seq STACK: target '%s' has no stack '%s'" % [target.name, seq_stack_name],
+				debug_enabled)
 		return
 
 	var juice_nodes: Array[JuiceBase] = []
@@ -1252,8 +1252,9 @@ func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
 			juice_nodes.append(child as JuiceBase)
 
 	if juice_nodes.is_empty():
-		if debug_enabled:
-			print("[%s] Seq STACK: stack '%s' on '%s' has no JuiceBase children" % [name, seq_stack_name, target.name])
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"Seq STACK: stack '%s' on '%s' has no JuiceBase children" % [seq_stack_name, target.name],
+				debug_enabled)
 		return
 
 	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "STACK")
@@ -1267,8 +1268,9 @@ func _seq_animate_target_children(target: Node, is_reverse: bool) -> void:
 			juice_nodes.append(child as JuiceBase)
 
 	if juice_nodes.is_empty():
-		if debug_enabled:
-			print("[%s] Seq CHILDREN: target '%s' has no JuiceBase children" % [name, target.name])
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"Seq CHILDREN: target '%s' has no JuiceBase children" % target.name,
+				debug_enabled)
 		return
 
 	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "CHILDREN")
@@ -1285,8 +1287,9 @@ func _seq_trigger_juice_nodes(juice_nodes: Array[JuiceBase], is_reverse: bool, t
 		else:
 			juice.animate_in()
 
-	if debug_enabled:
-		print("[%s] Seq %s: triggered %d JuiceBase nodes on '%s'" % [name, mode_label, juice_nodes.size(), target_name])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Seq %s: triggered %d JuiceBase nodes on '%s'" % [mode_label, juice_nodes.size(), target_name],
+			debug_enabled)
 
 
 # Callback when an externally-triggered JuiceBase node completes (STACK/CHILDREN modes).
@@ -1305,8 +1308,9 @@ func _seq_get_or_create_target_effects(target: Node) -> Array[JuiceEffectBase]:
 	var clones: Array[JuiceEffectBase] = recipe.create_runtime_effects()
 	_seq_target_effects[target] = clones
 
-	if debug_enabled:
-		print("[%s] Created %d effect clones for target '%s'" % [name, clones.size(), target.name])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Created %d effect clones for target '%s'" % [clones.size(), target.name],
+			debug_enabled)
 
 	return clones
 
@@ -1346,8 +1350,9 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 	if not _seq_held_entries.is_empty():
 		set_process(true)
 
-	if debug_enabled:
-		print("[%s] Seq warmup: %d targets, %d held" % [name, targets.size(), _seq_held_entries.size()])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Seq warmup: %d targets, %d held" % [targets.size(), _seq_held_entries.size()],
+			debug_enabled)
 
 
 # Release held entries for a target when its real animation starts.
@@ -1475,8 +1480,9 @@ func _seq_process_tick(delta: float) -> void:
 # Handles ping-pong cycling, PLAY_IN_AND_OUT auto-reverse, non-ping-pong
 # looping, hide_parent_on_reverse_complete, and final completion.
 func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: int) -> void:
-	if debug_enabled:
-		print("[%s] Seq pass complete (reverse=%s, osr=%s)" % [name, is_reverse, is_one_shot_return])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Seq pass complete (reverse=%s, osr=%s)" % [is_reverse, is_one_shot_return],
+			debug_enabled)
 
 	# --- Ping-pong cycling ---
 	# Forward leg → reverse leg = 1 cycle. Superset of PLAY_IN_AND_OUT auto-reverse.
@@ -1485,8 +1491,8 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 		if _seq_pp_forward:
 			# Forward leg just completed → start reverse leg
 			_seq_pp_forward = false
-			if debug_enabled:
-				print("[%s] Seq ping-pong: forward → reverse" % name)
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"Seq ping-pong: forward → reverse", debug_enabled)
 			if loop_delay > 0.0:
 				await get_tree().create_timer(loop_delay).timeout
 				if _seq_generation != my_gen:
@@ -1505,9 +1511,10 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 				should_continue = true
 
 			if should_continue:
-				if debug_enabled:
-					print("[%s] Seq ping-pong: cycle %d/%s → next" % [
-						name, _seq_pp_current_cycle, str(loop_count)])
+				JuiceLogger.log_info(self, _get_domain_tag(),
+						"Seq ping-pong: cycle %d/%s → next" % [
+						_seq_pp_current_cycle, str(loop_count)],
+						debug_enabled)
 				if loop_delay > 0.0:
 					await get_tree().create_timer(loop_delay).timeout
 					if _seq_generation != my_gen:
@@ -1527,9 +1534,10 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 			should_loop = true
 
 		if should_loop:
-			if debug_enabled:
-				print("[%s] Seq loop: pass %d/%s → next" % [
-					name, _seq_current_loop, str(loop_count)])
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"Seq loop: pass %d/%s → next" % [
+					_seq_current_loop, str(loop_count)],
+					debug_enabled)
 			if loop_delay > 0.0:
 				await get_tree().create_timer(loop_delay).timeout
 				if _seq_generation != my_gen:
@@ -1541,16 +1549,16 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 	# --- Sequence fully complete ---
 	_is_playing = false
 
-	if debug_enabled:
-		print("[%s] Seq fully complete" % name)
+	JuiceLogger.log_info(self, _get_domain_tag(), "Seq fully complete", debug_enabled)
 
 	# Handle hide_parent_on_reverse_complete (only after FINAL reverse)
 	if is_reverse and seq_hide_parent_on_reverse_complete:
 		var parent := get_parent()
 		if parent and parent is CanvasItem:
 			parent.hide()
-			if debug_enabled:
-				print("[%s] Hiding parent '%s' after reverse complete" % [name, parent.name])
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"Hiding parent '%s' after reverse complete" % parent.name,
+					debug_enabled)
 
 	completed.emit()
 
@@ -1568,6 +1576,12 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 ## Called once in _ready() after target is resolved.
 func _capture_base_values() -> void:
 	pass
+
+
+## Returns the domain tag string for logging ("Control", "2D", "3D").
+## Base returns "Base". Domain subclasses override.
+func _get_domain_tag() -> String:
+	return "Base"
 
 
 ## Pre-tick hook: detect external moves (something else changed the target).
@@ -1799,8 +1813,9 @@ func _get_seq_targets() -> Array[Node]:
 			for path in seq_custom_targets:
 				var node := get_node_or_null(path)
 				if node == null:
-					if debug_enabled:
-						print("[%s] CUSTOM target not found: %s" % [name, str(path)])
+					JuiceLogger.warn(self, _get_domain_tag(),
+							"CUSTOM target not found: %s" % str(path),
+							debug_enabled)
 					continue
 				candidates.append(node)
 
@@ -1888,8 +1903,9 @@ func _try_auto_connect() -> void:
 		var anim := _trigger_source_node as AnimationPlayer
 		if not anim.animation_finished.is_connected(_on_animation_finished):
 			anim.animation_finished.connect(_on_animation_finished)
-		if debug_enabled:
-			print("[%s] Auto-connected to AnimationPlayer '%s'" % [name, anim.name])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"Auto-connected to AnimationPlayer '%s'" % anim.name,
+				debug_enabled)
 		return
 
 	# Subclasses handle domain-specific signal connection
