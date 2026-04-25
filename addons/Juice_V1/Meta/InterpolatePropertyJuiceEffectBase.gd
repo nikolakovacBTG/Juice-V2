@@ -102,7 +102,8 @@ func _compute_lerp(entry: InterpolatePropertyTarget, progress: float) -> Variant
 		return lerp(from_val, to_val, progress)
 
 	# TYPE_NIL / unsupported — emit on first frame only to avoid spam.
-	if progress < 0.02 and debug_enabled:
-		push_warning("[InterpolateProperty] '%s' type unknown — set property_path first."
-			% entry.property_path)
+	if progress < 0.02:
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"property '%s' type unknown — set property_path first" % entry.property_path,
+				debug_enabled)
 	return null

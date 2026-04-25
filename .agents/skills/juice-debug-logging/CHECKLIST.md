@@ -80,33 +80,33 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Appearance2DJuiceEffect.gd` — done in 3E
 - [x] `Appearance3DJuiceEffect.gd` — done in 3E
 
-### Batch 4G: Property Effects (Meta bases — 5 files, simple)
-- [ ] `PropertyJuiceEffectBase.gd`
-- [ ] `InterpolatePropertyJuiceEffectBase.gd`
-- [ ] `NoisePropertyJuiceEffectBase.gd`
-- [ ] `ShakePropertyJuiceEffectBase.gd`
-- [ ] `ProgressPropertyJuiceEffectBase.gd`
+### Batch 4G: Property Effects (Meta bases — 5 files, simple) ✅
+- [x] `PropertyJuiceEffectBase.gd` — N/A (no prints)
+- [x] `InterpolatePropertyJuiceEffectBase.gd` — 1 push_warning → warn
+- [x] `NoisePropertyJuiceEffectBase.gd` — N/A (no prints)
+- [x] `ShakePropertyJuiceEffectBase.gd` — N/A (no prints)
+- [x] `ProgressPropertyJuiceEffectBase.gd` — 3 prints → log_info/log_capture
 
-### Batch 4H: Property Effects (Meta concrete Control — 5 files, simple)
-- [ ] `InterpolatePropertyControlJuiceEffect.gd`
-- [ ] `NoisePropertyControlJuiceEffect.gd`
-- [ ] `ShakePropertyControlJuiceEffect.gd`
-- [ ] `ProgressPropertyControlJuiceEffect.gd`
-- [ ] `TimeControlJuiceEffect.gd`
+### Batch 4H: Property Effects (Meta concrete Control — 5 files, simple) ✅ (no prints — already clean)
+- [x] `InterpolatePropertyControlJuiceEffect.gd` — N/A
+- [x] `NoisePropertyControlJuiceEffect.gd` — N/A
+- [x] `ShakePropertyControlJuiceEffect.gd` — N/A
+- [x] `ProgressPropertyControlJuiceEffect.gd` — N/A
+- [x] `TimeControlJuiceEffect.gd` — N/A
 
-### Batch 4I: Property Effects (Meta concrete 2D — 5 files, simple)
-- [ ] `InterpolateProperty2DJuiceEffect.gd`
-- [ ] `NoiseProperty2DJuiceEffect.gd`
-- [ ] `ShakeProperty2DJuiceEffect.gd`
-- [ ] `ProgressProperty2DJuiceEffect.gd`
-- [ ] `Time2DJuiceEffect.gd`
+### Batch 4I: Property Effects (Meta concrete 2D — 5 files, simple) ✅ (no prints — already clean)
+- [x] `InterpolateProperty2DJuiceEffect.gd` — N/A
+- [x] `NoiseProperty2DJuiceEffect.gd` — N/A
+- [x] `ShakeProperty2DJuiceEffect.gd` — N/A
+- [x] `ProgressProperty2DJuiceEffect.gd` — N/A
+- [x] `Time2DJuiceEffect.gd` — N/A
 
-### Batch 4J: Property Effects (Meta concrete 3D — 5 files, simple)
-- [ ] `InterpolateProperty3DJuiceEffect.gd`
-- [ ] `NoiseProperty3DJuiceEffect.gd`
-- [ ] `ShakeProperty3DJuiceEffect.gd`
-- [ ] `ProgressProperty3DJuiceEffect.gd`
-- [ ] `Time3DJuiceEffect.gd`
+### Batch 4J: Property Effects (Meta concrete 3D — 5 files, simple) ✅ (no prints — already clean)
+- [x] `InterpolateProperty3DJuiceEffect.gd` — N/A
+- [x] `NoiseProperty3DJuiceEffect.gd` — N/A
+- [x] `ShakeProperty3DJuiceEffect.gd` — N/A
+- [x] `ProgressProperty3DJuiceEffect.gd` — N/A
+- [x] `Time3DJuiceEffect.gd` — N/A
 
 ### Batch 4K: Camera + Screen (5 files)
 - [ ] `Camera2DJuiceEffect.gd`
