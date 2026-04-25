@@ -159,8 +159,9 @@ var _to_self_scale_snapshot: Vector2 = Vector2.ONE
 
 func _do_capture_base(target: Node) -> void:
 	if _has_base:
-		if debug_enabled:
-			print("[FROMTO_DBG] Transform2D._do_capture_base: SKIPPED (already has _base_pos=%s)" % [_base_position])
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"capture_base: SKIPPED (already has base_pos=%s)" % [_base_position],
+				debug_enabled)
 		return
 	var n2d := target as Node2D
 	if n2d == null:
@@ -170,9 +171,10 @@ func _do_capture_base(target: Node) -> void:
 	_base_rotation_radians = JuiceLedger.get_base(n2d, "rotation", n2d.rotation)
 	_base_scale = JuiceLedger.get_base(n2d, "scale", n2d.scale)
 	_has_base = true
-	if debug_enabled:
-		print("[FROMTO_DBG] Transform2D._do_capture_base: pos=%s, rot=%.1f°, scale=%s" % [
-			_base_position, rad_to_deg(_base_rotation_radians), _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s rot=%.1f° scale=%s" % [
+			_base_position, rad_to_deg(_base_rotation_radians), _base_scale],
+			debug_enabled)
 
 
 func _do_update_editor_cache(target: Node) -> void:
@@ -189,9 +191,10 @@ func _do_update_editor_cache(target: Node) -> void:
 		_to_editor_cached_position = n2d.position
 		_to_editor_cached_rotation = n2d.rotation
 		_to_editor_cached_scale = n2d.scale
-	if debug_enabled:
-		print("[Transform2D] Editor cache updated: pos=%s, rot=%.1f°, scale=%s" % [
-			n2d.position, rad_to_deg(n2d.rotation), n2d.scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "editor_cache",
+			"pos=%s rot=%.1f° scale=%s" % [
+			n2d.position, rad_to_deg(n2d.rotation), n2d.scale],
+			debug_enabled)
 
 
 func _clear_from_editor_cache_typed() -> void:
@@ -222,9 +225,10 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		# Prefer the ledger base (true natural position, pre-all-Juice)
 		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n2d.position if n2d else Vector2.ZERO)
 	_has_from_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] From Self position snapshot: %s (mode=%s)" % [
-			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_pos",
+			"%s (mode=%s)" % [
+			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_from_self_rotation_snapshot(target: Node) -> void:
@@ -237,9 +241,10 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		var n2d := target as Node2D
 		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n2d.rotation if n2d else 0.0)
 	_has_from_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] From Self rotation snapshot: %s rad (mode=%s)" % [
-			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_rot",
+			"%s rad (mode=%s)" % [
+			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_from_self_scale_snapshot(target: Node) -> void:
@@ -252,9 +257,10 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		var n2d := target as Node2D
 		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n2d.scale if n2d else Vector2.ONE)
 	_has_from_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] From Self scale snapshot: %s (mode=%s)" % [
-			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_scale",
+			"%s (mode=%s)" % [
+			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_position_snapshot(target: Node) -> void:
@@ -268,9 +274,10 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		var n2d := target as Node2D
 		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n2d.position if n2d else Vector2.ZERO)
 	_has_to_self_position_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] To Self position snapshot: %s (mode=%s)" % [
-			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_pos",
+			"%s (mode=%s)" % [
+			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_rotation_snapshot(target: Node) -> void:
@@ -283,9 +290,10 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		var n2d := target as Node2D
 		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n2d.rotation if n2d else 0.0)
 	_has_to_self_rotation_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] To Self rotation snapshot: %s rad (mode=%s)" % [
-			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_rot",
+			"%s rad (mode=%s)" % [
+			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _capture_to_self_scale_snapshot(target: Node) -> void:
@@ -298,9 +306,10 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		var n2d := target as Node2D
 		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n2d.scale if n2d else Vector2.ONE)
 	_has_to_self_scale_snapshot = true
-	if debug_enabled:
-		print("[Transform2D] To Self scale snapshot: %s (mode=%s)" % [
-			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_scale",
+			"%s (mode=%s)" % [
+			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]],
+			debug_enabled)
 
 
 func _do_resolve_pivot(target: Node) -> void:
@@ -312,8 +321,9 @@ func _do_resolve_pivot(target: Node) -> void:
 				if bounds.size == Vector2.ZERO:
 					bounds = _infer_node2d_bounds_recursive(n2d)
 				_pivot_point = bounds.get_center() if bounds.size != Vector2.ZERO else Vector2.ZERO
-				if debug_enabled:
-					print("[Transform2D] Auto-center pivot: bounds=%s, center=%s" % [bounds, _pivot_point])
+				JuiceLogger.log_capture(self, _get_domain_tag(), "pivot_auto",
+						"bounds=%s center=%s" % [bounds, _pivot_point],
+						debug_enabled)
 			else:
 				_pivot_point = Vector2.ZERO
 		PivotMode.INHERIT:
@@ -500,15 +510,18 @@ func _resolve_node_path_to_node2d(path: NodePath, path_name: String) -> Node2D:
 		return null
 	if _host_node == null or not is_instance_valid(_host_node):
 		if debug_enabled:
-			push_warning("[Transform2D] Cannot resolve %s — no host node" % path_name)
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"cannot resolve %s — no host node" % path_name, debug_enabled)
 		return null
 	var resolved := _host_node.get_node_or_null(path)
 	if resolved == null:
 		if debug_enabled:
-			push_warning("[Transform2D] %s path '%s' could not be resolved" % [path_name, path])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s path '%s' could not be resolved" % [path_name, path], debug_enabled)
 		return null
 	if not (resolved is Node2D):
 		if debug_enabled:
-			push_warning("[Transform2D] %s '%s' is not a Node2D (is %s)" % [path_name, resolved.name, resolved.get_class()])
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"%s '%s' is not a Node2D (is %s)" % [path_name, resolved.name, resolved.get_class()], debug_enabled)
 		return null
 	return resolved as Node2D
