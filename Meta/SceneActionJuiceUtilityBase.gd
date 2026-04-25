@@ -382,7 +382,9 @@ func _on_animate_start(target: Node) -> void:
 		tree_root = target.get_tree().root
 
 	if tree_root == null:
-		push_error("[SceneAction] Cannot spawn orchestrator — no valid tree access")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"cannot spawn orchestrator — no valid tree access",
+				debug_enabled)
 		orchestrator.free()
 		return
 
