@@ -225,8 +225,9 @@ func _on_animate_start(target: Node) -> void:
 	if transform_target != TransformTarget.POSITION and _pivot_point != Vector3.ZERO:
 		_contributes_position = true
 
-	if debug_enabled:
-		print("[Progress3D] Start: %s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction],
+			debug_enabled)
 
 
 func _restore_to_natural(target: Node) -> void:
@@ -322,8 +323,9 @@ func _check_bounds() -> void:
 
 	_clamp_to_bound()
 
-	if debug_enabled:
-		print("[Progress3D] Bound reached. Behaviour: %s" % BoundBehaviour.keys()[bound_behaviour])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			debug_enabled)
 
 	match bound_behaviour:
 		BoundBehaviour.EMIT_COMPLETED:
@@ -442,15 +444,17 @@ func _capture_base(target: Node) -> void:
 		return
 	var n3d := target as Node3D
 	if n3d == null:
-		push_warning("[Progress3D] Cannot capture base -- target is not Node3D")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"cannot capture base — target is not Node3D", debug_enabled)
 		return
 	_base_position = n3d.position
 	_base_rotation = n3d.rotation
 	_base_scale = n3d.scale
 	_has_base = true
-	if debug_enabled:
-		print("[Progress3D] Captured base -- pos:%s rot_rad:%s scale:%s" % [
-			_base_position, _base_rotation, _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s rot_rad=%s scale=%s" % [
+			_base_position, _base_rotation, _base_scale],
+			debug_enabled)
 
 
 # =============================================================================
@@ -468,8 +472,8 @@ func _resolve_pivot(target: Node) -> void:
 			_pivot_point = Vector3.ZERO
 		PivotMode.CUSTOM:
 			_pivot_point = custom_pivot
-	if debug_enabled:
-		print("[Progress3D] Pivot: %s" % _pivot_point)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "pivot",
+			"%s" % _pivot_point, debug_enabled)
 
 
 # Recursively sample child AABB to find visual center.

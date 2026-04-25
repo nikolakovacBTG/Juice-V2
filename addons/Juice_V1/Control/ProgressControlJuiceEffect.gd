@@ -219,8 +219,9 @@ func _on_animate_start(target: Node) -> void:
 	_contributes_rotation = (transform_target == TransformTarget.ROTATION)
 	_contributes_scale = (transform_target == TransformTarget.SCALE)
 
-	if debug_enabled:
-		print("[ProgressControl] Start: %s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction],
+			debug_enabled)
 
 
 func _restore_to_natural(target: Node) -> void:
@@ -297,8 +298,9 @@ func _check_bounds() -> void:
 
 	_clamp_to_bound()
 
-	if debug_enabled:
-		print("[ProgressControl] Bound reached. Behaviour: %s" % BoundBehaviour.keys()[bound_behaviour])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			debug_enabled)
 
 	match bound_behaviour:
 		BoundBehaviour.EMIT_COMPLETED:
@@ -410,15 +412,17 @@ func _capture_base(target: Node) -> void:
 		return
 	var ctrl := target as Control
 	if ctrl == null:
-		push_warning("[ProgressControl] Cannot capture base -- target is not Control")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"cannot capture base — target is not Control", debug_enabled)
 		return
 	_base_position = ctrl.position
 	_base_rotation = ctrl.rotation
 	_base_scale = ctrl.scale
 	_has_base = true
-	if debug_enabled:
-		print("[ProgressControl] Captured base -- pos:%s rot:%.1f- scale:%s" % [
-			_base_position, rad_to_deg(_base_rotation), _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s rot=%.1f° scale=%s" % [
+			_base_position, rad_to_deg(_base_rotation), _base_scale],
+			debug_enabled)
 
 
 # =============================================================================
@@ -446,8 +450,8 @@ func _apply_pivot_mode(ctrl: Control) -> void:
 			pass  # Leave existing pivot_offset untouched
 		PivotMode.CUSTOM:
 			ctrl.pivot_offset = Vector2(ctrl.size.x * custom_pivot.x, ctrl.size.y * custom_pivot.y)
-	if debug_enabled:
-		print("[ProgressControl] Pivot set to: %s" % ctrl.pivot_offset)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "pivot",
+			"%s" % ctrl.pivot_offset, debug_enabled)
 
 
 func _on_target_resized(ctrl: Control) -> void:

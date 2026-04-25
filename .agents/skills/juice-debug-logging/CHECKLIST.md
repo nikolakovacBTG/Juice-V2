@@ -65,20 +65,20 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Noise2DJuiceEffect.gd` — 1 print → log_info
 - [x] `Noise3DJuiceEffect.gd` — 1 print → log_info
 
-### Batch 4D: Progress
-- [ ] `ProgressControlJuiceEffect.gd`
-- [ ] `Progress2DJuiceEffect.gd`
-- [ ] `Progress3DJuiceEffect.gd`
+### Batch 4D: Progress ✅
+- [x] `ProgressControlJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
+- [x] `Progress2DJuiceEffect.gd` — 3 prints → log_info/log_capture, 1 push_warning → warn
+- [x] `Progress3DJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
 
-### Batch 4E: SquashStretch
-- [ ] `SquashStretchControlJuiceEffect.gd`
-- [ ] `SquashStretch2DJuiceEffect.gd`
-- [ ] `SquashStretch3DJuiceEffect.gd`
+### Batch 4E: SquashStretch ✅ (no prints — already clean)
+- [x] `SquashStretchControlJuiceEffect.gd` — N/A
+- [x] `SquashStretch2DJuiceEffect.gd` — N/A
+- [x] `SquashStretch3DJuiceEffect.gd` — N/A
 
-### Batch 4F: Appearance (concrete)
-- [ ] `AppearanceControlJuiceEffect.gd`
-- [ ] `Appearance2DJuiceEffect.gd`
-- [ ] `Appearance3DJuiceEffect.gd`
+### Batch 4F: Appearance (concrete) ✅ (instrumented in Batch 3E)
+- [x] `AppearanceControlJuiceEffect.gd` — done in 3E
+- [x] `Appearance2DJuiceEffect.gd` — done in 3E
+- [x] `Appearance3DJuiceEffect.gd` — done in 3E
 
 ### Batch 4G: Property Effects (Meta bases — 5 files, simple)
 - [ ] `PropertyJuiceEffectBase.gd`

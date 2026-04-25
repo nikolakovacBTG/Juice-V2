@@ -272,8 +272,9 @@ func _on_animate_start(target: Node) -> void:
 	if transform_target != TransformTarget.POSITION and _pivot_point != Vector2.ZERO:
 		_contributes_position = true
 
-	if debug_enabled:
-		print("[Progress2D] Start: %s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: target=%s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction],
+			debug_enabled)
 
 
 ## Sets deltas to 0 and optionally writes natural state back.
@@ -364,8 +365,9 @@ func _check_bounds() -> void:
 
 	_clamp_to_bound()
 
-	if debug_enabled:
-		print("[Progress2D] Bound reached. Behaviour: %s" % BoundBehaviour.keys()[bound_behaviour])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			debug_enabled)
 
 	match bound_behaviour:
 		BoundBehaviour.EMIT_COMPLETED:
@@ -481,15 +483,17 @@ func _capture_base(target: Node) -> void:
 		return
 	var n2d := target as Node2D
 	if n2d == null:
-		push_warning("[Progress2D] Cannot capture base -- target is not Node2D")
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"cannot capture base — target is not Node2D", debug_enabled)
 		return
 	_base_position = n2d.position
 	_base_rotation = n2d.rotation
 	_base_scale = n2d.scale
 	_has_base = true
-	if debug_enabled:
-		print("[Progress2D] Captured base -- pos:%s rot:%.1f- scale:%s" % [
-			_base_position, rad_to_deg(_base_rotation), _base_scale])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"pos=%s rot=%.1f° scale=%s" % [
+			_base_position, rad_to_deg(_base_rotation), _base_scale],
+			debug_enabled)
 
 
 # =============================================================================
