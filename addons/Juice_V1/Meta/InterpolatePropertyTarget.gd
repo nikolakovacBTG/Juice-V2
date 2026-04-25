@@ -292,7 +292,8 @@ func _capture_from_in_editor_now() -> void:
 		return
 	var node := _resolve_editor_node()
 	if node == null:
-		push_warning("[InterpolatePropertyTarget] Could not resolve node for FROM capture.")
+		JuiceLogger.warn(self, "PropertyTarget",
+				"could not resolve node for FROM capture", true)
 		return
 	_from_editor_cached = node.get_indexed(property_path)
 	notify_property_list_changed()
@@ -303,7 +304,8 @@ func _capture_to_in_editor_now() -> void:
 		return
 	var node := _resolve_editor_node()
 	if node == null:
-		push_warning("[InterpolatePropertyTarget] Could not resolve node for TO capture.")
+		JuiceLogger.warn(self, "PropertyTarget",
+				"could not resolve node for TO capture", true)
 		return
 	_to_editor_cached = node.get_indexed(property_path)
 	notify_property_list_changed()

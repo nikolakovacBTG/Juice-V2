@@ -39,25 +39,28 @@ static func resolve_manual_callable(
 			break
 
 	if not debug_label.is_empty():
-		print("[%s] TriggerRouter.resolve_manual_callable: signal='%s' | arg_count=%d | types=%s" % [
-			debug_label, sig_name, sig_args.size(),
-			sig_args.map(func(a): return type_string(a.get("type", TYPE_NIL)))])
+		JuiceLogger.log_info(null, "TriggerRouter",
+				"resolve_manual_callable: signal='%s' arg_count=%d types=%s" % [
+				sig_name, sig_args.size(),
+				sig_args.map(func(a): return type_string(a.get("type", TYPE_NIL)))],
+				true)
 
 	# Case 1: zero-arg signal → standard momentary trigger
 	if sig_args.is_empty():
-		if not debug_label.is_empty():
-			print("[%s]   → routing to on_momentary (0 args)" % debug_label)
+		JuiceLogger.log_info(null, "TriggerRouter",
+				"→ routing to on_momentary (0 args)", true)
 		return on_momentary
 
 	# Case 2: single float arg → drive external progress directly
 	if sig_args.size() == 1 and sig_args[0].get("type", -1) == TYPE_FLOAT:
-		if not debug_label.is_empty():
-			print("[%s]   → routing to on_progress (float arg)" % debug_label)
+		JuiceLogger.log_info(null, "TriggerRouter",
+				"→ routing to on_progress (float arg)", true)
 		return on_progress
 
 	# Case 3: any other signature → strip all args, treat as momentary
 	if not debug_label.is_empty():
-		print("[%s]   → routing to on_momentary.unbind(%d)" % [debug_label, sig_args.size()])
+		JuiceLogger.log_info(null, "TriggerRouter",
+				"→ routing to on_momentary.unbind(%d)" % sig_args.size(), true)
 	return on_momentary.unbind(sig_args.size())
 
 

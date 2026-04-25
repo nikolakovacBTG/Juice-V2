@@ -283,7 +283,8 @@ func _perform_scene_action() -> void:
 	match scene_action:
 		SceneAction.SWITCH_SCENE:
 			if target_scene == null:
-				push_error("[TransitionHandler] Cannot switch — target_scene is null")
+				JuiceLogger.warn(self, "Transition",
+					"cannot switch — target_scene is null", debug_enabled)
 				return
 			# Use async-loaded resource if available, otherwise use PackedScene directly
 			var loaded: PackedScene = _get_async_loaded(target_scene.resource_path)
@@ -303,7 +304,8 @@ func _perform_scene_action() -> void:
 			get_tree().quit()
 
 		_:
-			push_error("[TransitionHandler] Unknown scene_action: %d" % scene_action)
+			JuiceLogger.warn(self, "Transition",
+					"unknown scene_action: %d" % scene_action, debug_enabled)
 
 
 # =============================================================================
@@ -365,9 +367,11 @@ func _await_async_load(path: String) -> void:
 		await get_tree().process_frame
 		status = ResourceLoader.load_threaded_get_status(path)
 	if status == ResourceLoader.THREAD_LOAD_FAILED:
-		push_error("[TransitionHandler] Async load FAILED: %s" % path)
+		JuiceLogger.warn(self, "Transition",
+				"async load FAILED: %s" % path, debug_enabled)
 	elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-		push_error("[TransitionHandler] Invalid resource: %s" % path)
+		JuiceLogger.warn(self, "Transition",
+				"invalid resource: %s" % path, debug_enabled)
 	else:
 		JuiceLogger.log_info(self, "Transition",
 				"Async load complete: %s" % path, debug_enabled)

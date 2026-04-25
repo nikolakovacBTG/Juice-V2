@@ -116,25 +116,28 @@ var _was_active: bool = false
 
 func _ready() -> void:
 	if instance != null and instance != self:
-		if debug_enabled:
-			print("[ScreenJuiceUtility] Replacing previous instance (expected during scene transitions).")
+		JuiceLogger.log_info(self, "Screen",
+				"replacing previous instance (expected during scene transitions)",
+				debug_enabled)
 
 	instance = self
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_priority = 100  # After ScreenJuiceEffect writes (priority 0)
 
 	if not material or not material is ShaderMaterial:
-		push_warning("[ScreenJuiceUtility] No ShaderMaterial assigned. Auto-bootstrap should handle this.")
+		JuiceLogger.warn(self, "Screen",
+				"no ShaderMaterial assigned — auto-bootstrap should handle this",
+				debug_enabled)
 
-	if debug_enabled:
-		print("[ScreenJuiceUtility] Ready (static instance registered)")
+	JuiceLogger.log_info(self, "Screen",
+			"ready (static instance registered)", debug_enabled)
 
 
 func _exit_tree() -> void:
 	if instance == self:
 		instance = null
-		if debug_enabled:
-			print("[ScreenJuiceUtility] Removed (static instance cleared)")
+		JuiceLogger.log_info(self, "Screen",
+				"removed (static instance cleared)", debug_enabled)
 
 
 func _process(_delta: float) -> void:
@@ -162,10 +165,10 @@ func _process(_delta: float) -> void:
 	_was_active = true
 	_write_shader_uniforms(mat)
 
-	if debug_enabled:
-		print("[ScreenJuiceUtility] offset=%s rot=%.4f zoom=%.4f skew=%s barrel=%s wave=%.4f chroma=%.4f" % [
+	JuiceLogger.log_info(self, "Screen",
+			"offset=%s rot=%.4f zoom=%.4f skew=%s barrel=%s wave=%.4f chroma=%.4f" % [
 			offset, rotation_amount, zoom_offset, skew_offset, barrel_distortion, wave_amplitude, chromatic_amount
-		])
+		], debug_enabled)
 
 
 # =============================================================================
@@ -207,8 +210,8 @@ func _reset_shader_to_passthrough(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("use_vignette", false)
 	mat.set_shader_parameter("vignette_scale", Vector2.ONE)
 	mat.set_shader_parameter("vignette_softness", 1.0)
-	if debug_enabled:
-		print("[ScreenJuiceUtility] Shader reset to passthrough")
+	JuiceLogger.log_info(self, "Screen",
+			"shader reset to passthrough", debug_enabled)
 
 
 # =============================================================================
@@ -238,5 +241,5 @@ func reset_all() -> void:
 	if mat:
 		_reset_shader_to_passthrough(mat)
 
-	if debug_enabled:
-		print("[ScreenJuiceUtility] All offsets reset")
+	JuiceLogger.log_info(self, "Screen",
+			"all offsets reset", debug_enabled)
