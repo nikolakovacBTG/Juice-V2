@@ -50,10 +50,6 @@ var _base_captured: bool = false
 
 func _ready() -> void:
 	super._ready()
-	if debug_enabled:
-		print("[DEBUG] Juice2D _ready() called")
-		print("[DEBUG] Mode: ", mode)
-		print("[DEBUG] Target node: ", _target_node)
 
 
 func _exit_tree() -> void:
@@ -63,8 +59,6 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	if debug_enabled:
-		print("[DEBUG] Juice2D _process() called with delta: ", delta)
 
 # =============================================================================
 # TARGET RESOLUTION (Override)
@@ -76,8 +70,10 @@ func _resolve_target() -> Node:
 		var parent := get_parent()
 		if parent is Node2D:
 			return parent
-		if parent != null and debug_enabled:
-			push_warning("[%s] Parent '%s' is not a Node2D node" % [name, parent.name])
+		if parent != null:
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"Parent '%s' is not a Node2D node" % parent.name,
+					debug_enabled)
 		return null
 	return null  # SEQUENCER resolves per-target dynamically
 
@@ -163,13 +159,19 @@ func _connect_collision_object_2d_signals(col_obj: CollisionObject2D) -> void:
 			if col_obj is Area2D:
 				if not col_obj.area_exited.is_connected(_on_area_area_exited):
 					col_obj.area_exited.connect(_on_area_area_exited)
-	if debug_enabled:
-		print("[%s] Auto-connected to %s '%s' on %s" % [
-			name, col_obj.get_class(), col_obj.name, TriggerEvent.keys()[trigger_on]])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Auto-connected to %s '%s' on %s" % [
+			col_obj.get_class(), col_obj.name, TriggerEvent.keys()[trigger_on]],
+			debug_enabled)
 
 # =============================================================================
 # DOMAIN VIRTUAL HOOK OVERRIDES (Write Coordination)
 # =============================================================================
+
+## Returns "2D" for structured log output.
+func _get_domain_tag() -> String:
+	return "2D"
+
 
 ## Capture target's natural position/rotation/scale/modulate.
 ## All properties are tracked through the Shared Target Ledger.
