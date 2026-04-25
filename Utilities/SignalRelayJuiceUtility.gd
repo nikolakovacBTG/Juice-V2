@@ -64,44 +64,51 @@ func _ready() -> void:
 		source = get_node_or_null(listen_source_path)
 
 	if source == null:
-		push_warning("[%s] SignalRelay: source node not found (path: %s)" % [
-			name, listen_source_path])
+		JuiceLogger.warn(self, "SignalRelay",
+				"source node not found (path: %s)" % listen_source_path,
+				debug_enabled)
 		return
 
 	if not source.has_signal(listen_signal):
-		push_warning("[%s] SignalRelay: signal '%s' not found on '%s'" % [
-			name, listen_signal, source.name])
+		JuiceLogger.warn(self, "SignalRelay",
+				"signal '%s' not found on '%s'" % [listen_signal, source.name],
+				debug_enabled)
 		return
 
 	if emit_signal_name.is_empty():
-		push_warning("[%s] SignalRelay: emit_signal_name is empty" % name)
+		JuiceLogger.warn(self, "SignalRelay",
+				"emit_signal_name is empty", debug_enabled)
 		return
 
 	var bus := _get_signal_bus()
 	if bus == null:
-		push_warning("[%s] SignalRelay: signal bus not found at '%s'" % [
-			name, signal_bus_path])
+		JuiceLogger.warn(self, "SignalRelay",
+				"signal bus not found at '%s'" % signal_bus_path,
+				debug_enabled)
 		return
 
 	if not bus.has_signal(emit_signal_name):
-		push_warning("[%s] SignalRelay: signal bus at '%s' has no signal '%s'" % [
-			name, signal_bus_path, emit_signal_name])
+		JuiceLogger.warn(self, "SignalRelay",
+				"signal bus at '%s' has no signal '%s'" % [
+				signal_bus_path, emit_signal_name],
+				debug_enabled)
 		return
 
 	source.connect(listen_signal, _on_source_triggered)
 
-	if debug_enabled:
-		print("[%s] SignalRelay: '%s' on '%s' → '%s'.'%s'" % [
-			name, listen_signal, source.name, signal_bus_path, emit_signal_name])
+	JuiceLogger.log_info(self, "SignalRelay",
+			"'%s' on '%s' → '%s'.'%s'" % [
+			listen_signal, source.name, signal_bus_path, emit_signal_name],
+			debug_enabled)
 
 
 func _on_source_triggered(_interactor: Variant = null) -> void:
 	var bus := _get_signal_bus()
 	if bus:
 		bus.emit_signal(emit_signal_name)
-		if debug_enabled:
-			print("[%s] SignalRelay: emitted '%s' on '%s'" % [
-				name, emit_signal_name, signal_bus_path])
+		JuiceLogger.log_info(self, "SignalRelay",
+				"emitted '%s' on '%s'" % [emit_signal_name, signal_bus_path],
+				debug_enabled)
 
 
 func _get_signal_bus() -> Node:

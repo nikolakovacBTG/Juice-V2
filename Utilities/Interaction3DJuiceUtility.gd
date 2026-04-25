@@ -323,7 +323,9 @@ func _ready() -> void:
 			if _trigger_zone:
 				_wire_zone_signals(_trigger_zone)
 			elif debug_enabled:
-				push_warning("[%s] Zone gating enabled but no child trigger zone found" % name)
+				JuiceLogger.warn(self, "Interaction3D",
+						"zone gating enabled but no child trigger zone found",
+						debug_enabled)
 
 		var has_custom := _has_custom_action_entries()
 		if has_custom:
@@ -336,9 +338,10 @@ func _ready() -> void:
 			set_process_unhandled_input(false)
 			set_process_input(false)
 
-	if debug_enabled:
-		print("[%s] Interaction3D ready. mode=%s, actions=%d" % [
-			name, Mode.keys()[mode], action_count])
+	JuiceLogger.log_info(self, "Interaction3D",
+			"ready: mode=%s actions=%d" % [
+			Mode.keys()[mode], action_count],
+			debug_enabled)
 
 
 # =============================================================================
@@ -439,8 +442,9 @@ func _input_event(_camera: Camera3D, event: InputEvent, _position: Vector3, _nor
 		if matched:
 			if one_shot:
 				_has_fired = true
-			if debug_enabled:
-				print("[%s] Click preset → emit '%s'" % [name, sig_name])
+			JuiceLogger.log_info(self, "Interaction3D",
+					"click preset → emit '%s'" % sig_name,
+					debug_enabled)
 			emit_signal(sig_name)
 
 
@@ -480,8 +484,9 @@ func _handle_custom_actions(event: InputEvent) -> void:
 		if event.is_action_pressed(action_name):
 			if one_shot:
 				_has_fired = true
-			if debug_enabled:
-				print("[%s] Custom action '%s' triggered" % [name, action_name])
+			JuiceLogger.log_info(self, "Interaction3D",
+					"custom action '%s' triggered" % action_name,
+					debug_enabled)
 			emit_signal(action_name)
 
 
@@ -559,16 +564,18 @@ func _on_zone_object_entered(node: Node) -> void:
 					return
 				if one_shot:
 					_has_fired = true
-				if debug_enabled:
-					print("[%s] Zone trigger IN (node=%s)" % [name, node.name])
+				JuiceLogger.log_info(self, "Interaction3D",
+						"zone trigger IN (node=%s)" % node.name,
+						debug_enabled)
 				# Native body_entered/area_entered already fired on this Area3D
 		elif mode == Mode.INTERACTABLE and check_presence_in_trigger_zone:
 			# Zone activates: enable mouse picking and input processing
 			input_ray_pickable = true
 			if _has_custom_action_entries():
 				_enable_input_processing(true)
-			if debug_enabled:
-				print("[%s] Zone active — interaction enabled (node=%s)" % [name, node.name])
+			JuiceLogger.log_info(self, "Interaction3D",
+					"zone active — interaction enabled (node=%s)" % node.name,
+					debug_enabled)
 
 
 func _on_zone_object_exited(node: Node) -> void:
@@ -577,14 +584,16 @@ func _on_zone_object_exited(node: Node) -> void:
 		_zone_active = false
 		if mode == Mode.TRIGGER_ZONE:
 			if trigger_on_exit:
-				if debug_enabled:
-					print("[%s] Zone trigger OUT (node=%s)" % [name, node.name])
+				JuiceLogger.log_info(self, "Interaction3D",
+						"zone trigger OUT (node=%s)" % node.name,
+						debug_enabled)
 		elif mode == Mode.INTERACTABLE and check_presence_in_trigger_zone:
 			input_ray_pickable = false
 			if _has_custom_action_entries():
 				_enable_input_processing(false)
-			if debug_enabled:
-				print("[%s] Zone empty — interaction disabled (node=%s)" % [name, node.name])
+			JuiceLogger.log_info(self, "Interaction3D",
+					"zone empty — interaction disabled (node=%s)" % node.name,
+					debug_enabled)
 
 
 func _passes_filter(node: Node) -> bool:
@@ -611,8 +620,9 @@ func _sync_user_signals() -> void:
 			if not has_signal(sig):
 				add_user_signal(sig)
 			_registered_signals.append(sig)
-			if debug_enabled and Engine.is_editor_hint():
-				print("[%s] Registered dynamic signal '%s'" % [name, sig])
+			JuiceLogger.log_info(self, "Interaction3D",
+					"registered dynamic signal '%s'" % sig,
+					debug_enabled)
 	# Note: Godot has no remove_user_signal(). Orphaned signals from removed
 	# entries persist on this instance but are harmless. Cleaned on reload.
 
@@ -651,14 +661,14 @@ func set_enabled(enabled: bool) -> void:
 			if _has_custom_action_entries():
 				if not check_presence_in_trigger_zone or _zone_active:
 					_enable_input_processing(true)
-	if debug_enabled:
-		print("[%s] set_enabled(%s)" % [name, enabled])
+	JuiceLogger.log_info(self, "Interaction3D",
+			"set_enabled(%s)" % enabled, debug_enabled)
 
 
 func reset() -> void:
 	_has_fired = false
-	if debug_enabled:
-		print("[%s] reset() — one-shot guard cleared" % name)
+	JuiceLogger.log_info(self, "Interaction3D",
+			"reset() — one-shot guard cleared", debug_enabled)
 
 
 func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
@@ -672,29 +682,34 @@ func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
 		if matched:
 			var sig := _get_signal_name_for_entry(i)
 			if not sig.is_empty():
-				if debug_enabled:
-					print("[%s] simulate_click(%d) → '%s'" % [name, button, sig])
+				JuiceLogger.log_info(self, "Interaction3D",
+						"simulate_click(%d) → '%s'" % [button, sig],
+						debug_enabled)
 				emit_signal(sig)
 
 
 func simulate_input_action(action_name: StringName) -> void:
 	if has_signal(action_name):
-		if debug_enabled:
-			print("[%s] simulate_input_action('%s')" % [name, action_name])
+		JuiceLogger.log_info(self, "Interaction3D",
+				"simulate_input_action('%s')" % action_name, debug_enabled)
 		emit_signal(action_name)
-	elif debug_enabled:
-		push_warning("[%s] simulate_input_action: signal '%s' not found" % [name, action_name])
+	else:
+		JuiceLogger.warn(self, "Interaction3D",
+				"simulate_input_action: signal '%s' not found" % action_name,
+				debug_enabled)
 
 
 func simulate_zone_enter(node: Node) -> void:
-	if debug_enabled:
-		print("[%s] simulate_zone_enter(%s)" % [name, str(node.name) if node else "null"])
+	JuiceLogger.log_info(self, "Interaction3D",
+			"simulate_zone_enter(%s)" % (str(node.name) if node else "null"),
+			debug_enabled)
 	_on_zone_object_entered(node)
 
 
 func simulate_zone_exit(node: Node) -> void:
-	if debug_enabled:
-		print("[%s] simulate_zone_exit(%s)" % [name, str(node.name) if node else "null"])
+	JuiceLogger.log_info(self, "Interaction3D",
+			"simulate_zone_exit(%s)" % (str(node.name) if node else "null"),
+			debug_enabled)
 	_on_zone_object_exited(node)
 
 
