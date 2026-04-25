@@ -509,7 +509,7 @@ func _resolve_pivot(target: Node) -> void:
 			_pivot_point = custom_pivot
 
 
-## Infer visual center from child/self Sprite2D, CollisionShape2D, Polygon2D, etc.
+# Infer visual center from child/self Sprite2D, CollisionShape2D, Polygon2D, etc.
 func _infer_node2d_center(node: Node2D) -> Vector2:
 	# Check the node itself first
 	var size := _get_node2d_size(node)
@@ -549,8 +549,8 @@ func _get_node2d_size(node: Node2D) -> Vector2:
 # CONFIGURATION WARNINGS
 # =============================================================================
 
+# Called by JuiceBase when collecting per-effect editor warnings.
+# Add effect-specific warnings here (e.g. bound_value=0, zero rate, etc.).
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
-	if auto_start and not Engine.is_editor_hint():
-		pass  # Valid usage -- no warning needed
 	return warnings

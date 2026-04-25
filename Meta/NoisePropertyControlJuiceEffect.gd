@@ -1,4 +1,4 @@
-## Control-domain wrapper for NoisePropertyJuiceEffectBase.
+## Control-domain wrapper for [PropertyNoiseJuiceEffectBase]. Drives properties with procedural noise oscillation.
 ##
 ## Registers the effect in JuiceControlRecipe._CONCRETE_EFFECTS so it
 ## appears in the inspector dropdown on JuiceControl nodes.

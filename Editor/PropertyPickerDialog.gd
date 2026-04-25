@@ -213,12 +213,12 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 # SHADER PARAMETER SECTIONS
 # =============================================================================
 
-## Check all material-type properties on the target node and add a picker
-## section for each one that holds a ShaderMaterial with a compiled shader.
-## Confirmed working via live editor-script test:
-##   node.get("material")          → CanvasItem / Sprite2D / Label etc.
-##   node.get("material_override") → MeshInstance3D / GeometryInstance3D
-##   node.get("material_overlay")  → MeshInstance3D second overlay layer
+# Check all material-type properties on the target node and add a picker
+# section for each one that holds a ShaderMaterial with a compiled shader.
+# Confirmed working via live editor-script test:
+#   node.get("material")          → CanvasItem / Sprite2D / Label etc.
+#   node.get("material_override") → MeshInstance3D / GeometryInstance3D
+#   node.get("material_overlay")  → MeshInstance3D second overlay layer
 func _add_shader_params_section(filter: String) -> void:
 	if not is_instance_valid(_target_node):
 		return
@@ -228,9 +228,9 @@ func _add_shader_params_section(filter: String) -> void:
 			_add_shader_section_for_material(mat_prop, material, filter)
 
 
-## Populate one amber section in the tree for a specific ShaderMaterial.
-## mat_prop: the node property name holding the material
-## ("material", "material_override", or "material_overlay").
+# Populate one amber section in the tree for a specific ShaderMaterial.
+# mat_prop: the node property name holding the material
+# ("material", "material_override", or "material_overlay").
 func _add_shader_section_for_material(
 		mat_prop: String, material: ShaderMaterial, filter: String) -> void:
 

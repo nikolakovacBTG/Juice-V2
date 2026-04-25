@@ -333,79 +333,79 @@ func _validate_property(property: Dictionary) -> void:
 # INTERNAL STATE
 # =============================================================================
 
-## Runtime-cloned effects from the recipe (independent state per node).
+# Runtime-cloned effects from the recipe (independent state per node).
 var _runtime_effects: Array[JuiceEffectBase] = []
 
-## True after set_external_progress has initialised effects for the first time.
+# True after set_external_progress has initialised effects for the first time.
 var _external_progress_initialized: bool = false
 
 
-## Which effects are currently active (being ticked).
+# Which effects are currently active (being ticked).
 var _active_effect_indices: Array[int] = []
 
-## Target node — what effects animate (resolved at _ready).
+# Target node — what effects animate (resolved at _ready).
 var _target_node: Node = null
 
-## Trigger source node — where signals come from (may differ from target).
+# Trigger source node — where signals come from (may differ from target).
 var _trigger_source_node: Node = null
 
-## Current toggle state for TOGGLE behaviour.
+# Current toggle state for TOGGLE behaviour.
 var _toggle_state: bool = false
 
-## Whether any effects are currently playing.
+# Whether any effects are currently playing.
 var _is_playing: bool = false
 
-## Current recipe iteration count.
+# Current recipe iteration count.
 var _current_iteration: int = 0
 
-## Node-level start_delay tracking (delays entire recipe after trigger).
+# Node-level start_delay tracking (delays entire recipe after trigger).
 var _in_node_start_delay: bool = false
 var _node_delay_elapsed: float = 0.0
 var _pending_play_in: bool = true
 
-## Iteration delay tracking.
+# Iteration delay tracking.
 var _in_loop_delay: bool = false
 var _loop_delay_elapsed: float = 0.0
 
-## Queued trigger for RetriggerPolicy.QUEUE
+# Queued trigger for RetriggerPolicy.QUEUE
 var _queued_trigger: Dictionary = {}
 
 # --- Sequencer-specific state (SEQUENCER mode only) ---
 
-## Coroutine generation counter. Incremented on stop() and new sequence starts.
-## Each coroutine captures its generation at birth; if the global counter has
-## advanced past it after an await, the coroutine aborts silently.
+# Coroutine generation counter. Incremented on stop() and new sequence starts.
+# Each coroutine captures its generation at birth; if the global counter has
+# advanced past it after an await, the coroutine aborts silently.
 var _seq_generation: int = 0
 
-## Number of active animations being tracked for completion in current sequence pass.
+# Number of active animations being tracked for completion in current sequence pass.
 var _seq_active_animations: int = 0
 
-## True when currently playing in reverse (exit animation).
+# True when currently playing in reverse (exit animation).
 var _seq_playing_reverse: bool = false
 
-## The direction of the initial trigger. Used to restart loops from the correct direction.
+# The direction of the initial trigger. Used to restart loops from the correct direction.
 var _seq_initial_reverse: bool = false
 
-## Non-ping-pong loop counter for sequencer.
+# Non-ping-pong loop counter for sequencer.
 var _seq_current_loop: int = 0
 
-## Ping-pong state for sequencer: true = forward leg, false = reverse leg.
+# Ping-pong state for sequencer: true = forward leg, false = reverse leg.
 var _seq_pp_forward: bool = true
 
-## Counts completed full ping-pong cycles (forward + reverse = 1 cycle).
+# Counts completed full ping-pong cycles (forward + reverse = 1 cycle).
 var _seq_pp_current_cycle: int = 0
 
-## Per-target runtime effect clones for RECIPE mode.
-## Keys: target Node, Values: Array[JuiceEffectBase] (cloned effects for that target).
+# Per-target runtime effect clones for RECIPE mode.
+# Keys: target Node, Values: Array[JuiceEffectBase] (cloned effects for that target).
 var _seq_target_effects: Dictionary = {}
 
-## Per-target active effect indices (which clones are being ticked).
-## Keys: target Node, Values: Array[int] (indices into that target's effects array).
+# Per-target active effect indices (which clones are being ticked).
+# Keys: target Node, Values: Array[int] (indices into that target's effects array).
 var _seq_target_active_indices: Dictionary = {}
 
-## Held entries for Container hold pattern (RECIPE mode, Control targets).
-## Each entry: { "target": Node, "effects": Array[JuiceEffectBase] }
-## Effects are continuously re-applied at From state every frame until released.
+# Held entries for Container hold pattern (RECIPE mode, Control targets).
+# Each entry: { "target": Node, "effects": Array[JuiceEffectBase] }
+# Effects are continuously re-applied at From state every frame until released.
 var _seq_held_entries: Array[Dictionary] = []
 
 # _seq_target_contributions and _seq_expected_after_write were removed.
@@ -634,13 +634,13 @@ func _exit_tree() -> void:
 	_active_effect_indices.clear()
 	set_process(false)
 
-## Deferred counterpart to _ready().
-## Runs after the Container engine has finished sorting its children for the
-## current frame (Container._sort_children is deferred before JuiceControl.
-## _ready() executes, so it fires first in the deferred queue). This guarantees
-## that _capture_base_values reads the real Container-managed ctrl.position
-## rather than the pre-layout (0, 0) that all buttons share before first sort.
-## Effects that use CaptureAt.READY likewise see the correct position here.
+# Deferred counterpart to _ready().
+# Runs after the Container engine has finished sorting its children for the
+# current frame (Container._sort_children is deferred before JuiceControl.
+# _ready() executes, so it fires first in the deferred queue). This guarantees
+# that _capture_base_values reads the real Container-managed ctrl.position
+# rather than the pre-layout (0, 0) that all buttons share before first sort.
+# Effects that use CaptureAt.READY likewise see the correct position here.
 func _post_ready_init() -> void:
 	# Capture natural state after Container has sorted (STACK only).
 	# In SEQUENCER mode _target_node is null, so this is a no-op.
@@ -990,10 +990,10 @@ func _on_all_effects_completed() -> void:
 		_handle_trigger(queued)
 
 
-## D2: Stop sibling JuiceBase nodes whose effects share an interrupt identity
-## with any effect in this node that has interrupt_siblings = true.
-## Only called on new triggers (not loop restarts) to ensure consistent event propagation.
-## `interrupt_siblings and not is_one_shot_return` guard.
+# D2: Stop sibling JuiceBase nodes whose effects share an interrupt identity
+# with any effect in this node that has interrupt_siblings = true.
+# Only called on new triggers (not loop restarts) to ensure consistent event propagation.
+# `interrupt_siblings and not is_one_shot_return` guard.
 func _stop_matching_siblings() -> void:
 	# Collect identities from our effects that want sibling interruption
 	var my_identities: Array[Variant] = []
@@ -1037,7 +1037,7 @@ func _stop_all_effects_silent() -> void:
 # SEQUENCER LOGIC (mode == SEQUENCER only)
 # =============================================================================
 
-## Sequencer retrigger gate — mirrors STACK's retrigger logic but for sequences.
+# Sequencer retrigger gate — mirrors STACK's retrigger logic but for sequences.
 func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> void:
 	if _is_playing:
 		match retrigger_policy:
@@ -1063,7 +1063,7 @@ func _seq_request_sequence(is_reverse: bool, is_one_shot_return: bool = false) -
 
 	_seq_start_sequence(is_reverse, is_one_shot_return)
 
-## Stop all sequencer animations cleanly.
+# Stop all sequencer animations cleanly.
 func _seq_stop() -> void:
 	_seq_generation += 1  # Abort any in-flight coroutines
 	_is_playing = false
@@ -1108,7 +1108,7 @@ func _seq_stop() -> void:
 		print("[%s] Seq stopped" % name)
 
 
-## Core sequencing coroutine — staggers animation across targets.
+# Core sequencing coroutine — staggers animation across targets.
 func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> void:
 	_is_playing = true
 	_seq_playing_reverse = is_reverse
@@ -1180,7 +1180,7 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	_seq_on_pass_complete(is_reverse, is_one_shot_return, my_gen)
 
 
-## Animate a single target based on juice_source mode.
+# Animate a single target based on juice_source mode.
 func _seq_animate_target(target: Node, is_reverse: bool) -> void:
 	match juice_source:
 		JuiceSource.RECIPE:
@@ -1191,8 +1191,8 @@ func _seq_animate_target(target: Node, is_reverse: bool) -> void:
 			_seq_animate_target_children(target, is_reverse)
 
 
-## RECIPE mode: clone recipe effects per target and start them.
-## Effects are ticked by _seq_process_tick() in _process().
+# RECIPE mode: clone recipe effects per target and start them.
+# Effects are ticked by _seq_process_tick() in _process().
 func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 	if recipe == null:
 		return
@@ -1238,7 +1238,7 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 		print("[%s] Seq RECIPE: started %d roots on '%s'" % [name, root_indices.size(), target.name])
 
 
-## TARGETS_STACK mode: find JuiceBase nodes inside a named container on target.
+# TARGETS_STACK mode: find JuiceBase nodes inside a named container on target.
 func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
 	var stack := target.get_node_or_null(seq_stack_name)
 	if stack == null:
@@ -1259,7 +1259,7 @@ func _seq_animate_target_stack(target: Node, is_reverse: bool) -> void:
 	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "STACK")
 
 
-## TARGETS_CHILDREN mode: find JuiceBase children directly on target.
+# TARGETS_CHILDREN mode: find JuiceBase children directly on target.
 func _seq_animate_target_children(target: Node, is_reverse: bool) -> void:
 	var juice_nodes: Array[JuiceBase] = []
 	for child in target.get_children():
@@ -1274,7 +1274,7 @@ func _seq_animate_target_children(target: Node, is_reverse: bool) -> void:
 	_seq_trigger_juice_nodes(juice_nodes, is_reverse, target.name, "CHILDREN")
 
 
-## Shared helper: trigger a list of JuiceBase nodes and track their completion.
+# Shared helper: trigger a list of JuiceBase nodes and track their completion.
 func _seq_trigger_juice_nodes(juice_nodes: Array[JuiceBase], is_reverse: bool, target_name: String, mode_label: String) -> void:
 	for juice in juice_nodes:
 		_seq_active_animations += 1
@@ -1289,12 +1289,12 @@ func _seq_trigger_juice_nodes(juice_nodes: Array[JuiceBase], is_reverse: bool, t
 		print("[%s] Seq %s: triggered %d JuiceBase nodes on '%s'" % [name, mode_label, juice_nodes.size(), target_name])
 
 
-## Callback when an externally-triggered JuiceBase node completes (STACK/CHILDREN modes).
+# Callback when an externally-triggered JuiceBase node completes (STACK/CHILDREN modes).
 func _seq_on_ext_juice_completed() -> void:
 	_seq_active_animations = maxi(0, _seq_active_animations - 1)
 
 
-## Get or create per-target runtime effect clones for RECIPE mode.
+# Get or create per-target runtime effect clones for RECIPE mode.
 func _seq_get_or_create_target_effects(target: Node) -> Array[JuiceEffectBase]:
 	if _seq_target_effects.has(target):
 		return _seq_target_effects[target] as Array[JuiceEffectBase]
@@ -1311,9 +1311,9 @@ func _seq_get_or_create_target_effects(target: Node) -> Array[JuiceEffectBase]:
 	return clones
 
 
-## Pre-position all targets at their From state before the stagger loop begins.
-## For Control targets inside Containers, registers a hold entry so the From state
-## is re-applied every frame (beating Container re-sort). 2D/3D get one-shot only.
+# Pre-position all targets at their From state before the stagger loop begins.
+# For Control targets inside Containers, registers a hold entry so the From state
+# is re-applied every frame (beating Container re-sort). 2D/3D get one-shot only.
 func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 	_seq_held_entries.clear()
 	var play_in := not is_reverse
@@ -1350,16 +1350,16 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 		print("[%s] Seq warmup: %d targets, %d held" % [name, targets.size(), _seq_held_entries.size()])
 
 
-## Release held entries for a target when its real animation starts.
+# Release held entries for a target when its real animation starts.
 func _seq_release_held_for_target(target: Node) -> void:
 	for i in range(_seq_held_entries.size() - 1, -1, -1):
 		if _seq_held_entries[i].get("target") == target:
 			_seq_held_entries.remove_at(i)
 
 
-## Tick all per-target effects in SEQUENCER RECIPE mode.
-## Called from _process() when mode == SEQUENCER.
-## Handles chaining and per-target completion tracking.
+# Tick all per-target effects in SEQUENCER RECIPE mode.
+# Called from _process() when mode == SEQUENCER.
+# Handles chaining and per-target completion tracking.
 func _seq_process_tick(delta: float) -> void:
 	# Enforce held entries (Control targets in Containers, pre-positioned at From)
 	for entry in _seq_held_entries:
@@ -1471,9 +1471,9 @@ func _seq_process_tick(delta: float) -> void:
 		set_process(false)
 
 
-## Called when a full sequence pass completes (all targets done).
-## Handles ping-pong cycling, PLAY_IN_AND_OUT auto-reverse, non-ping-pong
-## looping, hide_parent_on_reverse_complete, and final completion.
+# Called when a full sequence pass completes (all targets done).
+# Handles ping-pong cycling, PLAY_IN_AND_OUT auto-reverse, non-ping-pong
+# looping, hide_parent_on_reverse_complete, and final completion.
 func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: int) -> void:
 	if debug_enabled:
 		print("[%s] Seq pass complete (reverse=%s, osr=%s)" % [name, is_reverse, is_one_shot_return])
@@ -1753,10 +1753,10 @@ func _get_configuration_warnings() -> PackedStringArray:
 # HELPERS
 # =============================================================================
 
-## Resolve the source node for trigger_on hint building in _validate_property.
-## Returns null if not in editor, or when the source can't yet be resolved
-## (e.g. during initial scene load before get_node is reliable).
-## Called only from _validate_property — never at runtime.
+# Resolve the source node for trigger_on hint building in _validate_property.
+# Returns null if not in editor, or when the source can't yet be resolved
+# (e.g. during initial scene load before get_node is reliable).
+# Called only from _validate_property — never at runtime.
 func _resolve_hint_source_node() -> Node:
 	if not Engine.is_editor_hint():
 		return null
@@ -1782,7 +1782,7 @@ func _resolve_target() -> Node:
 	return null  # SEQUENCER resolves per-target dynamically
 
 
-## Get filtered list of target nodes for SEQUENCER mode based on target_scope.
+# Get filtered list of target nodes for SEQUENCER mode based on target_scope.
 func _get_seq_targets() -> Array[Node]:
 	var targets: Array[Node] = []
 	var parent := get_parent()
@@ -1820,7 +1820,7 @@ func _get_seq_targets() -> Array[Node]:
 	return targets
 
 
-## Apply sequence ordering to target list, with optional mirror on exit.
+# Apply sequence ordering to target list, with optional mirror on exit.
 func _apply_seq_stagger_order(targets: Array[Node], is_reverse: bool) -> Array[Node]:
 	var ordered := targets.duplicate()
 
@@ -1845,7 +1845,7 @@ func _apply_seq_stagger_order(targets: Array[Node], is_reverse: bool) -> Array[N
 	return ordered
 
 
-## Clone recipe effects for independent runtime state.
+# Clone recipe effects for independent runtime state.
 func _invalidate_runtime_effects() -> void:
 	_runtime_effects.clear()
 	_active_effect_indices.clear()
@@ -1853,7 +1853,7 @@ func _invalidate_runtime_effects() -> void:
 		_runtime_effects = recipe.create_runtime_effects()
 
 
-## Get indices of root effects (not chained from any other effect).
+# Get indices of root effects (not chained from any other effect).
 func _get_root_effect_indices() -> Array[int]:
 	var chained_targets: Array[JuiceEffectBase] = []
 	for effect in _runtime_effects:
@@ -1962,7 +1962,7 @@ func _on_visibility_changed() -> void:
 			_on_trigger_polarity(not is_now_visible)
 
 
-## Callbacks for collision/input events (used by Juice2D, Juice3D subclasses)
+# Callbacks for collision/input events (used by Juice2D, Juice3D subclasses)
 func _on_area_body_entered(_body: Node) -> void:
 	_on_trigger_momentary()
 
@@ -2054,7 +2054,7 @@ func _on_collision_input_press_polarity_3d(_camera: Node, event: InputEvent, _po
 	else:
 		_on_trigger_polarity_off()
 
-## Filtered mouse button callback for Control gui_input (left/right/middle click).
+# Filtered mouse button callback for Control gui_input (left/right/middle click).
 func _on_control_gui_input_filtered(event: InputEvent) -> void:
 	if not event is InputEventMouseButton or not event.pressed:
 		return

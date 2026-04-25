@@ -220,8 +220,8 @@ func _restore_to_natural(_target: Node) -> void:
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
 	var desired: Vector3
 	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
-		# Decorrelated X/Y/Z: each axis sampled from a different noise-field row.
-		# Fixes the old diagonal-locked motion from multiplying Vector3 by a single scalar.
+		# Decorrelated X/Y/Z: each axis sampled from a different noise-field row
+		# to prevent diagonal-locked motion from a single scalar multiply.
 		var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
 		desired = Vector3(
 			position_offset.x * _shake_noise.get_noise_2d(t, 0.0)   * progress,
@@ -304,9 +304,9 @@ func _sample(envelope: float, seed_offset: float) -> float:
 # UTILITY DISCOVERY + AUTO-BOOTSTRAP
 # =============================================================================
 
-## Returns the active Camera3D's CameraJuiceUtility, creating one if absent.
-## Re-discovers every call -- handles mid-animation camera switches at zero cost.
-## Returns null in editor (would dirty the scene) or if no Camera3D exists.
+# Returns the active Camera3D's CameraJuiceUtility, creating one if absent.
+# Re-discovers every call — handles mid-animation camera switches at zero cost.
+# Returns null in editor (would dirty the scene) or if no Camera3D exists.
 func _find_or_create_utility() -> CameraJuiceUtility:
 	if Engine.is_editor_hint():
 		return null
@@ -322,7 +322,7 @@ func _find_or_create_utility() -> CameraJuiceUtility:
 	return _bootstrap_utility_on(cam)
 
 
-## Creates and attaches a CameraJuiceUtility to the given camera.
+# Creates and attaches a CameraJuiceUtility to the given camera.
 func _bootstrap_utility_on(cam: Camera3D) -> CameraJuiceUtility:
 	var util := CameraJuiceUtility.new()
 	util.name = "CameraJuiceUtility"

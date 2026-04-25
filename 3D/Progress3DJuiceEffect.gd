@@ -472,7 +472,7 @@ func _resolve_pivot(target: Node) -> void:
 		print("[Progress3D] Pivot: %s" % _pivot_point)
 
 
-## Recursively sample child AABB to find visual center.
+# Recursively sample child AABB to find visual center.
 func _infer_node3d_center(node: Node3D) -> Vector3:
 	var combined_aabb := AABB()
 	var found := false

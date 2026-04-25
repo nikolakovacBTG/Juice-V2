@@ -1,4 +1,4 @@
-## Control-domain wrapper for ProgressPropertyJuiceEffectBase.
+## Control-domain wrapper for [PropertyProgressJuiceEffectBase]. Continuously accumulates properties over time.
 ##
 ## Registers the effect in JuiceControlRecipe._CONCRETE_EFFECTS so it
 ## appears in the inspector dropdown on JuiceControl nodes.

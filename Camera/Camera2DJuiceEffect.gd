@@ -242,8 +242,8 @@ func _restore_to_natural(_target: Node) -> void:
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
 	var desired: Vector3
 	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
-		# Decorrelated X/Y: each axis sampled from a different noise-field row.
-		# Fixes the old diagonal-only motion from multiplying Vector2 by a single scalar.
+		# Decorrelated X/Y: each axis sampled from a different noise-field row
+		# to prevent diagonal-locked motion from a single scalar multiply.
 		var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
 		var nx := _shake_noise.get_noise_2d(t, 0.0)
 		var ny := _shake_noise.get_noise_2d(t, 100.0)
@@ -312,7 +312,7 @@ func _remove_contribution() -> void:
 # SHAKE OSCILLATOR
 # =============================================================================
 
-## Returns effective multiplier. DETERMINISTIC = envelope; SHAKE = envelope × noise.
+# Returns effective multiplier. DETERMINISTIC = envelope; SHAKE = envelope × noise.
 func _sample(envelope: float, seed_offset: float) -> float:
 	match animation_mode:
 		AnimationMode.DETERMINISTIC:
@@ -330,7 +330,7 @@ func _sample(envelope: float, seed_offset: float) -> float:
 # UTILITY DISCOVERY + AUTO-BOOTSTRAP
 # =============================================================================
 
-## Fast path — returns existing utility without discovery overhead.
+# Fast path — returns existing utility without discovery overhead.
 func _find_utility() -> CameraJuiceUtility:
 	if not is_instance_valid(_host_node):
 		return null
@@ -346,8 +346,8 @@ func _find_utility() -> CameraJuiceUtility:
 	return null
 
 
-## Returns the active Camera2D's utility, creating one if absent.
-## Returns null in editor or if no enabled Camera2D exists in viewport.
+# Returns the active Camera2D's utility, creating one if absent.
+# Returns null in editor or if no enabled Camera2D exists in viewport.
 func _find_or_create_utility() -> CameraJuiceUtility:
 	if Engine.is_editor_hint():
 		return null
@@ -373,7 +373,7 @@ func _find_or_create_utility() -> CameraJuiceUtility:
 	return _bootstrap_utility_on(cam)
 
 
-## Creates and attaches a CameraJuiceUtility to the given camera.
+# Creates and attaches a CameraJuiceUtility to the given camera.
 func _bootstrap_utility_on(cam: Camera2D) -> CameraJuiceUtility:
 	var util := CameraJuiceUtility.new()
 	util.name = "CameraJuiceUtility"

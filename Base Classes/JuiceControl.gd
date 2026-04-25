@@ -278,9 +278,7 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	# Re-apply transform deltas by flushing a fresh post-tick write
-	# This restores our deltas to the ledger and recalculates absolute bounds.
-	# Re-apply modulate by flushing a fresh post-tick write
+	# Re-register and flush all deltas (transform + modulate) through the Ledger
 	_post_tick_write()
 
 

@@ -416,14 +416,6 @@ func _on_animate_start(target: Node) -> void:
 	if debug_enabled:
 		print("[DEBUG] Phase A: _contributes_modulate set to: ", _contributes_modulate)
 
-	# CRITICAL FIX: Ensure this effect is in the domain node's runtime effects
-	# The proper way: effects should be added via the recipe system
-	# But as an emergency fix, we'll add it directly if it's not there
-	if debug_enabled:
-		print("[DEBUG] Phase A: Checking if effect is in runtime effects...")
-	# Note: This is a temporary fix - the real issue is in the recipe system
-	# Effects should be automatically added to _runtime_effects when the recipe is processed
-
 	# Capture From/To references based on capture_at setting
 	if from_reference == AppearanceReference.SELF and (from_capture_at == CaptureAt.TRIGGER or from_capture_at == CaptureAt.IN_EDITOR):
 		_perform_from_capture(n2d)

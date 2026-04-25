@@ -202,7 +202,7 @@ func _get_interrupt_identity() -> Variant:
 # HELPERS
 # =============================================================================
 
-## Capture base scale from target (once per animation cycle).
+# Capture base scale from target (once per animation cycle).
 func _capture_base(target: Node) -> void:
 	if _has_base:
 		return
@@ -213,7 +213,7 @@ func _capture_base(target: Node) -> void:
 	_has_base = true
 
 
-## Apply pivot offset to the Control based on pivot_mode.
+# Apply pivot offset to the Control based on pivot_mode.
 func _apply_pivot_mode(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
