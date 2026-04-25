@@ -156,12 +156,13 @@ func _ready() -> void:
 	if get_parent():
 		get_parent().child_order_changed.connect(_mark_siblings_dirty)
 
-	if debug_enabled:
-		var modes := []
-		if detect_mouse: modes.append("Mouse")
-		if detect_bodies: modes.append("Bodies")
-		if detect_areas: modes.append("Areas")
-		print("[%s] SoftTrigger2D ready. Detecting: %s" % [name, ", ".join(modes) if not modes.is_empty() else "nothing"])
+	var modes := []
+	if detect_mouse: modes.append("Mouse")
+	if detect_bodies: modes.append("Bodies")
+	if detect_areas: modes.append("Areas")
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"SoftTrigger2D ready. Detecting: %s" % [", ".join(modes) if not modes.is_empty() else "nothing"],
+			debug_enabled)
 
 
 func _process(_delta: float) -> void:
@@ -175,15 +176,17 @@ func _process(_delta: float) -> void:
 	var local_pos: Vector2
 	if _tracked_node != null and is_instance_valid(_tracked_node):
 		local_pos = _get_tracked_local_pos(_tracked_node)
-		if debug_enabled:
-			print("[%s] Tracking node '%s' | local_pos=%s (origin=%s)" % [
-				name, _tracked_node.name, local_pos,
-				to_local(_tracked_node.global_position)])
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"Tracking node '%s' | local_pos=%s (origin=%s)" % [
+				_tracked_node.name, local_pos,
+				to_local(_tracked_node.global_position)],
+				debug_enabled)
 	elif detect_mouse:
 		local_pos = to_local(get_global_mouse_position())
 	else:
-		if debug_enabled:
-			print("[%s] _process: no tracked node and detect_mouse=false — skipping" % name)
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"_process: no tracked node and detect_mouse=false — skipping",
+				debug_enabled)
 		return
 
 	# Calculate progress from the collision shape
@@ -194,18 +197,20 @@ func _process(_delta: float) -> void:
 	if falloff_curve != null and new_progress > 0.0 and new_progress < 1.0:
 		new_progress = falloff_curve.sample(new_progress)
 
-	if debug_enabled:
-		print("[%s] raw_progress=%.3f | after_curve=%.3f | falloff_zone=%.2f | curve=%s" % [
-			name, raw_progress, new_progress, falloff_zone,
-			"yes" if falloff_curve != null else "none"])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"raw_progress=%.3f | after_curve=%.3f | falloff_zone=%.2f | curve=%s" % [
+			raw_progress, new_progress, falloff_zone,
+			"yes" if falloff_curve != null else "none"],
+			debug_enabled)
 
 	progress = new_progress
 	progress_changed.emit(progress)
 
 	# Drive all discovered juice siblings
 	_ensure_juice_siblings()
-	if debug_enabled and not _juice_siblings.is_empty():
-		print("[%s] Driving %d sibling(s) with progress=%.3f" % [name, _juice_siblings.size(), progress])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Driving %d sibling(s) with progress=%.3f" % [_juice_siblings.size(), progress],
+			debug_enabled)
 	for juice in _juice_siblings:
 		if is_instance_valid(juice):
 			juice.set_external_progress(progress)
@@ -219,14 +224,12 @@ func _on_mouse_entered() -> void:
 	_is_inside = true
 	set_process(true)
 	proximity_entered.emit()
-	if debug_enabled:
-		print("[%s] Mouse entered" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse entered", debug_enabled)
 
 
 func _on_mouse_exited() -> void:
 	_release_all()
-	if debug_enabled:
-		print("[%s] Mouse exited" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse exited", debug_enabled)
 
 
 func _on_object_entered(object: Node2D) -> void:
@@ -236,16 +239,16 @@ func _on_object_entered(object: Node2D) -> void:
 		_is_inside = true
 		set_process(true)
 		proximity_entered.emit()
-		if debug_enabled:
-			print("[%s] Object entered: %s" % [name, object.name])
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"Object entered: %s" % object.name, debug_enabled)
 
 
 func _on_object_exited(object: Node2D) -> void:
 	if object == _tracked_node:
 		_tracked_node = null
 		_release_all()
-		if debug_enabled:
-			print("[%s] Object exited: %s" % [name, object.name])
+		JuiceLogger.log_info(self, "SoftTrigger",
+				"Object exited: %s" % object.name, debug_enabled)
 
 
 func _release_all() -> void:
@@ -281,8 +284,9 @@ func _calculate_shape_progress(local_pos: Vector2) -> float:
 	else:
 		# Fallback: treat unknown shapes as circle using the shape's rough extents
 		# This handles CapsuleShape2D, ConvexPolygon, etc. approximately
-		if debug_enabled:
-			push_warning("[%s] Unsupported shape type '%s', using circle fallback" % [name, shape.get_class()])
+		JuiceLogger.warn(self, "SoftTrigger",
+			"Unsupported shape type '%s', using circle fallback" % shape.get_class(),
+			debug_enabled)
 		return _progress_circle(local_pos, 64.0)
 
 
@@ -412,7 +416,8 @@ func _ensure_collision_shape() -> void:
 
 	if not auto_create_shape:
 		if not Engine.is_editor_hint():
-			push_warning("[%s] No CollisionShape2D child. Detection will not work." % name)
+		JuiceLogger.warn(self, "SoftTrigger",
+				"No CollisionShape2D child. Detection will not work.", debug_enabled)
 		return
 
 	# Auto-create a CollisionShape2D with RectangleShape2D
@@ -429,8 +434,9 @@ func _ensure_collision_shape() -> void:
 		if scene_root:
 			col.owner = scene_root
 
-	if debug_enabled:
-		print("[%s] Auto-created CollisionShape2D with size %s" % [name, detection_size])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Auto-created CollisionShape2D with size %s" % str(detection_size),
+			debug_enabled)
 
 
 ## Update the auto-created shape's size when detection_size changes.
@@ -460,8 +466,8 @@ func _ensure_juice_siblings() -> void:
 
 	_juice_siblings_dirty = false
 
-	if debug_enabled:
-		print("[%s] Discovered %d juice siblings" % [name, _juice_siblings.size()])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Discovered %d juice siblings" % _juice_siblings.size(), debug_enabled)
 
 
 func _mark_siblings_dirty() -> void:

@@ -131,8 +131,8 @@ func _ready() -> void:
 	if get_parent():
 		get_parent().child_order_changed.connect(_mark_siblings_dirty)
 
-	if debug_enabled:
-		print("[%s] SoftTriggerControl ready. Rect: %s" % [name, size])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"SoftTriggerControl ready. Rect: %s" % str(size), debug_enabled)
 
 
 func _process(_delta: float) -> void:
@@ -172,8 +172,7 @@ func _on_mouse_entered() -> void:
 	set_process(true)
 	proximity_entered.emit()
 
-	if debug_enabled:
-		print("[%s] Mouse entered detection zone" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse entered detection zone", debug_enabled)
 
 
 func _on_mouse_exited() -> void:
@@ -192,8 +191,7 @@ func _on_mouse_exited() -> void:
 
 	proximity_exited.emit()
 
-	if debug_enabled:
-		print("[%s] Mouse exited detection zone" % name)
+	JuiceLogger.log_info(self, "SoftTrigger", "Mouse exited detection zone", debug_enabled)
 
 
 # =============================================================================
@@ -258,8 +256,8 @@ func _ensure_juice_siblings() -> void:
 
 	_juice_siblings_dirty = false
 
-	if debug_enabled:
-		print("[%s] Discovered %d juice siblings" % [name, _juice_siblings.size()])
+	JuiceLogger.log_info(self, "SoftTrigger",
+			"Discovered %d juice siblings" % _juice_siblings.size(), debug_enabled)
 
 
 func _mark_siblings_dirty() -> void:

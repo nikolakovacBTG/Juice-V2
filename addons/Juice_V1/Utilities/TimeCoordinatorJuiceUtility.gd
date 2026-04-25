@@ -101,20 +101,22 @@ var _pitch_effect_index: int = -1
 
 func _ready() -> void:
 	if instance != null and instance != self:
-		if debug_enabled:
-			push_warning("[TimeCoordinatorJuiceUtility] Multiple instances detected — replacing previous.")
+		JuiceLogger.warn(self, "Time",
+				"Multiple instances detected — replacing previous.", debug_enabled)
 	instance = self
 
 	# Cache audio bus index if configured
 	if affect_audio_bus != &"":
 		_audio_bus_index = AudioServer.get_bus_index(affect_audio_bus)
 		if _audio_bus_index == -1:
-			push_warning("[TimeCoordinatorJuiceUtility] Audio bus '%s' not found" % affect_audio_bus)
+			JuiceLogger.warn(self, "Time",
+					"Audio bus '%s' not found" % affect_audio_bus, debug_enabled)
 		else:
 			_find_pitch_effect()
 
-	if debug_enabled:
-		print("[TimeCoordinatorJuiceUtility] Ready (static instance registered). Audio bus: '%s'" % affect_audio_bus)
+	JuiceLogger.log_info(self, "Time",
+			"Ready (static instance registered). Audio bus: '%s'" % affect_audio_bus,
+			debug_enabled)
 
 
 func _exit_tree() -> void:
@@ -124,8 +126,8 @@ func _exit_tree() -> void:
 	# Restore Engine.time_scale if we were managing it
 	if Engine.time_scale != 1.0:
 		Engine.time_scale = 1.0
-		if debug_enabled:
-			print("[TimeCoordinatorJuiceUtility] Restored Engine.time_scale to 1.0 on exit")
+		JuiceLogger.log_info(self, "Time",
+				"Restored Engine.time_scale to 1.0 on exit", debug_enabled)
 
 
 # =============================================================================
@@ -139,17 +141,16 @@ func _exit_tree() -> void:
 func request_time_scale(requester: Object, scale: float) -> void:
 
 	if not is_instance_valid(requester):
-		push_warning("[TimeCoordinatorJuiceUtility] Invalid requester")
+		JuiceLogger.warn(self, "Time", "Invalid requester", debug_enabled)
 		return
 
 	var requester_id := requester.get_instance_id()
 	_requests[requester_id] = scale
 
-	if debug_enabled:
-		var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
-		print("[TimeCoordinatorJuiceUtility] Request from '%s': scale=%.2f (total: %d)" % [
-			label, scale, _requests.size()
-		])
+	var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
+	JuiceLogger.log_info(self, "Time",
+			"Request from '%s': scale=%.2f (total: %d)" % [label, scale, _requests.size()],
+			debug_enabled)
 
 	_update_effective_scale()
 
@@ -167,11 +168,10 @@ func release_time_scale(requester: Object) -> void:
 	if _requests.has(requester_id):
 		_requests.erase(requester_id)
 
-		if debug_enabled:
-			var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
-			print("[TimeCoordinatorJuiceUtility] Released by '%s' (remaining: %d)" % [
-				label, _requests.size()
-			])
+		var label: String = requester.get("name") if requester.get("name") != null else str(requester_id)
+		JuiceLogger.log_info(self, "Time",
+				"Released by '%s' (remaining: %d)" % [label, _requests.size()],
+				debug_enabled)
 
 		_update_effective_scale()
 
@@ -191,8 +191,7 @@ func clear_all_requests() -> void:
 	_requests.clear()
 	_update_effective_scale()
 
-	if debug_enabled:
-		print("[TimeCoordinatorJuiceUtility] All requests cleared")
+	JuiceLogger.log_info(self, "Time", "All requests cleared", debug_enabled)
 
 
 # =============================================================================
@@ -228,8 +227,9 @@ func _update_effective_scale() -> void:
 		Engine.time_scale = _effective_scale
 		_apply_audio_pitch()
 
-		if debug_enabled:
-			print("[TimeCoordinatorJuiceUtility] Scale changed: %.2f → %.2f" % [old_scale, _effective_scale])
+		JuiceLogger.log_info(self, "Time",
+				"Scale changed: %.2f → %.2f" % [old_scale, _effective_scale],
+				debug_enabled)
 
 		time_scale_changed.emit(_effective_scale, old_scale)
 
@@ -244,12 +244,12 @@ func _find_pitch_effect() -> void:
 		var effect := AudioServer.get_bus_effect(_audio_bus_index, i)
 		if effect is AudioEffectPitchShift:
 			_pitch_effect_index = i
-			if debug_enabled:
-				print("[TimeCoordinatorJuiceUtility] Found PitchShift effect at index %d" % i)
+			JuiceLogger.log_info(self, "Time",
+					"Found PitchShift effect at index %d" % i, debug_enabled)
 			return
 
-	if debug_enabled:
-		push_warning("[TimeCoordinatorJuiceUtility] No PitchShift effect on bus '%s'" % affect_audio_bus)
+	JuiceLogger.warn(self, "Time",
+			"No PitchShift effect on bus '%s'" % affect_audio_bus, debug_enabled)
 
 
 # Adjusts the pitch effect on the configured audio bus to match time scale.
@@ -262,5 +262,5 @@ func _apply_audio_pitch() -> void:
 		var pitch := clampf(_effective_scale, 0.5, 2.0)
 		effect.pitch_scale = pitch
 
-		if debug_enabled:
-			print("[TimeCoordinatorJuiceUtility] Audio pitch set to %.2f" % pitch)
+		JuiceLogger.log_info(self, "Time",
+				"Audio pitch set to %.2f" % pitch, debug_enabled)

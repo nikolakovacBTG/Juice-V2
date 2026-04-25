@@ -125,8 +125,9 @@ func execute() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	name = "_JuiceTransitionHandler"
 
-	if debug_enabled:
-		print("[TransitionHandler] Starting: action=%d, overlay=%d" % [scene_action, overlay_type])
+	JuiceLogger.log_info(self, "Transition",
+			"Starting: action=%d, overlay=%d" % [scene_action, overlay_type],
+			debug_enabled)
 
 	match overlay_type:
 		TransitionOverlay.NONE:
@@ -162,15 +163,15 @@ func _execute_overlay_transition() -> void:
 	# Phase 2: Cover — create cover effect and tick until complete
 	_overlay_effect = _create_overlay_effect_cover()
 	if _overlay_effect == null:
-		push_warning("[TransitionHandler] Failed to create overlay effect — aborting")
+		JuiceLogger.warn(self, "Transition",
+				"Failed to create overlay effect — aborting", debug_enabled)
 		_emit_completed()
 		return
 
 	_overlay_effect.start(null, true, false)
 	await _overlay_animation_completed
 
-	if debug_enabled:
-		print("[TransitionHandler] Cover complete")
+	JuiceLogger.log_info(self, "Transition", "Cover complete", debug_enabled)
 
 	# Phase 3: Ensure async load is ready
 	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
@@ -193,8 +194,7 @@ func _execute_overlay_transition() -> void:
 	_overlay_effect.start(null, true, false)
 	await _overlay_animation_completed
 
-	if debug_enabled:
-		print("[TransitionHandler] Reveal complete")
+	JuiceLogger.log_info(self, "Transition", "Reveal complete", debug_enabled)
 
 	# Phase 7: Clean up
 	JuiceScreenOverlayProvider.clear()
@@ -205,7 +205,8 @@ func _execute_overlay_transition() -> void:
 
 func _execute_scene_transition() -> void:
 	if transition_scene == null:
-		push_warning("[TransitionHandler] transition_scene is null — falling back to NONE")
+		JuiceLogger.warn(self, "Transition",
+				"transition_scene is null — falling back to NONE", debug_enabled)
 		await _execute_no_transition()
 		return
 
@@ -224,19 +225,19 @@ func _execute_scene_transition() -> void:
 	_transition_scene_instance.process_mode = Node.PROCESS_MODE_ALWAYS
 	_transition_canvas.add_child(_transition_scene_instance)
 
-	if debug_enabled:
-		print("[TransitionHandler] Transition scene instanced")
+	JuiceLogger.log_info(self, "Transition", "Transition scene instanced", debug_enabled)
 
 	# Phase 3: Wait for cover
 	if use_scene_timing and _transition_scene_instance.has_signal("screen_covered"):
 		await _transition_scene_instance.screen_covered
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("screen_covered"):
-			push_warning("[TransitionHandler] Transition scene missing 'screen_covered' signal — using fallback timer")
+			JuiceLogger.warn(self, "Transition",
+					"Transition scene missing 'screen_covered' signal — using fallback timer",
+					debug_enabled)
 		await get_tree().create_timer(fallback_cover_duration, true, false, true).timeout
 
-	if debug_enabled:
-		print("[TransitionHandler] Cover phase complete (scene transition)")
+	JuiceLogger.log_info(self, "Transition", "Cover phase complete (scene transition)", debug_enabled)
 
 	# Phase 4: Ensure async load is ready
 	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
@@ -256,11 +257,12 @@ func _execute_scene_transition() -> void:
 		await _transition_scene_instance.transition_finished
 	else:
 		if use_scene_timing and not _transition_scene_instance.has_signal("transition_finished"):
-			push_warning("[TransitionHandler] Transition scene missing 'transition_finished' signal — using fallback timer")
+			JuiceLogger.warn(self, "Transition",
+					"Transition scene missing 'transition_finished' signal — using fallback timer",
+					debug_enabled)
 		await get_tree().create_timer(fallback_reveal_duration, true, false, true).timeout
 
-	if debug_enabled:
-		print("[TransitionHandler] Reveal phase complete (scene transition)")
+	JuiceLogger.log_info(self, "Transition", "Reveal phase complete (scene transition)", debug_enabled)
 
 	# Phase 7: Clean up
 	if is_instance_valid(_transition_scene_instance):
@@ -288,17 +290,16 @@ func _perform_scene_action() -> void:
 			if loaded == null:
 				loaded = target_scene
 			get_tree().change_scene_to_packed(loaded)
-			if debug_enabled:
-				print("[TransitionHandler] Scene switched to: %s" % target_scene.resource_path)
+			JuiceLogger.log_info(self, "Transition",
+					"Scene switched to: %s" % target_scene.resource_path,
+					debug_enabled)
 
 		SceneAction.RELOAD_SCENE:
 			get_tree().reload_current_scene()
-			if debug_enabled:
-				print("[TransitionHandler] Scene reloaded")
+			JuiceLogger.log_info(self, "Transition", "Scene reloaded", debug_enabled)
 
 		SceneAction.QUIT_GAME:
-			if debug_enabled:
-				print("[TransitionHandler] Quitting game")
+			JuiceLogger.log_info(self, "Transition", "Quitting game", debug_enabled)
 			get_tree().quit()
 
 		_:
@@ -345,12 +346,12 @@ func _start_async_load(path: String) -> void:
 		return
 	# Check if already loaded (embedded PackedScene)
 	if ResourceLoader.has_cached(path):
-		if debug_enabled:
-			print("[TransitionHandler] Scene already cached: %s" % path)
+		JuiceLogger.log_info(self, "Transition",
+				"Scene already cached: %s" % path, debug_enabled)
 		return
 	ResourceLoader.load_threaded_request(path)
-	if debug_enabled:
-		print("[TransitionHandler] Async load started: %s" % path)
+	JuiceLogger.log_info(self, "Transition",
+			"Async load started: %s" % path, debug_enabled)
 
 
 func _await_async_load(path: String) -> void:
@@ -367,8 +368,9 @@ func _await_async_load(path: String) -> void:
 		push_error("[TransitionHandler] Async load FAILED: %s" % path)
 	elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 		push_error("[TransitionHandler] Invalid resource: %s" % path)
-	elif debug_enabled:
-		print("[TransitionHandler] Async load complete: %s" % path)
+	else:
+		JuiceLogger.log_info(self, "Transition",
+				"Async load complete: %s" % path, debug_enabled)
 
 
 func _get_async_loaded(path: String) -> PackedScene:
