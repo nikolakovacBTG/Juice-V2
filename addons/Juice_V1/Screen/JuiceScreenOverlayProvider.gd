@@ -59,11 +59,13 @@ static func is_ready() -> bool:
 static func _create_overlay_system() -> void:
 	var root: Object = Engine.get_main_loop()
 	if not root is SceneTree:
-		push_error("[JuiceScreenOverlayProvider] Cannot create overlay — no SceneTree available")
+		JuiceLogger.warn(null, "ScreenOverlay",
+				"cannot create overlay — no SceneTree available", true)
 		return
 	var scene_root: Window = (root as SceneTree).root
 	if scene_root == null:
-		push_error("[JuiceScreenOverlayProvider] Cannot create overlay — SceneTree has no root")
+		JuiceLogger.warn(null, "ScreenOverlay",
+				"cannot create overlay — SceneTree has no root", true)
 		return
 
 	_canvas_layer = CanvasLayer.new()

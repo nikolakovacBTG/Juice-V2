@@ -127,26 +127,26 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `TimeJuiceEffectBase.gd` — 1 push_warning → warn, 6 prints → log_info
 - [x] `_JuiceSceneActionOrchestrator.gd` — 8 push_warning/error → warn, 14 prints → log_info, 6 push_error → warn
 
-### Batch 4N: Meta Utility Concrete (5 files, simple)
-- [ ] `CallMethodControlJuiceUtility.gd`
-- [ ] `CallMethod2DJuiceUtility.gd`
-- [ ] `CallMethod3DJuiceUtility.gd`
-- [ ] `SignalEmitControlJuiceUtility.gd`
-- [ ] `SignalEmit2DJuiceUtility.gd`
+### Batch 4N: Meta Utility Concrete (5 files) ✅ (no prints — already clean)
+- [x] `CallMethodControlJuiceUtility.gd` — N/A
+- [x] `CallMethod2DJuiceUtility.gd` — N/A
+- [x] `CallMethod3DJuiceUtility.gd` — N/A
+- [x] `SignalEmitControlJuiceUtility.gd` — N/A
+- [x] `SignalEmit2DJuiceUtility.gd` — N/A
 
-### Batch 4O: Meta Utility Concrete continued (4 files)
-- [ ] `SignalEmit3DJuiceUtility.gd`
-- [ ] `SceneActionControlJuiceUtility.gd`
-- [ ] `SceneAction2DJuiceUtility.gd`
-- [ ] `SceneAction3DJuiceUtility.gd`
+### Batch 4O: Meta Utility Concrete continued (4 files) ✅ (no prints — already clean)
+- [x] `SignalEmit3DJuiceUtility.gd` — N/A
+- [x] `SceneActionControlJuiceUtility.gd` — N/A
+- [x] `SceneAction2DJuiceUtility.gd` — N/A
+- [x] `SceneAction3DJuiceUtility.gd` — N/A
 
 ---
 
 ## Phase 4-Utilities: Standalone Utilities
 
-### Batch 4P: Interaction + SoftTrigger (3 files, complex)
-- [ ] `Interaction2DJuiceUtility.gd`
-- [ ] `Interaction3DJuiceUtility.gd`
+### Batch 4P: Interaction + SoftTrigger (3 files) ✅
+- [x] `Interaction2DJuiceUtility.gd` — 1 push_warning → warn, 14 prints → log_info
+- [x] `Interaction3DJuiceUtility.gd` — 2 push_warning → warn, 14 prints → log_info
 - [x] `SoftTriggerControlJuiceUtility.gd`
 
 ### Batch 4Q: SoftTrigger + Coordinator (3 files, complex) ✅
@@ -154,10 +154,10 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `SoftTrigger3DJuiceUtility.gd`
 - [x] `TimeCoordinatorJuiceUtility.gd` ✅ (compliant)
 
-### Batch 4R: Support (3 files)
+### Batch 4R: Support (3 files) ✅
 - [x] `_JuiceTransitionHandler.gd`
-- [ ] `SignalRelayJuiceUtility.gd`
-- [ ] `JuiceScreenOverlayProvider.gd`
+- [x] `SignalRelayJuiceUtility.gd` — 5 push_warning → warn, 2 prints → log_info
+- [x] `JuiceScreenOverlayProvider.gd` — 2 push_error → warn (always-on, static class)
 
 ---
 
