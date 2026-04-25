@@ -23,3 +23,7 @@
 @icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
 class_name JuiceControlEffectBase
 extends JuiceEffectBase
+
+
+func _get_domain_tag() -> String:
+	return "Control"
