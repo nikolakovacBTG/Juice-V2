@@ -196,9 +196,10 @@ func _needs_sustain() -> bool:
 func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_capture_base(target)
-	if debug_enabled:
-		print("[ProgressProperty] Start: '%s' (%s) dir=%.0f" % [
-			property_path, PropertyType.keys()[property_type], _current_direction])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"animate_start: property='%s' type=%s dir=%.0f" % [
+			property_path, PropertyType.keys()[property_type], _current_direction],
+			debug_enabled)
 
 
 ## Restores the target to its pre-accumulation state if hold_on_stop is false.
@@ -283,8 +284,9 @@ func _check_bounds(target: Node) -> void:
 
 	_clamp_to_bound(target)
 
-	if debug_enabled:
-		print("[ProgressProperty] Bound reached. Behaviour: %s" % BoundBehaviour.keys()[bound_behaviour])
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			debug_enabled)
 
 	match bound_behaviour:
 		BoundBehaviour.EMIT_COMPLETED:
@@ -416,8 +418,9 @@ func _capture_base(target: Node) -> void:
 		PropertyType.COLOR:
 			_base_color = value as Color if value is Color else Color.WHITE
 	_has_base = true
-	if debug_enabled:
-		print("[ProgressProperty] Captured base '%s' = %s" % [property_path, value])
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+			"property='%s' value=%s" % [property_path, value],
+			debug_enabled)
 
 
 # Writes the unmodified base value back to the engine property on stop.
