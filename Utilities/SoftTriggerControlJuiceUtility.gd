@@ -158,9 +158,9 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(juice):
 			juice.set_external_progress(progress)
 
-	if debug_enabled:
-		# Throttle to avoid flooding — only log at 10% milestones
-		pass
+	JuiceLogger.log_delta(self, "SoftTrigger", new_progress,
+			{"rect_size": size, "curve": "yes" if falloff_curve != null else "none"},
+			name, debug_enabled)
 
 
 # =============================================================================
