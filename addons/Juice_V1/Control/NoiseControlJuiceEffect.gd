@@ -265,6 +265,7 @@ func _get(property: StringName) -> Variant:
 
 var _noise: FastNoiseLite
 var _noise_time: float = 0.0
+var _last_noise_sample: float = 0.0  # Last raw noise value — logged as chain intermediate
 # _pivot_applied inherited from JuiceControlTransformEffect
 
 
@@ -297,18 +298,26 @@ func _on_animate_start(target: Node) -> void:
 			TransformTarget.keys()[transform_target], noise_speed],
 			debug_enabled)
 	JuiceLogger.log_capture(self, _get_domain_tag(), "noise_config",
-			{"pos_amp": position_amplitude, "rot_amp": rotation_amplitude,
-			"scale_amp": scale_amplitude}, debug_enabled)
+			{"target": TransformTarget.keys()[transform_target],
+			"pos_amp": position_amplitude, "pos_unit": PositionIn.keys()[position_unit],
+			"rot_amp": rotation_amplitude, "scale_amp": scale_amplitude,
+			"noise_speed": noise_speed, "noise_direction": NoiseDirection.keys()[noise_direction],
+			"noise_type": noise_type, "noise_freq": noise_frequency, "noise_seed": noise_seed,
+			"fractal_type": fractal_type, "clamp": Vector2(clamp_min, clamp_max)},
+			debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_noise_time(_current_delta)
 	var ctrl := target as Control
-	if ctrl:
-		_compute_noise_deltas(progress, ctrl)
-		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-				{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
-				ctrl.name, debug_enabled)
+	if ctrl == null:
+		JuiceLogger.warn(self, _get_domain_tag(), "_apply_effect: target is not a Control", debug_enabled)
+		return
+	_compute_noise_deltas(progress, ctrl)
+	var noise_sample := _last_noise_sample
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"noise_sample": noise_sample, "pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+			ctrl.name, debug_enabled)
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -322,6 +331,7 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 func _restore_to_natural(_target: Node) -> void:
 	_clear_deltas()
+	JuiceLogger.log_info(self, _get_domain_tag(), "restore_to_natural: pos/rot/scale deltas cleared", debug_enabled)
 
 
 func _invalidate_base_cache() -> void:
@@ -440,4 +450,5 @@ func _sample_noise(y_offset: float, axis_speed: float) -> float:
 		NoiseDirection.NEGATIVE_ONLY:
 			raw = -absf(raw)
 	raw = clampf(raw, clamp_min, clamp_max)
+	_last_noise_sample = raw
 	return raw
