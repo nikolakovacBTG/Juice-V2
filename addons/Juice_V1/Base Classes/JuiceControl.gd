@@ -277,12 +277,14 @@ func _post_tick_write() -> void:
 	# Register modulate factor into the Ledger — sibling stacking is handled
 	# automatically via per-source delta tracking (one entry per JuiceControl node).
 	JuiceLedger.register_delta(ctrl, self, "self_modulate", combined_modulate)
-	JuiceLogger.log_info(self, "Control",
-			"post_tick: self_modulate factor this_node=%s" % combined_modulate,
-			debug_enabled)
 
 	# Flush all properties — transform (additive) + self_modulate (multiplicative)
 	JuiceLedger.flush(ctrl, ["position", "rotation", "scale", "self_modulate"])
+	var written_modulate: Color = ctrl.self_modulate
+	JuiceLogger.log_info(self, "Control",
+			"post_tick: self_modulate this_node_factor=%s total_written=%s" % [
+			combined_modulate, written_modulate],
+			debug_enabled)
 
 
 ## Subtract this node's contributions — other nodes' contributions remain.
@@ -291,8 +293,23 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	# Sum deltas being stripped so the log shows exactly what is removed.
+	var strip_pos := Vector2.ZERO
+	var strip_rot := 0.0
+	var strip_scale := Vector2.ZERO
+	for effect in _runtime_effects:
+		var te := effect as JuiceControlTransformEffect
+		if te == null:
+			continue
+		if te._contributes_position:
+			strip_pos += te._pos_delta
+		if te._contributes_rotation:
+			strip_rot += te._rot_delta
+		if te._contributes_scale:
+			strip_scale += te._scale_delta
 	JuiceLogger.log_info(self, "Control",
-			"undo_visual: stripping this node's deltas from '%s'" % ctrl.name,
+			"undo_visual '%s': stripping pos=%s rot=%.4f scale=%s" % [
+			ctrl.name, strip_pos, strip_rot, strip_scale],
 			debug_enabled)
 
 	# Strip our deltas from the ledger temporarily without destroying it
@@ -308,9 +325,12 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	JuiceLogger.log_info(self, "Control", "reapply_visual: re-registering contributions", debug_enabled)
 	# Re-register and flush all deltas (transform + modulate) through the Ledger
 	_post_tick_write()
+	JuiceLogger.log_info(self, "Control",
+			"reapply_visual '%s': restored pos=%s rot=%.4f scale=%s modulate=%s" % [
+			ctrl.name, ctrl.position, ctrl.rotation, ctrl.scale, ctrl.self_modulate],
+			debug_enabled)
 
 
 # =============================================================================

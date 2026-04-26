@@ -324,15 +324,15 @@ func _post_tick_write() -> void:
 	# Store as Color(albedo.r, albedo.g, albedo.b, alpha) to pack both channels.
 	var appearance_factor := Color(combined_albedo.r, combined_albedo.g, combined_albedo.b, combined_alpha)
 	JuiceLedger.register_delta(n3d, self, "_appearance_factor", appearance_factor)
-	JuiceLogger.log_info(self, "3D",
-			"post_tick: appearance_factor this_node=albedo(%s,%s,%s) alpha=%s" % [
-			"%.2f" % combined_albedo.r, "%.2f" % combined_albedo.g,
-			"%.2f" % combined_albedo.b, "%.2f" % combined_alpha],
-			debug_enabled)
 
 	# Read the combined factor from all sibling Juice3D nodes on this target.
 	# The Ledger multiplies Color deltas automatically (multiplicative accumulation).
 	var total_factor: Color = JuiceLedger.get_total(n3d, "_appearance_factor", Color.WHITE)
+	JuiceLogger.log_info(self, "3D",
+			"post_tick: appearance this_node=albedo(%.2f,%.2f,%.2f) alpha=%.2f total_factor=albedo(%.2f,%.2f,%.2f) alpha=%.2f" % [
+			combined_albedo.r, combined_albedo.g, combined_albedo.b, combined_alpha,
+			total_factor.r, total_factor.g, total_factor.b, total_factor.a],
+			debug_enabled)
 
 	# Read base albedo/alpha from the Ledger (captured at ensure time).
 	var base_app: Color = JuiceLedger.get_base(n3d, "_appearance_factor", Color.WHITE)
@@ -365,8 +365,23 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
+	# Sum deltas being stripped so the log shows exactly what is removed.
+	var strip_pos := Vector3.ZERO
+	var strip_rot := Vector3.ZERO
+	var strip_scale := Vector3.ZERO
+	for effect in _runtime_effects:
+		var te := effect as Juice3DTransformEffect
+		if te == null:
+			continue
+		if te._contributes_position:
+			strip_pos += te._pos_delta
+		if te._contributes_rotation:
+			strip_rot += te._rot_delta
+		if te._contributes_scale:
+			strip_scale += te._scale_delta
 	JuiceLogger.log_info(self, "3D",
-			"undo_visual: stripping this node's deltas from '%s'" % n3d.name,
+			"undo_visual '%s': stripping pos=%s rot=%s scale=%s" % [
+			n3d.name, strip_pos, strip_rot, strip_scale],
 			debug_enabled)
 
 	# Strip our transform deltas from the ledger temporarily without destroying it
@@ -385,13 +400,16 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	JuiceLogger.log_info(self, "3D", "reapply_visual: re-registering contributions for '%s'" % n3d.name, debug_enabled)
 	# Re-apply transform deltas by flushing a fresh post-tick write.
 	# This restores our deltas to the ledger and recalculates absolute values.
 	# Re-install working material and recompute albedo.
 	if _appearance_setup and _appearance_mesh != null and _appearance_working_mat != null:
 		_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
 	_post_tick_write()
+	JuiceLogger.log_info(self, "3D",
+			"reapply_visual '%s': restored pos=%s rot=%s scale=%s" % [
+			n3d.name, n3d.position, n3d.rotation, n3d.scale],
+			debug_enabled)
 
 
 # =============================================================================
