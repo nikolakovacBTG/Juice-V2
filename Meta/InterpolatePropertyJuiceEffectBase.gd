@@ -64,6 +64,8 @@ func _on_animate_start(target: Node) -> void:
 	for entry: InterpolatePropertyTarget in property_targets:
 		if entry != null and entry.is_configured():
 			entry.capture_runtime_values()
+	JuiceLogger.log_capture(self, _get_domain_tag(), "interpolate_targets",
+			property_targets.size(), debug_enabled)
 
 
 ## Iterates over the target entries and performs polymorphic interpolation (lerp), mapping 0-1 progress to property values directly on the engine target.
@@ -77,6 +79,9 @@ func _apply_effect(progress: float, _target: Node) -> void:
 		if value == null:
 			continue
 		entry._resolved_node.set_indexed(entry.property_path, value)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"entries": property_targets.size()},
+			"property", debug_enabled)
 
 
 # =============================================================================

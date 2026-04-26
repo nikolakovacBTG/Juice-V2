@@ -134,6 +134,9 @@ func _apply_effect(progress: float, _target: Node) -> void:
 
 		entry._resolved_node.set_indexed(
 			entry.property_path, entry._base_value + delta)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"entries": property_targets.size(), "shake_time": _shake_time},
+			"property", debug_enabled)
 
 
 ## Undoes the shake delta from the target property to cleanly reset it on stop.
