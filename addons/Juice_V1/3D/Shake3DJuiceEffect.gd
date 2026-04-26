@@ -184,23 +184,38 @@ func _on_animate_start(target: Node) -> void:
 		_compute_pivot_offset()
 		_contributes_position = (_contributes_position or _pivot_offset != Vector3.ZERO)
 
-	JuiceLogger.log_info(self, _get_domain_tag(),
-			"animate_start: target=%s freq=%.1f Hz" % [
-			TransformTarget.keys()[transform_target], shake_frequency],
-			debug_enabled)
-	JuiceLogger.log_capture(self, _get_domain_tag(), "shake_config",
-			{"pos_str": position_strength, "rot_amp": rotation_amplitude,
-			"randomness": position_randomness}, debug_enabled)
+	# Full config snapshot — every variable that feeds the computation chain.
+	# transform_target and pivot_mode are ROUTING: they determine which branch runs.
+	# All amplitude/randomness/unit vars feed the oscillation or raw_offset stage.
+	# _shake_seed captured here so per-frame logs can be reproduced offline.
+	JuiceLogger.log_capture(self, _get_domain_tag(), "shake_config", {
+		"target": TransformTarget.keys()[transform_target],
+		"freq": shake_frequency,
+		"seed": _shake_seed,
+		"pivot_mode": PivotMode.keys()[pivot_mode],
+		"pivot_offset": _pivot_offset,
+		"pos_strength": position_strength,
+		"pos_unit": PositionIn3D.keys()[position_unit],
+		"pos_randomness": position_randomness,
+		"rot_amp": rotation_amplitude,
+		"rot_rand_dir": rotation_randomize_direction,
+		"scale_amp": scale_amplitude,
+		"scale_randomness": scale_randomness,
+		"scale_uniform": scale_uniform,
+	}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
 	_shake_time += _current_delta
 	var n3d := target as Node3D
-	if n3d:
-		_compute_shake_deltas(progress, n3d)
-		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-				{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
-				n3d.name, debug_enabled)
+	if n3d == null:
+		JuiceLogger.warn(self, _get_domain_tag(),
+			"_apply_effect: target is not a Node3D (got %s) — skipping" % target.get_class(),
+			debug_enabled)
+		return
+	_compute_shake_deltas(progress, n3d)
+	# Note: per-branch log_delta calls are inside _compute_shake_deltas with
+	# richer payloads. The outer call is intentionally omitted to avoid duplicates.
 
 
 func _on_animate_in_complete(_target: Node) -> void:
@@ -231,6 +246,9 @@ func _get_interrupt_identity() -> Variant:
 
 func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 	if intensity <= 0.0:
+		JuiceLogger.warn(self, _get_domain_tag(),
+			"_compute_shake_deltas: intensity=0 — zeroing deltas and returning",
+			debug_enabled)
 		_pos_delta = Vector3.ZERO
 		_rot_delta = Vector3.ZERO
 		_scale_delta = Vector3.ZERO
@@ -245,11 +263,20 @@ func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 			var rx := randf_range(-1.0, 1.0)
 			var ry := randf_range(-1.0, 1.0)
 			var rz := randf_range(-1.0, 1.0)
-			var raw_offset = Vector3(
-				lerpf(sx, rx, position_randomness) * position_strength.x * intensity,
-				lerpf(sy, ry, position_randomness) * position_strength.y * intensity,
-				lerpf(sz, rz, position_randomness) * position_strength.z * intensity)
+			# oscillation: sine blended with random component per axis
+			var osc_x := lerpf(sx, rx, position_randomness)
+			var osc_y := lerpf(sy, ry, position_randomness)
+			var osc_z := lerpf(sz, rz, position_randomness)
+			var raw_offset := Vector3(
+				osc_x * position_strength.x * intensity,
+				osc_y * position_strength.y * intensity,
+				osc_z * position_strength.z * intensity)
 			_pos_delta = _convert_to_world_units(raw_offset, position_unit, target)
+			# oscillation≠0 but pos_delta=0 → unit conversion is the bug source.
+			# raw_offset=0 but oscillation≠0 → strength or intensity is the bug source.
+			JuiceLogger.log_delta(self, _get_domain_tag(), intensity,
+				{"oscillation": Vector3(osc_x, osc_y, osc_z), "raw_offset": raw_offset, "pos_delta": _pos_delta},
+				target.name, debug_enabled)
 
 		TransformTarget.ROTATION:
 			var freq_base := _shake_time * shake_frequency * TAU
@@ -266,18 +293,29 @@ func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 				deg_to_rad(sine_y * amp.y * _direction_multiplier.y),
 				deg_to_rad(sine_z * amp.z * _direction_multiplier.z))
 			_rot_delta = rot_offset
+			var pivot_pos_comp := Vector3.ZERO
 			if _pivot_offset != Vector3.ZERO:
 				var basis_delta := Basis.from_euler(rot_offset)
-				_pos_delta = _pivot_offset - basis_delta * _pivot_offset
+				pivot_pos_comp = _pivot_offset - basis_delta * _pivot_offset
+				_pos_delta = pivot_pos_comp
+			# sine values + dir_mul expose the oscillation stage per axis.
+			# rot_delta=0 with sine≠0 → amplitude or intensity is the bug source.
+			JuiceLogger.log_delta(self, _get_domain_tag(), intensity,
+				{"sine": Vector3(sine_x, sine_y, sine_z),
+				"dir_mul": _direction_multiplier,
+				"rot_delta": _rot_delta,
+				"pivot_pos_comp": pivot_pos_comp},
+				target.name, debug_enabled)
 
 		TransformTarget.SCALE:
 			var freq := _shake_time * shake_frequency * TAU
-			var scale_offset: Vector3
+			var osc: Vector3
 			if scale_uniform:
 				var sv := sin(freq + _shake_seed)
 				var rv := randf_range(-1.0, 1.0)
-				var v := lerpf(sv, rv, scale_randomness) * scale_amplitude.x * intensity
-				scale_offset = Vector3(v, v, v)
+				var blended := lerpf(sv, rv, scale_randomness)
+				osc = Vector3(blended, blended, blended)
+				_scale_delta = osc * scale_amplitude.x * intensity
 			else:
 				var sx := sin(freq + _shake_seed)
 				var sy := sin(freq * 1.3 + _shake_seed + 100.0)
@@ -285,18 +323,27 @@ func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 				var rx := randf_range(-1.0, 1.0)
 				var ry := randf_range(-1.0, 1.0)
 				var rz := randf_range(-1.0, 1.0)
-				scale_offset = Vector3(
-					lerpf(sx, rx, scale_randomness) * scale_amplitude.x * intensity,
-					lerpf(sy, ry, scale_randomness) * scale_amplitude.y * intensity,
-					lerpf(sz, rz, scale_randomness) * scale_amplitude.z * intensity)
-			_scale_delta = scale_offset
+				osc = Vector3(
+					lerpf(sx, rx, scale_randomness),
+					lerpf(sy, ry, scale_randomness),
+					lerpf(sz, rz, scale_randomness))
+				_scale_delta = Vector3(
+					osc.x * scale_amplitude.x * intensity,
+					osc.y * scale_amplitude.y * intensity,
+					osc.z * scale_amplitude.z * intensity)
+			var pivot_pos_comp := Vector3.ZERO
 			if _pivot_offset != Vector3.ZERO:
-				var new_scale := _base_scale + scale_offset
+				var new_scale := _base_scale + _scale_delta
 				var scale_ratio := new_scale / _base_scale
-				_pos_delta = _pivot_offset - Vector3(
+				pivot_pos_comp = _pivot_offset - Vector3(
 					_pivot_offset.x * scale_ratio.x,
 					_pivot_offset.y * scale_ratio.y,
 					_pivot_offset.z * scale_ratio.z)
+				_pos_delta = pivot_pos_comp
+			# oscillation intermediate + scale_delta expose the chain.
+			JuiceLogger.log_delta(self, _get_domain_tag(), intensity,
+				{"oscillation": osc, "scale_delta": _scale_delta, "pivot_pos_comp": pivot_pos_comp},
+				target.name, debug_enabled)
 
 
 # =============================================================================
@@ -317,6 +364,10 @@ func _update_direction_axis(sine_value: float, axis: int) -> void:
 				0: _direction_multiplier.x *= -1.0
 				1: _direction_multiplier.y *= -1.0
 				2: _direction_multiplier.z *= -1.0
+			# State transition: per-axis direction flip — log old→new with zero-cross trigger.
+			JuiceLogger.log_info(self, _get_domain_tag(),
+				"direction_multiplier axis=%d flipped to %s at sine_val=%.3f" % [
+				axis, _direction_multiplier, sine_value], debug_enabled)
 		match axis:
 			0: _last_sine_sign.x = current_sign
 			1: _last_sine_sign.y = current_sign

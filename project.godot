@@ -110,3 +110,8 @@ jump={
 "type": "key"
 }]
 }
+
+[juice]
+
+debug/enabled=true
+debug/log_to_file=true

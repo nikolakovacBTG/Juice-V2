@@ -64,6 +64,29 @@ Read: .agents/rules/add-logging-rule.md
 
 ---
 
+## Step 2.5: Pre-Implementation Design (MANDATORY — Do Not Skip)
+
+For **each file** in the batch, produce both artifacts from:
+```
+@juice-debug-logging QUALITY_GATE.md § MANDATORY: Pre-Implementation Design
+```
+
+**Artifact 1 — Config Variable Map:** List every `@export var` and config variable by
+exact GDScript name. Assign each to a chain stage, ROUTING, SIDE_EFFECT, or UNUSED.
+Every variable mapped to a computation stage must appear in `log_capture`.
+
+**Artifact 2 — Expected Log Template:** Write what the actual log payload should contain
+before writing any `log_capture` or `log_delta` call. Real key names, realistic values.
+The implementation must match this template — it is the spec.
+
+These artifacts cannot be faked without reading the code. That is the point.
+
+**LOG_POINTS.md (Step 2) tells you WHERE to log.
+Artifact 1 and 2 tell you WHAT the payload must contain.**
+Both are required. Neither replaces the other.
+
+---
+
 ## Step 3: Audit Existing Prints (If Any)
 
 For each `if debug_enabled: print(...)` found in the batch files:
@@ -104,7 +127,15 @@ cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 
 5b. If failures: fix before proceeding. Do NOT move to the next batch with failing tests.
 
-5c. Open Godot editor, toggle `debug_enabled` on a JuiceBase node in a demo scene, and confirm console output matches the standardized format.
+5c. Apply the **Completeness Test** from [QUALITY_GATE.md](.agents/skills/juice-debug-logging/QUALITY_GATE.md)
+§ Post-Implementation. Answer all three questions from the log output alone (no source code):
+
+> **1. Wrong output:** Can you find where in the chain actual diverged from expected?
+> **2. No output:** Can you find which early return fired?
+> **3. Reconstruction:** Can you reconstruct the full computation from lifecycle log + 10 per-frame lines?
+
+All three must be **YES** before the batch is marked done. If any is **NO**, a chain stage
+is missing — return to Step 4.
 
 ---
 

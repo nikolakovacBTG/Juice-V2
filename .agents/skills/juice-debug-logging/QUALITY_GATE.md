@@ -2,38 +2,139 @@
 
 ## Context
 
-This is a 60fps game engine plugin. Effects tick every frame, helpers are called from hot paths, and the editor inspector fires property methods constantly. Logging must be **useful without being noisy**.
+This is a 60fps game engine plugin. Effects tick every frame, helpers are called from hot paths,
+and the editor inspector fires property methods constantly. Logging must be useful without being noisy.
 
-`debug_enabled` is a manual toggle — the user turns it on, reproduces the bug, turns it off. Log volume during that window is acceptable, but signal-to-noise matters: every line must carry a value you'd actually read.
+`debug_enabled` is a manual toggle — the user turns it on, reproduces the bug, turns it off.
+Log volume during that window is acceptable, but every line must carry a value that advances
+understanding of what the effect actually did.
+
+---
+
+## MANDATORY: Pre-Implementation Design
+
+**Before writing or modifying any log call**, produce these two artifacts in writing.
+
+They cannot be faked without reading the actual code. They become the spec your
+implementation is verified against. An implementation that doesn't match its own
+artifacts has a defect — either in the artifacts or in the code.
+
+---
+
+### Artifact 1 — Config Variable Map
+
+Open the file. List **every** `@export var` and every config variable by its exact GDScript
+name. For each one, assign it to a chain stage, or mark it with one of the reserved tags.
+
+**Format:**
+```
+CONFIG MAP: [ClassName]
+  [var_name]        → [stage_name]    # role in computation
+  [var_name]        → ROUTING         # determines which branch runs
+  [var_name]        → SIDE_EFFECT     # causes a write, not part of output delta
+  [var_name]        → UNUSED          # not used in computation (justify this)
+```
+
+**Example — ShakeControlJuiceEffect:**
+```
+CONFIG MAP: ShakeControlJuiceEffect
+  transform_target          → ROUTING         # selects position/rotation/scale branch
+  shake_frequency           → oscillation     # freq × time × TAU drives sin()
+  position_strength         → raw_offset      # per-axis scalar on blended oscillation
+  position_unit             → raw_offset      # unit conversion factor for position
+  position_randomness       → oscillation     # lerp blend weight sine↔rand
+  rotation_amplitude        → oscillation     # degrees multiplied into sine output
+  rotation_randomize_direction → oscillation  # flips _direction_multiplier at zero-cross
+  scale_amplitude           → oscillation     # per-axis scalar for scale branch
+  scale_randomness          → oscillation     # lerp blend weight for scale branch
+  scale_uniform             → oscillation     # branches uniform vs anisotropic output
+  pivot_mode                → SIDE_EFFECT     # sets pivot_offset once, not part of delta
+  custom_pivot              → SIDE_EFFECT     # used only when pivot_mode = CUSTOM
+```
+
+**Rule: every variable mapped to a computation stage MUST appear in `log_capture` at
+lifecycle start. No curated subsets. If it feeds the chain, it is logged.**
+
+`ROUTING` variables: include as a string key in `log_capture` (they determine which
+branch ran — critical for reading any other log line).
+
+`SIDE_EFFECT` and `UNUSED` variables: do not need logging unless they produce a
+visible discrepancy (e.g., wrong pivot set — log it in the method that sets it).
+
+---
+
+### Artifact 2 — Expected Log Template
+
+Before writing any `log_capture` or `log_delta`, write what the actual log payload
+should contain. Use real GDScript key names and realistic representative values.
+
+**Format:**
+```
+EXPECTED log_capture at [method]:
+  { "key": value, "key": value, ... }
+
+EXPECTED log_delta at [method] (typical mid-animation frame):
+  progress: 0.45, delta: { "key": value, "key": value }
+```
+
+**Example — ShakeControlJuiceEffect:**
+```
+EXPECTED log_capture at _on_animate_start:
+  {
+    "target": "POSITION",
+    "freq": 20.0,
+    "strength": "(5.00, 5.00)",
+    "unit": "PIXELS",
+    "randomness": 0.500,
+    "seed": 847.32
+  }
+  # Note: pivot_mode logged separately in _apply_pivot_mode as SIDE_EFFECT
+
+EXPECTED log_delta at _apply_effect (POSITION branch, mid-animation):
+  progress: 0.45, delta: {
+    "oscillation": 0.612,      # sine_val blended with rand — the intermediate
+    "raw_offset": "(3.06, 2.14)",  # before unit conversion
+    "pos_delta": "(3.06, 2.14)"    # final value registered with ledger
+  }
+```
+
+**Rule: the implementation must match this template. If a key is impossible to log
+because an intermediate is computed inline and discarded, the fix is to assign it
+to a named variable — not to drop the key from the spec.**
+
+This template also defines what a reviewer checks. If the implemented `log_capture`
+is missing `seed` and `randomness`, the gap is visible without running the game.
 
 ---
 
 ## The Four Logging Boundaries
 
-Not every method needs logging. Log at these four boundaries:
+These are the structural positions that the chain stages above map to.
+Use as a cross-check that no class of log is missing.
 
 ### 1. Lifecycle (runs once per animation)
 
 **Where:** `_on_animate_start()`, `stop()`, `_restore_to_natural()`
 
-**What to log:** Full state snapshot — all config values AND captured runtime values.
-
-This is your baseline. When a user sends a log, you read this first to understand what was configured and what state the engine was in when the animation started.
+**What:** Full state snapshot — every field from Artifact 1 that feeds the chain,
+plus captured runtime values (base position, resolved From/To, material RID, etc.).
 
 ```gdscript
-# GOOD — config + captured engine state
+# GOOD — config fields + captured runtime state
 JuiceLogger.log_capture(self, _get_domain_tag(), "start",
-    {"property": property_path, "type": PropertyType.keys()[property_type],
-     "base_value": _base_float, "rate": float_rate, "dir": _current_direction},
+    {"target": TransformTarget.keys()[transform_target],
+     "freq": shake_frequency, "strength": position_strength,
+     "randomness": position_randomness, "seed": _shake_seed},
     debug_enabled)
 
-# BAD — config only, no engine state
+# BAD — config subset, runtime state absent
 JuiceLogger.log_capture(self, _get_domain_tag(), "start",
-    {"property": property_path, "type": PropertyType.keys()[property_type]},
+    {"freq": shake_frequency},
     debug_enabled)
 ```
 
-**Restore must also log.** If a user says "the property didn't reset," you need to see whether `_restore_to_natural` ran and what value it wrote back:
+Restore must log what value was written back. If a user says "the property didn't reset,"
+you need to see whether `_restore_to_natural` ran and what it wrote:
 
 ```gdscript
 JuiceLogger.log_info(self, _get_domain_tag(),
@@ -45,32 +146,30 @@ JuiceLogger.log_info(self, _get_domain_tag(),
 
 **Where:** `_apply_effect()`
 
-**What to log:** The **computed output** — the value that was produced this frame. Minimal payload, one line per frame.
-
-Do NOT log inputs that were already logged at lifecycle start (config, property path, type). Do NOT log both inputs and outputs — that doubles log volume for no gain since inputs are derivable from the lifecycle log.
+**What:** The computed output at this frame — intermediate values that change frame-to-frame,
+plus the final delta. One compact line. **Never repeat static config here** — it was already
+logged at lifecycle start.
 
 ```gdscript
-# GOOD — the actual computed value that matters
+# GOOD — intermediate oscillation + final delta, both change each frame
 JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-    {"accumulated": _accumulated_float, "written": _base_float + _accumulated_float},
+    {"oscillation": blended, "raw_offset": raw_offset, "pos_delta": _pos_delta},
     target.name, debug_enabled)
 
-# BAD — static config repeated every frame
+# BAD — static config logged per-frame (same value 3600 times)
 JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-    {"path": property_path, "type": PropertyType.keys()[property_type]},
+    {"freq": shake_frequency, "strength": position_strength},
     target.name, debug_enabled)
 ```
-
-**The test:** If you stare at 10 consecutive `log_delta` lines, can you see the value changing (or not changing, which IS the bug)? If yes, the payload is correct.
 
 ### 3. State Transitions (runs rarely)
 
 **Where:** Direction reversals, bound breaches, phase changes, crossfade starts.
 
-**What to log:** The old value, the new value, and enough context to understand why the transition happened.
+**What:** Old value → new value + what triggered it.
 
 ```gdscript
-# GOOD — before/after with context
+# GOOD
 JuiceLogger.log_info(self, _get_domain_tag(),
     "bound hit: accumulated=%.3f limit=%.3f → %s (dir: %.0f → %.0f)" % [
     accumulated_magnitude, bound_value,
@@ -78,25 +177,25 @@ JuiceLogger.log_info(self, _get_domain_tag(),
     old_direction, _current_direction],
     debug_enabled)
 
-# BAD — event name only
-JuiceLogger.log_info(self, _get_domain_tag(),
-    "bound reached: REVERSE", debug_enabled)
+# BAD — event name only, nothing to reason about
+JuiceLogger.log_info(self, _get_domain_tag(), "bound reached: REVERSE", debug_enabled)
 ```
 
 ### 4. Error Exits (runs rarely)
 
-**Where:** Every early `return` that causes a method to skip its work.
+**Where:** Every early `return` that skips effect work.
 
-**What to log:** Why it bailed. This diagnoses "nothing happened" bugs — the most common marketplace report.
+**What:** Why it bailed. This diagnoses "nothing happened" reports — the most common
+class of marketplace bug.
 
 ```gdscript
-# GOOD — explains the skip
+# GOOD
 if property_path.is_empty():
     JuiceLogger.warn(self, _get_domain_tag(),
         "Skipped _apply_effect: property_path is empty", debug_enabled)
     return
 
-# BAD — silent, user sees nothing, effect does nothing, no one knows why
+# BAD — silent, effect does nothing, log shows nothing
 if property_path.is_empty():
     return
 ```
@@ -107,35 +206,44 @@ if property_path.is_empty():
 
 | Method Type | Example | Why Not |
 |---|---|---|
-| **Editor inspector** | `_get_property_list()`, `_set()`, `_get()` | Fires during inspector clicks, not gameplay |
-| **Pure helpers called from logged methods** | `_clamp_to_bound()`, `_wrap_accumulated()` | Parent method already logs the decision; logging both creates redundant nested output |
-| **Pure getters returning bool** | `_is_bound_exceeded()` | Caller knows the result; the state transition log covers it |
+| **Editor inspector** | `_get_property_list()`, `_set()`, `_get()` | Fires on every inspector click, not gameplay |
+| **Pure helpers called from logged methods** | `_clamp_to_bound()`, `_wrap_accumulated()` | Caller already logs the decision; double-logging is noise |
+| **Pure boolean getters** | `_is_bound_exceeded()` | Result visible from the state transition log |
 | **Constructors / `_init()`** | Resource initialization | No runtime state exists yet |
+| **Static config per-frame** | `property_path` in `_apply_effect()` | Belongs at lifecycle start; 3600 identical lines add nothing |
 
 ---
 
-## Per-File Completeness Check
+## The Completeness Test (Post-Implementation Gate)
 
-After instrumenting a file, verify:
+After instrumenting a file, answer these three questions **from the log output alone
+— no source code allowed:**
 
-- [ ] **Lifecycle start** logs config AND captured engine values (not config alone)
-- [ ] **Lifecycle stop/restore** logs what value was written back
-- [ ] **Per-frame** logs the computed output value (not static config)
-- [ ] **Every state transition** logs old→new with trigger context
-- [ ] **Every silent `return` guard** has a warn explaining why it bailed
-- [ ] **No helper method** duplicates logging from its caller
-- [ ] **No editor method** has logging
+> **1. Wrong output:** If the effect produced an unexpected value, can you identify the
+>    exact chain stage where actual output first diverged from expected?
+>
+> **2. No output:** If the effect produced nothing (zero delta, no change), can you
+>    determine which early return or zero-condition fired?
+>
+> **3. Reconstruction:** Can you reconstruct the full computation — all inputs, all
+>    intermediate values, the final result — from the lifecycle log + 10 consecutive
+>    per-frame lines?
+
+If any answer is **NO** → a chain stage is not logged. Return to Artifact 1, find the
+unlogged stage, fix it.
+
+If all three are **YES** → the file is done.
 
 ---
 
-## The 10-Line Test
+## Per-File Completeness Checklist
 
-After instrumenting a file, mentally simulate a bug ("value stuck at 0.7") and ask:
+Quick structural check after the Completeness Test passes:
 
-> If I read the lifecycle log + 10 consecutive per-frame lines, can I see:
-> 1. What config was active?
-> 2. What base value was captured from the engine?
-> 3. What value is being computed each frame — and is it changing or stuck?
-> 4. If it stopped, why?
-
-If any of those four questions has no answer in the log, a log is missing or its payload is wrong.
+- [ ] Every variable in Artifact 1 mapped to a stage appears in `log_capture` at lifecycle start
+- [ ] Artifact 2 template matches the implemented log calls (keys, values, method)
+- [ ] Per-frame log contains computed output values, not static config
+- [ ] Every state transition logs old→new with trigger context
+- [ ] Every silent `return` has a `warn()` before it
+- [ ] No helper method duplicates logging already present in its caller
+- [ ] No editor method (`_get_property_list`, `_set`, `_get`) has any logging

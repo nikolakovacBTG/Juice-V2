@@ -23,6 +23,12 @@ const DEBUG_ENABLED_KEY := "juice/debug/enabled"
 ## When enabled, JuiceLogger writes to user://juice_debug.log in addition to console.
 const DEBUG_LOG_TO_FILE_KEY := "juice/debug/log_to_file"
 
+## Project Settings key for verbose per-frame console output.
+## When false (default), log_delta and log_aggregation are file-only.
+## Set to true only when you specifically need per-frame console tracing.
+## Expect high console volume — the Godot output panel can overflow at 60fps.
+const DEBUG_VERBOSE_KEY := "juice/debug/verbose"
+
 ## Returns whether the plugin should aggressively force resources to be
 ## local to the scene to prevent shared-state preset bugs.
 ## Default is true for safety.
@@ -38,6 +44,10 @@ static func get_debug_enabled() -> bool:
 ## Returns whether file logging is enabled.
 static func get_debug_log_to_file() -> bool:
 	return ProjectSettings.get_setting(DEBUG_LOG_TO_FILE_KEY, false)
+
+## Returns whether verbose per-frame console output is enabled.
+static func get_debug_verbose() -> bool:
+	return ProjectSettings.get_setting(DEBUG_VERBOSE_KEY, false)
 
 ## Register all Juice-specific settings into the ProjectSettings menu.
 ## Called by juice_plugin.gd's _enter_tree().
@@ -75,5 +85,16 @@ static func register_settings() -> void:
 		"type": TYPE_BOOL,
 		"hint": PROPERTY_HINT_NONE,
 		"hint_string": "Write debug logs to user://juice_debug.log in addition to console output."
+	})
+
+	if not ProjectSettings.has_setting(DEBUG_VERBOSE_KEY):
+		ProjectSettings.set_setting(DEBUG_VERBOSE_KEY, false)
+	
+	ProjectSettings.set_initial_value(DEBUG_VERBOSE_KEY, false)
+	ProjectSettings.add_property_info({
+		"name": DEBUG_VERBOSE_KEY,
+		"type": TYPE_BOOL,
+		"hint": PROPERTY_HINT_NONE,
+		"hint_string": "Print per-frame delta logs (log_delta, log_aggregation) to the console. Default false prevents output overflow at 60fps. Enable only for interactive per-frame tracing."
 	})
 

@@ -226,5 +226,66 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 
 ## Phase 5: Bug Report System
 
-- [ ] `JuiceDebugReport.gd` — state snapshot + log export
-- [ ] Editor plugin menu item: "Tools → Export Juice Bug Report"
+- [x] `JuiceDebugReport.gd` — JSON report exporter (`/code`)
+- [x] `juice_plugin.gd` — "Export Juice Bug Report" menu item (`/code`)
+
+---
+
+## Phase 4-Upgrade: Positivist Standard Re-Audit
+
+Re-audit all instrumented files using Artifact 1 (Config Variable Map) +
+Artifact 2 (Expected Log Template) + Completeness Test.
+Workflow: `/upgrade-logging` for every batch.
+Re-read `@juice-debug-logging QUALITY_GATE.md` and `@juice-logging-upgrade SKILL.md`
+at the start of each new session.
+
+### Batch U-Dry: SOP Validation (1 file)
+- [ ] `ShakeControlJuiceEffect.gd` — dry run, validates new SOP before all batches
+
+### Batch U-1: Shake (2 files, after dry run)
+- [ ] `Shake2DJuiceEffect.gd`
+- [ ] `Shake3DJuiceEffect.gd`
+
+### Batch U-2: Noise (3 files)
+- [ ] `NoiseControlJuiceEffect.gd`
+- [ ] `Noise2DJuiceEffect.gd`
+- [ ] `Noise3DJuiceEffect.gd`
+
+### Batch U-3: Domain Nodes (3 files)
+- [ ] `JuiceControl.gd`
+- [ ] `Juice2D.gd`
+- [ ] `Juice3D.gd`
+
+### Batch U-4: Appearance (3 files)
+- [ ] `AppearanceControlJuiceEffect.gd`
+- [ ] `Appearance2DJuiceEffect.gd`
+- [ ] `Appearance3DJuiceEffect.gd`
+
+### Batch U-5a: Transform Bases (3 files)
+- [ ] `JuiceControlTransformEffect.gd`
+- [ ] `Juice2DTransformEffect.gd`
+- [ ] `Juice3DTransformEffect.gd`
+
+### Batch U-5b: Transform Concrete (3 files, depends on U-5a)
+- [ ] `TransformControlJuiceEffect.gd`
+- [ ] `Transform2DJuiceEffect.gd`
+- [ ] `Transform3DJuiceEffect.gd`
+
+### Batch U-6: Progress + SquashStretch (6 files)
+- [ ] `ProgressControlJuiceEffect.gd`
+- [ ] `Progress2DJuiceEffect.gd`
+- [ ] `Progress3DJuiceEffect.gd`
+- [ ] `SquashStretchControlJuiceEffect.gd`
+- [ ] `SquashStretch2DJuiceEffect.gd`
+- [ ] `SquashStretch3DJuiceEffect.gd`
+
+### Batch U-7: Property Meta Bases (4 files)
+- [ ] `InterpolatePropertyJuiceEffectBase.gd`
+- [ ] `NoisePropertyJuiceEffectBase.gd`
+- [ ] `ShakePropertyJuiceEffectBase.gd`
+- [ ] `ProgressPropertyJuiceEffectBase.gd`
+
+### Batch U-8: Base Classes (2 files)
+- [ ] `JuiceBase.gd`
+- [ ] `JuiceEffectBase.gd`
+
