@@ -228,10 +228,10 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 
 func _restore_to_natural(_target: Node) -> void:
-	_clear_deltas()
-	# Log restore so "property didn't reset" reports have evidence the call ran.
 	JuiceLogger.log_info(self, _get_domain_tag(),
-		"restore_to_natural: pos_delta/rot_delta/scale_delta cleared", debug_enabled)
+		"restore_to_natural: clearing pos=%s rot=%s scale=%s" % [
+		_pos_delta, _rot_delta, _scale_delta], debug_enabled)
+	_clear_deltas()
 
 
 func _invalidate_base_cache() -> void:

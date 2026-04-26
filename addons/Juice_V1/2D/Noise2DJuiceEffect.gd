@@ -316,8 +316,10 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 
 func _restore_to_natural(_target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+		"restore_to_natural: clearing pos=%s rot=%.4f scale=%s" % [
+		_pos_delta, _rot_delta, _scale_delta], debug_enabled)
 	_clear_deltas()
-	JuiceLogger.log_info(self, _get_domain_tag(), "restore_to_natural: pos/rot/scale deltas cleared", debug_enabled)
 
 
 func _invalidate_base_cache() -> void:
