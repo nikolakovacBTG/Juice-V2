@@ -140,6 +140,9 @@ func _on_animate_start(target: Node) -> void:
 	_contributes_scale = true
 	if pivot_offset != Vector3.ZERO:
 		_contributes_position = true
+	JuiceLogger.log_capture(self, _get_domain_tag(), "squash_config",
+			{"amount": squash_amount, "axis": SquashAxis3D.keys()[squash_axis],
+			"volume": preserve_volume}, debug_enabled)
 
 
 ## Compute squash/stretch scale delta at the given progress.

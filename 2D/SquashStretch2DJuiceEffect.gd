@@ -116,6 +116,9 @@ func _on_animate_start(target: Node) -> void:
 
 	# Set contribution flag so the domain node knows to aggregate scale
 	_contributes_scale = true
+	JuiceLogger.log_capture(self, _get_domain_tag(), "squash_config",
+			{"amount": squash_amount, "axis": SquashAxis.keys()[squash_axis],
+			"volume": preserve_volume}, debug_enabled)
 
 
 ## Compute squash/stretch scale delta at the given progress.
