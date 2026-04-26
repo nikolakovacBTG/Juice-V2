@@ -171,6 +171,8 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 	# Store delta from natural scale — node aggregates and writes
 	_scale_delta = new_scale - _base_scale
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"scale": _scale_delta}, target.name, debug_enabled)
 
 
 ## Snap back to zero delta to avoid floating point drift.
