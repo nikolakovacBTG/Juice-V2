@@ -39,6 +39,12 @@ var _pos_delta: Vector2 = Vector2.ZERO
 var _rot_delta: float = 0.0
 var _scale_delta: Vector2 = Vector2.ZERO
 
+# Last desired_absolute values — set by concrete _apply_*_effect() before subtraction.
+# Logged as chain intermediate: if delta is wrong but desired is correct → bug is in base capture.
+var _last_desired_pos: Vector2 = Vector2.ZERO
+var _last_desired_rot: float = 0.0
+var _last_desired_scale: Vector2 = Vector2.ZERO
+
 
 # =============================================================================
 # ENUMS — shared by all 2D transform effects
@@ -452,12 +458,16 @@ func _apply_effect(progress: float, target: Node) -> void:
 		TransformTarget.ROTATION: _apply_rotation_effect(progress, target)
 		TransformTarget.SCALE:    _apply_scale_effect(progress, target)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+			{"desired": _last_desired_pos if transform_target == TransformTarget.POSITION
+				else (_last_desired_rot if transform_target == TransformTarget.ROTATION
+				else _last_desired_scale),
+			"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
 			target.name if target else "", debug_enabled)
 
 
 func _restore_to_natural(_target: Node) -> void:
 	_clear_deltas()
+	JuiceLogger.log_info(self, _get_domain_tag(), "restore_to_natural: pos/rot/scale deltas cleared", debug_enabled)
 
 
 func _invalidate_base_cache() -> void:

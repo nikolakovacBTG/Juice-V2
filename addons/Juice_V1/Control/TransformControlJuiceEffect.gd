@@ -341,9 +341,8 @@ func _apply_position_effect(progress: float, target: Node) -> void:
 	var from_value := _resolve_from_position(ctrl)
 	var to_value   := _resolve_to_position(ctrl)
 	var desired_absolute := from_value.lerp(to_value, progress)
+	_last_desired_pos = desired_absolute
 	_pos_delta = desired_absolute - _base_position
-
-
 
 func _apply_rotation_effect(progress: float, target: Node) -> void:
 	var ctrl := target as Control
@@ -352,6 +351,7 @@ func _apply_rotation_effect(progress: float, target: Node) -> void:
 	var from_rad := _resolve_from_rotation(ctrl)
 	var to_rad   := _resolve_to_rotation(ctrl)
 	var desired_absolute := lerp_angle(from_rad, to_rad, progress)
+	_last_desired_rot = desired_absolute
 	_rot_delta = desired_absolute - _base_rotation_radians
 
 
@@ -362,6 +362,7 @@ func _apply_scale_effect(progress: float, target: Node) -> void:
 	var from_value := _resolve_from_scale(ctrl)
 	var to_value   := _resolve_to_scale(ctrl)
 	var desired_absolute := from_value.lerp(to_value, progress)
+	_last_desired_scale = desired_absolute
 	_scale_delta = desired_absolute - _base_scale
 
 
