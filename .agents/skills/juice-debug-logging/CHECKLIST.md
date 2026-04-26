@@ -181,10 +181,10 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `SquashStretch2DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()`
 - [x] `SquashStretch3DJuiceEffect.gd` — NEW `log_delta` in `_apply_effect()` (includes pos_delta for pivot)
 
-### Batch R-D: Cat 3 — Delta logging in Transform effects (3 files, complex)
-- [ ] `TransformControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `Transform2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `Transform3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+### Batch R-D: Cat 3 — Delta logging in Transform effects (3 files, complex) ✅
+- [x] `TransformControlJuiceEffect.gd` — via base `JuiceControlTransformEffect._apply_effect()`
+- [x] `Transform2DJuiceEffect.gd` — via base `Juice2DTransformEffect._apply_effect()`
+- [x] `Transform3DJuiceEffect.gd` — via base `Juice3DTransformEffect._apply_effect()`
 
 ### Batch R-E: Cat 3+2 — Delta + Capture in Appearance effects (3 files, complex)
 - [ ] `AppearanceControlJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
