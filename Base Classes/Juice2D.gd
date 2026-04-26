@@ -231,21 +231,19 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(n2d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n2d, self, "scale", new_scale)
 
+	var base_pos: Vector2 = JuiceLedger.get_base(n2d, "position", Vector2.ZERO)
+	var base_rot: float = JuiceLedger.get_base(n2d, "rotation", 0.0)
+	var base_scale: Vector2 = JuiceLedger.get_base(n2d, "scale", Vector2.ONE)
+	var total_pos: Vector2 = JuiceLedger.get_total(n2d, "position", Vector2.ZERO)
+	var total_rot: float = JuiceLedger.get_total(n2d, "rotation", 0.0)
+	var total_scale: Vector2 = JuiceLedger.get_total(n2d, "scale", Vector2.ZERO)
+
 	JuiceLogger.log_aggregation("2D", n2d.name, "position",
-			JuiceLedger.get_base(n2d, "position", Vector2.ZERO),
-			new_pos,
-			JuiceLedger.get_total(n2d, "position", Vector2.ZERO),
-			debug_enabled)
+			base_pos, new_pos, base_pos + total_pos, debug_enabled)
 	JuiceLogger.log_aggregation("2D", n2d.name, "rotation",
-			JuiceLedger.get_base(n2d, "rotation", 0.0),
-			new_rot,
-			JuiceLedger.get_total(n2d, "rotation", 0.0),
-			debug_enabled)
+			base_rot, new_rot, base_rot + total_rot, debug_enabled)
 	JuiceLogger.log_aggregation("2D", n2d.name, "scale",
-			JuiceLedger.get_base(n2d, "scale", Vector2.ONE),
-			new_scale,
-			JuiceLedger.get_total(n2d, "scale", Vector2.ZERO),
-			debug_enabled)
+			base_scale, new_scale, base_scale + total_scale, debug_enabled)
 
 	# Accumulate modulate factors from Juice2DAppearanceEffect effects.
 	# Each effect contributes a multiplicative factor; the Ledger handles

@@ -268,21 +268,19 @@ func _post_tick_write() -> void:
 	# Only flushes transform properties; appearance uses multiplicative accumulation below.
 	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
 
+	var base_pos: Vector3 = JuiceLedger.get_base(n3d, "position", Vector3.ZERO)
+	var base_rot: Vector3 = JuiceLedger.get_base(n3d, "rotation", Vector3.ZERO)
+	var base_scale: Vector3 = JuiceLedger.get_base(n3d, "scale", Vector3.ONE)
+	var total_pos: Vector3 = JuiceLedger.get_total(n3d, "position", Vector3.ZERO)
+	var total_rot: Vector3 = JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO)
+	var total_scale: Vector3 = JuiceLedger.get_total(n3d, "scale", Vector3.ZERO)
+
 	JuiceLogger.log_aggregation("3D", n3d.name, "position",
-			JuiceLedger.get_base(n3d, "position", Vector3.ZERO),
-			new_pos,
-			JuiceLedger.get_total(n3d, "position", Vector3.ZERO),
-			debug_enabled)
+			base_pos, new_pos, base_pos + total_pos, debug_enabled)
 	JuiceLogger.log_aggregation("3D", n3d.name, "rotation",
-			JuiceLedger.get_base(n3d, "rotation", Vector3.ZERO),
-			new_rot,
-			JuiceLedger.get_total(n3d, "rotation", Vector3.ZERO),
-			debug_enabled)
+			base_rot, new_rot, base_rot + total_rot, debug_enabled)
 	JuiceLogger.log_aggregation("3D", n3d.name, "scale",
-			JuiceLedger.get_base(n3d, "scale", Vector3.ONE),
-			new_scale,
-			JuiceLedger.get_total(n3d, "scale", Vector3.ZERO),
-			debug_enabled)
+			base_scale, new_scale, base_scale + total_scale, debug_enabled)
 
 	# Appearance: accumulate albedo/alpha factors from Juice3DAppearanceEffect effects.
 	# Domain node owns one working material; effects only contribute factors.

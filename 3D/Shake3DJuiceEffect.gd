@@ -229,6 +229,9 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 func _restore_to_natural(_target: Node) -> void:
 	_clear_deltas()
+	# Log restore so "property didn't reset" reports have evidence the call ran.
+	JuiceLogger.log_info(self, _get_domain_tag(),
+		"restore_to_natural: pos_delta/rot_delta/scale_delta cleared", debug_enabled)
 
 
 func _invalidate_base_cache() -> void:
@@ -246,9 +249,8 @@ func _get_interrupt_identity() -> Variant:
 
 func _compute_shake_deltas(intensity: float, target: Node3D) -> void:
 	if intensity <= 0.0:
-		JuiceLogger.warn(self, _get_domain_tag(),
-			"_compute_shake_deltas: intensity=0 — zeroing deltas and returning",
-			debug_enabled)
+		# Silent — intensity reaching 0 is normal animation end (fade-out completion).
+		# Only unexpected if the effect never produced output; diagnosable via absent log_delta lines.
 		_pos_delta = Vector3.ZERO
 		_rot_delta = Vector3.ZERO
 		_scale_delta = Vector3.ZERO
