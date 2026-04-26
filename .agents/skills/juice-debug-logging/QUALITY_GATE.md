@@ -262,3 +262,4 @@ Quick structural check after the Completeness Test passes:
 - [ ] Every silent `return` has a `warn()` before it
 - [ ] No helper method duplicates logging already present in its caller
 - [ ] No editor method (`_get_property_list`, `_set`, `_get`) has any logging
+- [ ] **Every log that follows a state-clearing call (`_clear_deltas`, `cleanup_source`, `queue_free`, etc.) is MOVED to before that call** — logging after a clear always produces trivially correct output and is useless for diagnosis
