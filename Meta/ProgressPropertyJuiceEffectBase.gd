@@ -269,6 +269,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 	if bound_enabled and progress > 0.0:
 		_check_bounds(target)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"path": property_path, "type": PropertyType.keys()[property_type]},
+			target.name, debug_enabled)
 
 
 # =============================================================================

@@ -288,6 +288,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 	if bound_enabled and progress > 0.0:
 		_check_bounds()
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+			target.name, debug_enabled)
 
 
 ## Compute position delta so rotation appears to happen around _pivot_point.

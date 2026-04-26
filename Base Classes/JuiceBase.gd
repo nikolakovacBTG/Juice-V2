@@ -888,6 +888,23 @@ func _start_effects(play_in: bool) -> void:
 		if _target_node == null:
 			return
 
+	# Cat 6: Domain guardrail — warn if any effect is incompatible with target
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		if effect is JuiceControlEffectBase and not (_target_node is Control):
+			JuiceLogger.warn_domain_mismatch(
+				effect.get_script().get_global_name(),
+				"Control", _target_node.get_class())
+		elif effect is Juice2DEffectBase and not (_target_node is Node2D):
+			JuiceLogger.warn_domain_mismatch(
+				effect.get_script().get_global_name(),
+				"Node2D", _target_node.get_class())
+		elif effect is Juice3DEffectBase and not (_target_node is Node3D):
+			JuiceLogger.warn_domain_mismatch(
+				effect.get_script().get_global_name(),
+				"Node3D", _target_node.get_class())
+
 	_is_playing = true
 	_active_effect_indices.clear()
 
