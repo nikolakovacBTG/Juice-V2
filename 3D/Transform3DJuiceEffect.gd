@@ -376,7 +376,9 @@ func _apply_position_effect(progress: float, target: Node) -> void:
 		return
 	var from_value := _resolve_from_position(n3d)
 	var to_value   := _resolve_to_position(n3d)
-	_pos_delta = from_value.lerp(to_value, progress) - _base_position
+	var desired_absolute := from_value.lerp(to_value, progress)
+	_last_desired_pos = desired_absolute
+	_pos_delta = desired_absolute - _base_position
 
 
 func _apply_rotation_effect(progress: float, target: Node) -> void:
@@ -387,6 +389,7 @@ func _apply_rotation_effect(progress: float, target: Node) -> void:
 	var to_quat   := _resolve_to_rotation_quat(n3d)
 	var current_quat := from_quat.slerp(to_quat, progress)
 	var desired_euler := Basis(current_quat).get_euler()
+	_last_desired_rot = desired_euler
 	_rot_delta = desired_euler - _base_euler
 	# Pivot compensation
 	if rotation_pivot_offset != Vector3.ZERO:
@@ -401,6 +404,7 @@ func _apply_scale_effect(progress: float, target: Node) -> void:
 	var from_value := _resolve_from_scale(n3d)
 	var to_value   := _resolve_to_scale(n3d)
 	var desired_absolute := from_value.lerp(to_value, progress)
+	_last_desired_scale = desired_absolute
 	_scale_delta = desired_absolute - _base_scale
 	if _scale_pivot_point != Vector3.ZERO:
 		var scale_ratio := desired_absolute / _base_scale
