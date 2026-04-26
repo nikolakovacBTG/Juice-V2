@@ -201,12 +201,12 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `NoisePropertyJuiceEffectBase.gd` — NEW `log_delta`
 - [x] `ShakePropertyJuiceEffectBase.gd` — NEW `log_delta`
 
-### Batch R-H: Cat 2 — Capture logging in Shake/Noise/SquashStretch _on_animate_start (5 files, simple)
-- [ ] `ShakeControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `Shake2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `Shake3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `NoiseControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `Noise2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
+### Batch R-H: Cat 2 — Capture logging in Shake/Noise _on_animate_start (5 files, simple) ✅
+- [x] `ShakeControlJuiceEffect.gd` — NEW `log_capture` (shake_config)
+- [x] `Shake2DJuiceEffect.gd` — NEW `log_capture` (shake_config)
+- [x] `Shake3DJuiceEffect.gd` — NEW `log_capture` (shake_config)
+- [x] `NoiseControlJuiceEffect.gd` — NEW `log_capture` (noise_config)
+- [x] `Noise2DJuiceEffect.gd` — NEW `log_capture` (noise_config)
 
 ### Batch R-I: Cat 2 continued + Cat 3 Progress (5 files, simple)
 - [ ] `Noise3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`

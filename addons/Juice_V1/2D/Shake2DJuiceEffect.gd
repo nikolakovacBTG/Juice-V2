@@ -189,6 +189,9 @@ func _on_animate_start(target: Node) -> void:
 			"animate_start: target=%s freq=%.1f Hz" % [
 			TransformTarget.keys()[transform_target], shake_frequency],
 			debug_enabled)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "shake_config",
+			{"pos_str": position_strength, "rot_amp": rotation_amplitude,
+			"randomness": position_randomness}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
