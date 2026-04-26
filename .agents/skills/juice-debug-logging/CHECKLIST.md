@@ -208,12 +208,12 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `NoiseControlJuiceEffect.gd` — NEW `log_capture` (noise_config)
 - [x] `Noise2DJuiceEffect.gd` — NEW `log_capture` (noise_config)
 
-### Batch R-I: Cat 2 continued + Cat 3 Progress (5 files, simple)
-- [ ] `Noise3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `SquashStretchControlJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `SquashStretch2DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `SquashStretch3DJuiceEffect.gd` — `_on_animate_start()` needs `log_capture`
-- [ ] `ProgressControlJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
+### Batch R-I: Cat 2 continued + Cat 3 Progress (5 files, simple) ✅
+- [x] `Noise3DJuiceEffect.gd` — NEW `log_capture` (noise_config)
+- [x] `SquashStretchControlJuiceEffect.gd` — NEW `log_capture` (squash_config)
+- [x] `SquashStretch2DJuiceEffect.gd` — NEW `log_capture` (squash_config)
+- [x] `SquashStretch3DJuiceEffect.gd` — NEW `log_capture` (squash_config, SquashAxis3D)
+- [x] `ProgressControlJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
 
 ### Batch R-J: Cat 3 — Progress deltas + Cat 6 domain guardrails (5 files, simple)
 - [ ] `Progress2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`

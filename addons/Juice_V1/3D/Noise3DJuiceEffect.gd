@@ -285,6 +285,9 @@ func _on_animate_start(target: Node) -> void:
 			"animate_start: target=%s speed=%.2f" % [
 			TransformTarget.keys()[transform_target], noise_speed],
 			debug_enabled)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "noise_config",
+			{"pos_amp": position_amplitude, "rot_amp": rotation_amplitude,
+			"scale_amp": scale_amplitude}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
