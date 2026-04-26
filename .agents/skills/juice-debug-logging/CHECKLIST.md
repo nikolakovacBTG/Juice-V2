@@ -244,10 +244,10 @@ at the start of each new session.
 - [x] `Shake2DJuiceEffect.gd` — same + pivot_pos_comp logged
 - [x] `Shake3DJuiceEffect.gd` — same + per-axis direction flip in _update_direction_axis
 
-### Batch U-2: Noise (3 files)
-- [ ] `NoiseControlJuiceEffect.gd`
-- [ ] `Noise2DJuiceEffect.gd`
-- [ ] `Noise3DJuiceEffect.gd`
+### Batch U-2: Noise (3 files) ✅
+- [x] `NoiseControlJuiceEffect.gd`
+- [x] `Noise2DJuiceEffect.gd`
+- [x] `Noise3DJuiceEffect.gd`
 
 ### Batch U-3: Domain Nodes (3 files)
 - [ ] `JuiceControl.gd`
@@ -259,15 +259,15 @@ at the start of each new session.
 - [ ] `Appearance2DJuiceEffect.gd`
 - [ ] `Appearance3DJuiceEffect.gd`
 
-### Batch U-5a: Transform Bases (3 files)
-- [ ] `JuiceControlTransformEffect.gd`
-- [ ] `Juice2DTransformEffect.gd`
-- [ ] `Juice3DTransformEffect.gd`
+### Batch U-5a: Transform Bases (3 files) ✅
+- [x] `JuiceControlTransformEffect.gd`
+- [x] `Juice2DTransformEffect.gd`
+- [x] `Juice3DTransformEffect.gd`
 
-### Batch U-5b: Transform Concrete (3 files, depends on U-5a)
-- [ ] `TransformControlJuiceEffect.gd`
-- [ ] `Transform2DJuiceEffect.gd`
-- [ ] `Transform3DJuiceEffect.gd`
+### Batch U-5b: Transform Concrete (3 files, depends on U-5a) ✅
+- [x] `TransformControlJuiceEffect.gd`
+- [x] `Transform2DJuiceEffect.gd`
+- [x] `Transform3DJuiceEffect.gd`
 
 ### Batch U-6: Progress + SquashStretch (6 files)
 - [ ] `ProgressControlJuiceEffect.gd`
