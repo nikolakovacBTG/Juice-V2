@@ -186,10 +186,10 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `Transform2DJuiceEffect.gd` — via base `Juice2DTransformEffect._apply_effect()`
 - [x] `Transform3DJuiceEffect.gd` — via base `Juice3DTransformEffect._apply_effect()`
 
-### Batch R-E: Cat 3+2 — Delta + Capture in Appearance effects (3 files, complex)
-- [ ] `AppearanceControlJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
-- [ ] `Appearance2DJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
-- [ ] `Appearance3DJuiceEffect.gd` — `_apply_effect()` log_delta + `_on_animate_start()` log_capture
+### Batch R-E: Cat 3+2 — Delta + Capture in Appearance effects (3 files, complex) ✅
+- [x] `AppearanceControlJuiceEffect.gd` — NEW `log_delta` + `log_capture` (from/to)
+- [x] `Appearance2DJuiceEffect.gd` — NEW `log_delta` + `log_capture` (from/to)
+- [x] `Appearance3DJuiceEffect.gd` — NEW `log_delta(albedo/alpha)` + `log_capture` (from/to)
 
 ### Batch R-F: Cat 4 — Shader diagnostics in Appearance effects (3 files, complex)
 - [ ] `AppearanceControlJuiceEffect.gd` — shader uniform writes need `log_shader`

@@ -408,6 +408,12 @@ func _on_animate_start(target: Node) -> void:
 			AppearanceEffect.keys()[effect_type],
 			FlickerMode.keys()[flicker_mode]],
 			debug_enabled)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+			{"tint": _captured_from_tint_color, "alpha": _captured_from_alpha,
+			"brightness": _captured_from_brightness}, debug_enabled)
+	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+			{"tint": _captured_to_tint_color, "alpha": _captured_to_alpha,
+			"brightness": _captured_to_brightness}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
@@ -449,6 +455,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 				OutlineFlickerTarget.COLOR:
 					_computed_outline_amount = amount
 					_computed_outline_color = outline_color.lerp(flicker_color_to, 1.0 - f)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"albedo": _albedo_factor, "alpha": _alpha_factor},
+			target.name if target else "", debug_enabled)
 
 
 func _on_animate_out_complete(_target: Node) -> void:
