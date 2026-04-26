@@ -465,6 +465,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 					OutlineFlickerTarget.COLOR:
 						mat.set_shader_parameter("outline_width", width)
 						mat.set_shader_parameter("outline_color", outline_color.lerp(flicker_color_to, 1.0 - f))
+				JuiceLogger.log_shader(self, _get_domain_tag(),
+						"outline_width", mat.get_shader_parameter("outline_width"),
+						"rid=%s" % mat.get_rid(), debug_enabled)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
 			{"modulate": _modulate_factor}, target.name, debug_enabled)
 
