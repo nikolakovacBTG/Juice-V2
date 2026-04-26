@@ -215,12 +215,12 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `SquashStretch3DJuiceEffect.gd` — NEW `log_capture` (squash_config, SquashAxis3D)
 - [x] `ProgressControlJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
 
-### Batch R-J: Cat 3 — Progress deltas + Cat 6 domain guardrails (5 files, simple)
-- [ ] `Progress2DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `Progress3DJuiceEffect.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `ProgressPropertyJuiceEffectBase.gd` — `_apply_effect()` needs `log_delta`
-- [ ] `JuiceBase.gd` — `_ready()` or `_start_effects()` needs `warn_domain_mismatch` (Cat 6)
-- [ ] `JuiceRecipe.gd` — validation path needs `warn_domain_mismatch` (Cat 6)
+### Batch R-J: Cat 3 — Progress deltas + Cat 6 domain guardrails (5 files, simple) ✅
+- [x] `Progress2DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
+- [x] `Progress3DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
+- [x] `ProgressPropertyJuiceEffectBase.gd` — NEW `log_delta` (property path + type)
+- [x] `JuiceBase.gd` — NEW `warn_domain_mismatch` in `_start_effects()` (Control/2D/3D guardrails)
+- [x] `JuiceRecipe.gd` — N/A (Resource, no target context; check lives in JuiceBase)
 
 ---
 
