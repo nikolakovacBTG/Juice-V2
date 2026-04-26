@@ -68,6 +68,7 @@ func test_position_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_vec3(target.position, natural_pos,
 		"Position should differ during noise animation", 0.01)
@@ -84,6 +85,7 @@ func test_rotation_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_vec3(target.rotation, natural_rot,
 		"Rotation should differ during noise animation", 0.01)
@@ -100,6 +102,7 @@ func test_scale_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_vec3(target.scale, natural_scale,
 		"Scale should differ during noise animation", 0.01)

@@ -66,6 +66,7 @@ func test_position_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_vec2(target.position, natural_pos,
 		"Position should differ during noise animation", 0.5)
@@ -82,6 +83,7 @@ func test_rotation_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_float(target.rotation, natural_rot,
 		"Rotation should differ during noise animation", 0.01)
@@ -98,6 +100,7 @@ func test_scale_noise_applies() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	assert_not_approx_vec2(target.scale, natural_scale,
 		"Scale should differ during noise animation", 0.01)
@@ -156,6 +159,7 @@ func test_stacking_with_transform_effect() -> void:
 
 	juice.animate_in()
 	await wait_seconds(0.15)
+	await wait_frames(5)
 
 	# Both effects should have moved the position away from natural
 	assert_not_approx_vec2(target.position, natural_pos,

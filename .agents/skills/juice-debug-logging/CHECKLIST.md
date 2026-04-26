@@ -249,10 +249,10 @@ at the start of each new session.
 - [x] `Noise2DJuiceEffect.gd`
 - [x] `Noise3DJuiceEffect.gd`
 
-### Batch U-3: Domain Nodes (3 files)
-- [ ] `JuiceControl.gd`
-- [ ] `Juice2D.gd`
-- [ ] `Juice3D.gd`
+### Batch U-3: Domain Nodes (3 files) ✅
+- [x] `JuiceControl.gd`
+- [x] `Juice2D.gd`
+- [x] `Juice3D.gd`
 
 ### Batch U-4: Appearance (3 files)
 - [ ] `AppearanceControlJuiceEffect.gd`
