@@ -455,6 +455,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 				OutlineFlickerTarget.COLOR:
 					_computed_outline_amount = amount
 					_computed_outline_color = outline_color.lerp(flicker_color_to, 1.0 - f)
+			JuiceLogger.log_shader(self, _get_domain_tag(),
+					"outline_amount", _computed_outline_amount,
+					"computed (domain writes)", debug_enabled)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
 			{"albedo": _albedo_factor, "alpha": _alpha_factor},
 			target.name if target else "", debug_enabled)
