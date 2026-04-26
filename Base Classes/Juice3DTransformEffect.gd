@@ -481,6 +481,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 		TransformTarget.POSITION: _apply_position_effect(progress, target)
 		TransformTarget.ROTATION: _apply_rotation_effect(progress, target)
 		TransformTarget.SCALE:    _apply_scale_effect(progress, target)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+			target.name if target else "", debug_enabled)
 
 
 func _restore_to_natural(_target: Node) -> void:

@@ -148,7 +148,7 @@ func execute() -> void:
 
 	# Singleton guard
 	if _active_orchestrator != null and is_instance_valid(_active_orchestrator):
-			JuiceLogger.warn(self, "SceneAction",
+		JuiceLogger.warn(self, "SceneAction",
 				"another orchestrator is active — aborting", debug_enabled)
 		queue_free()
 		return
