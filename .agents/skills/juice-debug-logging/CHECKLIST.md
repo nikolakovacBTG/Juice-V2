@@ -239,12 +239,10 @@ Workflow: `/upgrade-logging` for every batch.
 Re-read `@juice-debug-logging QUALITY_GATE.md` and `@juice-logging-upgrade SKILL.md`
 at the start of each new session.
 
-### Batch U-Dry: SOP Validation (1 file)
-- [ ] `ShakeControlJuiceEffect.gd` — dry run, validates new SOP before all batches
-
-### Batch U-1: Shake (2 files, after dry run)
-- [ ] `Shake2DJuiceEffect.gd`
-- [ ] `Shake3DJuiceEffect.gd`
+### Batch U-Dry + U-1: Shake (all 3 files) ✅
+- [x] `ShakeControlJuiceEffect.gd` — full chain: oscillation+raw_offset in log_delta, full config capture, warn on silent returns, direction flip state transition
+- [x] `Shake2DJuiceEffect.gd` — same + pivot_pos_comp logged
+- [x] `Shake3DJuiceEffect.gd` — same + per-axis direction flip in _update_direction_axis
 
 ### Batch U-2: Noise (3 files)
 - [ ] `NoiseControlJuiceEffect.gd`

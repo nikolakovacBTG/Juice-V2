@@ -245,21 +245,19 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(ctrl, self, "rotation", new_rot)
 	JuiceLedger.register_delta(ctrl, self, "scale", new_scale)
 
+	var base_pos: Vector2 = JuiceLedger.get_base(ctrl, "position", Vector2.ZERO)
+	var base_rot: float = JuiceLedger.get_base(ctrl, "rotation", 0.0)
+	var base_scale: Vector2 = JuiceLedger.get_base(ctrl, "scale", Vector2.ONE)
+	var total_pos: Vector2 = JuiceLedger.get_total(ctrl, "position", Vector2.ZERO)
+	var total_rot: float = JuiceLedger.get_total(ctrl, "rotation", 0.0)
+	var total_scale: Vector2 = JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO)
+
 	JuiceLogger.log_aggregation("Control", ctrl.name, "position",
-			JuiceLedger.get_base(ctrl, "position", Vector2.ZERO),
-			new_pos,
-			JuiceLedger.get_total(ctrl, "position", Vector2.ZERO),
-			debug_enabled)
+			base_pos, new_pos, base_pos + total_pos, debug_enabled)
 	JuiceLogger.log_aggregation("Control", ctrl.name, "rotation",
-			JuiceLedger.get_base(ctrl, "rotation", 0.0),
-			new_rot,
-			JuiceLedger.get_total(ctrl, "rotation", 0.0),
-			debug_enabled)
+			base_rot, new_rot, base_rot + total_rot, debug_enabled)
 	JuiceLogger.log_aggregation("Control", ctrl.name, "scale",
-			JuiceLedger.get_base(ctrl, "scale", Vector2.ONE),
-			new_scale,
-			JuiceLedger.get_total(ctrl, "scale", Vector2.ZERO),
-			debug_enabled)
+			base_scale, new_scale, base_scale + total_scale, debug_enabled)
 
 	# Accumulate modulate factors from JuiceControlAppearanceEffect effects.
 	# Each effect contributes a multiplicative factor; the Ledger handles

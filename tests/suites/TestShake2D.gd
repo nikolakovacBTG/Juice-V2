@@ -56,10 +56,19 @@ func test_position_shake_applies() -> void:
 	var natural_pos := target.position
 
 	juice.animate_in()
-	await wait_seconds(0.1)
 
-	assert_not_approx_vec2(target.position, natural_pos,
-		"Position should differ during shake", 0.5)
+	# Sample max displacement over several frames rather than a single snapshot.
+	# A single snapshot at t=N/freq lands on a zero-crossing and causes flaky failures.
+	# Strength=20px — any nonzero shake must exceed 0.5px over 10 frames at 20Hz.
+	var max_dist := 0.0
+	for i in range(10):
+		await wait_frames(1)
+		var dist := target.position.distance_to(natural_pos)
+		if dist > max_dist:
+			max_dist = dist
+
+	assert_true(max_dist > 0.5,
+		"Position should differ during shake (max_dist=%.4f > 0.5)" % max_dist)
 
 	await cleanup(target)
 

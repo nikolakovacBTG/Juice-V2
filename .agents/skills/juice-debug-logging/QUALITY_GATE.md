@@ -216,23 +216,38 @@ if property_path.is_empty():
 
 ## The Completeness Test (Post-Implementation Gate)
 
-After instrumenting a file, answer these three questions **from the log output alone
-— no source code allowed:**
+> [!CAUTION]
+> **This test requires REAL log output from the test suite. Code reasoning is not permitted.**
+> Before answering, you MUST:
+> 1. Clear the log: `Remove-Item "C:\Users\nikol\AppData\Roaming\Godot\app_userdata\Juice Demo\juice_debug.log" -ErrorAction SilentlyContinue`
+> 2. Run ONLY the batch suites: `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=<family>`
+> 3. Read and filter the log: `Get-Content "...\juice_debug.log" | Select-String "\[FamilyTag\]"`
+> 4. Paste the relevant lines as quoted evidence — must include all 3 domains (Control, 2D, 3D)
+>
+> Custom verify scenes are not permitted — the test suite exercises all domains already.
+> Answering "YES" by reasoning about what the code *would* produce is self-certification
+> and invalidates the entire test. If you cannot quote a log line showing a stage,
+> that stage is not logged — regardless of what the source code says.
+
+After obtaining real log output, answer these three questions by **quoting specific
+lines from that output**. Each YES answer must cite the line it is based on.
 
 > **1. Wrong output:** If the effect produced an unexpected value, can you identify the
 >    exact chain stage where actual output first diverged from expected?
+>    → Quote the log_delta line(s) that would expose the divergence.
 >
 > **2. No output:** If the effect produced nothing (zero delta, no change), can you
 >    determine which early return or zero-condition fired?
+>    → Quote the warn() line or the absence of log_delta lines as evidence.
 >
 > **3. Reconstruction:** Can you reconstruct the full computation — all inputs, all
 >    intermediate values, the final result — from the lifecycle log + 10 consecutive
 >    per-frame lines?
+>    → Quote the log_capture line and at least 3 consecutive log_delta lines.
 
-If any answer is **NO** → a chain stage is not logged. Return to Artifact 1, find the
-unlogged stage, fix it.
+If any answer requires reasoning rather than quoting → a stage is missing. Return to Artifact 1.
 
-If all three are **YES** → the file is done.
+If all three cite real log lines → the file is done.
 
 ---
 

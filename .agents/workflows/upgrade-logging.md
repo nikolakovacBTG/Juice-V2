@@ -116,32 +116,82 @@ Work through the fix list file by file:
 
 4a. Expand `log_capture` payloads — every field that feeds the computation chain.
 4b. Add intermediate `log_delta` at stages that were invisible.
-4c. Add `warn()` on every silent early return that skips effect work.
+4c. Add `warn()` on **unexpected** silent early returns only — returns that are normal
+    animation behavior (e.g. fade-out reaching intensity=0.0) must NOT warn. Only warn
+    when the skip represents a configuration error or an impossible state.
 4d. Remove any per-frame log that only echoes static config (noise without signal).
 4e. Ensure `desired_absolute` is logged alongside `delta` for interpolation effects
     (if one is correct but the other is wrong, it pinpoints whether the bug is in
     the interpolation or in the base-value capture).
+4f. Log `_restore_to_natural` — this is the #1 undiagnosable marketplace bug class.
+    Every effect must log what it cleared/restored and to what value.
 
 Refer to `@juice-debug-logging TEMPLATES.md` for `JuiceLogger` call syntax.
 
 ---
 
-## Step 5: Apply the Completeness Test
+## Step 5a: Evidence Collection (MANDATORY — cannot be skipped)
 
-Before marking the batch done, answer these three questions from the log output alone —
-**no source code allowed:**
+**This step operationalizes the Completeness Test. Without it, Step 5b is self-certification
+from code reading and is invalid.**
+
+The test suite already exercises every effect family across all 3 domains with
+`juice/debug/enabled = true` and `log_to_file = true`. Use it directly — no custom
+verify scenes are needed or permitted.
+
+**1. Clear the log file first (prevents last session's data polluting evidence):**
+```powershell
+Remove-Item "C:\Users\nikol\AppData\Roaming\Godot\app_userdata\Juice Demo\juice_debug.log" -ErrorAction SilentlyContinue
+```
+
+**2. Run only the batch-relevant suites using the `--suite` filter:**
+
+| Batch | Filter command |
+|-------|---------------|
+| Shake | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=shake` |
+| Noise | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=noise` |
+| Transform | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=transform` |
+| Appearance | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=appearance` |
+| Squash+Progress | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=squash` and `--suite=progress` |
+| Property Meta | `cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat" -- --suite=property` |
+
+The `--suite` filter uses partial string matching — `shake` matches `shake_control`,
+`shake_2d`, and `shake_3d` in one run.
+
+**3. After the run, read the log file:**
+```powershell
+Get-Content "C:\Users\nikol\AppData\Roaming\Godot\app_userdata\Juice Demo\juice_debug.log" | Select-String "\[Shake\]"
+```
+Replace `\[Shake\]` with the family tag for the current batch (e.g. `\[Noise\]`, `\[Transform\]`).
+
+**4. Paste the relevant lines here** — the lifecycle `log_capture` line(s) and at least
+3 consecutive per-frame `log_delta` lines from each domain (Control, 2D, 3D).
+
+Do not proceed to Step 5b without quoted log lines covering all 3 domains.
+
+---
+
+## Step 5b: Apply the Completeness Test
+
+Answer these three questions **by quoting specific lines from the log output obtained
+in Step 5a**. Each answer must cite the log line(s) it is based on.
+Answering from code reasoning is not permitted.
 
 > **1. Wrong output:** If the effect produced an unexpected value, can you identify the
 >    exact chain stage where actual diverged from expected?
+>    → Quote the log_delta line(s) showing the intermediate where divergence would appear.
 >
-> **2. No output:** If the effect produced nothing, can you determine which early return
->    or zero-condition fired?
+> **2. No output:** If the effect produced nothing (zero delta, no change), can you
+>    determine which early return or zero-condition fired?
+>    → Quote the warn() or the log_capture line that would show the bail-out.
 >
 > **3. Reconstruction:** Can you reconstruct the full computation — all inputs, all
 >    intermediate values, the final result — from the lifecycle log + 10 consecutive
 >    per-frame lines?
+>    → Quote both the log_capture line and 3+ consecutive log_delta lines as evidence.
 
-If any answer is **NO**, a stage is still missing. Return to Step 4.
+If any answer requires reasoning about what the code *would* produce rather than quoting
+actual output, that stage is not logged. Return to Step 4.
 
 ---
 
@@ -172,7 +222,8 @@ Report batch completion:
 **Gaps fixed:**
   - [File]: [what was missing → what was added]
   - [File]: [what was missing → what was added]
-**Completeness Test:** PASS (all 3 questions YES)
+**Evidence collected:** [quoted log_capture line] + [N per-frame lines from Step 5a]
+**Completeness Test:** PASS — each answer cites a quoted log line
 **Tests:** X passed, 0 failed
 **Next batch:** [name from Step 1 priority order]
 ```
