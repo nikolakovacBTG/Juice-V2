@@ -16,8 +16,9 @@ extends RefCounted
 #       ensures zero cost in release builds while keeping per-node isolation
 #       available during development.
 # SYSTEM: Juice System (addons/Juice_V1/)
-# DOES NOT: Write to file (future Phase 5 — JuiceDebugReport handles that).
-#           Does not own the master-switch setting — JuiceProjectSettings does.
+# DOES NOT: Own the master-switch setting — JuiceProjectSettings does.
+#           Generate the final bug report — JuiceDebugReport assembles that
+#           from the file this class writes.
 # ============================================================================
 
 
@@ -30,6 +31,11 @@ const MASTER_SWITCH_KEY := "juice/debug/enabled"
 
 ## Project Settings key for file logging toggle.
 const LOG_TO_FILE_KEY := "juice/debug/log_to_file"
+
+## Project Settings key for verbose per-frame console output.
+## When false (default), log_delta and log_aggregation write to file only.
+## When true, per-frame output also prints to the console (expect high volume).
+const VERBOSE_LOG_KEY := "juice/debug/verbose"
 
 ## Path where the debug log file is written.
 const LOG_FILE_PATH := "user://juice_debug.log"
@@ -82,13 +88,15 @@ static func log_capture(source: Object, domain: String, property: String, value:
 
 ## Category 3: Per-frame delta reporting (math trace).
 ## Use inside _apply_effect() to trace the computed offset each frame.
+## Routed through _emit_delta(): always written to file + ring buffer,
+## printed to console only when juice/debug/verbose is enabled.
 static func log_delta(source: Object, domain: String, progress: float, delta: Variant, target_name: String, debug_flag: bool) -> void:
 	if not _should_log(debug_flag):
 		return
 	var effect_type := _effect_type(source)
 	var line := "[Juice][%s][%s] %s: progress=%.3f delta=%s" % [
 		domain, effect_type, target_name, progress, _val(delta)]
-	_emit(line)
+	_emit_delta(line)
 
 
 ## Category 4: Shader/material uniform diagnostics for Appearance effects.
@@ -104,12 +112,14 @@ static func log_shader(source: Object, domain: String, uniform_name: String, val
 
 ## Category 5: Aggregation write summary from domain nodes.
 ## Use in _post_tick_write() to trace the final value written to the target.
+## Routed through _emit_delta(): always written to file + ring buffer,
+## printed to console only when juice/debug/verbose is enabled.
 static func log_aggregation(domain: String, target_name: String, channel: String, base: Variant, total_delta: Variant, final_value: Variant, debug_flag: bool) -> void:
 	if not _should_log(debug_flag):
 		return
 	var line := "[Juice][%s] %s: Write %s: base=%s + delta=%s → final=%s" % [
 		domain, target_name, channel, _val(base), _val(total_delta), _val(final_value)]
-	_emit(line)
+	_emit_delta(line)
 
 
 ## Category 6: Domain mismatch warning — always logs in debug builds.
@@ -260,11 +270,24 @@ static func _val(value: Variant) -> String:
 # HELPERS — OUTPUT
 # =============================================================================
 
-# Emit a log line to console, ring buffer, and optionally file.
+# Emit a lifecycle log line to console, ring buffer, and file.
+# Use for log_info, log_capture, warn — events that fire at most once per
+# animation and are always safe to show on the console.
 static func _emit(line: String) -> void:
 	print(line)
 	_ring_push(line)
 	_file_write(line)
+
+
+# Emit a per-frame log line to ring buffer and file, console only if verbose.
+# Use for log_delta and log_aggregation — 60fps output that overflows the
+# Godot console panel on any non-trivial scene.
+# Verbose mode is opt-in via juice/debug/verbose in Project Settings.
+static func _emit_delta(line: String) -> void:
+	_ring_push(line)
+	_file_write(line)
+	if ProjectSettings.get_setting(VERBOSE_LOG_KEY, false):
+		print(line)
 
 
 # Push a line into the ring buffer.
