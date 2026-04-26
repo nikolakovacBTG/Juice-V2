@@ -263,6 +263,9 @@ func _post_tick_write() -> void:
 	# Register modulate factor into the Ledger — sibling stacking is handled
 	# automatically via per-source delta tracking (one entry per Juice2D node).
 	JuiceLedger.register_delta(n2d, self, "modulate", combined_modulate)
+	JuiceLogger.log_info(self, "2D",
+			"post_tick: modulate factor this_node=%s" % combined_modulate,
+			debug_enabled)
 
 	# Flush all properties — transform (additive) + modulate (multiplicative)
 	JuiceLedger.flush(n2d, ["position", "rotation", "scale", "modulate"])
@@ -274,7 +277,9 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n2d := _target_node as Node2D
-	JuiceLogger.log_info(self, "2D", "Temporarily undoing visual contributions", debug_enabled)
+	JuiceLogger.log_info(self, "2D",
+			"undo_visual: stripping this node's deltas from '%s'" % n2d.name,
+			debug_enabled)
 
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n2d, self, false)
@@ -288,6 +293,8 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
+	var n2d := _target_node as Node2D
+	JuiceLogger.log_info(self, "2D", "reapply_visual: re-registering contributions for '%s'" % n2d.name, debug_enabled)
 	# Re-apply transform deltas by flushing a fresh post-tick write.
 	# This restores our deltas to the ledger and recalculates absolute values.
 	_post_tick_write()

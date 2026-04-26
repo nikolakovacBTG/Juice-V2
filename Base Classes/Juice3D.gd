@@ -324,6 +324,11 @@ func _post_tick_write() -> void:
 	# Store as Color(albedo.r, albedo.g, albedo.b, alpha) to pack both channels.
 	var appearance_factor := Color(combined_albedo.r, combined_albedo.g, combined_albedo.b, combined_alpha)
 	JuiceLedger.register_delta(n3d, self, "_appearance_factor", appearance_factor)
+	JuiceLogger.log_info(self, "3D",
+			"post_tick: appearance_factor this_node=albedo(%s,%s,%s) alpha=%s" % [
+			"%.2f" % combined_albedo.r, "%.2f" % combined_albedo.g,
+			"%.2f" % combined_albedo.b, "%.2f" % combined_alpha],
+			debug_enabled)
 
 	# Read the combined factor from all sibling Juice3D nodes on this target.
 	# The Ledger multiplies Color deltas automatically (multiplicative accumulation).
@@ -360,7 +365,9 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var n3d := _target_node as Node3D
-	JuiceLogger.log_info(self, "3D", "Temporarily undoing visual contributions", debug_enabled)
+	JuiceLogger.log_info(self, "3D",
+			"undo_visual: stripping this node's deltas from '%s'" % n3d.name,
+			debug_enabled)
 
 	# Strip our transform deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n3d, self, false)
@@ -377,6 +384,8 @@ func _temporarily_undo_visual() -> void:
 func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
+	var n3d := _target_node as Node3D
+	JuiceLogger.log_info(self, "3D", "reapply_visual: re-registering contributions for '%s'" % n3d.name, debug_enabled)
 	# Re-apply transform deltas by flushing a fresh post-tick write.
 	# This restores our deltas to the ledger and recalculates absolute values.
 	# Re-install working material and recompute albedo.

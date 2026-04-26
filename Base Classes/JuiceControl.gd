@@ -277,6 +277,9 @@ func _post_tick_write() -> void:
 	# Register modulate factor into the Ledger — sibling stacking is handled
 	# automatically via per-source delta tracking (one entry per JuiceControl node).
 	JuiceLedger.register_delta(ctrl, self, "self_modulate", combined_modulate)
+	JuiceLogger.log_info(self, "Control",
+			"post_tick: self_modulate factor this_node=%s" % combined_modulate,
+			debug_enabled)
 
 	# Flush all properties — transform (additive) + self_modulate (multiplicative)
 	JuiceLedger.flush(ctrl, ["position", "rotation", "scale", "self_modulate"])
@@ -288,7 +291,9 @@ func _temporarily_undo_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
-	JuiceLogger.log_info(self, "Control", "Temporarily undoing visual contributions", debug_enabled)
+	JuiceLogger.log_info(self, "Control",
+			"undo_visual: stripping this node's deltas from '%s'" % ctrl.name,
+			debug_enabled)
 
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(ctrl, self, false)
@@ -303,6 +308,7 @@ func _temporarily_reapply_visual() -> void:
 	if _target_node == null or not _base_captured:
 		return
 	var ctrl := _target_node as Control
+	JuiceLogger.log_info(self, "Control", "reapply_visual: re-registering contributions", debug_enabled)
 	# Re-register and flush all deltas (transform + modulate) through the Ledger
 	_post_tick_write()
 
