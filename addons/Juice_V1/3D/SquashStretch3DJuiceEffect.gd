@@ -184,6 +184,8 @@ func _apply_effect(progress: float, target: Node) -> void:
 	if pivot_offset != Vector3.ZERO:
 		var scale_ratio := new_scale / _base_scale
 		_pos_delta = pivot_offset * (Vector3.ONE - scale_ratio)
+	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+			{"scale": _scale_delta, "pos": _pos_delta}, target.name, debug_enabled)
 
 
 ## Snap back to zero delta to avoid floating point drift.
