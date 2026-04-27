@@ -404,39 +404,60 @@ func _on_animate_start(target: Node) -> void:
 	# No effect-side setup needed — Juice3D reads _computed_outline_amount/_color.
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"animate_start: effect=%s flicker=%s" % [
+			"animate_start: effect=%s from_ref=%s(%s) to_ref=%s(%s) flicker=%s" % [
 			AppearanceEffect.keys()[effect_type],
+			AppearanceReference.keys()[from_reference],
+			CaptureAt.keys()[from_capture_at] if from_reference == AppearanceReference.SELF else "n/a",
+			AppearanceReference.keys()[to_reference],
+			CaptureAt.keys()[to_capture_at] if to_reference == AppearanceReference.SELF else "n/a",
 			FlickerMode.keys()[flicker_mode]],
 			debug_enabled)
-	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
-			{"tint": _captured_from_tint_color, "alpha": _captured_from_alpha,
-			"brightness": _captured_from_brightness}, debug_enabled)
-	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
-			{"tint": _captured_to_tint_color, "alpha": _captured_to_alpha,
-			"brightness": _captured_to_brightness}, debug_enabled)
+	match effect_type:
+		AppearanceEffect.TINT:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"tint_color": _captured_from_tint_color, "tint_blend": _captured_from_tint_blend}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"tint_color": _captured_to_tint_color, "tint_blend": _captured_to_tint_blend}, debug_enabled)
+		AppearanceEffect.FADE:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"alpha": _captured_from_alpha}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"alpha": _captured_to_alpha}, debug_enabled)
+		AppearanceEffect.OVERBRIGHT:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"brightness": _captured_from_brightness}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"brightness": _captured_to_brightness}, debug_enabled)
+		AppearanceEffect.OUTLINE:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"from_width_factor": from_width_factor}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"to_width_factor": to_width_factor, "outline_color": outline_color}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_flicker_time()
 	var f := _compute_flicker_multiplier()
 
+	var from_val: Variant
+	var to_val: Variant
 	match effect_type:
 		AppearanceEffect.TINT:
-			var from_val := _resolve_from_tint(target)
-			var to_val := _resolve_to_tint(target)
-			_albedo_factor = from_val.lerp(to_val, progress * f)
+			from_val = _resolve_from_tint(target)
+			to_val = _resolve_to_tint(target)
+			_albedo_factor = (from_val as Color).lerp(to_val, progress * f)
 			_albedo_factor.a = 1.0  # TINT does not alter alpha channel
 			_alpha_factor = 1.0
 
 		AppearanceEffect.FADE:
-			var from_val := _resolve_from_alpha(target)
-			var to_val := _resolve_to_alpha(target)
+			from_val = _resolve_from_alpha(target)
+			to_val = _resolve_to_alpha(target)
 			_albedo_factor = Color.WHITE
 			_alpha_factor = lerpf(from_val, to_val, progress * f)
 
 		AppearanceEffect.OVERBRIGHT:
-			var from_val := _resolve_from_brightness(target)
-			var to_val := _resolve_to_brightness(target)
+			from_val = _resolve_from_brightness(target)
+			to_val = _resolve_to_brightness(target)
 			var boost := lerpf(from_val, to_val, progress * f)
 			_albedo_factor = Color(boost, boost, boost, 1.0)
 			_alpha_factor = 1.0
@@ -459,7 +480,8 @@ func _apply_effect(progress: float, target: Node) -> void:
 					"outline_amount", _computed_outline_amount,
 					"computed (domain writes)", debug_enabled)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"albedo": _albedo_factor, "alpha": _alpha_factor},
+			{"f(flicker)": f, "from": from_val, "to": to_val,
+			"albedo": _albedo_factor, "alpha": _alpha_factor},
 			target.name if target else "", debug_enabled)
 
 
@@ -468,6 +490,10 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 
 func _restore_to_natural(_target: Node) -> void:
+	# Log before clearing so mid-animation interrupts are diagnosable.
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: clearing albedo=%s alpha=%.3f" % [
+			_albedo_factor, _alpha_factor], debug_enabled)
 	# Reset appearance factors — domain node stops modifying material once factors are identity.
 	_clear_appearance()
 	_contributes_appearance = false
@@ -539,19 +565,23 @@ func _perform_from_capture(target: Node) -> void:
 	if _has_from_self_snapshot:
 		return
 	# For 3D, capture from the domain node's working material albedo
-	# This is more complex than 2D/Control because 3D uses a shared working material
-	# We'll capture from the target's current material state if available
 	var mesh_inst := target as MeshInstance3D
-	if mesh_inst != null and mesh_inst.get_active_material(0) != null:
+	if mesh_inst == null:
+		JuiceLogger.warn(self, _get_domain_tag(),
+			"_perform_from_capture: target is not a MeshInstance3D (got %s) — snapshot skipped" % [
+			target.get_class() if target else "null"], debug_enabled)
+		_has_from_self_snapshot = true
+		return
+	if mesh_inst.get_active_material(0) != null:
 		var mat := mesh_inst.get_active_material(0) as StandardMaterial3D
 		if mat != null:
-			# Capture TINT references
 			_captured_from_tint_color = mat.albedo_color
-			_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
-			# Capture FADE references
+			_captured_from_tint_blend = 0.0
 			_captured_from_alpha = mat.albedo_color.a
-			# Capture OVERBRIGHT references
 			_captured_from_brightness = max(mat.albedo_color.r, max(mat.albedo_color.g, mat.albedo_color.b))
+			JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_3d",
+				{"albedo": mat.albedo_color, "alpha": _captured_from_alpha,
+				"brightness": _captured_from_brightness}, debug_enabled)
 	_has_from_self_snapshot = true
 
 # Perform the actual To reference capture
