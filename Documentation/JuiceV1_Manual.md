@@ -426,36 +426,73 @@ An autoload singleton that mediates requests between multiple `TimeJuiceEffect` 
 
 # Debug Logging
 
-Juice V1 includes a structured debug logging system that makes animation bugs diagnosable from a log file alone, without running the editor interactively.
 
-## How It Works
+Juice V1 includes a structured debug logging system that makes animation bugs diagnosable from a log file alone, without needing to stop and re-run the scene repeatedly.
 
-All log output flows through `JuiceLogger` — a static utility with **three-tier gating**:
+## Enabling Logging
 
-1. **Build type** — logs are stripped entirely in export builds (`OS.is_debug_build()`). Zero cost at runtime.
-2. **Master switch** — `Project Settings → juice/debug/enabled` turns on all logging at once. Use when you want to capture everything.
-3. **Per-node flag** — `debug_enabled` on any `JuiceBase` node isolates logging to that node only, without touching the global switch.
+Open **Project → Project Settings**, search for `juice`, and configure:
 
-Logic: a log call proceeds if `debug_build AND (master_switch OR node_flag)`.
+| Setting | What It Does |
+|---------|-------------|
+| `juice/debug/enabled` | Master switch — turns on logging for all Juice nodes at once |
+| `juice/debug/log_to_file` | Writes output to a file that persists after the scene stops |
+| `juice/debug/verbose` | Also prints per-frame data to the Godot console (high volume) |
+
+You can also enable logging for a single node only: select any `JuiceBase` in the scene and tick **Debug Enabled** in the Inspector. This works independently of the master switch — useful for isolating one problem node without the noise of everything else.
+
+> **Important:** Enable `log_to_file` if you intend to generate bug reports. The in-memory log resets when the scene stops; the file persists.
+
+## The Log File
+
+When `log_to_file` is on, all output is written to:
+
+- **Windows:** `%APPDATA%\Godot\app_userdata\<YourProjectName>\juice_debug.log`
+- **macOS / Linux:** `~/.local/share/godot/app_userdata/<YourProjectName>/juice_debug.log`
+
+The file is **overwritten at the start of each session** — it is not date-stamped. The first lines contain a header with the session timestamp and Godot version so you can tell which run produced it. Copy the file manually before hitting Play if you need to preserve a previous log.
+
+## Generating a Bug Report
+
+**Project → Tools → Export Juice Bug Report** assembles everything into a single JSON file and opens it automatically with your system's default application. The report contains:
+
+- Godot version, OS, project name, and session timestamp
+- Current Juice debug settings (confirms logging was actually active when the bug occurred)
+- An inventory of every `JuiceBase` node in the open scene with its full inspector configuration
+- The complete contents of `juice_debug.log`
+
+**Steps to generate:**
+1. In **Project → Project Settings**, set `juice/debug/log_to_file = true`
+2. Set `juice/debug/enabled = true` — or tick **Debug Enabled** on the specific node
+3. Run the scene and reproduce the bug
+4. Stop the scene
+5. Open **Project → Tools → Export Juice Bug Report**
+6. `juice_debug_report.json` opens automatically — attach it to the bug report
+
+## How It Works (Technical)
+
+All log output flows through `JuiceLogger` — a static utility with **three-tier gating**. A log call proceeds only if all applicable gates pass:
+
+1. **Build type** — stripped entirely in export builds (`OS.is_debug_build()`). Zero cost at runtime.
+2. **Master switch** — `juice/debug/enabled` in Project Settings. Enables all nodes at once.
+3. **Per-node flag** — `debug_enabled` on a specific `JuiceBase`. Isolates one node without global noise.
+
+Logic: `debug_build AND (master_switch OR node_flag)`
 
 ## Log Categories
-
-Each call site uses the appropriate category method on `JuiceLogger`:
 
 | Category | Method | What It Records |
 |----------|--------|-----------------|
 | 1 | `log_info` | Lifecycle events — trigger, start, stop, complete, timing state transitions |
 | 2 | `log_capture` | Base value and From/To snapshot captures |
-| 3 | `log_delta` | Per-frame delta computed by `_apply_effect()` |
+| 3 | `log_delta` | Per-frame delta from `_apply_effect()` — file only unless verbose is on |
 | 4 | `log_shader` | Shader uniform writes from Appearance effects |
-| 5 | `log_aggregation` | Final value written to the target node each frame |
+| 5 | `log_aggregation` | Final value written to the target node each frame — file only unless verbose is on |
 | 6 | `warn_domain_mismatch` | Configuration error: wrong effect type for this domain |
-
-Categories 3 and 5 (per-frame) are **file-only by default**. Enable `juice/debug/verbose` to also print them to the console — expect high volume.
 
 ## Log Format
 
-Every line follows a consistent, machine-parseable format:
+Every line follows a consistent format:
 
 ```
 [Juice][Domain][EffectType] SourceName: message
@@ -467,28 +504,7 @@ Example:
 [Juice][Control] @Node@43: Started 2 root effects (play_in=true): [TransformControlJuiceEffect, NoiseControlJuiceEffect]
 ```
 
-The domain tag (`Control`, `2D`, `3D`, `Screen`, etc.) and effect type are always present, so filtering by domain or effect family in a text editor is straightforward.
-
-## File Logging
-
-Enable `juice/debug/log_to_file` to write all output to `user://juice_debug.log`. The file persists after the scene stops, which is required for bug reports (the in-memory ring buffer resets on stop).
-
-## Bug Reports
-
-**Tools → Export Juice Bug Report** generates a self-contained `juice_debug_report.json` and opens it immediately. The report contains:
-
-- Godot version, OS, project name
-- Current Juice debug settings (so you can confirm logging was actually enabled)
-- An inventory of every `JuiceBase` node in the current scene with its configuration
-- The full contents of `juice_debug.log`
-
-To file a complete bug report:
-1. Enable `juice/debug/log_to_file = true` in Project Settings
-2. Enable `debug_enabled` on the relevant `JuiceBase` node (or turn on the master switch)
-3. Run the scene and reproduce the bug
-4. Stop the scene
-5. **Tools → Export Juice Bug Report**
-6. Attach `juice_debug_report.json`
+The domain tag (`Control`, `2D`, `3D`, `Screen`, etc.) is always present, making it easy to filter by domain or effect family in any text editor.
 
 ---
 
