@@ -1,5 +1,10 @@
 ## TestMetaEffects.gd
 ## Tests for SignalEmitJuiceUtilityBase and CallMethodJuiceUtilityBase.
+##
+## API NOTE: These utilities were refactored from single-property (emit_on, payload,
+## call_on, method_name) to array-of-entries (entries: Array[SignalEmitEntry / CallMethodEntry]).
+## The old direct-assignment tests crashed with "Invalid assignment of property emit_on"
+## because those properties no longer exist on the effect — they live on each Entry sub-resource.
 extends JuiceTestSuite
 
 
@@ -24,18 +29,24 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # =============================================================================
 
+# Creates a SignalEmitControlJuiceUtility with ONE SignalEmitEntry.
+# timing: use SignalEmitJuiceUtilityBase.EmitTiming constants (0, 1, 2).
 func _create_signal_emit_rig(
 	timing: int,
 	p_payload: Variant = null
 ) -> Array:
 	var target := create_control_target("SigEmitBtn")
 
+	# Build entry sub-resource — emit_on and payload live here now.
+	var entry := SignalEmitEntry.new()
+	entry.emit_on = timing
+	entry.payload = p_payload
+
 	var effect := SignalEmitControlJuiceUtility.new()
-	effect.emit_on = timing
-	effect.payload = p_payload
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 	effect.duration_in = 0.1
 	effect.duration_out = 0.1
+	effect.entries.append(entry)
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
@@ -48,6 +59,7 @@ func _create_signal_emit_rig(
 	return [target, juice]
 
 
+# Creates a CallMethodControlJuiceUtility with ONE CallMethodEntry.
 func _create_call_method_rig(
 	timing: int,
 	path: NodePath = NodePath(""),
@@ -56,14 +68,18 @@ func _create_call_method_rig(
 ) -> Array:
 	var target := create_control_target("CallMethodBtn")
 
+	# Build entry sub-resource — call_on, target_node_path, method_name, arguments live here.
+	var entry := CallMethodEntry.new()
+	entry.call_on = timing
+	entry.target_node_path = path
+	entry.method_name = m_name
+	entry.arguments = m_args
+
 	var effect := CallMethodControlJuiceUtility.new()
-	effect.call_on = timing
-	effect.target_node_path = path
-	effect.method_name = m_name
-	effect.arguments = m_args
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
 	effect.duration_in = 0.1
 	effect.duration_out = 0.1
+	effect.entries.append(entry)
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
@@ -190,18 +206,28 @@ func test_call_method_on_start_calls_at_animate_start() -> void:
 	var target := create_control_target("CallMethodBtn")
 	target.set_meta("call_count", 0)
 
-	# Add a helper method to the target via script
-	var helper := Node.new()
-	helper.set_script(null)
-	target.add_child(helper)
+	var rig := await _create_call_method_rig(
+		CallMethodJuiceUtilityBase.CallTiming.ON_START,
+		NodePath(""),  # empty = call on juiced target node itself
+		"set_meta",
+		["call_count", 1]
+	)
+	# _create_call_method_rig creates its own target — use the rig's juice
+	# and verify the rig target was called (not our outer target).
+	# Re-build rig targeting our outer target for proper assertion.
+	await cleanup(rig[0])
+
+	# Inline rig so we can verify on our outer 'target' directly.
+	var entry := CallMethodEntry.new()
+	entry.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
+	entry.target_node_path = NodePath("")
+	entry.method_name = "set_meta"
+	entry.arguments = ["call_count", 1]
 
 	var effect := CallMethodControlJuiceUtility.new()
-	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
-	effect.target_node_path = NodePath("")  # empty = use juiced target
-	effect.method_name = "set_meta"
-	effect.arguments = ["call_count", 1]
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.1
+	effect.entries.append(entry)
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
@@ -211,7 +237,6 @@ func test_call_method_on_start_calls_at_animate_start() -> void:
 	target.add_child(juice)
 
 	await wait_frames(2)
-
 	juice.animate_in()
 	await wait_frames(2)
 
@@ -224,13 +249,16 @@ func test_call_method_on_start_calls_at_animate_start() -> void:
 func test_call_method_with_arguments() -> void:
 	var target := create_control_target("CallArgsBtn")
 
+	var entry := CallMethodEntry.new()
+	entry.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
+	entry.target_node_path = NodePath("")
+	entry.method_name = "set_meta"
+	entry.arguments = ["injected_value", 99]
+
 	var effect := CallMethodControlJuiceUtility.new()
-	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
-	effect.target_node_path = NodePath("")
-	effect.method_name = "set_meta"
-	effect.arguments = ["injected_value", 99]
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.1
+	effect.entries.append(entry)
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
@@ -240,7 +268,6 @@ func test_call_method_with_arguments() -> void:
 	target.add_child(juice)
 
 	await wait_frames(2)
-
 	juice.animate_in()
 	await wait_frames(2)
 
@@ -253,12 +280,15 @@ func test_call_method_with_arguments() -> void:
 func test_call_method_graceful_on_empty_method_name() -> void:
 	var target := create_control_target("CallEmptyBtn")
 
+	var entry := CallMethodEntry.new()
+	entry.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
+	entry.target_node_path = NodePath("")
+	entry.method_name = ""  # Intentionally empty
+
 	var effect := CallMethodControlJuiceUtility.new()
-	effect.call_on = CallMethodJuiceUtilityBase.CallTiming.ON_START
-	effect.target_node_path = NodePath("")
-	effect.method_name = ""  # Intentionally empty
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.1
+	effect.entries.append(entry)
 
 	var juice := JuiceControl.new()
 	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
@@ -269,7 +299,7 @@ func test_call_method_graceful_on_empty_method_name() -> void:
 
 	await wait_frames(2)
 
-	# Should not crash — just print a warning and continue
+	# Should not crash — just log a warning and continue
 	juice.animate_in()
 	await wait_frames(2)
 
