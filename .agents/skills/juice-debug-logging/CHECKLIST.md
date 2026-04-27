@@ -254,10 +254,10 @@ at the start of each new session.
 - [x] `Juice2D.gd`
 - [x] `Juice3D.gd`
 
-### Batch U-4: Appearance (3 files)
-- [ ] `AppearanceControlJuiceEffect.gd`
-- [ ] `Appearance2DJuiceEffect.gd`
-- [ ] `Appearance3DJuiceEffect.gd`
+### Batch U-4: Appearance (3 files) ✅
+- [x] `AppearanceControlJuiceEffect.gd`
+- [x] `Appearance2DJuiceEffect.gd`
+- [x] `Appearance3DJuiceEffect.gd`
 
 ### Batch U-5a: Transform Bases (3 files) ✅
 - [x] `JuiceControlTransformEffect.gd`
@@ -269,21 +269,38 @@ at the start of each new session.
 - [x] `Transform2DJuiceEffect.gd`
 - [x] `Transform3DJuiceEffect.gd`
 
-### Batch U-6: Progress + SquashStretch (6 files)
-- [ ] `ProgressControlJuiceEffect.gd`
-- [ ] `Progress2DJuiceEffect.gd`
-- [ ] `Progress3DJuiceEffect.gd`
-- [ ] `SquashStretchControlJuiceEffect.gd`
-- [ ] `SquashStretch2DJuiceEffect.gd`
-- [ ] `SquashStretch3DJuiceEffect.gd`
+### Batch U-6: Progress + SquashStretch (6 files) ✅
+- [x] `ProgressControlJuiceEffect.gd`
+- [x] `Progress2DJuiceEffect.gd`
+- [x] `Progress3DJuiceEffect.gd`
+- [x] `SquashStretchControlJuiceEffect.gd`
+- [x] `SquashStretch2DJuiceEffect.gd`
+- [x] `SquashStretch3DJuiceEffect.gd`
 
-### Batch U-7: Property Meta Bases (4 files)
-- [ ] `InterpolatePropertyJuiceEffectBase.gd`
-- [ ] `NoisePropertyJuiceEffectBase.gd`
-- [ ] `ShakePropertyJuiceEffectBase.gd`
-- [ ] `ProgressPropertyJuiceEffectBase.gd`
+### Batch U-7: Property Meta Bases (4 files) ✅
+- [x] `InterpolatePropertyJuiceEffectBase.gd` — per-entry from/to/computed in log_delta; warn on invalid resolved_node
+- [x] `NoisePropertyJuiceEffectBase.gd` — seed/speed/direction/clamp at start; raw_sample[0]+delta[0] per frame
+- [x] `ShakePropertyJuiceEffectBase.gd` — seed/frequency/randomness at start; sine[0]/rand[0]/blend[0]/delta[0] per frame
+- [x] `ProgressPropertyJuiceEffectBase.gd` — type-conditional rate at start; accumulated+delta_t+dir in log_delta; warn on empty path; bound accumulated at trigger + direction flip
 
 ### Batch U-8: Base Classes (2 files)
 - [ ] `JuiceBase.gd`
 - [ ] `JuiceEffectBase.gd`
 
+---
+
+## Test Gap Fixes (discovered during upgrade audit)
+
+### TestShakeProperty (NEW) ✅
+- [x] `tests/suites/TestShakeProperty.gd` — 4 tests: moves property, restores to natural, recipe whitelist, inspector layout
+  - Gap discovered: ShakeProperty had zero runtime test coverage before U-7
+  - Registered in `JuiceTestRunner._register_suites()`
+
+### TestMetaEffects (FIXED) ✅
+- [x] `tests/suites/TestMetaEffects.gd` — 8 tests rewritten to current entries-array API
+  - Root cause: `SignalEmit` + `CallMethod` refactored from single-property to `entries: Array`
+    but tests still assigned `effect.emit_on`, `effect.payload`, `effect.call_on` directly
+  - Silent failure: every test crashed before any assertion → 0 passed, 0 failed in runner
+  - Fix: rigs now build `SignalEmitEntry` / `CallMethodEntry` sub-resources and append to `effect.entries`
+
+**Tests after fixes: 460 passing, 0 failing** (was 448)
