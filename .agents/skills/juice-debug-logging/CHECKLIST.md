@@ -269,7 +269,7 @@ at the start of each new session.
 - [x] `Transform2DJuiceEffect.gd`
 - [x] `Transform3DJuiceEffect.gd`
 
-### Batch U-6: Progress + SquashStretch (6 files) ✅
+### Batch U-5c: Progress + SquashStretch (6 files) ✅
 - [x] `ProgressControlJuiceEffect.gd`
 - [x] `Progress2DJuiceEffect.gd`
 - [x] `Progress3DJuiceEffect.gd`
@@ -277,13 +277,13 @@ at the start of each new session.
 - [x] `SquashStretch2DJuiceEffect.gd`
 - [x] `SquashStretch3DJuiceEffect.gd`
 
-### Batch U-7: Property Meta Bases (4 files) ✅
+### Batch U-5d: Property Meta Bases (4 files) ✅
 - [x] `InterpolatePropertyJuiceEffectBase.gd` — per-entry from/to/computed in log_delta; warn on invalid resolved_node
 - [x] `NoisePropertyJuiceEffectBase.gd` — seed/speed/direction/clamp at start; raw_sample[0]+delta[0] per frame
 - [x] `ShakePropertyJuiceEffectBase.gd` — seed/frequency/randomness at start; sine[0]/rand[0]/blend[0]/delta[0] per frame
 - [x] `ProgressPropertyJuiceEffectBase.gd` — type-conditional rate at start; accumulated+delta_t+dir in log_delta; warn on empty path; bound accumulated at trigger + direction flip
 
-### Batch U-8: Base Classes (2 files)
+### Batch U-6: Base Classes (2 files)
 - [ ] `JuiceBase.gd`
 - [ ] `JuiceEffectBase.gd`
 
