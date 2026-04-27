@@ -283,9 +283,11 @@ at the start of each new session.
 - [x] `ShakePropertyJuiceEffectBase.gd` — seed/frequency/randomness at start; sine[0]/rand[0]/blend[0]/delta[0] per frame
 - [x] `ProgressPropertyJuiceEffectBase.gd` — type-conditional rate at start; accumulated+delta_t+dir in log_delta; warn on empty path; bound accumulated at trigger + direction flip
 
-### Batch U-6: Base Classes (2 files)
-- [ ] `JuiceBase.gd`
-- [ ] `JuiceEffectBase.gd`
+### Batch U-6: Base Classes (2 files) ✅
+- [x] `JuiceBase.gd` — orchestration: effect type names in start log; type+progress in completion; chain-to names; clone count; target confirmation in post_ready_init
+- [x] `JuiceEffectBase.gd` — timing engine: start_delay expiry; hold_at_peak expiry; auto-reverse start; crossfade resolved; animate_in/out complete (sustain path + normal path)
+
+**Upgrade project COMPLETE — all U batches done. 461 tests passing.**
 
 ---
 
