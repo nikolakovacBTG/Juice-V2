@@ -38,7 +38,9 @@ const LOG_TO_FILE_KEY := "juice/debug/log_to_file"
 const VERBOSE_LOG_KEY := "juice/debug/verbose"
 
 ## Path where the debug log file is written.
-const LOG_FILE_PATH := "user://juice_debug.log"
+## Set on first write using a session timestamp — each run produces a new file.
+## Format: user://juice_YYYY-MM-DDTHH.MM.SS.log
+static var LOG_FILE_PATH: String = ""
 
 ## Maximum number of log lines kept in the ring buffer for bug reports.
 const RING_BUFFER_MAX := 5000
@@ -305,7 +307,7 @@ static func _file_write(line: String) -> void:
 	if not ProjectSettings.get_setting(LOG_TO_FILE_KEY, false):
 		return
 	if _log_file == null:
-		_log_file = FileAccess.open(LOG_FILE_PATH, FileAccess.WRITE)
+		_log_file = FileAccess.open(_build_session_log_path(), FileAccess.WRITE)
 		if _log_file == null:
 			# Can't open file — disable silently to avoid error spam
 			return
@@ -316,3 +318,16 @@ static func _file_write(line: String) -> void:
 		_log_file.store_line("===")
 		_log_file.store_line("")
 	_log_file.store_line(line)
+
+
+# Builds the session log path on first call and caches it in LOG_FILE_PATH.
+# Uses the same timestamp format as Godot's own engine logs (colons replaced
+# by dots for Windows filename compatibility).
+static func _build_session_log_path() -> String:
+	if not LOG_FILE_PATH.is_empty():
+		return LOG_FILE_PATH
+	var dt := Time.get_datetime_string_from_system()
+	# Replace colons with dots: 2026-04-27T17:22:53 → 2026-04-27T17.22.53
+	dt = dt.replace(":", ".")
+	LOG_FILE_PATH = "user://juice_%s.log" % dt
+	return LOG_FILE_PATH
