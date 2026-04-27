@@ -445,12 +445,14 @@ You can also enable logging for a single node only: select any `JuiceBase` in th
 
 ## The Log File
 
-When `log_to_file` is on, all output is written to:
+When `log_to_file` is on, each run creates a new timestamped file — it is never overwritten:
 
-- **Windows:** `%APPDATA%\Godot\app_userdata\<YourProjectName>\juice_debug.log`
-- **macOS / Linux:** `~/.local/share/godot/app_userdata/<YourProjectName>/juice_debug.log`
+- **Windows:** `%APPDATA%\Godot\app_userdata\<YourProjectName>\juice_YYYY-MM-DDTHH.MM.SS.log`
+- **macOS / Linux:** `~/.local/share/godot/app_userdata/<YourProjectName>/juice_YYYY-MM-DDTHH.MM.SS.log`
 
-The file is **overwritten at the start of each session** — it is not date-stamped. The first lines contain a header with the session timestamp and Godot version so you can tell which run produced it. Copy the file manually before hitting Play if you need to preserve a previous log.
+Each session produces one file, named with the date and time of the first log line that session. Files accumulate — there is no automatic cleanup, so delete old ones manually when you no longer need them.
+
+> **Note:** Godot also writes its own engine logs in a `logs/` subfolder in the same location, named `godot*.log`. Those are unrelated to Juice logging — they contain Godot engine output, print statements, and errors from all scripts.
 
 ## Generating a Bug Report
 
@@ -459,7 +461,7 @@ The file is **overwritten at the start of each session** — it is not date-stam
 - Godot version, OS, project name, and session timestamp
 - Current Juice debug settings (confirms logging was actually active when the bug occurred)
 - An inventory of every `JuiceBase` node in the open scene with its full inspector configuration
-- The complete contents of `juice_debug.log`
+- The complete contents of the current session's `juice_*.log` file
 
 **Steps to generate:**
 1. In **Project → Project Settings**, set `juice/debug/log_to_file = true`
@@ -468,6 +470,7 @@ The file is **overwritten at the start of each session** — it is not date-stam
 4. Stop the scene
 5. Open **Project → Tools → Export Juice Bug Report**
 6. `juice_debug_report.json` opens automatically — attach it to the bug report
+
 
 ## How It Works (Technical)
 
