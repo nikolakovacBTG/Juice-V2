@@ -80,7 +80,9 @@ Generated: 2026-04-24
 
 | File | Methods | Uncommented | Status | Notes |
 |------|---------|-------------|--------|-------|
+| `JuiceDebugReport.gd` | 6 | 1 | DONE | Written to standard during logging sprint — class tooltip, WHAT/WHY block, `export()` with `##`, all private helpers with `#`. Zero TODOs. |
 | `JuiceEditorContext.gd` | 2 | 0 | DONE | Already clean, excellent documentation |
+| `JuiceLogger.gd` | 10 | 0 | DONE | Written to standard during logging sprint — class tooltip, WHAT/WHY block, all 6 logging methods + 3 buffer methods with `##`, all private helpers with `#`. Zero TODOs. |
 | `JuiceProjectSettings.gd` | 2 | 0 | DONE | Already clean, no changes needed |
 | `PropertyPickerDialog.gd` | 8 | 5 | DONE | Downgraded 2 shader helpers ##→# |
 | `PropertyPickerPlugin.gd` | 12 | 7 | DONE | Downgraded 3 inner-class private helpers ##→# |
