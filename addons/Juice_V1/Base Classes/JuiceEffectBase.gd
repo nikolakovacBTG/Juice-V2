@@ -496,6 +496,11 @@ func tick(delta: float, target: Node) -> TickResult:
 			return TickResult.PLAYING
 		_in_start_delay = false
 		_elapsed = 0.0
+		# Transition: delay expired — animation begins. Logs once, not per-frame.
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"delay done (%.2fs): animation starting (target=%s)" % [
+				_start_delay_duration, target.name if target else "null"],
+				debug_enabled)
 
 	# --- Sustain: hold at peak indefinitely, keep applying effect ---
 	if _in_sustain:
@@ -513,6 +518,11 @@ func tick(delta: float, target: Node) -> TickResult:
 		if _hold_elapsed < hold_at_peak:
 			return TickResult.PLAYING
 		_in_hold_at_peak = false
+		# Transition: hold window expired. Logs once — tells us hold was honored.
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"hold_at_peak expired (%.2fs): proceeding (auto_reverse=%s)" % [
+				hold_at_peak, _will_auto_reverse],
+				debug_enabled)
 		# After hold, chain to animate_out if auto-reversing
 		if _will_auto_reverse and not _is_one_shot_return:
 			_start_animate_out_internal(target)
@@ -543,6 +553,12 @@ func tick(delta: float, target: Node) -> TickResult:
 		_apply_effect(blended, target)
 		if blend >= 1.0:
 			_is_crossfading = false
+			# Transition: crossfade resolved. Logs once — confirms blend completed.
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"crossfade done: from=%.3f → progress=%.3f (target=%s)" % [
+					_crossfade_start_progress, _animation_progress,
+					target.name if target else "null"],
+					debug_enabled)
 	else:
 		_apply_effect(_animation_progress, target)
 
@@ -629,6 +645,10 @@ func _get_time_to_completion() -> float:
 
 # Start the auto-reverse OUT phase (for IN_AND_OUT effects).
 func _start_animate_out_internal(target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"auto-reverse: starting out phase from progress=%.3f (target=%s)" % [
+			_animation_progress, target.name if target else "null"],
+			debug_enabled)
 	_start_progress = _animation_progress
 	_target_progress = 0.0
 	_is_one_shot_return = true
@@ -711,14 +731,26 @@ func _finish(target: Node) -> TickResult:
 	if just_animated_in and not _will_auto_reverse and _needs_sustain():
 		_in_sustain = true
 		_on_animate_in_complete(target)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"animate_in complete → sustain started (target=%s)" % [
+				target.name if target else "null"],
+				debug_enabled)
 		return TickResult.COMPLETED
 
 	_is_playing = false
 
 	if just_animated_in:
 		_on_animate_in_complete(target)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"animate_in complete (progress=%.3f, target=%s)" % [
+				_animation_progress, target.name if target else "null"],
+				debug_enabled)
 	else:
 		_on_animate_out_complete(target)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"animate_out complete (progress=%.3f, target=%s)" % [
+				_animation_progress, target.name if target else "null"],
+				debug_enabled)
 
 	return TickResult.COMPLETED
 

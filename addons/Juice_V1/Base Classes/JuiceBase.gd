@@ -651,6 +651,12 @@ func _post_ready_init() -> void:
 	# In SEQUENCER mode _target_node is null, so this is a no-op.
 	if _target_node != null:
 		_capture_base_values()
+		# Confirm target identity after Container deferred layout resolves.
+		# This is the earliest point where target.position is Container-accurate.
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"post_ready: target=%s (%d effects ready)" % [
+				_target_node.name, _runtime_effects.size()],
+				debug_enabled)
 
 	# Forward _on_host_ready so effects with CaptureAt.READY snapshot the
 	# real, Container-managed position rather than the pre-layout (0, 0).
@@ -944,9 +950,15 @@ func _start_effects(play_in: bool) -> void:
 
 	set_process(true)
 
+	# Log started effects with their type names so the orchestration chain is
+	# auditable: which specific effects are playing, not just how many.
+	var effect_names := PackedStringArray()
+	for idx in root_indices:
+		var e := _runtime_effects[idx]
+		effect_names.append(e.get_script().get_global_name() if e else "null")
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"Started %d root effects (play_in=%s)" % [
-			root_indices.size(), play_in],
+			"Started %d root effects (play_in=%s): [%s]" % [
+			root_indices.size(), play_in, ", ".join(effect_names)],
 			debug_enabled)
 
 
@@ -958,7 +970,13 @@ func _on_effect_completed(idx: int) -> void:
 	if effect == null:
 		return
 
-	JuiceLogger.log_info(self, _get_domain_tag(), "Effect %d completed" % idx, debug_enabled)
+	# Include type name + final progress so completion is attributable without
+	# cross-referencing effect index against the recipe list.
+	var effect_type: String = effect.get_script().get_global_name() if effect.get_script() else "unknown"
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Effect %d (%s) completed (progress=%.3f)" % [
+			idx, effect_type, effect._animation_progress],
+			debug_enabled)
 
 	# Follow chain_to (skip if chained_preroll already started it)
 	if not effect.chain_to.is_empty() and not effect._chained_preroll_triggered:
@@ -970,8 +988,11 @@ func _on_effect_completed(idx: int) -> void:
 					var play_in := effect._animation_progress >= 0.5
 					chained.start(_target_node, play_in, false)
 					_active_effect_indices.append(chain_idx)
+		var chain_names := PackedStringArray()
+		for ce in effect.chain_to:
+			chain_names.append(ce.get_script().get_global_name() if ce and ce.get_script() else "null")
 		JuiceLogger.log_info(self, _get_domain_tag(),
-				"Chained to %d effects from effect %d" % [effect.chain_to.size(), idx],
+				"Effect %d (%s) chained to [%s]" % [idx, effect_type, ", ".join(chain_names)],
 				debug_enabled)
 
 
@@ -1886,6 +1907,11 @@ func _invalidate_runtime_effects() -> void:
 	_active_effect_indices.clear()
 	if recipe != null:
 		_runtime_effects = recipe.create_runtime_effects()
+		# Confirm how many runtime clones were produced. If this is 0 when effects are
+		# expected, the recipe is empty or create_runtime_effects() silently failed.
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"runtime effects cloned: %d" % _runtime_effects.size(),
+				debug_enabled)
 
 
 # Get indices of root effects (not chained from any other effect).
