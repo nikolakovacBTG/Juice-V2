@@ -197,13 +197,42 @@ func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_capture_base(target)
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"animate_start: property='%s' type=%s dir=%.0f" % [
-			property_path, PropertyType.keys()[property_type], _current_direction],
+			"animate_start: property='%s' type=%s dir=%.0f hold=%s bound=%s" % [
+			property_path, PropertyType.keys()[property_type], _current_direction,
+			hold_on_stop, bound_enabled],
 			debug_enabled)
+	# Type-conditional rate — a wrong rate here fully explains any wrong accumulation speed.
+	match property_type:
+		PropertyType.FLOAT:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+					{"float_rate": float_rate}, debug_enabled)
+		PropertyType.VECTOR2:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+					{"vector2_rate": vector2_rate}, debug_enabled)
+		PropertyType.VECTOR3:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+					{"vector3_rate": vector3_rate}, debug_enabled)
+		PropertyType.COLOR:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+					{"color_rate": color_rate}, debug_enabled)
+	if bound_enabled:
+		JuiceLogger.log_capture(self, _get_domain_tag(), "bound",
+				{"behaviour": BoundBehaviour.keys()[bound_behaviour],
+				"value": bound_value}, debug_enabled)
 
 
 ## Restores the target to its pre-accumulation state if hold_on_stop is false.
 func _restore_to_natural(target: Node) -> void:
+	# Log the accumulated state before clearing — silent clears are the #1 undiagnosable bug.
+	var acc_log: Variant
+	match property_type:
+		PropertyType.FLOAT:   acc_log = _accumulated_float
+		PropertyType.VECTOR2: acc_log = _accumulated_vec2
+		PropertyType.VECTOR3: acc_log = _accumulated_vec3
+		PropertyType.COLOR:   acc_log = _accumulated_color
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: hold=%s accumulated=%s path='%s'" % [
+			hold_on_stop, acc_log, property_path], debug_enabled)
 	if not hold_on_stop:
 		_reset_accumulated()
 		_has_base = false
@@ -228,11 +257,15 @@ func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 ## Accumulates the typed rate * delta * progress and writes it directly to the target via set_indexed.
 func _apply_effect(progress: float, target: Node) -> void:
 	if property_path.is_empty():
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"property_path is empty — accumulation skipped", debug_enabled)
 		return
 
 	# When hold_on_stop=false and progress reaches 0 (animate_out at rest),
 	# write natural values back immediately so target visually resets.
 	if not hold_on_stop and progress <= 0.0:
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"apply_effect: progress<=0 + hold=false — resetting to natural", debug_enabled)
 		_reset_accumulated()
 		_write_natural(target)
 		return
@@ -269,8 +302,17 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 	if bound_enabled and progress > 0.0:
 		_check_bounds(target)
+	# Log accumulated value (type-conditional) + delta_t + dir —
+	# separates "wrong rate", "wrong delta_t", "wrong direction", and "bound fired" causes.
+	var acc_log: Variant
+	match property_type:
+		PropertyType.FLOAT:   acc_log = _accumulated_float
+		PropertyType.VECTOR2: acc_log = _accumulated_vec2
+		PropertyType.VECTOR3: acc_log = _accumulated_vec3
+		PropertyType.COLOR:   acc_log = _accumulated_color
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"path": property_path, "type": PropertyType.keys()[property_type]},
+			{"delta_t": delta, "accumulated": acc_log, "dir": _current_direction,
+			"path": property_path},
 			target.name, debug_enabled)
 
 
@@ -287,8 +329,15 @@ func _check_bounds(target: Node) -> void:
 
 	_clamp_to_bound(target)
 
+	var accumulated_at_bound: Variant
+	match property_type:
+		PropertyType.FLOAT:   accumulated_at_bound = _accumulated_float
+		PropertyType.VECTOR2: accumulated_at_bound = _accumulated_vec2
+		PropertyType.VECTOR3: accumulated_at_bound = _accumulated_vec3
+		PropertyType.COLOR:   accumulated_at_bound = _accumulated_color
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			"bound reached: behaviour=%s accumulated=%s" % [
+			BoundBehaviour.keys()[bound_behaviour], accumulated_at_bound],
 			debug_enabled)
 
 	match bound_behaviour:
@@ -298,9 +347,13 @@ func _check_bounds(target: Node) -> void:
 		BoundBehaviour.REVERSE:
 			_absorb_accumulated_into_base()
 			_current_direction *= -1.0
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"direction flipped: new_dir=%.0f" % _current_direction, debug_enabled)
 		BoundBehaviour.REVERSE_EASED:
 			_absorb_accumulated_into_base()
 			_current_direction *= -1.0
+			JuiceLogger.log_info(self, _get_domain_tag(),
+					"direction flipped (eased): new_dir=%.0f" % _current_direction, debug_enabled)
 			_pending_restart_reversed = true
 		BoundBehaviour.WRAP:
 			_wrap_accumulated()

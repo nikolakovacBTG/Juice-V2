@@ -50,6 +50,17 @@ func _get_target_resource_type() -> String:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+## Log what is being restored before delegating to the base class lifecycle.
+func _restore_to_natural(target: Node) -> void:
+	for entry: InterpolatePropertyTarget in property_targets:
+		if entry == null or not entry.is_configured():
+			continue
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"restore_to_natural: resetting path='%s' to natural" % entry.property_path,
+				debug_enabled)
+	super._restore_to_natural(target)
+
+
 ## Interpolate does not need frame-by-frame sustain — set_indexed() writes
 ## are persistent. The last write at progress=1.0 holds naturally.
 func _needs_sustain() -> bool:
@@ -64,8 +75,14 @@ func _on_animate_start(target: Node) -> void:
 	for entry: InterpolatePropertyTarget in property_targets:
 		if entry != null and entry.is_configured():
 			entry.capture_runtime_values()
-	JuiceLogger.log_capture(self, _get_domain_tag(), "interpolate_targets",
-			property_targets.size(), debug_enabled)
+	# Log each entry individually — the from/to capture is the critical diagnostic.
+	# A wrong captured value at this point (ON_TRIGGER mode) explains any wrong output.
+	for entry: InterpolatePropertyTarget in property_targets:
+		if entry == null or not entry.is_configured():
+			continue
+		JuiceLogger.log_capture(self, _get_domain_tag(), "interpolate_target",
+			{"path": entry.property_path, "from": entry.get_from(),
+			"to": entry.get_to()}, debug_enabled)
 
 
 ## Iterates over the target entries and performs polymorphic interpolation (lerp), mapping 0-1 progress to property values directly on the engine target.
@@ -74,14 +91,19 @@ func _apply_effect(progress: float, _target: Node) -> void:
 		if entry == null or not entry.is_configured():
 			continue
 		if not is_instance_valid(entry._resolved_node):
+			JuiceLogger.warn(self, _get_domain_tag(),
+					"resolved_node invalid for path '%s' — effect skipped" % entry.property_path,
+					debug_enabled)
 			continue
 		var value: Variant = _compute_lerp(entry, progress)
 		if value == null:
 			continue
 		entry._resolved_node.set_indexed(entry.property_path, value)
-	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"entries": property_targets.size()},
-			"property", debug_enabled)
+		# Per-entry log: from, to, and computed value make divergence immediately visible.
+		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+				{"path": entry.property_path, "from": entry.get_from(),
+				"to": entry.get_to(), "computed": value},
+				entry._resolved_node.name, debug_enabled)
 
 
 # =============================================================================

@@ -226,6 +226,14 @@ func _on_animate_start(target: Node) -> void:
 	if _target_progress <= 0.0 or _noise == null:
 		_noise_time = 0.0
 		_setup_noise()
+	# Log the actual seed used (0 → randomized → log the resolved value).
+	var actual_seed := _noise.seed if _noise != null else -1
+	JuiceLogger.log_capture(self, _get_domain_tag(), "noise_config",
+			{"seed": actual_seed, "speed": noise_speed,
+			"direction": NoiseDirection.keys()[noise_direction],
+			"type": noise_type, "frequency": noise_frequency,
+			"clamp": "[%.2f, %.2f]" % [clamp_min, clamp_max]},
+			debug_enabled)
 
 
 ## Samples the 1D noise space for each target entry and writes the resulting delta to the engine property.
@@ -233,6 +241,11 @@ func _apply_effect(progress: float, _target: Node) -> void:
 	# _current_delta is set by JuiceEffectBase.tick() each frame.
 	# Same pattern as Noise2DJuiceEffect._advance_noise_time(_current_delta).
 	_advance_noise_time(_current_delta)
+
+	# Capture first-entry diagnostics for the per-frame log (avoids per-entry spam on multi-target).
+	var _log_sample: float = 0.0
+	var _log_delta: Variant = null
+	var _logged_first: bool = false
 
 	for entry: NoisePropertyTarget in property_targets:
 		if entry == null or not entry.is_configured():
@@ -246,15 +259,27 @@ func _apply_effect(progress: float, _target: Node) -> void:
 		if delta == null:
 			continue
 
+		# Capture first-entry diagnostic values before write.
+		if not _logged_first:
+			_log_sample = _sample_noise(0.0)
+			_log_delta = delta
+			_logged_first = true
+
 		entry._resolved_node.set_indexed(
 			entry.property_path, entry._base_value + delta)
+	# Log raw_sample and first-entry delta alongside noise_time —
+	# distinguishes "sample near zero" from "amplitude near zero" from "progress killed it".
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"entries": property_targets.size(), "noise_time": _noise_time},
+			{"noise_time": _noise_time, "raw_sample[0]": _log_sample,
+			"delta[0]": _log_delta},
 			"property", debug_enabled)
 
 
 ## Undoes the noise delta from the target property to cleanly reset it on stop.
 func _restore_to_natural(target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: noise_time=%.3f targets=%d" % [
+			_noise_time, property_targets.size()], debug_enabled)
 	super._restore_to_natural(target)
 	_noise_time = 0.0
 

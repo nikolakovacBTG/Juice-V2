@@ -110,11 +110,24 @@ func _on_animate_start(target: Node) -> void:
 	# Fresh randomized seed each trigger — each play sounds different.
 	_shake_seed = randf() * 1000.0
 	_shake_time = 0.0
+	# Log the three values that define the entire shake character.
+	# seed: determines the random phase of each shake cycle.
+	# randomness: 0=pure sine (predictable), 1=pure random (chaotic).
+	JuiceLogger.log_capture(self, _get_domain_tag(), "shake_config",
+			{"seed": _shake_seed, "frequency": shake_frequency,
+			"randomness": randomness}, debug_enabled)
 
 
 ## Samples random noise discretely based on the frequency timer and writes the resulting delta to the engine property.
 func _apply_effect(progress: float, _target: Node) -> void:
 	_shake_time += _current_delta  # Same pattern as Shake2DJuiceEffect._apply_effect
+
+	# Capture first-entry diagnostics — avoids per-entry spam on multi-target.
+	var _log_sine: float = 0.0
+	var _log_rand: float = 0.0
+	var _log_blend: float = 0.0
+	var _log_delta: Variant = null
+	var _logged_first: bool = false
 
 	for i: int in property_targets.size():
 		var entry: ShakePropertyTarget = property_targets[i]
@@ -132,15 +145,31 @@ func _apply_effect(progress: float, _target: Node) -> void:
 		if delta == null:
 			continue
 
+		# First-entry: capture sine + random + blend for diagnostic log.
+		if not _logged_first:
+			var freq := _shake_time * shake_frequency * TAU
+			_log_sine = sin(freq + _shake_seed + phase_offset)
+			_log_rand = randf_range(-1.0, 1.0)
+			_log_blend = lerpf(_log_sine, _log_rand, randomness)
+			_log_delta = delta
+			_logged_first = true
+
 		entry._resolved_node.set_indexed(
 			entry.property_path, entry._base_value + delta)
+	# Log sine/rand/blend for first entry: tells you whether wrong output came from
+	# sin computation, RNG, randomness blend, or strength scaling.
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"entries": property_targets.size(), "shake_time": _shake_time},
+			{"shake_time": _shake_time, "sine[0]": _log_sine,
+			"rand[0]": snapped(_log_rand, 0.001), "blend[0]": snapped(_log_blend, 0.001),
+			"delta[0]": _log_delta},
 			"property", debug_enabled)
 
 
 ## Undoes the shake delta from the target property to cleanly reset it on stop.
 func _restore_to_natural(target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: shake_time=%.3f targets=%d" % [
+			_shake_time, property_targets.size()], debug_enabled)
 	super._restore_to_natural(target)
 	_shake_time = 0.0
 
