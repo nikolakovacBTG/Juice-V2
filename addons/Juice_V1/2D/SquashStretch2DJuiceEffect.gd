@@ -145,7 +145,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 	# Store delta from natural scale — node aggregates and writes
 	_scale_delta = new_scale - _base_scale
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"scale": _scale_delta}, target.name, debug_enabled)
+			{"squash_factor": squash_factor, "primary_mult": 1.0 - (squash_amount * squash_factor),
+			"new_scale": new_scale, "scale_delta": _scale_delta},
+			target.name, debug_enabled)
 
 
 ## Snap back to zero delta to avoid floating point drift.
@@ -155,6 +157,8 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 ## Clear deltas — the domain node will write natural state via _post_tick_write().
 func _restore_to_natural(_target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: clearing scale_delta=%s" % _scale_delta, debug_enabled)
 	_clear_deltas()
 
 
@@ -184,3 +188,5 @@ func _capture_base(target: Node) -> void:
 		return
 	_base_scale = n2d.scale
 	_has_base = true
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base_scale",
+			{"base_scale": _base_scale}, debug_enabled)

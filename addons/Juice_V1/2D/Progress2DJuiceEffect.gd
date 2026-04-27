@@ -273,12 +273,39 @@ func _on_animate_start(target: Node) -> void:
 		_contributes_position = true
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"animate_start: target=%s dir=%.0f" % [TransformTarget.keys()[transform_target], _current_direction],
+			"animate_start: target=%s dir=%.0f hold=%s bound=%s" % [
+			TransformTarget.keys()[transform_target], _current_direction,
+			hold_on_stop, bound_enabled],
 			debug_enabled)
+	match transform_target:
+		TransformTarget.POSITION:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+				{"position_rate": position_rate, "unit": PositionIn.keys()[position_unit]},
+				debug_enabled)
+		TransformTarget.ROTATION:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+				{"rotation_rate_deg": rotation_rate}, debug_enabled)
+		TransformTarget.SCALE:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "rate",
+				{"scale_rate": scale_rate}, debug_enabled)
+	if bound_enabled:
+		JuiceLogger.log_capture(self, _get_domain_tag(), "bound",
+			{"behaviour": BoundBehaviour.keys()[bound_behaviour],
+			"mode": BoundMode.keys()[bound_mode] if transform_target != TransformTarget.ROTATION else "n/a",
+			"value": bound_value}, debug_enabled)
 
 
 ## Sets deltas to 0 and optionally writes natural state back.
 func _restore_to_natural(target: Node) -> void:
+	var acc_log: Variant
+	match transform_target:
+		TransformTarget.POSITION: acc_log = _accumulated_position
+		TransformTarget.ROTATION: acc_log = rad_to_deg(_accumulated_rotation)
+		TransformTarget.SCALE:    acc_log = _accumulated_scale
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: hold=%s accumulated=%s pos_d=%s rot_d=%.3f scale_d=%s" % [
+			hold_on_stop, acc_log, _pos_delta, _rot_delta, _scale_delta],
+			debug_enabled)
 	_clear_deltas()
 	if not hold_on_stop:
 		_reset_accumulated()
@@ -351,8 +378,14 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 	if bound_enabled and progress > 0.0:
 		_check_bounds()
+	var accumulated_log: Variant
+	match transform_target:
+		TransformTarget.POSITION: accumulated_log = _accumulated_position
+		TransformTarget.ROTATION: accumulated_log = rad_to_deg(_accumulated_rotation)
+		TransformTarget.SCALE:    accumulated_log = _accumulated_scale
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
+			{"delta_t": _last_delta, "accumulated": accumulated_log, "dir": _current_direction,
+			"pos": _pos_delta, "rot": _rot_delta, "scale": _scale_delta},
 			target.name, debug_enabled)
 
 
@@ -368,20 +401,29 @@ func _check_bounds() -> void:
 
 	_clamp_to_bound()
 
+	var accumulated_at_bound: Variant
+	match transform_target:
+		TransformTarget.POSITION: accumulated_at_bound = _accumulated_position
+		TransformTarget.ROTATION: accumulated_at_bound = rad_to_deg(_accumulated_rotation)
+		TransformTarget.SCALE:    accumulated_at_bound = _accumulated_scale
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"bound reached: behaviour=%s" % BoundBehaviour.keys()[bound_behaviour],
+			"bound reached: behaviour=%s accumulated=%s" % [
+			BoundBehaviour.keys()[bound_behaviour], accumulated_at_bound],
 			debug_enabled)
 
 	match bound_behaviour:
 		BoundBehaviour.EMIT_COMPLETED:
-			# Signal completion via _is_playing - host's tick loop detects COMPLETED
 			_is_playing = false
 		BoundBehaviour.REVERSE:
 			_absorb_accumulated_into_base()
 			_current_direction *= -1.0
+			JuiceLogger.log_info(self, _get_domain_tag(),
+				"direction flipped: new_dir=%.0f" % _current_direction, debug_enabled)
 		BoundBehaviour.REVERSE_EASED:
 			_absorb_accumulated_into_base()
 			_current_direction *= -1.0
+			JuiceLogger.log_info(self, _get_domain_tag(),
+				"direction flipped (eased): new_dir=%.0f" % _current_direction, debug_enabled)
 			_pending_restart_reversed = true
 		BoundBehaviour.WRAP:
 			_wrap_accumulated()

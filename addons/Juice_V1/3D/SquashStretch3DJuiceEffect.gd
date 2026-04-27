@@ -188,7 +188,10 @@ func _apply_effect(progress: float, target: Node) -> void:
 		var scale_ratio := new_scale / _base_scale
 		_pos_delta = pivot_offset * (Vector3.ONE - scale_ratio)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"scale": _scale_delta, "pos": _pos_delta}, target.name, debug_enabled)
+			{"squash_factor": squash_factor, "primary_mult": primary_multiplier,
+			"perp_mult": perpendicular_multiplier, "new_scale": new_scale,
+			"scale_delta": _scale_delta, "pos_delta(pivot)": _pos_delta},
+			target.name, debug_enabled)
 
 
 ## Snap back to zero delta to avoid floating point drift.
@@ -199,6 +202,9 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 ## Clear deltas — the domain node will write natural state via _post_tick_write().
 func _restore_to_natural(_target: Node) -> void:
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: clearing scale_delta=%s pos_delta=%s" % [
+			_scale_delta, _pos_delta], debug_enabled)
 	_clear_deltas()
 
 
@@ -230,3 +236,5 @@ func _capture_base(target: Node) -> void:
 	_base_scale = n3d.scale
 	_base_position = n3d.position
 	_has_base = true
+	JuiceLogger.log_capture(self, _get_domain_tag(), "base_state",
+			{"base_scale": _base_scale, "base_pos": _base_position}, debug_enabled)
