@@ -10,6 +10,7 @@ Key architectural pillars:
 - **Effects as Data (`JuiceEffectBase`)**: Effects are purely mathematical, stateless Resource objects. They never mutate the target node directly; they only calculate a "delta" (offset) for a given progress value.
 - **Domain Separation**: A strict type system (via `JuiceRecipe` whitelists) ensures that 2D effects can only be applied to 2D nodes, Control effects to UI nodes, etc., preventing runtime type crashes.
 - **Safe Stacking**: Multiple effects (e.g., Shake, Squash, Transform) can be stacked on the same node. The Domain Node aggregates all their deltas and performs a single, unified write operation to the Godot Engine.
+- **Debug Logging** (`JuiceLogger` / `JuiceDebugReport`): A cross-cutting, three-tier gated logging system. Zero cost in export builds. Produces timestamped per-session log files and exportable JSON bug reports.
 
 ```mermaid
 graph LR
@@ -154,8 +155,23 @@ graph LR
     Resource_Root --> CallMethodEntry:::ConcreteClass
     Resource_Root --> SignalEmitEntry:::ConcreteClass
 
+    %% DEBUG LOGGING SYSTEM =================================
+    RefCounted_Root("Godot RefCounted"):::GodotClass
 
-    %% Styling
+    RefCounted_Root --> JuiceLogger:::DebugUtil
+    RefCounted_Root --> JuiceDebugReport:::DebugUtil
+
+    Note_Logging("📝 CROSS-CUTTING DEBUG SERVICE<br>Three-tier gating: export-build strip → master switch → per-node flag.<br>Writes timestamped juice_*.log per session. Never overwrites."):::PostIt
+    JuiceLogger -.-> Note_Logging
+
+    %% Who calls JuiceLogger
+    JuiceBase -. "log_info / warn" .-> JuiceLogger
+    JuiceEffectBase -. "log_info / log_delta" .-> JuiceLogger
+
+    %% JuiceDebugReport reads from JuiceLogger
+    JuiceDebugReport -. "reads LOG_FILE_PATH" .-> JuiceLogger
+
+
     classDef GodotClass fill:#1c2433,stroke:#3e4c63,stroke-width:2px,color:#d8dee9;
     classDef CoreNode fill:#36537a,stroke:#5c81b5,stroke-width:2px,color:#fff;
     classDef CoreResource fill:#45594b,stroke:#6f8f79,stroke-width:2px,color:#fff;
@@ -164,6 +180,6 @@ graph LR
     classDef BaseClass fill:#4f4333,stroke:#857157,stroke-dasharray: 5 5,color:#fff;
     classDef ConcreteClass fill:#6e333b,stroke:#b85663,stroke-width:1px,color:#fff;
     classDef UtilityNode fill:#5c4066,stroke:#9769a8,stroke-width:1px,color:#fff;
+    classDef DebugUtil fill:#2e4a4f,stroke:#4a9eaa,stroke-width:2px,color:#fff;
     classDef PostIt fill:#fff59d,stroke:#fbc02d,stroke-width:1px,color:#000,stroke-dasharray: 0;
-
 ```
