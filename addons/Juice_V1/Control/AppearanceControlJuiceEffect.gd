@@ -412,16 +412,36 @@ func _on_animate_start(target: Node) -> void:
 			_install_material(ctrl, mat)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
-			"animate_start: effect=%s flicker=%s" % [
+			"animate_start: effect=%s from_ref=%s(%s) to_ref=%s(%s) flicker=%s" % [
 			AppearanceEffect.keys()[effect_type],
+			AppearanceReference.keys()[from_reference],
+			CaptureAt.keys()[from_capture_at] if from_reference == AppearanceReference.SELF else "n/a",
+			AppearanceReference.keys()[to_reference],
+			CaptureAt.keys()[to_capture_at] if to_reference == AppearanceReference.SELF else "n/a",
 			FlickerMode.keys()[flicker_mode]],
 			debug_enabled)
-	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
-			{"tint": _captured_from_tint_color, "alpha": _captured_from_alpha,
-			"brightness": _captured_from_brightness}, debug_enabled)
-	JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
-			{"tint": _captured_to_tint_color, "alpha": _captured_to_alpha,
-			"brightness": _captured_to_brightness}, debug_enabled)
+	# Log only the channel that is active for this effect_type.
+	match effect_type:
+		AppearanceEffect.TINT:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"tint_color": _captured_from_tint_color, "tint_blend": _captured_from_tint_blend}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"tint_color": _captured_to_tint_color, "tint_blend": _captured_to_tint_blend}, debug_enabled)
+		AppearanceEffect.FADE:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"alpha": _captured_from_alpha}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"alpha": _captured_to_alpha}, debug_enabled)
+		AppearanceEffect.OVERBRIGHT:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"brightness": _captured_from_brightness}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"brightness": _captured_to_brightness}, debug_enabled)
+		AppearanceEffect.OUTLINE:
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_from",
+				{"from_width": from_width}, debug_enabled)
+			JuiceLogger.log_capture(self, _get_domain_tag(), "appearance_to",
+				{"outline_width": outline_width, "outline_color": outline_color}, debug_enabled)
 
 
 func _apply_effect(progress: float, target: Node) -> void:
@@ -429,23 +449,27 @@ func _apply_effect(progress: float, target: Node) -> void:
 	var f := _compute_flicker_multiplier()
 
 	if target == null:
+		JuiceLogger.warn(self, _get_domain_tag(),
+			"_apply_effect: target is null — skipping", debug_enabled)
 		return
 
+	var from_val: Variant
+	var to_val: Variant
 	match effect_type:
 		AppearanceEffect.TINT:
-			var from_val := _resolve_from_tint(target)
-			var to_val := _resolve_to_tint(target)
-			_modulate_factor = from_val.lerp(to_val, progress * f)
+			from_val = _resolve_from_tint(target)
+			to_val = _resolve_to_tint(target)
+			_modulate_factor = (from_val as Color).lerp(to_val, progress * f)
 			_modulate_factor.a = 1.0  # TINT does not alter alpha channel
 
 		AppearanceEffect.FADE:
-			var from_val := _resolve_from_alpha(target)
-			var to_val := _resolve_to_alpha(target)
+			from_val = _resolve_from_alpha(target)
+			to_val = _resolve_to_alpha(target)
 			_modulate_factor = Color(1.0, 1.0, 1.0, lerpf(from_val, to_val, progress * f))
 
 		AppearanceEffect.OVERBRIGHT:
-			var from_val := _resolve_from_brightness(target)
-			var to_val := _resolve_to_brightness(target)
+			from_val = _resolve_from_brightness(target)
+			to_val = _resolve_to_brightness(target)
 			var boost := lerpf(from_val, to_val, progress * f)
 			_modulate_factor = Color(boost, boost, boost, 1.0)
 
@@ -469,7 +493,8 @@ func _apply_effect(progress: float, target: Node) -> void:
 						"outline_width", mat.get_shader_parameter("outline_width"),
 						"rid=%s" % mat.get_rid(), debug_enabled)
 	JuiceLogger.log_delta(self, _get_domain_tag(), progress,
-			{"modulate": _modulate_factor}, target.name, debug_enabled)
+			{"f(flicker)": f, "from": from_val, "to": to_val, "modulate": _modulate_factor},
+			target.name, debug_enabled)
 
 
 func _on_animate_out_complete(_target: Node) -> void:
@@ -477,12 +502,18 @@ func _on_animate_out_complete(_target: Node) -> void:
 
 
 func _restore_to_natural(target: Node) -> void:
+	# Log before clearing so mid-animation interrupts are diagnosable.
+	var had_outline := _active_material != null
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"restore_to_natural: clearing modulate=%s had_outline=%s" % [
+			_modulate_factor, had_outline], debug_enabled)
+
 	# Reset modulate factor — domain node stops writing once factor is WHITE.
 	_modulate_factor = Color.WHITE
 	_contributes_modulate = false
 
 	# OUTLINE: restore target.material to what it was before animation.
-	if _active_material != null:
+	if had_outline:
 		var ctrl := target as Control
 		if ctrl != null and _has_natural:
 			ctrl.material = _natural_material
