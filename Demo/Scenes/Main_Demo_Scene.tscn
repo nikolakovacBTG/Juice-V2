@@ -262,7 +262,7 @@ metadata/_custom_type_script = "uid://bf43e3idc17tt"
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_b3jpr"), SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), null])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_c2ixe"]
@@ -403,6 +403,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
@@ -425,6 +426,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
@@ -447,6 +449,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
@@ -472,6 +475,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
 1891345964408: Vector2(0, 0),
 1899482914158: Vector2(0, 0),

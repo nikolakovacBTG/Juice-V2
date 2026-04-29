@@ -130,10 +130,12 @@
 
 ## VFX (2 effects)
 
+> **Design note:** `VFXJuiceEffect` is domain-agnostic — registered in all 3 recipes. It fires GPU/CPU particles as children or spawns a PackedScene per trigger. `TrailJuiceEffect` is 2D-only — registered in `Juice2DRecipe` only. Both are approved side-effect exceptions: `_apply_effect()` is a no-op; all side-effects fire in `_on_animate_start()`, matching `TimeJuiceEffectBase`'s established pattern.
+
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `VFXJuiceComp` | `VFXJuiceEffect` | ❌ | — | — |
-| `TrailJuiceComp` | `TrailJuiceEffect` | ❌ | — | — |
+| `VFXJuiceComp` | `VFXJuiceEffect` (all 3 domains) | ✅ | `TestVFXEffect` (21 tests) | 2026-04-29 |
+| `TrailJuiceComp` | `TrailJuiceEffect` (2D only) | ✅ | `TestTrailEffect` (21 tests) | 2026-04-29 |
 
 ## Events & Flow (Legacy, absorbed by JuiceBase)
 
@@ -192,11 +194,11 @@
 
 | Category | Total | Ported | Pending UX | In Progress | Not Started | Legacy/Cut |
 |----------|-------|--------|------------|-------------|-------------|--------|
-| Effects | ~43 | 30 | 7 | 1 | 2 | 12 |
+| Effects | ~43 | 32 | 7 | 1 | 0 | 12 |
 | Utilities | ~10 | 9 | 0 | 1 | 1 | 0 |
 | Infrastructure | 4 | 4 | 0 | 0 | 0 | 0 |
 | Editor Tooling | 2 | 0 | 2 | 0 | 0 | 0 |
-| **Total** | **~59** | **43** | **9** | **2** | **3** | **12** |
+| **Total** | **~59** | **45** | **9** | **2** | **1** | **12** |
 
-> **Last updated:** 2026-04-27 — Editor Transport (`JuicePreviewDirector` + `juice_plugin.gd`) implemented and verified with 31 automated tests. Sequencer replay bug fixed in all 3 exit paths (natural completion, explicit stop, loop boundary). Sustained-effect warning label finalized. Test suite: 498/498 passing.
+> **Last updated:** 2026-04-29 — `VFXJuiceEffect` (all 3 domains) and `TrailJuiceEffect` (2D only) ported and verified. `PauseJuiceEffectBase` chaining bug fixed (duplicate resource remap + inspector refresh). Test suite: **556/556 passing**.
 

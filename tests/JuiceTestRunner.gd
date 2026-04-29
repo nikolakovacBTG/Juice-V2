@@ -106,6 +106,9 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestScreenJuice.gd").new())
 	_suites.append(load("res://tests/suites/TestTransport.gd").new())
 	_suites.append(load("res://tests/suites/TestPauseEffect.gd").new())
+	_suites.append(load("res://tests/suites/TestVFXEffect.gd").new())
+	_suites.append(load("res://tests/suites/TestTrailEffect.gd").new())
+
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():
