@@ -98,11 +98,16 @@ func _validate_property(property: Dictionary) -> void:
 
 
 # Redirect pause_duration and use_realtime through _set() for inspector/resource writes.
-# Direct GDScript assignment uses the native setter on pause_duration directly.
+# Also intercept duration_in: old scene files (.tscn) may have duration_in = 0.3 baked in
+# from before this effect existed. Redirecting it through pause_duration ensures the setter
+# always runs and keeps both values in sync, regardless of which property Godot restores first.
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"pause_duration":
 			pause_duration = value  # native setter → also sets duration_in
+			return true
+		&"duration_in":
+			pause_duration = value  # redirect legacy/base writes through our setter
 			return true
 		&"use_realtime": use_realtime = value; return true
 	return super._set(property, value)
@@ -138,8 +143,12 @@ func tick(delta: float, target: Node) -> TickResult:
 
 
 # Resets the one-shot log guard when the animation restarts.
-func _on_animate_start(_target: Node) -> void:
+# Also prints an always-visible diagnostic so we can confirm duration_in is
+# in sync with pause_duration at the moment the effect actually starts.
+func _on_animate_start(target: Node) -> void:
 	_realtime_logged = false
+	print("[PauseDiag] start — pause_duration=%.3f  duration_in=%.3f  target=%s" % [
+		pause_duration, duration_in, target.name if target else "null"])
 
 
 # =============================================================================

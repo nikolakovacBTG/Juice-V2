@@ -59,15 +59,32 @@ func create_runtime_effects() -> Array[JuiceEffectBase]:
 		original_chains.append(effect.chain_to.duplicate())
 		clones.append(effect.duplicate(true) as JuiceEffectBase)
 
-	# Remap chain_to array references using the saved originals (not deep-copied refs)
+	# Build a per-original ordered index list so duplicate resource references remap
+	# to DISTINCT clones. valid_effects.find() only returns the first match, which
+	# means two chain_to entries pointing at the same .tres object would both remap
+	# to clone[firstIndex], leaving clone[secondIndex] as a false root that fires
+	# immediately instead of waiting for the chain trigger.
+	var original_to_clone_indices: Dictionary = {}
+	for j in valid_effects.size():
+		var orig := valid_effects[j]
+		if not original_to_clone_indices.has(orig):
+			original_to_clone_indices[orig] = []
+		original_to_clone_indices[orig].append(j)
+
+	# Remap each source effect's chain_to independently.
+	# local_consumed resets per source so two different effects chaining to the same
+	# target don't interfere with each other's index accounting.
 	for i in clones.size():
 		var remapped_array: Array[JuiceEffectBase] = []
+		var local_consumed: Dictionary = {}
 		for original_chain in original_chains[i]:
 			if original_chain == null:
 				continue
-			var chain_idx := valid_effects.find(original_chain)
-			if chain_idx >= 0 and chain_idx < clones.size():
-				remapped_array.append(clones[chain_idx])
+			var indices: Array = original_to_clone_indices.get(original_chain, [])
+			var consumed: int = local_consumed.get(original_chain, 0)
+			if consumed < indices.size():
+				remapped_array.append(clones[indices[consumed]])
+				local_consumed[original_chain] = consumed + 1
 		clones[i].chain_to = remapped_array
 
 	return clones
