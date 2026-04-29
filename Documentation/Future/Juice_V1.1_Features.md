@@ -30,3 +30,17 @@ Transition the 3D outline system to use **Instance Uniforms** (Approach 2).
 - Update `Juice3D.gd` to maintain a single, globally shared `ShaderMaterial` resource for outlines instead of instantiating new ones.
 - Set specific outline values per mesh instance using Godot 4's `set_instance_shader_parameter()` (or `RenderingServer.instance_set_shader_parameter()`).
 - **Result:** The Godot renderer can draw every "juiced" outline object in a single batch, drastically reducing CPU/GPU overhead and enabling massive scale without frame drops.
+
+---
+
+## 3. Control Domain Container Refactor (Godot 4.7 Compatibility)
+
+**Problem (Godot 4.x Container Aggressiveness):**
+In Godot 4.0 - 4.6, Control containers aggressively override and reset the transforms of their children every single frame to ensure compliance with container layout rules. To make Juice work with UI elements inside containers, we implemented complex workarounds in the `JuiceControl` domain (like the Container hold pattern and JIT `_pre_tick()`) to battle the container and apply our visual effects after the container's sort pass.
+
+**Improvement Solution (Godot 4.7 GUI Changes):**
+With the release of Godot 4.7 (specifically changes detailed in 4.7 dev snapshots/betas), Control containers will no longer forcefully reset children's transforms every frame if they haven't intrinsically changed.
+- Remove the aggressive frame-by-frame container hold patterns in `JuiceControl`.
+- Simplify the layout shift detection logic.
+- Remove workarounds that exist purely to fight the old container behavior, leading to cleaner, more robust, and significantly more performant UI juice.
+- Re-evaluate if `_temporarily_undo_visual()` and `_temporarily_reapply_visual()` require any Control-specific container fighting logic going forward.

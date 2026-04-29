@@ -42,6 +42,6 @@ Skipping this produces mechanical logging. Mechanical logging is a defect.
 4. Batch size: 3 files (complex), 5 files (simple), never mix domains in one batch
 5. **Config at lifecycle start = EVERY field that feeds the computation chain.** No curated subsets.
 6. **Per-frame log = computed output at that frame.** Never static config repeated from start.
-7. **Every silent `return` = a `warn()` before it.** Silent bail-outs are the most common marketplace bug.
+7. **Unexpected silent `return` = `warn()` before it.** Normal animation behavior (hold active, fade-out complete, progress=0) must NOT warn — only config errors and impossible states. Silent bail-outs that would confuse a marketplace user always get a `warn()`.
 8. **Completeness Test gates every file.** Three questions must answer YES before the file is done.
 

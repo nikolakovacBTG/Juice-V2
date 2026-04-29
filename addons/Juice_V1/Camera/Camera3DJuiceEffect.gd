@@ -305,19 +305,24 @@ func _sample(envelope: float, seed_offset: float) -> float:
 # =============================================================================
 
 # Returns the active Camera3D's CameraJuiceUtility, creating one if absent.
+# Fast-path: if a utility already exists (e.g. pre-placed by JuicePreviewDirector
+# for editor preview), return it immediately — even in editor context. The guard
+# below only prevents self-bootstrapping, which would dirty the scene.
 # Re-discovers every call — handles mid-animation camera switches at zero cost.
-# Returns null in editor (would dirty the scene) or if no Camera3D exists.
 func _find_or_create_utility() -> CameraJuiceUtility:
-	if Engine.is_editor_hint():
-		return null
-
 	var cam := _find_camera_3d()
 	if not cam:
 		return null
 
+	# Fast path — utility already exists (runtime-bootstrapped or Director-placed for preview)
 	for child in cam.get_children():
 		if child is CameraJuiceUtility:
 			return child
+
+	# Do not self-bootstrap in editor: add_child() would mark the scene dirty.
+	# The Director bootstraps the utility before play() when in editor preview.
+	if Engine.is_editor_hint():
+		return null
 
 	return _bootstrap_utility_on(cam)
 

@@ -76,17 +76,27 @@ func test_shake_property_moves_float_property() -> void:
 	# delta = strength × sin/rand-blend × progress
 	# If output is flat, one of three factors is zero.
 	# This test proves the chain fires end-to-end.
+	#
+	# Sample max displacement over 10 frames rather than a single snapshot.
+	# A single snapshot at t=N/freq can land exactly on a zero-crossing of the
+	# sine function, causing a false-negative despite the effect working correctly.
+	# strength=0.3 at freq=8Hz — any nonzero shake must exceed 0.01 over 10 frames.
 	var rig := await _create_shake_property_rig("modulate:a", 0.3, 0.3, 0.5)
 	var ctrl: Control = rig[0]
 	var juice: JuiceControl = rig[1]
 
 	var initial := ctrl.modulate.a
 	juice.animate_in()
-	await wait_seconds(0.15)  # Midpoint — effect is running, not restored yet.
 
-	var delta := absf(ctrl.modulate.a - initial)
-	assert_true(delta > 0.005,
-		"ShakePropertyEffect should move modulate:a away from rest (delta=%.4f)" % delta)
+	var max_delta := 0.0
+	for i in range(10):
+		await wait_frames(1)
+		var d := absf(ctrl.modulate.a - initial)
+		if d > max_delta:
+			max_delta = d
+
+	assert_true(max_delta > 0.01,
+		"ShakePropertyEffect should move modulate:a away from rest (max_delta=%.4f over 10 frames)" % max_delta)
 
 	await cleanup(ctrl)
 

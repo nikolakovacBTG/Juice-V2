@@ -143,8 +143,8 @@
 | `LooperJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Loop` group |
 | `RandomJuiceComp` | `JuiceBase` | ➖ | Absorbed into `SequenceType.RANDOM` |
 | `PauseJuiceComp` | `PauseJuiceEffect` | ❌ | Port pending |
-| NEW | `TriggerStackJuiceEffect` | ➖ | Native logic in `Mode.STACK` |
-| NEW | `TriggerSequencerJuiceEffect` | ➖ | Native logic in `Mode.SEQUENCER` |
+| NEW | `TriggerStackJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
+| NEW | `TriggerSequencerJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
 
 ## Meta Effects (5 — includes 3 NEW)
 
@@ -174,19 +174,16 @@
 
 ## Editor Tooling
 
-> **Transport + Camera/Screen preview — known gap:** Camera and Screen effects are guarded by `Engine.is_editor_hint()` at runtime to prevent scene dirtying (Camera) and editor-UI overlays (Screen). This means neither can be previewed via the editor transport today.
->
-> **Planned fix (Transport port):** The editor preview transport should:
-> 1. **Camera** — temporarily inject a `CameraJuiceUtility` onto the viewport's active camera before preview, and remove it on transport stop — never saved to scene.
-> 2. **Screen** — temporarily bootstrap a `CanvasLayer`+`ScreenJuiceUtility` inside the editor's SubViewport (not `SceneTree.root`) before preview, and clean up on stop.
-> 3. **JuiceEditorContext** — Utilize the newly created `JuiceEditorContext` (V1.0) to hold references to these injected preview nodes safely decoupled from the resources.
->
-> Do NOT implement this workaround inside the effects themselves — the transport owns this lifecycle.
+> **Transport + Camera/Screen preview — implemented (2026-04-29):**
+> `JuicePreviewDirector.play()` / `play_in()` / `play_out()` now call `_bootstrap_preview_utilities()`, which:
+> - **Camera:** finds the active Camera2D or Camera3D in the primary node's viewport and pre-places a `CameraJuiceUtility` on it (`owner=null` → not serialized). The effect's `_find_or_create_utility()` now checks for an existing utility *before* the `is_editor_hint()` bail, so it finds the Director-placed one without self-bootstrapping.
+> - **Screen:** bootstraps `ScreenJuiceUtility` + `CanvasLayer` inside `EditorInterface.get_editor_viewport_2d()` (not `SceneTree.root`) and sets the static `instance`. The effect already checks `instance` first, so it finds it automatically.
+> Both are freed by `_cleanup_preview_utilities()` on every `stop()` / `deselect()`. `owner=null` means the serializer never sees them — scene cannot be dirtied.
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `JuicePreviewDirector` | TBD | ❌ | — | — |
-| `juice_plugin.gd` | `juice_plugin.gd` | 🔧 Basic registration | — | — |
+| `JuicePreviewDirector` | `JuicePreviewDirector` + `juice_plugin.gd` | 🧪 | `TestTransport` (31 tests) | 2026-04-27 |
+| `juice_plugin.gd` | `juice_plugin.gd` | 🧪 | Transport UI: play/stop/loop/scrub/sustained-warning | 2026-04-27 |
 
 ---
 
@@ -197,6 +194,8 @@
 | Effects | ~43 | 30 | 7 | 1 | 2 | 12 |
 | Utilities | ~10 | 9 | 0 | 1 | 1 | 0 |
 | Infrastructure | 4 | 4 | 0 | 0 | 0 | 0 |
-| **Total** | **~57** | **43** | **7** | **2** | **3** | **12** |
+| Editor Tooling | 2 | 0 | 2 | 0 | 0 | 0 |
+| **Total** | **~59** | **43** | **9** | **2** | **3** | **12** |
 
-> **Last updated:** 2026-04-23 — Property family (Interpolate/Noise/Shake) ported, unit tests passing (24/24), UX polish in progress. ProgressProperty renamed to PropertyProgress. ShaderProperty absorbed via shader_parameter/ path support.
+> **Last updated:** 2026-04-27 — Editor Transport (`JuicePreviewDirector` + `juice_plugin.gd`) implemented and verified with 31 automated tests. Sequencer replay bug fixed in all 3 exit paths (natural completion, explicit stop, loop boundary). Sustained-effect warning label finalized. Test suite: 498/498 passing.
+

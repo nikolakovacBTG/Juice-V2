@@ -33,6 +33,58 @@ The "RATIONALE:" prefix creates redundancy. The sentence IS the rationale.
 func _on_animate_start(target: Node) -> void:
 ```
 
+## Virtual Hook Implementations (NEW — the biggest gap from the previous sweep)
+
+Virtual hook implementations are methods in concrete effects that override base class hooks.
+They are the connective tissue between the architecture and the domain-specific behavior.
+Without comments, a reader must trace 3 levels of inheritance to understand what calls them and when.
+
+### BAD: No comment at all
+```gdscript
+func _do_capture_base(target: Node) -> void:
+    if _has_base:
+        return
+    var ctrl := target as Control
+    # ...25 lines of ledger reads...
+```
+A developer reading this has no idea when `_do_capture_base` is called, by whom, or why it reads from the ledger instead of directly from the target.
+
+### BAD: Restates the name
+```gdscript
+# Captures base values.
+func _do_capture_base(target: Node) -> void:
+```
+This tells the reader nothing they couldn't see from the function name.
+
+### GOOD: Explains the call chain and the WHY
+```gdscript
+# Called by JuiceControlTransformEffect._on_animate_start when effects start.
+# Captures the natural position/rotation/scale from the JuiceLedger (not the
+# target directly) to get the pre-Juice state even when other effects are active.
+# Skip-guarded: only captures once per animation cycle to prevent mid-animation overwrite.
+func _do_capture_base(target: Node) -> void:
+```
+Now a reader knows: (1) when it's called, (2) why it reads from ledger, (3) why the skip guard exists.
+
+### BAD: Fabricated comment (doesn't match the code)
+```gdscript
+# Captures the current position from the target node.
+func _capture_from_self_position_snapshot(target: Node) -> void:
+    # Actually reads from ledger, falls back to editor cache...
+```
+This comment is WRONG — the method doesn't read from the target node directly. It reads from the ledger with an editor-cache fallback. A wrong comment is worse than no comment.
+
+### GOOD: Honest description of the actual behavior
+```gdscript
+# Called during _on_animate_start when from_reference == SELF.
+# Captures the starting position using the ledger's natural state to avoid
+# reading dirty values from other active effects. Falls back to the baked
+# editor cache when no ledger entry exists (rare — only before first ready).
+func _capture_from_self_position_snapshot(target: Node) -> void:
+```
+
+## History References
+
 ### BAD: History reference
 ```gdscript
 ## Mirrors V0's direct-apply pattern: initialises effects on first call, then
@@ -59,31 +111,6 @@ Same technical content, zero historical baggage.
 # Sibling stacking with metadata-based natural base capture
 ```
 
-### BAD: Phase-tagged TODO
-```gdscript
-# TODO(phase-4): Absorb META_KEY into JuiceLedger
-```
-
-### GOOD: Clean TODO
-```gdscript
-# TODO: Absorb META_KEY into JuiceLedger
-```
-
-### OK: Sequential algorithm steps (not dev phases)
-```gdscript
-# Step 1: Start async loading
-# Step 2: Cover with transition effect
-# Step 3: Execute scene action
-```
-These describe the *algorithm flow*, not the *development timeline* — perfectly fine.
-
-### SKIP: Self-documenting
-```gdscript
-# No comment needed — the name, return type, and body tell the full story.
-func _needs_sustain() -> bool:
-    return true
-```
-
 ## Class Tooltips
 
 ### BAD: Generic filler
@@ -108,6 +135,22 @@ func _needs_sustain() -> bool:
 ```gdscript
 ## Seconds for the animate_in phase. Applies the configured easing curve over this duration.
 @export var duration_in: float = 0.3
+```
+
+## Self-Documenting (SKIP)
+
+### No comment needed — the name, return type, and body tell the full story.
+```gdscript
+func _needs_sustain() -> bool:
+    return true
+```
+
+### No comment needed — obvious reset-to-defaults.
+```gdscript
+func _clear_from_editor_cache_typed() -> void:
+    _from_editor_cached_position = Vector2.ZERO
+    _from_editor_cached_rotation = 0.0
+    _from_editor_cached_scale = Vector2.ONE
 ```
 
 ## TODO Triage

@@ -66,10 +66,21 @@ Read: .agents/rules/add-logging-rule.md
 
 ## Step 2.5: Pre-Implementation Design (MANDATORY — Do Not Skip)
 
-For **each file** in the batch, produce both artifacts from:
+For **each file** in the batch, produce all three of the following **before opening the
+file to edit**. They cannot be faked without reading the code — that is the point.
+
+**0. Contract + Chain (write this first, before Artifacts 1 and 2):**
 ```
-@juice-debug-logging QUALITY_GATE.md § MANDATORY: Pre-Implementation Design
+CONTRACT: [one sentence — what it computes, what goes in, what comes out]
+
+CHAIN:
+  [input_stage(key_vars)]
+    → [stage_name(key_vars)]
+    → [stage_name(key_vars)]
+    → [output_channel]
 ```
+For effect families, use the chain maps in `@juice-logging-upgrade SKILL.md §
+Per-Family Chain Reference` as a starting point — then verify against the actual code.
 
 **Artifact 1 — Config Variable Map:** List every `@export var` and config variable by
 exact GDScript name. Assign each to a chain stage, ROUTING, SIDE_EFFECT, or UNUSED.
@@ -79,11 +90,10 @@ Every variable mapped to a computation stage must appear in `log_capture`.
 before writing any `log_capture` or `log_delta` call. Real key names, realistic values.
 The implementation must match this template — it is the spec.
 
-These artifacts cannot be faked without reading the code. That is the point.
-
 **LOG_POINTS.md (Step 2) tells you WHERE to log.
-Artifact 1 and 2 tell you WHAT the payload must contain.**
-Both are required. Neither replaces the other.
+Contract+Chain tells you WHAT the chain IS.
+Artifacts 1 and 2 tell you WHAT the payload must contain.**
+All three are required. None replaces the others.
 
 ---
 
@@ -113,29 +123,79 @@ For each `if debug_enabled: print(...)` found in the batch files:
 3. Add new logging calls at insertion points from LOG_POINTS.md
 4. Ensure `_get_domain_tag()` is implemented (for effect classes)
 
-4c. Follow `/code` workflow rules for all changes (header comments, inspector config, etc.)
+4c. **Silent returns:** Add `warn()` only on **unexpected** silent returns — returns that
+represent a configuration error or impossible state. Normal animation behavior
+(e.g. fade-out reaching `intensity=0.0`, hold phase active) must **NOT** warn.
+Silent bail-outs that represent bugs in user setup always get a `warn()`.
+
+4d. **Intermediate stages:** Every chain stage from the Contract+Chain map that is
+computed then discarded must appear in a `log_delta` before its result is used.
+Do not log only input and output — the intermediate is where bugs live.
+
+4e. **Interpolation effects:** Log `desired_absolute` AND `delta` together. If desired
+is correct but delta is wrong, the bug is in base-value capture — without both
+values you cannot distinguish the two failure modes.
+
+4f. **`_restore_to_natural`:** Every effect must log what it cleared and the value
+written back. Failure to reset is the #1 undiagnosable marketplace bug class.
+
+4g. Follow `/code` workflow rules for all changes (header comments, inspector config, etc.)
 
 ---
 
-## Step 5: Verify
+## Step 5a: Evidence Collection (MANDATORY — cannot be skipped)
+
+The Completeness Test in Step 5b requires real log output. Code reasoning is not permitted.
+
+**1. Clear the log file first:**
+```powershell
+Remove-Item "C:\Users\nikol\AppData\Roaming\Godot\app_userdata\Juice Demo\juice_debug.log" -ErrorAction SilentlyContinue
+```
+
+**2. Run the test suite (all suites, or a family filter if the batch is a single family):**
 
 // turbo
-5a. Run the test suite:
 ```powershell
 cmd /c "D:\Godot_projekti\juice-demo\tests\run_tests.bat"
 ```
+For single-family batches use `-- --suite=<family>` (e.g. `--suite=shake`).
+The `--suite` filter uses partial matching — `shake` matches Control, 2D, and 3D in one run.
 
-5b. If failures: fix before proceeding. Do NOT move to the next batch with failing tests.
+**3. Read the log and filter to the instrumented family:**
+```powershell
+Get-Content "C:\Users\nikol\AppData\Roaming\Godot\app_userdata\Juice Demo\juice_debug.log" | Select-String "\[FamilyTag\]"
+```
 
-5c. Apply the **Completeness Test** from [QUALITY_GATE.md](.agents/skills/juice-debug-logging/QUALITY_GATE.md)
-§ Post-Implementation. Answer all three questions from the log output alone (no source code):
+**4. Paste the relevant lines** — the lifecycle `log_capture` and at least 3 consecutive
+per-frame `log_delta` lines from each domain tested (Control, 2D, 3D where applicable).
+
+Do not proceed to Step 5b without quoted log lines in hand.
+
+---
+
+## Step 5b: Completeness Test
+
+Answer these three questions **by quoting specific lines from the log output obtained
+in Step 5a**. Answering from code reasoning is self-certification and is invalid.
 
 > **1. Wrong output:** Can you find where in the chain actual diverged from expected?
+>    → Quote the `log_delta` line(s) that would expose the divergence.
+>
 > **2. No output:** Can you find which early return fired?
+>    → Quote the `warn()` line, or the absence of `log_delta` lines as evidence.
+>
 > **3. Reconstruction:** Can you reconstruct the full computation from lifecycle log + 10 per-frame lines?
+>    → Quote the `log_capture` line and at least 3 consecutive `log_delta` lines.
 
-All three must be **YES** before the batch is marked done. If any is **NO**, a chain stage
-is missing — return to Step 4.
+All three must be **YES** before the batch is marked done. If any requires reasoning
+rather than quoting → a stage is missing. Return to Step 4.
+
+---
+
+## Step 5c: Fix Test Failures
+
+If any test suite failures were found in Step 5a: fix before proceeding.
+Do NOT move to the next batch with failing tests.
 
 ---
 

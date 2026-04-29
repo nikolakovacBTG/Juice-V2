@@ -71,6 +71,8 @@ func _ready() -> void:
 # =============================================================================
 
 func _register_suites() -> void:
+	# --- Plugin compile check FIRST: catches parse errors before any logic tests ---
+	_suites.append(load("res://tests/suites/TestPluginScripts.gd").new())
 	# --- Add new test suites here ---
 	_suites.append(load("res://tests/suites/TestJuiceLedger.gd").new())
 	_suites.append(load("res://tests/suites/TestNodeProperties.gd").new())
@@ -102,6 +104,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestIntegrationDemoSequencer.gd").new())
 	_suites.append(load("res://tests/suites/TestCameraJuice.gd").new())
 	_suites.append(load("res://tests/suites/TestScreenJuice.gd").new())
+	_suites.append(load("res://tests/suites/TestTransport.gd").new())
 
 	# Apply suite filter
 	if not _suite_filter.is_empty():

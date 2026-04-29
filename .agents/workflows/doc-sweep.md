@@ -23,9 +23,11 @@ If you skip any of these steps, you WILL drift into filler comments. This is not
 
 ## Step 1: Identify the Batch
 
-The user will specify which files to work on, OR you select the next `TODO` files from the tracker.
+The user will specify which files to work on, OR you select the next `STRUCTURAL` or `TODO` files from the tracker.
 
-**Batch size:** Maximum 5 files per invocation.
+**Batch size:** Maximum 3 files per invocation.
+
+Why 3, not 5? Method comprehension requires genuine engagement with each file's architecture. 3 files done well beats 5 files done mechanically. If a file is particularly complex (>40 methods), it counts as 2.
 
 **Never** start a file you can't finish in this session. If unsure, do fewer files.
 
@@ -35,27 +37,37 @@ The user will specify which files to work on, OR you select the next `TODO` file
 
 For each file in the batch:
 
-### 2a. Read the Entire File
-Open and read the full file. Understand its role in the architecture before writing a single comment.
+### 2a. Read the Entire File AND Its Base Class
+Open and read the full file. If it extends a base class with virtual hooks, also read the base class to understand the call chain. You must understand:
+- What calls this class's methods
+- What data flows through them
+- How they connect to the broader animation lifecycle
 
-### 2b. Apply the Decision Tree
+### 2b. Pass the Comprehension Gate (Phase B0)
+Before writing any method comments, write a brief comprehension statement for your batch report:
+- What base class does this extend?
+- What virtual hooks does it implement?
+- When are this file's key methods called?
+
+### 2c. Apply the Decision Tree + Triage Table (Phase B1)
 For each method, apply the `@doc-sweep` decision tree:
 - Self-documenting? → SKIP
 - Boilerplate? → SKIP
 - Public API? → `##` comment required
+- Virtual hook implementation? → `#` or `##` required (WHEN called + WHAT it does here)
 - Architecturally significant private method? → `#` comment required
 - Trivial helper? → SKIP or one-liner max
 
-### 2c. Check Exports
-Every `@export var` must have a `##` tooltip above it.
+Record your triage decisions in a table for the batch report. This is how we verify every method was consciously considered.
 
-### 2d. Check Class Tooltip
-First line of file must be `## Action-oriented sentence.`
+### 2d. Write Comments (Phase B2-B3)
+Write the comments for methods marked DOCUMENT.
 
-### 2e. Sanitize History
-Search for V0, V1, migration, ported, refactor references.
-- Translate useful ones to pure rationale
-- Delete empty ones
+### 2e. Check Structural Items (Phase A — if not already STRUCTURAL)
+- Class tooltip: first line must be `## Action-oriented sentence.`
+- Export tooltips: every `@export var` must have `##`
+- History: sanitize V0/V1/migration/phase references
+- TODO triage: check for stale/valid TODOs
 
 ### 2f. Edit Using Editor Tools ONLY
 **NEVER** use PowerShell/bash to write `.gd` files.
@@ -70,8 +82,9 @@ Run `@doc-sweep` → [VALIDATION/post-edit-check.md](../skills/doc-sweep/VALIDAT
 ## Step 3: Update Tracker
 
 After each file is complete, update `Documentation/doc_sweep_tracker.md`:
-- Change status from `TODO` to `DONE`
-- Add a brief note of what was done (e.g., "3 method comments, 2 export tooltips, 1 history cleanup")
+- Change status to `DONE` (both phases complete)
+- Add a brief note summarizing what was done
+- Include the count of methods triaged and methods documented
 
 ---
 
@@ -79,9 +92,11 @@ After each file is complete, update `Documentation/doc_sweep_tracker.md`:
 
 After completing all files in the batch, present:
 
-1. **Files completed** — list with one-line summary each
-2. **Judgment calls** — any methods you deliberately SKIPPED and why
-3. **Remaining work** — how many files left in tracker
+1. **Comprehension statements** — your B0 answers for each file (proves understanding)
+2. **Triage tables** — your B1 method decisions for each file (proves every method was considered)
+3. **Files completed** — list with one-line summary each
+4. **Judgment calls** — any methods you deliberately SKIPPED and why
+5. **Remaining work** — how many files left in tracker
 
 Then STOP and wait for user review before starting the next batch.
 
@@ -89,11 +104,13 @@ Then STOP and wait for user review before starting the next batch.
 
 ## Anti-Drift Rules
 
+- **Do NOT write comments for methods you haven't traced through the call chain**
 - **Do NOT invent comment prefixes** (RATIONALE:, PURPOSE:, NOTE:, etc.)
 - **Do NOT add comments that just restate the function name**
 - **Do NOT batch-spray identical comment patterns across methods**
 - **Do NOT use PowerShell to write .gd files** (causes editor desync)
 - **Do NOT modify existing good comments** — if it works, leave it alone
+- **Do NOT mark a file DONE if you only did Phase A (structural)**
 - **Do NOT continue to the next batch without user approval**
 
 ---
@@ -103,10 +120,10 @@ Then STOP and wait for user review before starting the next batch.
 The tracker file (`Documentation/doc_sweep_tracker.md`) uses this format:
 
 ```markdown
-| File | Status | Notes |
-|------|--------|-------|
-| `Base Classes/JuiceBase.gd` | DONE | 6 methods, 2 exports, 1 history |
-| `Control/TransformControlJuiceEffect.gd` | TODO | — |
+| File | Phase A | Phase B | Status | Notes |
+|------|---------|---------|--------|-------|
+| `Base Classes/JuiceBase.gd` | ✅ | ✅ | DONE | 45/73 methods documented, 28 deliberately skipped (boilerplate/trivial) |
+| `Control/TransformControlJuiceEffect.gd` | ✅ | ❌ | STRUCTURAL | Headers/exports clean. 35 methods need triage. |
 ```
 
-Statuses: `TODO`, `IN PROGRESS`, `DONE`, `SKIP` (file has no methods or is auto-generated)
+Statuses: `TODO`, `STRUCTURAL`, `IN PROGRESS`, `DONE`, `SKIP`, `BLOCKED`
