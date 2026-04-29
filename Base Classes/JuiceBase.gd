@@ -370,6 +370,11 @@ var _loop_delay_elapsed: float = 0.0
 # Queued trigger for RetriggerPolicy.QUEUE
 var _queued_trigger: Dictionary = {}
 
+# True while the Preview Director has this node in editor preview mode.
+# Set by _enter/_exit_editor_preview(). Used to prevent _ready() from
+# short-circuiting in editor and to gate preview-only code paths.
+var _editor_preview_active: bool = false
+
 # --- Sequencer-specific state (SEQUENCER mode only) ---
 
 # Coroutine generation counter. Incremented on stop() and new sequence starts.
@@ -525,7 +530,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if Engine.is_editor_hint():
+	# Block editor-mode ticking unless this node is actively being previewed
+	# by the transport director. _editor_preview_active is set by
+	# _enter_editor_preview() and cleared by _exit_editor_preview().
+	if Engine.is_editor_hint() and not _editor_preview_active:
 		return
 
 	# --- SEQUENCER mode: tick per-target effects ---
@@ -771,6 +779,156 @@ func set_external_progress(value: float) -> void:
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"External progress=%.3f (initialized=%s)" % [value, _external_progress_initialized],
 			debug_enabled)
+
+# =============================================================================
+# EDITOR PREVIEW API
+# =============================================================================
+
+## Enter editor preview mode. Called by the Preview Director when this node is
+## selected for in-editor animation previewing.
+##
+## Resolves the target node, captures base values, and initializes runtime
+## effects so the node is ready for play/scrub without running the game.
+func _enter_editor_preview() -> void:
+	if _editor_preview_active:
+		return
+	_editor_preview_active = true
+
+	if mode == Mode.SEQUENCER:
+		# SEQUENCER mode has no single target node — it resolves per-target dynamically
+		# each time animate_in() fires. We cannot resolve a target here, but we CAN
+		# clone the runtime effects and set the preview flag so the transport's
+		# play() button correctly triggers the sequencer's own animate path.
+		_invalidate_runtime_effects()
+		JuiceEditorContext.set_previewing(self, true)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"Entered editor preview (SEQUENCER mode)", debug_enabled)
+		return
+
+	# STACK mode: resolve single target node as normal
+	_target_node = _resolve_target()
+	if _target_node == null:
+		_editor_preview_active = false
+		return
+
+	# Capture base values (domain subclasses: position, rotation, scale)
+	_capture_base_values()
+
+	# Clone recipe effects into _runtime_effects for independent state
+	_invalidate_runtime_effects()
+
+	# Initialize effects with target (call _on_host_ready so From/To capture works)
+	for effect in _runtime_effects:
+		if effect != null:
+			effect._on_host_ready(_target_node, self)
+
+	# Register with JuiceEditorContext for smart selection discovery
+	JuiceEditorContext.set_previewing(self, true)
+
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Entered editor preview | target='%s' | effects=%d" % [
+			_target_node.name, _runtime_effects.size()],
+			debug_enabled)
+
+
+## Exit editor preview mode. Called by the Preview Director when this node is
+## deselected or the transport is closing.
+##
+## Stops all effects, restores target to natural state, and cleans up runtime
+## clones so no preview artifacts leak into the scene.
+func _exit_editor_preview() -> void:
+	if not _editor_preview_active:
+		return
+
+	if mode == Mode.SEQUENCER:
+		# SEQUENCER cleanup: stop the sequence if running, clear runtime state
+		if _is_playing:
+			stop()
+		_editor_preview_active = false
+		_runtime_effects.clear()
+		_active_effect_indices.clear()
+		JuiceEditorContext.set_previewing(self, false)
+		JuiceLogger.log_info(self, _get_domain_tag(),
+				"Exited editor preview (SEQUENCER mode)", debug_enabled)
+		return
+
+	# STACK mode: stop all effects and restore natural state
+	if _is_playing:
+		stop()
+	else:
+		# Even if not playing (paused, scrubbed), undo any visual contribution
+		_temporarily_undo_visual()
+		_post_tick_write()
+
+	_editor_preview_active = false
+	_target_node = null
+	_runtime_effects.clear()
+	_active_effect_indices.clear()
+
+	# Unregister from JuiceEditorContext
+	JuiceEditorContext.set_previewing(self, false)
+
+	JuiceLogger.log_info(self, _get_domain_tag(),
+			"Exited editor preview", debug_enabled)
+
+
+## Whether this node supports editor preview.
+## Returns true if the node has a valid recipe with at least one effect.
+## SceneAction utilities override this to return false.
+func _supports_editor_preview() -> bool:
+	if recipe == null:
+		return false
+	for effect in recipe.effects:
+		if effect != null:
+			return true
+	return false
+
+
+## Whether any effects are currently playing.
+func is_playing() -> bool:
+	return _is_playing
+
+
+## Get the total preview duration for the scrub slider range.
+## Accounts for node_start_delay and the longest effect in the recipe.
+func get_total_preview_duration() -> float:
+	var base_dur := 0.0
+	if recipe != null:
+		base_dur = recipe.get_total_preview_duration()
+	return base_dur + start_delay
+
+
+## Scrub all effects to a specific wall-clock time.
+## Each effect maps the time to its own progress using get_progress_at_time(),
+## which accounts for start_delay, duration_in, hold_at_peak, duration_out, and easing.
+## Called by the Preview Director when the user drags the scrub slider.
+func scrub_to_time(time: float) -> void:
+	if _target_node == null or _runtime_effects.is_empty():
+		return
+
+	# Subtract node-level start_delay from the wall-clock time
+	var effect_time := maxf(time - start_delay, 0.0)
+
+	# Initialize effects on first scrub if not yet started
+	if not _external_progress_initialized:
+		_external_progress_initialized = true
+		_temporarily_undo_visual()
+		for effect in _runtime_effects:
+			if effect != null:
+				effect._ledger_base_snapshot = JuiceLedger.get_base_dict(_target_node)
+				effect._on_animate_start(_target_node)
+		_temporarily_reapply_visual()
+
+	# Set per-effect progress based on wall-clock time
+	for effect in _runtime_effects:
+		if effect != null:
+			var progress := effect.get_progress_at_time(effect_time)
+			effect.set_progress(progress, _target_node)
+
+	# Flush stacked deltas to target
+	_pre_tick()
+	_post_tick_write()
+
 
 # =============================================================================
 # TRIGGER HANDLING
@@ -1141,6 +1299,12 @@ func _seq_stop() -> void:
 			var effect: JuiceEffectBase = effect_variant as JuiceEffectBase
 			if effect != null and effect.is_playing() and target != null:
 				effect.stop(target)
+	# Clear the clone cache so the next play creates fresh effects.
+	# Without this, stop-then-replay and mid-loop-stop-then-replay reuse stale
+	# clones with _has_base=true, causing the next animate_in to snap instead
+	# of animate. Natural completion clears the cache in _seq_on_pass_complete;
+	# explicit stop must do the same here.
+	_seq_target_effects.clear()
 
 	set_process(false)
 
@@ -1583,12 +1747,24 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 				await get_tree().create_timer(loop_delay).timeout
 				if _seq_generation != my_gen:
 					return
-			# Restart from the initial trigger direction
+			# Clear the clone cache before each loop restart — same reason as _seq_stop:
+			# effect clones carry _has_base=true from the completed iteration. Reusing
+			# them causes warmup to compute a stale FROM delta (post-animation position),
+			# snapping targets to TO on the first frame of the new iteration.
+			_seq_target_effects.clear()
 			_seq_start_sequence(_seq_initial_reverse)
 			return
 
 	# --- Sequence fully complete ---
 	_is_playing = false
+	# Drop the per-target clone cache so the next play creates fresh effects.
+	# The cache is a live-session resource — effect clones accumulate base-capture
+	# state (_has_base=true) during a run. Keeping them alive across plays causes
+	# subsequent animate_in() calls to snap rather than animate, because
+	# _on_animate_start skips re-capture when _has_base is already set.
+	# Internal loops are safe: they call _seq_start_sequence() and return before
+	# reaching this block, so the cache stays live for the full loop session.
+	_seq_target_effects.clear()
 
 	JuiceLogger.log_info(self, _get_domain_tag(), "Seq fully complete", debug_enabled)
 

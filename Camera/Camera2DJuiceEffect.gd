@@ -347,10 +347,10 @@ func _find_utility() -> CameraJuiceUtility:
 
 
 # Returns the active Camera2D's utility, creating one if absent.
-# Returns null in editor or if no enabled Camera2D exists in viewport.
+# Fast-path: if a utility already exists (e.g. pre-placed by JuicePreviewDirector
+# for editor preview), return it immediately — even in editor context. The guard
+# below only prevents self-bootstrapping, which would dirty the scene.
 func _find_or_create_utility() -> CameraJuiceUtility:
-	if Engine.is_editor_hint():
-		return null
 	if not is_instance_valid(_host_node):
 		return null
 
@@ -365,10 +365,15 @@ func _find_or_create_utility() -> CameraJuiceUtility:
 				debug_enabled)
 		return null
 
-	# Fast path — utility already exists
+	# Fast path — utility already exists (runtime-bootstrapped or Director-placed for preview)
 	for child in cam.get_children():
 		if child is CameraJuiceUtility:
 			return child
+
+	# Do not self-bootstrap in editor: add_child() would mark the scene dirty.
+	# The Director bootstraps the utility before play() when in editor preview.
+	if Engine.is_editor_hint():
+		return null
 
 	return _bootstrap_utility_on(cam)
 
