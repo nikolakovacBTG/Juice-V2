@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
 [ext_resource type="Script" uid="uid://cpjntnfyohrul" path="res://addons/Juice_V1/Screen/ScreenJuiceEffect.gd" id="10_hbpc2"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
+[ext_resource type="Script" uid="uid://c1jttmr8cpdfm" path="res://addons/Juice_V1/Meta/PauseControlJuiceEffect.gd" id="12_5ihny"]
 [ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="14_6mvn5"]
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
@@ -194,6 +195,50 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://cpjntnfyohrul"
 
+[sub_resource type="Resource" id="Resource_xqd22"]
+script = ExtResource("10_hbpc2")
+channel = 0
+animation_mode = 1
+screen_offset = Vector2(0.02, 0.02)
+offset_unit = 0
+shake_frequency = 8.0
+shake_seed = 0.0
+shake_noise_type = 1
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cpjntnfyohrul"
+
+[sub_resource type="Resource" id="Resource_b3jpr"]
+script = ExtResource("12_5ihny")
+pause_duration = 7.5600000000000005
+use_realtime = false
+duration_in = 7.5600000000000005
+chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
+interrupt_siblings = false
+chained_preroll = 0.0
+debug_enabled = false
+duration_in = 7.5600000000000005
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
+interrupt_siblings = false
+chained_preroll = 0.0
+debug_enabled = false
+metadata/_custom_type_script = "uid://c1jttmr8cpdfm"
+
 [sub_resource type="Resource" id="Resource_gyyga"]
 script = ExtResource("10_ntvx2")
 transform_target = 0
@@ -213,7 +258,7 @@ duration_in = 0.3
 transition_in = 9
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_uae5o")])
+chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_b3jpr")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
@@ -222,7 +267,7 @@ metadata/_custom_type_script = "uid://bf43e3idc17tt"
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_uae5o")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_b3jpr"), SubResource("Resource_xqd22"), SubResource("Resource_xqd22")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_c2ixe"]
@@ -363,6 +408,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0)
 }
 }
@@ -383,6 +429,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0)
 }
 }
@@ -403,6 +450,7 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890641321343: Vector2(0, 0),
 1899533245809: Vector2(0, 0)
 }
 }
@@ -426,16 +474,21 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "position": {
+1890641321343: Vector2(0, 0),
+1891345964408: Vector2(0, 0),
 1899482914158: Vector2(0, 0),
 1899533245809: Vector2(0, 0)
 },
 "rotation": {
+1891345964408: 0.0,
 1899482914158: 0.0
 },
 "scale": {
+1891345964408: Vector2(0, 0),
 1899482914158: Vector2(0, 0)
 },
 "self_modulate": {
+1891345964408: Color(1, 1, 1, 1),
 1899482914158: Color(1, 1, 1, 1)
 }
 }

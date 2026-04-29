@@ -7,7 +7,7 @@ You are in PORT MODE.
 This workflow ports a V0 Juice effect (comp) to V1 architecture (resource-based effect).
 It enforces **strict sequential domain porting** (2D → Control → 3D) to prevent context overflow and ensure quality.
 
-**Skills auto-invoked:** `@juice-architecture`, `@unit-test-patterns`, `@verify-claims`
+**Skills auto-invoked:** `@juice-architecture`, `@unit-test-patterns`, `@verify-claims`, `@doc-sweep`, `@juice-debug-logging`
 
 **Parent workflow:** `/architecture`
 
@@ -154,14 +154,55 @@ This verifies the effect works in real-world scenarios (stacking, containers, se
 
 ---
 
-## Step 6: Commit + Update Tracker
+## Step 6: Documentation Sweep
+
+Invoke `@doc-sweep` on every newly created effect and test file.
+Do this **before committing** — the commit should include polished docs, not a TODO.
+
+For each file created in Steps 2–4:
+```
+Apply: @doc-sweep
+Targets: all new addons/Juice_V1/ scripts for this port
+```
+
+The sweep must verify:
+- Class tooltip (`##` first line) — concise, action-oriented
+- `@export` property tooltips (`##` above each export)
+- `## Above public func` doc for every public method
+- `## Above virtual func` doc for every override point
+- No migration history comments ("V0", "ported", "refactor") remain
+- WHAT/WHY/SYSTEM/DOES NOT header block is accurate and complete
+
+---
+
+## Step 7: Debug Logging
+
+Invoke `@juice-debug-logging` on every newly created effect file.
+Do this **before committing** — logging must ship with the effect, not be retrofitted.
+
+For each new effect script:
+```
+Apply: @juice-debug-logging
+Targets: all new addons/Juice_V1/ effect scripts for this port
+```
+
+Mandatory pre-implementation protocol (from QUALITY_GATE.md):
+1. **State the contract** — what invariants this effect guarantees
+2. **Map the chain** — list every method in call order that needs a log point
+3. **Audit coverage** — confirm animate_start, delta compute, and animate_complete are covered
+
+Then instrument. Skipping the protocol produces mechanical logging — that is a defect.
+
+---
+
+## Step 8: Commit + Update Tracker
 
 ```powershell
-cd "[PROJECT_ROOT]"; git add -A; git commit -m "Port [EffectName] effect to V1 — all domains + tests"
+cd "[PROJECT_ROOT]"; git add -A; git commit -m "Port [EffectName] effect to V1 — all domains + tests + docs + logging"
 ```
 
 Update `Documentation/Port_Master_Tracker.md`:
-- Set status to ✅ for all 3 domain variants
+- Set status to ✅ for all ported domain variants
 - Add test file references
 - Update the date
 
@@ -185,5 +226,7 @@ Report completion to user using this exact format:
 **Domain-specific adaptations made:** 
 - Control: [list]
 - 3D: [list]
+**Doc sweep:** ✅ All new scripts swept
+**Debug logging:** ✅ Contract/Chain/Coverage protocol applied
 **Port Master Tracker:** Updated
 ```

@@ -142,7 +142,7 @@
 | `SequencerJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Mode.SEQUENCER` |
 | `LooperJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Loop` group |
 | `RandomJuiceComp` | `JuiceBase` | ➖ | Absorbed into `SequenceType.RANDOM` |
-| `PauseJuiceComp` | `PauseJuiceEffect` | ❌ | Port pending |
+| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control|2D|3D}JuiceEffect` | ✅ | `TestPauseEffect` | 2026-04-29 |
 | NEW | `TriggerStackJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
 | NEW | `TriggerSequencerJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
 
@@ -154,6 +154,7 @@
 | NEW | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
 | NEW | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
 | `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffectBase` + `PropertyProgress{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
+| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control\|2D\|3D}JuiceEffect` | ✅ | `TestPauseEffect` | 2026-04-29 |
 
 > **Inspector note (2026-04-17):** SignalEmit + CallMethod refactored — single "Trigger" group, crossfade_time hidden (no-op for meta effects), icons corrected (JuiceUtilitySignals / JuiceUtilityMethods / JuiceUtilityTimeCoord). Time2D/3D icons also corrected to JuiceUtilityTimeCoord.
 
