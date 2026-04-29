@@ -12,8 +12,6 @@
 #       Auto-bootstrap means zero configuration — just drop the effect and go.
 # SYSTEM: Juice System (addons/Juice_V1/Screen/)
 # DOES NOT: Animate the JuiceBase target node — writes to ScreenJuiceUtility only.
-# DOES NOT: Preview in editor — ScreenJuiceUtility is runtime-only.
-#           Transport preview will be addressed during the Editor Transport port.
 #
 # SETUP: None. The effect auto-bootstraps ScreenJuiceUtility at runtime.
 #        Place ScreenJuiceUtility manually only for custom layer/shader control.
@@ -545,11 +543,13 @@ func _find_utility() -> ScreenJuiceUtility:
 
 # Returns the utility, bootstrapping one at SceneTree.root if not present.
 # Returns null in editor (would overlay Godot's own UI) or if tree unavailable.
+# Director-placed instance check runs first: if the transport bootstrapped a utility
+# before the preview tick, we use it directly — editor guard skipped intentionally.
 func _find_or_create_utility() -> ScreenJuiceUtility:
-	if Engine.is_editor_hint():
-		return null
 	if is_instance_valid(ScreenJuiceUtility.instance):
 		return ScreenJuiceUtility.instance
+	if Engine.is_editor_hint():
+		return null
 	return _bootstrap_utility()
 
 
