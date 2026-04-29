@@ -57,6 +57,7 @@ transition_out = 4
 ease_out = 0
 chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
+chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
 
@@ -93,6 +94,7 @@ transition_out = 4
 ease_out = 0
 chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
+chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
 
@@ -129,6 +131,7 @@ transition_out = 4
 ease_out = 0
 chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
+chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
 
@@ -163,6 +166,7 @@ transition_out = 4
 ease_out = 0
 chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
+chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bh4tgf0c85bbh"
 
@@ -173,29 +177,6 @@ effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ve81s")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_uae5o"]
-script = ExtResource("10_hbpc2")
-channel = 6
-animation_mode = 0
-chromatic_amount = 0.008
-chromatic_mode = 0
-use_vignette = false
-trigger_behaviour = 0
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-duration_out = 0.1
-transition_out = 4
-ease_out = 0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cpjntnfyohrul"
-
-[sub_resource type="Resource" id="Resource_xqd22"]
 script = ExtResource("10_hbpc2")
 channel = 0
 animation_mode = 1
@@ -220,19 +201,33 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://cpjntnfyohrul"
 
-[sub_resource type="Resource" id="Resource_b3jpr"]
-script = ExtResource("12_5ihny")
-pause_duration = 7.5600000000000005
-use_realtime = false
-duration_in = 7.5600000000000005
-chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
-interrupt_siblings = false
-chained_preroll = 0.0
-debug_enabled = false
-duration_in = 7.5600000000000005
+[sub_resource type="Resource" id="Resource_xqd22"]
+script = ExtResource("10_hbpc2")
+channel = 6
+animation_mode = 0
+chromatic_amount = 0.008
+chromatic_mode = 0
+use_vignette = false
+trigger_behaviour = 0
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
 transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
+duration_out = 0.3
+transition_out = 4
+ease_out = 0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://cpjntnfyohrul"
+
+[sub_resource type="Resource" id="Resource_b3jpr"]
+script = ExtResource("12_5ihny")
+pause_duration = 2.0
+use_realtime = false
 chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
 interrupt_siblings = false
 chained_preroll = 0.0
@@ -267,7 +262,7 @@ metadata/_custom_type_script = "uid://bf43e3idc17tt"
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_b3jpr"), SubResource("Resource_xqd22"), SubResource("Resource_xqd22")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_b3jpr"), SubResource("Resource_uae5o"), SubResource("Resource_xqd22")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="Resource" id="Resource_c2ixe"]
@@ -409,7 +404,8 @@ metadata/juice_active_ledger = {
 "deltas": {
 "position": {
 1890641321343: Vector2(0, 0),
-1899533245809: Vector2(0, 0)
+1899533245809: Vector2(0, 0),
+1902821580157: Vector2(0, 0)
 }
 }
 }
@@ -430,7 +426,8 @@ metadata/juice_active_ledger = {
 "deltas": {
 "position": {
 1890641321343: Vector2(0, 0),
-1899533245809: Vector2(0, 0)
+1899533245809: Vector2(0, 0),
+1902821580157: Vector2(0, 0)
 }
 }
 }
@@ -451,7 +448,8 @@ metadata/juice_active_ledger = {
 "deltas": {
 "position": {
 1890641321343: Vector2(0, 0),
-1899533245809: Vector2(0, 0)
+1899533245809: Vector2(0, 0),
+1902821580157: Vector2(0, 0)
 }
 }
 }
@@ -477,7 +475,8 @@ metadata/juice_active_ledger = {
 1890641321343: Vector2(0, 0),
 1891345964408: Vector2(0, 0),
 1899482914158: Vector2(0, 0),
-1899533245809: Vector2(0, 0)
+1899533245809: Vector2(0, 0),
+1902821580157: Vector2(0, 0)
 },
 "rotation": {
 1891345964408: 0.0,

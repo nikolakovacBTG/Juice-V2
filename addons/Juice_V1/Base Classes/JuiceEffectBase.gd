@@ -284,10 +284,15 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "interrupt_siblings", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
-	if not chain_to.is_empty():
-		props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_NONE,
-			"usage": PROPERTY_USAGE_DEFAULT})
+	# chained_preroll is always emitted here so it serializes correctly.
+	# Visibility is controlled in _validate_property() which Godot calls reactively
+	# on every inspector edit — unlike _get_property_list() which only re-runs on
+	# notify_property_list_changed(). Typed arrays mutated in-place by the inspector
+	# never trigger that notification, so the old conditional here would leave
+	# chained_preroll visible after removing the last chain_to entry.
+	props.append({"name": "chained_preroll", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_NONE,
+		"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- Debug ---
 	props.append({"name": "Debug", "type": TYPE_NIL,
@@ -296,6 +301,16 @@ func _get_property_list() -> Array[Dictionary]:
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	return props
+
+
+# Hide chained_preroll when chain_to is empty.
+# _validate_property() is called by Godot on every inspector change (including
+# in-place array mutations), so this hides/shows the row immediately without
+# needing notify_property_list_changed() — which typed arrays never trigger on
+# element removal.
+func _validate_property(property: Dictionary) -> void:
+	if property.name == &"chained_preroll" and chain_to.is_empty():
+		property.usage = PROPERTY_USAGE_NONE
 
 
 func _set(property: StringName, value: Variant) -> bool:
