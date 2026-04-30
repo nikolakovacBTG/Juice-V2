@@ -105,34 +105,36 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "vfx_source", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Children,External Scene",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "spawn_offset", "type": TYPE_VECTOR3,
-		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "inherit_rotation", "type": TYPE_BOOL,
-		"usage": PROPERTY_USAGE_DEFAULT})
+
+	# kill_previous and intensity apply to both modes.
 	props.append({"name": "kill_previous_on_trigger", "type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "intensity_multiplier", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,4.0,0.1,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append({"name": "max_living_instances", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0,100,1,or_greater",
-		"usage": PROPERTY_USAGE_DEFAULT})
 
-	if max_living_instances > 0:
-		props.append({"name": "cull_strategy", "type": TYPE_INT,
-			"hint": PROPERTY_HINT_ENUM,
-			"hint_string": "Oldest,Most Progressed,Farthest Camera",
-			"usage": PROPERTY_USAGE_DEFAULT})
-
+	# All remaining settings only apply to EXTERNAL_SCENE mode.
 	if vfx_source == SourceMode.EXTERNAL_SCENE:
-		props.append({"name": "spawn_in_world_space", "type": TYPE_BOOL,
-			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "vfx_scene", "type": TYPE_OBJECT,
 			"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "PackedScene",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "spawn_offset", "type": TYPE_VECTOR3,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "inherit_rotation", "type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "spawn_in_world_space", "type": TYPE_BOOL,
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "auto_free_delay", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,30.0,0.1",
 			"usage": PROPERTY_USAGE_DEFAULT})
+		props.append({"name": "max_living_instances", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0,100,1,or_greater",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		if max_living_instances > 0:
+			props.append({"name": "cull_strategy", "type": TYPE_INT,
+				"hint": PROPERTY_HINT_ENUM,
+				"hint_string": "Oldest,Most Progressed,Farthest Camera",
+				"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append_array(_get_effect_base_properties())
 	return props
@@ -327,11 +329,18 @@ func _spawn_external_vfx(target: Node) -> void:
 		JuiceLogger.warn(self, _get_domain_tag(), "vfx_scene.instantiate() returned null", debug_enabled)
 		return
 
-	var spawn_parent: Node = (
-		_host_node.get_tree().current_scene if spawn_in_world_space
-		else target.get_parent())
-	if spawn_parent == null:
+	var spawn_parent: Node
+	if spawn_in_world_space:
 		spawn_parent = _host_node.get_tree().current_scene
+	if spawn_parent == null:
+		# current_scene may be null during early scene transitions — fall back to target's parent.
+		spawn_parent = target.get_parent()
+	if spawn_parent == null:
+		# If both are null, we cannot place the instance — log and abort cleanly.
+		JuiceLogger.warn(self, _get_domain_tag(),
+				"spawn_parent is null — cannot add VFX instance to tree", debug_enabled)
+		instance.queue_free()
+		return
 
 	spawn_parent.add_child(instance)
 	_position_instance(instance, target)
@@ -420,7 +429,8 @@ func _position_instance(instance: Node, target: Node) -> void:
 			var ctrl := target as Control
 			i2.global_position = ctrl.global_position + ctrl.size / 2.0 + off2
 			if inherit_rotation:
-				i2.global_rotation = ctrl.global_transform.get_rotation()
+				# Control has no global_transform — use global_rotation directly.
+				i2.global_rotation = ctrl.global_rotation
 
 
 # Hook "finished" signal if available; fall back to a timed callback for auto-free.
