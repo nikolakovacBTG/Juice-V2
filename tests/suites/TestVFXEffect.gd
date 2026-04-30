@@ -228,6 +228,7 @@ func test_external_scene_missing_vfx_scene_does_not_crash() -> void:
 
 func test_cull_strategy_visible_when_max_set() -> void:
 	var effect := VFXJuiceEffect.new()
+	effect.vfx_source = VFXJuiceEffect.SourceMode.EXTERNAL_SCENE
 	effect.max_living_instances = 3
 	var props := effect._get_property_list()
 	var found := false
@@ -235,11 +236,12 @@ func test_cull_strategy_visible_when_max_set() -> void:
 		if p.name == "cull_strategy":
 			found = true
 			break
-	assert_true(found, "cull_strategy visible when max_living_instances > 0")
+	assert_true(found, "cull_strategy visible when EXTERNAL_SCENE and max_living_instances > 0")
 
 
 func test_cull_strategy_hidden_when_max_zero() -> void:
 	var effect := VFXJuiceEffect.new()
+	effect.vfx_source = VFXJuiceEffect.SourceMode.EXTERNAL_SCENE
 	effect.max_living_instances = 0
 	var props := effect._get_property_list()
 	var found := false

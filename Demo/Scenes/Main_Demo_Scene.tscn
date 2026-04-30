@@ -13,13 +13,17 @@
 [ext_resource type="Script" uid="uid://cpjntnfyohrul" path="res://addons/Juice_V1/Screen/ScreenJuiceEffect.gd" id="10_hbpc2"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
 [ext_resource type="Script" uid="uid://c1jttmr8cpdfm" path="res://addons/Juice_V1/Meta/PauseControlJuiceEffect.gd" id="12_5ihny"]
+[ext_resource type="Script" uid="uid://y8nr8f3an3h3" path="res://addons/Juice_V1/Meta/VFXJuiceEffect.gd" id="13_q1ksy"]
 [ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="14_6mvn5"]
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
+[ext_resource type="PackedScene" uid="uid://hmywymxq54gw" path="res://Demo/Scenes/gpu_particles_2d.tscn" id="14_vyqmh"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
+[ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V1/icons/JuiceBase.svg" id="15_ve81s"]
 [ext_resource type="Script" uid="uid://bso8kvx4rdnkp" path="res://addons/Juice_V1/2D/Progress2DJuiceEffect.gd" id="16_gd4to"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="16_w3iwx"]
 [ext_resource type="Script" uid="uid://j5sk1n2mq6qy" path="res://addons/Juice_V1/Meta/InterpolatePropertyTarget.gd" id="17_8wggb"]
 [ext_resource type="Script" uid="uid://bv23ao6ea320w" path="res://addons/Juice_V1/Meta/InterpolateProperty2DJuiceEffect.gd" id="18_5ihny"]
+[ext_resource type="Script" uid="uid://dni12p84dccqt" path="res://addons/Juice_V1/Meta/TrailJuiceEffect.gd" id="21_wdhjc"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -259,11 +263,42 @@ chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
+[sub_resource type="Resource" id="Resource_37chk"]
+script = ExtResource("13_q1ksy")
+vfx_source = 1
+spawn_offset = Vector3(1.26, 0, 0)
+inherit_rotation = true
+kill_previous_on_trigger = false
+intensity_multiplier = 1.0
+max_living_instances = 0
+spawn_in_world_space = true
+vfx_scene = ExtResource("14_vyqmh")
+auto_free_delay = 2.0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://y8nr8f3an3h3"
+
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), null])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_37chk")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_tloff"]
+lifetime_randomness = 0.07
+particle_flag_disable_z = true
+spread = 180.0
+initial_velocity_max = 76.43
+gravity = Vector3(0, 98, 0)
 
 [sub_resource type="Resource" id="Resource_c2ixe"]
 script = ExtResource("15_gd4to")
@@ -351,10 +386,25 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bv23ao6ea320w"
 
+[sub_resource type="Resource" id="Resource_6i2li"]
+script = ExtResource("21_wdhjc")
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://dni12p84dccqt"
+
 [sub_resource type="Resource" id="Resource_ev3yq"]
 resource_local_to_scene = true
 script = ExtResource("16_w3iwx")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_necpd"), SubResource("Resource_eyg51"), null])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_necpd"), SubResource("Resource_eyg51"), SubResource("Resource_6i2li")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [node name="MainDemoScene" type="Control" unique_id=75509961]
@@ -405,6 +455,7 @@ metadata/juice_active_ledger = {
 "position": {
 1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
+1891731840359: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
 }
@@ -428,6 +479,7 @@ metadata/juice_active_ledger = {
 "position": {
 1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
+1891731840359: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
 }
@@ -451,6 +503,7 @@ metadata/juice_active_ledger = {
 "position": {
 1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
+1891731840359: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
 }
@@ -478,20 +531,25 @@ metadata/juice_active_ledger = {
 1890372885879: Vector2(0, 0),
 1890641321343: Vector2(0, 0),
 1891345964408: Vector2(0, 0),
+1891681508708: Vector2(0, 0),
+1891731840359: Vector2(0, 0),
 1899482914158: Vector2(0, 0),
 1899533245809: Vector2(0, 0),
 1902821580157: Vector2(0, 0)
 },
 "rotation": {
 1891345964408: 0.0,
+1891681508708: 0.0,
 1899482914158: 0.0
 },
 "scale": {
 1891345964408: Vector2(0, 0),
+1891681508708: Vector2(0, 0),
 1899482914158: Vector2(0, 0)
 },
 "self_modulate": {
 1891345964408: Color(1, 1, 1, 1),
+1891681508708: Color(1, 1, 1, 1),
 1899482914158: Color(1, 1, 1, 1)
 }
 }
@@ -512,6 +570,12 @@ recipe = SubResource("Resource_bgrya")
 debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
+[node name="GPUParticles2D" type="GPUParticles2D" parent="MarginContainer/CenterContainer/Menu/JuiceControl" unique_id=1843051729]
+emitting = false
+texture = ExtResource("15_ve81s")
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_tloff")
+
 [node name="Scene Container" type="Node" parent="." unique_id=467602694]
 
 [node name="Dummy" parent="Scene Container" unique_id=447935588 instance=ExtResource("9_008jw")]
@@ -531,15 +595,19 @@ metadata/juice_active_ledger = {
 },
 "deltas": {
 "modulate": {
+1891933166960: Color(1, 1, 1, 1),
 1899701017978: Color(1, 1, 1, 1)
 },
 "position": {
+1891933166960: Vector2(0, 0),
 1899701017978: Vector2(0, 0)
 },
 "rotation": {
+1891933166960: 0.0,
 1899701017978: 0.0
 },
 "scale": {
+1891933166960: Vector2(0, 0),
 1899701017978: Vector2(0, 0)
 }
 }
