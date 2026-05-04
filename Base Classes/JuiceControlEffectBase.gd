@@ -16,7 +16,7 @@
 #        ├─ JuiceControlTransformEffect (pos/rot/scale deltas)
 #        │    └─ TransformControlJuiceEffect, NoiseControlJuiceEffect, etc.
 #        └─ Non-transform effects extend this directly
-#             └─ AppearanceControlJuiceEffect, ProgressControlJuiceEffect, etc.
+#             └─ AppearanceControlJuiceEffect, ProgressTransformControlJuiceEffect, etc.
 # ============================================================================
 
 @tool

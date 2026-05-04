@@ -42,6 +42,35 @@ var _tree: Tree
 
 
 # =============================================================================
+# LEDGER-MANAGED PROPERTIES
+# =============================================================================
+
+# Properties owned by the JuiceLedger across all domains.
+# These are shown grayed-out in the picker with a redirect note so the user
+# knows which dedicated effect to use instead of the Property family.
+# Key: root property name (String). Value: redirect hint (String).
+const LEDGER_MANAGED_PROPERTIES: Dictionary = {
+	"position":          "Add Transform Effect to recipe",
+	"rotation":          "Add Transform Effect to recipe",
+	"rotation_degrees":  "Add Transform Effect to recipe",
+	"scale":             "Add Transform Effect to recipe",
+	"skew":              "Add Transform Effect to recipe",
+	"modulate":          "Add Appearance Effect to recipe",
+	"self_modulate":     "Add Appearance Effect to recipe",
+}
+
+# Types that cannot be picked at all — they are internal engine handles with no
+# inspector-configurable value and no meaningful animation target.
+# Everything else (bool, string, object, packed arrays, etc.) is supported either
+# as a full lerp/noise target or as a threshold-flip type per the agreed type table.
+const UNSUPPORTED_TYPES: Array[int] = [
+	TYPE_RID,       # Internal engine handle — cannot be set by user.
+	TYPE_CALLABLE,  # Function reference — not serializable or inspectable.
+	TYPE_SIGNAL,    # Signal reference — not inspectable.
+]
+
+
+# =============================================================================
 # LIFECYCLE
 # =============================================================================
 
@@ -89,21 +118,36 @@ func _build_ui() -> void:
 	_tree = Tree.new()
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tree.hide_root = true
-	_tree.columns = 2
+	_tree.columns = 3
 	_tree.set_column_title(0, "Property")
 	_tree.set_column_title(1, "Type")
+	_tree.set_column_title(2, "Note")
 	_tree.set_column_titles_visible(true)
+	# Property column: expands to fill all remaining space.
 	_tree.set_column_expand(0, true)
+	# Type column: fixed narrow width.
 	_tree.set_column_expand(1, false)
-	_tree.set_column_custom_minimum_width(1, 90)
+	_tree.set_column_custom_minimum_width(1, 68)
+	# Note column: fixed width — does NOT expand so Property column gets priority.
+	_tree.set_column_expand(2, false)
+	_tree.set_column_custom_minimum_width(2, 165)
 	main_vbox.add_child(_tree)
 
-	# Tip label
+	# Status tip
 	var tip := Label.new()
 	tip.text = "✓ = already in list  |  Check to add, uncheck to remove"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	main_vbox.add_child(tip)
+
+	# Grayed-out notice — explains why some rows cannot be picked.
+	var ledger_tip := Label.new()
+	ledger_tip.text = ("Grayed-out properties are managed by the Juice system internally.\n"
+		+ "Use the dedicated effect shown in the Note column instead.")
+	ledger_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ledger_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ledger_tip.add_theme_color_override("font_color", Color(0.75, 0.55, 0.25))
+	main_vbox.add_child(ledger_tip)
 
 	# --- Connections ---
 	_search_edit.text_changed.connect(func(_t): _populate_tree())
@@ -159,7 +203,19 @@ func _populate_tree() -> void:
 		if not filter.is_empty() and not name.to_lower().contains(filter):
 			continue
 
+		var type_id: int = prop.get("type", TYPE_NIL)
+
+		# Skip non-animatable types unless they are ledger-managed
+		# (those still appear grayed to explain the redirect).
+		if type_id in UNSUPPORTED_TYPES and not (name in LEDGER_MANAGED_PROPERTIES):
+			continue
+
 		if usage & PROPERTY_USAGE_EDITOR:
+			exported_items.append(prop)
+		elif name in LEDGER_MANAGED_PROPERTIES:
+			# Ledger-managed properties must always appear in the "Inspector Properties"
+			# section grayed-out, even if the engine marks them as storage-only.
+			# Without this, position/rotation/scale could be hidden by "Exports only".
 			exported_items.append(prop)
 		else:
 			engine_items.append(prop)
@@ -193,6 +249,19 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 		var type_id: int = prop.get("type", TYPE_NIL)
 
 		var item := _tree.create_item(header)
+
+		# Ledger-managed: show grayed, non-checkable, with redirect note in col 2.
+		if name in LEDGER_MANAGED_PROPERTIES:
+			item.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
+			item.set_selectable(0, false)
+			item.set_text(0, name)
+			item.set_custom_color(0, Color(0.5, 0.5, 0.5))
+			item.set_text(1, type_string(type_id))
+			item.set_custom_color(1, Color(0.5, 0.5, 0.5))
+			item.set_text(2, LEDGER_MANAGED_PROPERTIES[name])
+			item.set_custom_color(2, Color(0.8, 0.6, 0.3))
+			continue
+
 		item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		item.set_editable(0, true)
 		item.set_text(0, name)

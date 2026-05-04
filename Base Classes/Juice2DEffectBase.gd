@@ -16,7 +16,7 @@
 #        ├─ Juice2DTransformEffect (pos/rot/scale deltas)
 #        │    └─ Transform2DJuiceEffect, Noise2DJuiceEffect, etc.
 #        └─ Non-transform effects extend this directly
-#             └─ Appearance2DJuiceEffect, Progress2DJuiceEffect, etc.
+#             └─ Appearance2DJuiceEffect, ProgressTransform2DJuiceEffect, etc.
 # ============================================================================
 
 @tool
