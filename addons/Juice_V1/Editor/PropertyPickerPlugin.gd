@@ -73,12 +73,15 @@ func _parse_property(
 # CUSTOM EDITOR PROPERTY (inner class)
 # =============================================================================
 
-## Custom inspector row for "property_path" — shows a button that opens the
-## property picker dialog instead of a raw editable string field.
+## Custom inspector row for "property_path" — shows a read-only LineEdit that
+## opens the property picker dialog when clicked.
+## A LineEdit is used (not a Button) because its .text property updates reliably
+## across inspector rebuilds — Button.text can get stuck when Godot creates a
+## new EditorProperty instance after emit_changed fires.
 class PropertyPathEditorProperty extends EditorProperty:
 
 	var _dialog: PropertyPickerDialog
-	var _btn: Button
+	var _display: LineEdit
 	var _updating := false
 	# Stored at pick time so _on_properties_confirmed can access them.
 	var _current_target: PropertyTarget = null
@@ -87,26 +90,36 @@ class PropertyPathEditorProperty extends EditorProperty:
 	func _init(dialog: PropertyPickerDialog) -> void:
 		_dialog = dialog
 
-		# Button fills the row label area.
-		_btn = Button.new()
-		_btn.text = "Pick…"
-		_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		_btn.clip_text = true
-		_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_btn.pressed.connect(_on_pick_pressed)
-		add_child(_btn)
+		# Read-only LineEdit acts as the value display.
+		# editable=false prevents typing but the gui_input still fires for click.
+		_display = LineEdit.new()
+		_display.placeholder_text = "Pick…"
+		_display.editable = false
+		_display.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_display.tooltip_text = "Click to browse available properties."
+		# Route mouse clicks through to our handler.
+		_display.gui_input.connect(_on_display_gui_input)
+		add_child(_display)
 
-	## Called by the inspector to sync the button label with the current value.
+	## Called by the inspector to sync the display field with the current resource value.
+	## This runs on every inspector rebuild (including after emit_changed fires a new
+	## EditorProperty instance) — so the text always reflects the true resource state.
 	func update_property() -> void:
 		_updating = true
 		var current: String = get_edited_object().get(get_edited_property())
 		if current.is_empty():
-			_btn.text = "Pick…"
-			_btn.tooltip_text = "No property selected. Click to browse."
+			_display.text = ""
+			_display.placeholder_text = "Pick…"
+			_display.tooltip_text = "No property selected. Click to browse."
 		else:
-			_btn.text = current
-			_btn.tooltip_text = "Current: %s\nClick to change." % current
+			_display.text = current
+			_display.tooltip_text = "Current: %s\nClick to change." % current
 		_updating = false
+
+	# Opens the picker dialog on left-click. Right-click and other events pass through.
+	func _on_display_gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_on_pick_pressed()
 
 	func _on_pick_pressed() -> void:
 		if _dialog == null:
@@ -116,47 +129,40 @@ class PropertyPathEditorProperty extends EditorProperty:
 		if target == null:
 			return
 
-		# Resolve the target node.
-		# PropertyTarget.node_path is relative to the JuiceBase node that owns the
-		# effect (because the inspector's NodePath picker stores paths relative to
-		# the closest Node ancestor of the resource). We find the JuiceBase node
-		# from the editor selection context.
 		var node: Node = _resolve_target_node(target)
-
 		if node == null:
 			push_warning("[PropertyPickerPlugin] Cannot resolve node for property picker. "
 				+ "Make sure node_path is set and the target node exists in the scene.")
 			return
 
-		# Cache references for use in _on_properties_confirmed.
 		_current_target = target
 		_parent_effect = _find_parent_effect()
 
-		# Build the list of currently-configured paths for pre-checking.
 		var current_paths: Array[String] = []
 		var cur: String = target.get("property_path")
 		if not cur.is_empty():
 			current_paths.append(cur)
 
-		# Disconnect any previous confirmation signal to avoid stacking.
 		if _dialog.properties_confirmed.is_connected(_on_properties_confirmed):
 			_dialog.properties_confirmed.disconnect(_on_properties_confirmed)
 
 		_dialog.properties_confirmed.connect(_on_properties_confirmed, CONNECT_ONE_SHOT)
-		_dialog.open_for_node(node, current_paths)
+		# Pass the effect class name so the dialog can show per-family ledger notes.
+		var family := _parent_effect.get_class() if _parent_effect != null else ""
+		_dialog.open_for_node(node, current_paths, family)
 
 	func _on_properties_confirmed(paths: Array[String]) -> void:
 		if paths.is_empty():
 			return
 
-		# Write directly on the resource before emit_changed. emit_changed routes
-		# through undo/redo — the resource value is not yet written when Godot
-		# rebuilds the inspector row and calls update_property() on the new instance.
-		# Setting it here ensures update_property() reads the correct value.
+		# Write directly on the resource before emit_changed. emit_changed triggers
+		# an inspector rebuild that creates a new PropertyPathEditorProperty instance.
+		# Setting the value here means the new instance's update_property() reads the
+		# correct string from the resource, not the old empty value.
 		get_edited_object().set("property_path", paths[0])
-		# Update button label immediately as belt-and-suspenders.
-		_btn.text = paths[0]
-		_btn.tooltip_text = "Current: %s\nClick to change." % paths[0]
+		# Sync the display field immediately on this instance as belt-and-suspenders.
+		_display.text = paths[0]
+		_display.tooltip_text = "Current: %s\nClick to change." % paths[0]
 
 		# Register with undo/redo so Ctrl+Z works correctly.
 		emit_changed(get_edited_property(), paths[0])
