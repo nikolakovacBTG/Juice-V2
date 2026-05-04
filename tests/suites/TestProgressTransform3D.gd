@@ -1,6 +1,6 @@
-## TestProgress3D.gd
+## TestProgressTransform3D.gd
 ## ============================================================================
-## WHAT: Tests for Progress3DJuiceEffect across position, rotation, scale.
+## WHAT: Tests for ProgressTransform3DJuiceEffect across position, rotation, scale.
 ## WHY: Verify accumulation-as-speed-multiplier, hold_on_stop, and bound
 ##      behaviours work correctly for the 3D domain.
 ## SYSTEM: Tests (tests/suites/)
@@ -9,7 +9,7 @@ extends "res://tests/JuiceTestSuite.gd"
 
 
 func get_suite_name() -> String:
-	return "progress_3d"
+	return "progress_transform_3d"
 
 
 func get_test_methods() -> Array[String]:
@@ -27,7 +27,7 @@ func get_test_methods() -> Array[String]:
 
 func _create_progress_rig(
 	label: String,
-	target_type: int = Progress3DJuiceEffect.TransformTarget.POSITION,
+	target_type: int = ProgressTransform3DJuiceEffect.TransformTarget.POSITION,
 	rate_pos: Vector3 = Vector3(100.0, 0.0, 0.0),
 	rate_rot: Vector3 = Vector3(0.0, 90.0, 0.0),
 	rate_scale: Vector3 = Vector3(0.5, 0.5, 0.5),
@@ -40,7 +40,7 @@ func _create_progress_rig(
 	target.scale = Vector3.ONE
 	_runner.add_child(target)
 
-	var effect := Progress3DJuiceEffect.new()
+	var effect := ProgressTransform3DJuiceEffect.new()
 	effect.transform_target = target_type
 	effect.position_rate = rate_pos
 	effect.rotation_rate = rate_rot
@@ -67,7 +67,7 @@ func _create_progress_rig(
 
 func test_position_accumulates() -> void:
 	var rig := await _create_progress_rig("prog_pos_3d",
-		Progress3DJuiceEffect.TransformTarget.POSITION,
+		ProgressTransform3DJuiceEffect.TransformTarget.POSITION,
 		Vector3(100.0, 0.0, 0.0), Vector3(0.0, 90.0, 0.0), Vector3(0.5, 0.5, 0.5), 0.1)
 	var target: Node3D = rig[0]
 	var juice: Juice3D = rig[1]
@@ -83,7 +83,7 @@ func test_position_accumulates() -> void:
 
 func test_rotation_accumulates() -> void:
 	var rig := await _create_progress_rig("prog_rot_3d",
-		Progress3DJuiceEffect.TransformTarget.ROTATION,
+		ProgressTransform3DJuiceEffect.TransformTarget.ROTATION,
 		Vector3(100.0, 0.0, 0.0), Vector3(0.0, 90.0, 0.0), Vector3(0.5, 0.5, 0.5), 0.1)
 	var target: Node3D = rig[0]
 	var juice: Juice3D = rig[1]
@@ -102,9 +102,9 @@ func test_rotation_accumulates() -> void:
 # =============================================================================
 
 func test_needs_sustain() -> void:
-	var effect := Progress3DJuiceEffect.new()
+	var effect := ProgressTransform3DJuiceEffect.new()
 	assert_true(effect._needs_sustain(),
-		"Progress3DJuiceEffect must return true from _needs_sustain()")
+		"ProgressTransform3DJuiceEffect must return true from _needs_sustain()")
 
 
 # =============================================================================
@@ -117,13 +117,13 @@ func test_bound_reverse() -> void:
 	target.position = Vector3.ZERO
 	_runner.add_child(target)
 
-	var effect := Progress3DJuiceEffect.new()
-	effect.transform_target = Progress3DJuiceEffect.TransformTarget.POSITION
+	var effect := ProgressTransform3DJuiceEffect.new()
+	effect.transform_target = ProgressTransform3DJuiceEffect.TransformTarget.POSITION
 	effect.position_rate = Vector3(200.0, 0.0, 0.0)
 	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = 0.05
 	effect.bound_enabled = true
-	effect.bound_behaviour = Progress3DJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_behaviour = ProgressTransform3DJuiceEffect.BoundBehaviour.REVERSE
 	effect.bound_value = 50.0
 
 	var juice := Juice3D.new()

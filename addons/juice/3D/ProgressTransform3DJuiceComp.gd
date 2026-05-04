@@ -1,4 +1,4 @@
-## Progress3DJuiceComp.gd
+## ProgressTransform3DJuiceComp.gd
 ## ============================================================================
 ## WHAT: Continuous accumulation effect for Node3D nodes. Accumulates position,
 ##       rotation, or scale change over time at a configurable rate.
@@ -7,7 +7,7 @@
 ##      Supports bounded accumulation with configurable behaviors (reverse, wrap,
 ##      stop, etc.) for looping and finite-distance effects.
 ## SYSTEM: Juicing System (addons/juice/) - 3D Domain
-## DOES NOT: Handle Control or Node2D targets (use ProgressControl/Progress2D).
+## DOES NOT: Handle Control or Node2D targets (use ProgressTransformControl/ProgressTransform2D).
 ## DOES NOT: Handle arbitrary property accumulation (use ProgressPropertyJuiceComp).
 ## DOES NOT: Handle one-shot triggered transforms (use Transform3DJuiceComp).
 ## ============================================================================
@@ -40,7 +40,7 @@
 
 @tool
 @icon("res://addons/juice/Icons/JuiceBase3D.svg")
-class_name Progress3DJuiceComp
+class_name ProgressTransform3DJuiceComp
 extends JuiceCompBase
 
 # =============================================================================
@@ -871,5 +871,5 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	var parent := get_parent()
 	if parent and not parent is Node3D:
-		warnings.append("Parent must be a Node3D node. Use ProgressControl/Progress2D for other domains. (ignore if comp is a child of a sequencer)")
+		warnings.append("Parent must be a Node3D node. Use ProgressTransformControl/ProgressTransform2D for other domains. (ignore if comp is a child of a sequencer)")
 	return warnings

@@ -19,7 +19,7 @@
 
 @tool
 @icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
-class_name Progress3DJuiceEffect
+class_name ProgressTransform3DJuiceEffect
 extends Juice3DTransformEffect
 
 

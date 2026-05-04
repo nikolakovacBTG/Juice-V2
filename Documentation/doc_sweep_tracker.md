@@ -75,7 +75,7 @@ It did NOT complete Phase B for concrete effects, domain transform bases, or mos
 | `TransformControlJuiceEffect.gd` | 35 | 0 | **STRUCTURAL** | Phase A done (excellent header block). Zero method comments. 35 virtual hook implementations including capture, resolve, and apply methods — all need Phase B to explain the call chain. |
 | `AppearanceControlJuiceEffect.gd` | 28 | 6 | **STRUCTURAL** | Phase A done. 22 uncommented methods include shader parameter writes, modulate blending, and appearance delta computation. |
 | `NoiseControlJuiceEffect.gd` | 18 | 2 | **STRUCTURAL** | Phase A done. 16 uncommented including noise sampling, delta computation, and the discrete-time advancement system. |
-| `ProgressControlJuiceEffect.gd` | 24 | 0 | **STRUCTURAL** | Phase A done. Zero method comments. 24 methods covering pivot application, center inference, and the full From/To resolution chain. |
+| `ProgressTransformControlJuiceEffect.gd` | 24 | 0 | **STRUCTURAL** | Phase A done. Zero method comments. 24 methods covering pivot application, center inference, and the full From/To resolution chain. |
 | `ShakeControlJuiceEffect.gd` | 14 | 0 | **STRUCTURAL** | Phase A done. Zero method comments. Shake-specific capture and apply methods. |
 | `SquashStretchControlJuiceEffect.gd` | 12 | 8 | **STRUCTURAL** | Better coverage. Some methods may be genuinely DONE after triage. |
 
@@ -88,7 +88,7 @@ It did NOT complete Phase B for concrete effects, domain transform bases, or mos
 | `Transform2DJuiceEffect.gd` | 37 | 0 | **STRUCTURAL** | Mirrors TransformControlJuiceEffect. Zero method comments. |
 | `Appearance2DJuiceEffect.gd` | 28 | 7 | **STRUCTURAL** | Mirrors AppearanceControl. |
 | `Noise2DJuiceEffect.gd` | 19 | 0 | **STRUCTURAL** | Mirrors NoiseControl. Zero method comments. |
-| `Progress2DJuiceEffect.gd` | 23 | 7 | **STRUCTURAL** | Mirrors ProgressControl. Some base coverage exists. |
+| `ProgressTransform2DJuiceEffect.gd` | 23 | 7 | **STRUCTURAL** | Mirrors ProgressTransformControl. Some base coverage exists. |
 | `Shake2DJuiceEffect.gd` | 16 | 0 | **STRUCTURAL** | Mirrors ShakeControl. Zero method comments. |
 | `SquashStretch2DJuiceEffect.gd` | 11 | 7 | **STRUCTURAL** | Better coverage. |
 
@@ -101,7 +101,7 @@ It did NOT complete Phase B for concrete effects, domain transform bases, or mos
 | `Transform3DJuiceEffect.gd` | 38 | 0 | **STRUCTURAL** | Mirrors TransformControl. Zero method comments. |
 | `Appearance3DJuiceEffect.gd` | 26 | 6 | **STRUCTURAL** | Mirrors AppearanceControl. |
 | `Noise3DJuiceEffect.gd` | 18 | 0 | **STRUCTURAL** | Mirrors NoiseControl. Zero method comments. |
-| `Progress3DJuiceEffect.gd` | 25 | 3 | **STRUCTURAL** | Mirrors ProgressControl. |
+| `ProgressTransform3DJuiceEffect.gd` | 25 | 3 | **STRUCTURAL** | Mirrors ProgressTransformControl. |
 | `Shake3DJuiceEffect.gd` | 16 | 0 | **STRUCTURAL** | Mirrors ShakeControl. Zero method comments. |
 | `SquashStretch3DJuiceEffect.gd` | 11 | 7 | **STRUCTURAL** | Better coverage. |
 

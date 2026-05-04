@@ -92,7 +92,7 @@ target.property = _ledger_get_base_value() + _ledger_get_total()
 | `NoiseControlJuiceEffect.gd` | 3 sites |
 | `ShakeControlJuiceEffect.gd` | 2 sites |
 | `SquashStretchControlJuiceEffect.gd` | 2 sites |
-| `ProgressControlJuiceEffect.gd` | 2 sites |
+| `ProgressTransformControlJuiceEffect.gd` | 2 sites |
 
 `pivot_offset` is Control-specific and affects visual pivot only. Currently
 **last-write-wins** across effects. This causes the documented "pivot conflict"

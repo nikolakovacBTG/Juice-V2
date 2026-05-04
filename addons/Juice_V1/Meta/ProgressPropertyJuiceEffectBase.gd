@@ -10,7 +10,7 @@
 #       Examples: "modulate:a", "material:shader_parameter/dissolve", "speed"
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # DOES NOT: Use the delta system — writes directly via set_indexed() (approved exception).
-# DOES NOT: Handle position/rotation/scale — use Progress2D/Control/3DJuiceEffect.
+# DOES NOT: Handle position/rotation/scale — use ProgressTransform2D/Control/3DJuiceEffect.
 #
 # APPROVED EXCEPTION: ProgressProperty writes via set_indexed() because:
 # 1. Domain nodes don't know about arbitrary user properties.

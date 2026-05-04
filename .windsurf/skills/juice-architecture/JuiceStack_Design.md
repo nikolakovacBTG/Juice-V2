@@ -237,9 +237,9 @@ Appearance2DJuiceComp → `Appearance2DEffect`
 Appearance3DJuiceComp → `Appearance3DEffect`
 
 ### Progress (4)
-ProgressControlJuiceComp → `ProgressControlEffect`
-Progress2DJuiceComp → `Progress2DEffect`
-Progress3DJuiceComp → `Progress3DEffect`
+ProgressTransformControlJuiceComp → `ProgressTransformControlEffect`
+ProgressTransform2DJuiceComp → `ProgressTransform2DEffect`
+ProgressTransform3DJuiceComp → `ProgressTransform3DEffect`
 ProgressPropertyJuiceComp → `ProgressPropertyEffect`
 
 ### Outline (3)

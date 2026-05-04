@@ -57,7 +57,7 @@ graph LR
     JuiceControlTransformEffect --> ShakeControlJuiceEffect:::ConcreteClass
     JuiceControlTransformEffect --> NoiseControlJuiceEffect:::ConcreteClass
     JuiceControlTransformEffect --> SquashStretchControlJuiceEffect:::ConcreteClass
-    JuiceControlTransformEffect --> ProgressControlJuiceEffect:::ConcreteClass
+    JuiceControlTransformEffect --> ProgressTransformControlJuiceEffect:::ConcreteClass
 
     %% 2D DOMAIN EFFECTS ====================================
     Juice2DEffectBase --> Juice2DAppearanceEffect:::BaseClass
@@ -68,7 +68,7 @@ graph LR
     Juice2DTransformEffect --> Shake2DJuiceEffect:::ConcreteClass
     Juice2DTransformEffect --> Noise2DJuiceEffect:::ConcreteClass
     Juice2DTransformEffect --> SquashStretch2DJuiceEffect:::ConcreteClass
-    Juice2DTransformEffect --> Progress2DJuiceEffect:::ConcreteClass
+    Juice2DTransformEffect --> ProgressTransform2DJuiceEffect:::ConcreteClass
 
     %% 3D DOMAIN EFFECTS ====================================
     Juice3DEffectBase --> Juice3DAppearanceEffect:::BaseClass
@@ -79,7 +79,7 @@ graph LR
     Juice3DTransformEffect --> Shake3DJuiceEffect:::ConcreteClass
     Juice3DTransformEffect --> Noise3DJuiceEffect:::ConcreteClass
     Juice3DTransformEffect --> SquashStretch3DJuiceEffect:::ConcreteClass
-    Juice3DTransformEffect --> Progress3DJuiceEffect:::ConcreteClass
+    Juice3DTransformEffect --> ProgressTransform3DJuiceEffect:::ConcreteClass
 
     %% META: PROPERTY EFFECTS ===============================
     JuiceEffectBase --> PropertyJuiceEffectBase:::BaseClass

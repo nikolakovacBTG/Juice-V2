@@ -429,8 +429,7 @@ func _position_instance(instance: Node, target: Node) -> void:
 			var ctrl := target as Control
 			i2.global_position = ctrl.global_position + ctrl.size / 2.0 + off2
 			if inherit_rotation:
-				# Control has no global_transform — use global_rotation directly.
-				i2.global_rotation = ctrl.global_rotation
+				i2.global_rotation = ctrl.get_global_transform().get_rotation()
 
 
 # Hook "finished" signal if available; fall back to a timed callback for auto-free.

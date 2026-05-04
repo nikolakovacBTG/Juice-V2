@@ -179,21 +179,21 @@ trigger_on = 15
 trigger_behaviour = 0
 recipe = SubResource("Resource_8ai6r")
 
-[node name="Progress2DTest" type="Node2D" parent="." unique_id=998465023]
+[node name="ProgressTransform2DTest" type="Node2D" parent="." unique_id=998465023]
 position = Vector2(452, 464)
 
-[node name="Sprite2D" type="Sprite2D" parent="Progress2DTest" unique_id=2119089907]
+[node name="Sprite2D" type="Sprite2D" parent="ProgressTransform2DTest" unique_id=2119089907]
 modulate = Color(0.2, 0.2, 0.8, 1)
 texture = ExtResource("2_e4141")
 
-[node name="Juice2D" type="Node2D" parent="Progress2DTest" unique_id=749891205]
+[node name="Juice2D" type="Node2D" parent="ProgressTransform2DTest" unique_id=749891205]
 script = ExtResource("3_7yy7b")
 trigger_source_path = NodePath("../Area2D")
 recipe = SubResource("Resource_b0p5q")
 
-[node name="Area2D" type="Area2D" parent="Progress2DTest" unique_id=2073526055]
+[node name="Area2D" type="Area2D" parent="ProgressTransform2DTest" unique_id=2073526055]
 
-[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="Progress2DTest/Area2D" unique_id=511603751]
+[node name="Juice_CollisionShape2D" type="CollisionShape2D" parent="ProgressTransform2DTest/Area2D" unique_id=511603751]
 position = Vector2(-0.5, 2.5)
 shape = SubResource("RectangleShape2D_trt1j")
 

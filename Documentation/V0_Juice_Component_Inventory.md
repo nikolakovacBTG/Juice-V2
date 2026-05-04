@@ -30,7 +30,7 @@
 | 4 | `ShakeControlJuiceComp` | | | | | |
 | 5 | `SpringControlJuiceComp` | | | | | |
 | 6 | `NoiseControlJuiceComp` | | | | | |
-| 7 | `ProgressControlJuiceComp` | | | | | |
+| 7 | `ProgressTransformControlJuiceComp` | | | | | |
 | 8 | `AppearanceControlJuiceComp` | ✅ | | | | Enum-driven effects + Flicker + Blending Mode layer. Outline = ghost Panel + StyleBoxFlat (no shader, no 9-slice). Dynamic corner radius. Blend mode on ghost. |
 | 9 | `OutlineControlJuiceComp` | | | | | Legacy — Appearance comp absorbs this |
 
@@ -43,7 +43,7 @@
 | 12 | `Shake2DJuiceComp` | | | | | |
 | 13 | `Spring2DJuiceComp` | | | | | |
 | 14 | `Noise2DJuiceComp` | | | | | |
-| 15 | `Progress2DJuiceComp` | | | | | |
+| 15 | `ProgressTransform2DJuiceComp` | | | | | |
 | 16 | `Appearance2DJuiceComp` | ✅ | | | | Enum-driven effects + Flicker + Blending Mode layer. Outline = outline_2d.gdshader (alpha-edge + vertex expansion). |
 | 17 | `Outline2DJuiceComp` | | | | | Legacy — Appearance comp absorbs this |
 
@@ -56,7 +56,7 @@
 | 20 | `Shake3DJuiceComp` | | | | | |
 | 21 | `Spring3DJuiceComp` | | | | | |
 | 22 | `Noise3DJuiceComp` | | | | | |
-| 23 | `Progress3DJuiceComp` | | | | | |
+| 23 | `ProgressTransform3DJuiceComp` | | | | | |
 | 24 | `Appearance3DJuiceComp` | | | | | Enum-driven effects + Flicker + Blending Mode layer + 3D-exclusive |
 | 25 | `Outline3DJuiceComp` | | | | | Legacy — Appearance comp absorbs this |
 

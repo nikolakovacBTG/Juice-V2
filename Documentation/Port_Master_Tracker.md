@@ -73,9 +73,9 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ProgressControlJuiceComp` | `ProgressControlJuiceEffect` | 🧪 | `TestProgressControl` | — |
-| `Progress2DJuiceComp` | `Progress2DJuiceEffect` | 🧪 | `TestProgress2D` | — |
-| `Progress3DJuiceComp` | `Progress3DJuiceEffect` | 🧪 | `TestProgress3D` | — |
+| `ProgressTransformControlJuiceComp` | `ProgressTransformControlJuiceEffect` | 🧪 | `TestProgressTransformControl` | — |
+| `ProgressTransform2DJuiceComp` | `ProgressTransform2DJuiceEffect` | 🧪 | `TestProgressTransform2D` | — |
+| `ProgressTransform3DJuiceComp` | `ProgressTransform3DJuiceEffect` | 🧪 | `TestProgressTransform3D` | — |
 | `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
 
 > **Inspector note (2026-04-17):** Rate, Pivot, Bound demoted from top-level GROUPs to flat properties inside the Effect group. `bound_enabled` tooltip improved. `_leaf_owns_layout` applied to suppress duplicate Effect header.

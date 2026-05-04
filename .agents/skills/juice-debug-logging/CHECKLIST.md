@@ -66,9 +66,9 @@ Audit existing ~44 prints. Decide keep/remove per call, then convert.
 - [x] `Noise3DJuiceEffect.gd` — 1 print → log_info
 
 ### Batch 4D: Progress ✅
-- [x] `ProgressControlJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
-- [x] `Progress2DJuiceEffect.gd` — 3 prints → log_info/log_capture, 1 push_warning → warn
-- [x] `Progress3DJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
+- [x] `ProgressTransformControlJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
+- [x] `ProgressTransform2DJuiceEffect.gd` — 3 prints → log_info/log_capture, 1 push_warning → warn
+- [x] `ProgressTransform3DJuiceEffect.gd` — 4 prints → log_info/log_capture, 1 push_warning → warn
 
 ### Batch 4E: SquashStretch ✅ (no prints — already clean)
 - [x] `SquashStretchControlJuiceEffect.gd` — N/A
@@ -213,11 +213,11 @@ log points mandated by LOG_POINTS.md. These remediation batches close the gaps.
 - [x] `SquashStretchControlJuiceEffect.gd` — NEW `log_capture` (squash_config)
 - [x] `SquashStretch2DJuiceEffect.gd` — NEW `log_capture` (squash_config)
 - [x] `SquashStretch3DJuiceEffect.gd` — NEW `log_capture` (squash_config, SquashAxis3D)
-- [x] `ProgressControlJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
+- [x] `ProgressTransformControlJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
 
 ### Batch R-J: Cat 3 — Progress deltas + Cat 6 domain guardrails (5 files, simple) ✅
-- [x] `Progress2DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
-- [x] `Progress3DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
+- [x] `ProgressTransform2DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
+- [x] `ProgressTransform3DJuiceEffect.gd` — NEW `log_delta` (pos/rot/scale deltas)
 - [x] `ProgressPropertyJuiceEffectBase.gd` — NEW `log_delta` (property path + type)
 - [x] `JuiceBase.gd` — NEW `warn_domain_mismatch` in `_start_effects()` (Control/2D/3D guardrails)
 - [x] `JuiceRecipe.gd` — N/A (Resource, no target context; check lives in JuiceBase)
@@ -270,9 +270,9 @@ at the start of each new session.
 - [x] `Transform3DJuiceEffect.gd`
 
 ### Batch U-5c: Progress + SquashStretch (6 files) ✅
-- [x] `ProgressControlJuiceEffect.gd`
-- [x] `Progress2DJuiceEffect.gd`
-- [x] `Progress3DJuiceEffect.gd`
+- [x] `ProgressTransformControlJuiceEffect.gd`
+- [x] `ProgressTransform2DJuiceEffect.gd`
+- [x] `ProgressTransform3DJuiceEffect.gd`
 - [x] `SquashStretchControlJuiceEffect.gd`
 - [x] `SquashStretch2DJuiceEffect.gd`
 - [x] `SquashStretch3DJuiceEffect.gd`

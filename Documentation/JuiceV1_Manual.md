@@ -117,7 +117,7 @@ Continuously accumulate position, rotation, or scale at a configurable rate per 
 
 Progress is incredibly versatile. It is used for continuous spins, endless scrolling textures, or when an animation is driven by an external `0.0–1.0` value (like a SoftTrigger) acting as a direct speed throttle.
 
-**Domain variants:** `ProgressControlJuiceEffect` · `Progress2DJuiceEffect` · `Progress3DJuiceEffect`
+**Domain variants:** `ProgressTransformControlJuiceEffect` · `ProgressTransform2DJuiceEffect` · `ProgressTransform3DJuiceEffect`
 
 ### Progress — Overview
 
@@ -129,15 +129,15 @@ This makes Progress ideal for looping platforms (Wrap) or bouncing objects (Reve
 
 ### Progress — 2D
 
-`Progress2DJuiceEffect` accumulates `Vector2` rates for position and scale, and a `float` rate (degrees/sec) for rotation. It natively supports pixel, own-size, or parent-size units.
+`ProgressTransform2DJuiceEffect` accumulates `Vector2` rates for position and scale, and a `float` rate (degrees/sec) for rotation. It natively supports pixel, own-size, or parent-size units.
 
 ### Progress — Control
 
-`ProgressControlJuiceEffect` functions identically to the 2D variant but applies offsets to the UI `Control` node, utilizing its native `pivot_offset`.
+`ProgressTransformControlJuiceEffect` functions identically to the 2D variant but applies offsets to the UI `Control` node, utilizing its native `pivot_offset`.
 
 ### Progress — 3D
 
-`Progress3DJuiceEffect` accumulates `Vector3` rates for position, rotation (degrees/sec), and scale. Pivot compensation utilizes the visual AABB center.
+`ProgressTransform3DJuiceEffect` accumulates `Vector3` rates for position, rotation (degrees/sec), and scale. Pivot compensation utilizes the visual AABB center.
 
 ---
 

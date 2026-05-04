@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://b0ayl7gcp01lx" path="res://addons/juice/Control/TransformControlJuiceComp.gd" id="3_dxpb1"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="4_ctnp2"]
 [ext_resource type="Script" uid="uid://81p8ahyldckl" path="res://addons/juice/Control/NoiseControlJuiceComp.gd" id="4_dxpb1"]
-[ext_resource type="Script" uid="uid://gr42guay12p1" path="res://addons/juice/Control/ProgressControlJuiceComp.gd" id="6_3etqj"]
+[ext_resource type="Script" uid="uid://gr42guay12p1" path="res://addons/juice/Control/ProgressTransformControlJuiceComp.gd" id="6_3etqj"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
 interpolation_mode = 2
@@ -234,7 +234,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://b0ayl7gcp01lx"
 
-[node name="ProgressControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer"]
+[node name="ProgressTransformControlJuiceComp" type="Node" parent="MarginContainer/VBoxContainer"]
 script = ExtResource("6_3etqj")
 transform_target = 2
 scale_rate = Vector2(0.03, 0.03)

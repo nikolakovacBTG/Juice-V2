@@ -8,7 +8,7 @@
 ##       This is the "+1" in the 3+1 architecture (domain-agnostic complement
 ##       to the 3 domain-specific progress scripts).
 ## SYSTEM: Juicing System (addons/juice/) - Property Domain
-## DOES NOT: Handle transform accumulation (use ProgressControl/2D/3D).
+## DOES NOT: Handle transform accumulation (use ProgressTransformControl/2D/3D).
 ## DOES NOT: Handle one-shot property animation (use PropertyTween or similar).
 ##
 ## PLACEMENT:

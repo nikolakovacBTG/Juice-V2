@@ -149,7 +149,16 @@ class PropertyPathEditorProperty extends EditorProperty:
 		if paths.is_empty():
 			return
 
-		# Set the first path on the current PropertyTarget (normal single-select flow).
+		# Write directly on the resource before emit_changed. emit_changed routes
+		# through undo/redo — the resource value is not yet written when Godot
+		# rebuilds the inspector row and calls update_property() on the new instance.
+		# Setting it here ensures update_property() reads the correct value.
+		get_edited_object().set("property_path", paths[0])
+		# Update button label immediately as belt-and-suspenders.
+		_btn.text = paths[0]
+		_btn.tooltip_text = "Current: %s\nClick to change." % paths[0]
+
+		# Register with undo/redo so Ctrl+Z works correctly.
 		emit_changed(get_edited_property(), paths[0])
 
 		# For each additional selected path, create a sibling PropertyTarget on the parent effect.
@@ -169,11 +178,35 @@ class PropertyPathEditorProperty extends EditorProperty:
 		_parent_effect = null
 
 	# Find the PropertyJuiceEffectBase that owns the current PropertyTarget.
-	# Returns null if the top-level inspected object isn't a PropertyJuiceEffectBase.
+	# When the inspector drills into a PropertyTarget sub-resource, get_edited_object()
+	# returns the PropertyTarget, not the parent effect. We walk up the ownership
+	# chain by checking if the edited object itself IS the effect, or by scanning
+	# the JuiceBase recipe for an effect that contains _current_target.
 	func _find_parent_effect() -> PropertyJuiceEffectBase:
+		# Case 1: inspector is showing the effect directly (normal top-level edit).
 		var obj := EditorInterface.get_inspector().get_edited_object()
 		if obj is PropertyJuiceEffectBase:
 			return obj as PropertyJuiceEffectBase
+
+		# Case 2: inspector drilled into a sub-resource — walk recipe.effects to find
+		# the effect whose property_targets array contains _current_target.
+		var juice_node := _find_juice_base_from_selection()
+		if juice_node == null:
+			return null
+		var recipe = juice_node.get("recipe")
+		if recipe == null:
+			return null
+		var effects = recipe.get("effects")
+		if not effects is Array:
+			return null
+		for effect in effects:
+			if not effect is PropertyJuiceEffectBase:
+				continue
+			var targets = (effect as PropertyJuiceEffectBase).get("property_targets")
+			if targets is Array:
+				for t in targets:
+					if t == _current_target:
+						return effect as PropertyJuiceEffectBase
 		return null
 
 	# Resolve the target node from the PropertyTarget's node_path.
