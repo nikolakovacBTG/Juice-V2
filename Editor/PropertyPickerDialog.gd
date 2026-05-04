@@ -64,33 +64,36 @@ const LEDGER_MANAGED_PROPERTIES: Dictionary = {
 	"self_modulate":     true,
 }
 
-# Returns the exact redirect note for a ledger-managed property given the
-# opening effect's family name. Each property family knows which Juice effect
-# handles that concern. New families should be added here when ported.
-# prop: root property name (e.g. "position"). family: class_name of the effect.
+# Returns the exact redirect note for a ledger-managed property.
+# Derives the domain suffix (Control / 2D / 3D) from the opening effect's
+# class name so the note names the EXACT Juice Effect class visible in the
+# inspector "Add Effect" dropdown — no guessing.
 func _get_ledger_note(prop: String, family: String) -> String:
+	# Derive domain suffix from opening effect class name.
+	var domain := ""
+	if "Control" in family:
+		domain = "Control"
+	elif "2D" in family:
+		domain = "2D"
+	elif "3D" in family:
+		domain = "3D"
+
 	var is_transform := prop in ["position", "rotation", "rotation_degrees", "scale", "skew"]
 	var is_appearance := prop in ["modulate", "self_modulate"]
 
-	# Transform properties
 	if is_transform:
-		if "Noise" in family:
-			return "→ Use Shake or NoiseProperty Effect for transform noise"
-		if "Shake" in family:
-			return "→ Use Shake Effect (already the right family!)"
-		# Interpolate and others
-		return "→ Use Transform Interpolate Effect for smooth from/to moves"
+		if domain.is_empty():
+			return "→ Use Transform Effect (position / rotation / scale)"
+		return "→ Use Transform%sJuiceEffect" % domain
 
-	# Appearance / color properties
 	if is_appearance:
-		if "Noise" in family:
-			return "→ Use Appearance Noise Effect for color/alpha noise"
-		if "Shake" in family:
-			return "→ Use Appearance Effect (Shake doesn't animate color)"
-		return "→ Use Appearance Interpolate Effect for color/alpha from/to"
+		if domain.is_empty():
+			return "→ Use Appearance Effect (modulate / self_modulate)"
+		return "→ Use Appearance%sJuiceEffect" % domain
 
-	# Unknown ledger property (future additions)
-	return "→ Managed by Juice — use the dedicated effect for this property"
+	# Fallback for any future ledger-managed property.
+	return "→ Managed by Juice — use the dedicated Effect for this property"
+
 
 
 # Types that cannot be picked at all — they are internal engine handles with no
@@ -128,12 +131,9 @@ func _init() -> void:
 
 
 func _build_ui() -> void:
-	# AcceptDialog / ConfirmationDialog do not automatically layout multiple custom
-	# children — wrap everything in a single VBoxContainer that fills the content area.
+	# Single VBoxContainer as the dialog's content root.
 	var main_vbox := VBoxContainer.new()
-	# Give the VBox a minimum size so the first layout pass has something to work with.
-	# Without this, Tree gets 0 height on first open and the dialog renders broken.
-	main_vbox.custom_minimum_size = Vector2i(460, 460)
+	main_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(main_vbox)
 
 	# --- Top bar: search + filter ---
@@ -148,34 +148,38 @@ func _build_ui() -> void:
 
 	_restrict_check = CheckBox.new()
 	_restrict_check.text = "Exports only"
-	_restrict_check.button_pressed = true  # ON by default
+	_restrict_check.button_pressed = true
 	_restrict_check.tooltip_text = (
 		"ON: show only properties visible in the Inspector.\n"
 		+ "OFF: show all non-internal properties (including storage-only vars).")
 	top_bar.add_child(_restrict_check)
 
-	# --- Property tree ---
+	# --- ScrollContainer wrapping the Tree so the dialog never overflows the screen.
+	# The Tree itself is allowed to grow to any height; the ScrollContainer clips it
+	# to the available space and adds a scrollbar when needed.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2i(0, 300)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	main_vbox.add_child(scroll)
+
 	_tree = Tree.new()
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# Explicit minimum height so layout is stable on first open.
-	_tree.custom_minimum_size = Vector2i(0, 340)
+	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tree.hide_root = true
 	_tree.columns = 3
 	_tree.set_column_title(0, "Property")
 	_tree.set_column_title(1, "Type")
 	_tree.set_column_title(2, "Note")
 	_tree.set_column_titles_visible(true)
-	# Property column: expands to fill remaining space.
 	_tree.set_column_expand(0, true)
 	_tree.set_column_custom_minimum_width(0, 120)
-	# Type column: fixed narrow width — type names are short.
 	_tree.set_column_expand(1, false)
 	_tree.set_column_custom_minimum_width(1, 68)
-	# Note column: also expands so it widens when the window is stretched.
-	# Minimum keeps the column readable at narrow sizes.
 	_tree.set_column_expand(2, true)
 	_tree.set_column_custom_minimum_width(2, 140)
-	main_vbox.add_child(_tree)
+	scroll.add_child(_tree)
 
 	# --- Footer: selection hint ---
 	var tip := Label.new()
@@ -184,16 +188,22 @@ func _build_ui() -> void:
 	tip.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	main_vbox.add_child(tip)
 
-	# --- Footer: grayed + unsupported explanation ---
-	var info_tip := Label.new()
-	info_tip.text = (
-		"Grayed-out properties are controlled by the Juice system — the Note column\n"
-		+ "shows exactly which Juice Effect to add to the Recipe instead.\n"
-		+ "Some engine-internal properties (non-animatable handles) are not listed at all.")
-	info_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	info_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info_tip.add_theme_color_override("font_color", Color(0.75, 0.55, 0.25))
-	main_vbox.add_child(info_tip)
+	# --- Footer: ledger + unsupported notice (user-specified wording, smaller font) ---
+	var ledger_tip := Label.new()
+	ledger_tip.text = ("Properties that are grayed out are better animated by appropriate "
+		+ "Juice Effects stated in the \"Note\" column.")
+	ledger_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ledger_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ledger_tip.add_theme_color_override("font_color", Color(0.75, 0.55, 0.25))
+	ledger_tip.add_theme_font_size_override("font_size", 11)
+	main_vbox.add_child(ledger_tip)
+
+	var unsupported_tip := Label.new()
+	unsupported_tip.text = "Unsupported properties are not listed."
+	unsupported_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	unsupported_tip.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
+	unsupported_tip.add_theme_font_size_override("font_size", 11)
+	main_vbox.add_child(unsupported_tip)
 
 	# --- Connections ---
 	_search_edit.text_changed.connect(func(_t): _populate_tree())
@@ -214,6 +224,10 @@ func open_for_node(node: Node, current_paths: Array[String], effect_family: Stri
 	_effect_family = effect_family
 	_populate_tree()
 	popup_centered(Vector2i(480, 560))
+	# Set size explicitly after popup so the first-open layout uses the correct dimensions.
+	# popup_centered() computes the position before the layout pass runs, which can
+	# produce incorrect centering on first open. Overwriting size here corrects it.
+	size = Vector2i(480, 560)
 
 
 # =============================================================================
