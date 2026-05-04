@@ -50,6 +50,7 @@ With the release of Godot 4.7 (specifically changes detailed in 4.7 dev snapshot
 ## 4. Property Effect Family — Ledger Refactor (Conflict Safety)
 
 **Status:** Deferred from V1.0. Shipped as an approved Direct-Write Exception.  
+**Branch:** `feature/v1.1-property-family` (all code preserved there, deleted from master)  
 **Full plan:** `Documentation/Future/PropertyFamily_Ledger_Refactor.md`
 
 **Why deferred:**
