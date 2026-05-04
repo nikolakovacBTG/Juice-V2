@@ -269,50 +269,173 @@ func _get_property_list() -> Array[Dictionary]:
 			props.append({"name": "_to_editor_cached_display", "type": TYPE_STRING,
 				"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
 
-	# Serialize everything so type-switches don't lose values.
-	props.append({"name": "from_int",   "type": TYPE_INT,     "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "from_float", "type": TYPE_FLOAT,   "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "from_vec2",  "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "from_vec3",  "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "from_color", "type": TYPE_COLOR,   "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "to_int",     "type": TYPE_INT,     "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "to_float",   "type": TYPE_FLOAT,   "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "to_vec2",    "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "to_vec3",    "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "to_color",   "type": TYPE_COLOR,   "usage": PROPERTY_USAGE_STORAGE})
-	props.append({"name": "_from_editor_cached", "type": TYPE_NIL,
+	# ---- Serialized storage — all vars, regardless of which type is active. ----
+	# Storing every field means switching the target property to a different type
+	# never silently discards previously typed From/To values.
+	props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_bool",      "type": TYPE_BOOL,    "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_bool",        "type": TYPE_BOOL,    "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_int",       "type": TYPE_INT,     "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_int",         "type": TYPE_INT,     "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_float",     "type": TYPE_FLOAT,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_float",       "type": TYPE_FLOAT,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec2",      "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec2",        "type": TYPE_VECTOR2, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec2i",     "type": TYPE_VECTOR2I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec2i",       "type": TYPE_VECTOR2I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_rect2",     "type": TYPE_RECT2,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_rect2",       "type": TYPE_RECT2,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_rect2i",    "type": TYPE_RECT2I,  "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_rect2i",      "type": TYPE_RECT2I,  "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec3",      "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec3",        "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec3i",     "type": TYPE_VECTOR3I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec3i",       "type": TYPE_VECTOR3I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec4",      "type": TYPE_VECTOR4, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec4",        "type": TYPE_VECTOR4, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_vec4i",     "type": TYPE_VECTOR4I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_vec4i",       "type": TYPE_VECTOR4I,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_plane",     "type": TYPE_PLANE,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_plane",       "type": TYPE_PLANE,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_quat",      "type": TYPE_QUATERNION, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_quat",        "type": TYPE_QUATERNION, "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_aabb",      "type": TYPE_AABB,    "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_aabb",        "type": TYPE_AABB,    "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_basis",     "type": TYPE_BASIS,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_basis",       "type": TYPE_BASIS,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_projection","type": TYPE_PROJECTION,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_projection",  "type": TYPE_PROJECTION,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_color",     "type": TYPE_COLOR,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_color",       "type": TYPE_COLOR,   "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_string",    "type": TYPE_STRING,  "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_string",      "type": TYPE_STRING,  "usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_stringname","type": TYPE_STRING_NAME,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_stringname",  "type": TYPE_STRING_NAME,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_nodepath",  "type": TYPE_NODE_PATH,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "to_nodepath",    "type": TYPE_NODE_PATH,"usage": PROPERTY_USAGE_STORAGE})
+	props.append({&"name": "from_object",    "type": TYPE_OBJECT,  "usage": PROPERTY_USAGE_STORAGE,
+		"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Resource"})
+	props.append({&"name": "to_object",      "type": TYPE_OBJECT,  "usage": PROPERTY_USAGE_STORAGE,
+		"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Resource"})
+	props.append({&"name": "_from_editor_cached", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_NIL_IS_VARIANT})
-	props.append({"name": "_to_editor_cached",   "type": TYPE_NIL,
+	props.append({&"name": "_to_editor_cached",   "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_NIL_IS_VARIANT})
 
 	return props
 
 
-# Returns inspector value fields for the given prefix ("from"/"to") keyed by detected type.
-# Returns [] when TYPE_NIL (no property picked yet) — hides all value fields
-# until the user picks a property and the type is auto-detected.
-func _value_props(prefix: String, label: String) -> Array[Dictionary]:
+# Builds the inspector-visible From Value / To Value fields for the given prefix.
+# Only the field matching _detected_type is shown — all others are storage-only.
+# Discrete types (bool, string, object, etc.) additionally show flip_threshold
+# once so the designer can see and adjust the switch point without scrolling.
+# Returns [] when _detected_type is TYPE_NIL (no property picked yet).
+func _value_props(prefix: String, _label: String) -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 	var t := _detected_type
+
+	# Continuous types — lerp/slerp between From and To.
 	match t:
 		TYPE_INT:
-			props.append({"name": "%s_int" % prefix, "type": TYPE_INT,
+			props.append({&"name": "%s_int" % prefix,  "type": TYPE_INT,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		TYPE_FLOAT:
-			props.append({"name": "%s_float" % prefix, "type": TYPE_FLOAT,
+			props.append({&"name": "%s_float" % prefix, "type": TYPE_FLOAT,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		TYPE_VECTOR2:
-			props.append({"name": "%s_vec2" % prefix, "type": TYPE_VECTOR2,
+			props.append({&"name": "%s_vec2" % prefix,  "type": TYPE_VECTOR2,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_VECTOR2I:
+			props.append({&"name": "%s_vec2i" % prefix, "type": TYPE_VECTOR2I,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_RECT2:
+			props.append({&"name": "%s_rect2" % prefix, "type": TYPE_RECT2,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_RECT2I:
+			props.append({&"name": "%s_rect2i" % prefix,"type": TYPE_RECT2I,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		TYPE_VECTOR3:
-			props.append({"name": "%s_vec3" % prefix, "type": TYPE_VECTOR3,
+			props.append({&"name": "%s_vec3" % prefix,  "type": TYPE_VECTOR3,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_VECTOR3I:
+			props.append({&"name": "%s_vec3i" % prefix, "type": TYPE_VECTOR3I,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_VECTOR4:
+			props.append({&"name": "%s_vec4" % prefix,  "type": TYPE_VECTOR4,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_VECTOR4I:
+			props.append({&"name": "%s_vec4i" % prefix, "type": TYPE_VECTOR4I,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_QUATERNION:
+			props.append({&"name": "%s_quat" % prefix,  "type": TYPE_QUATERNION,
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_AABB:
+			props.append({&"name": "%s_aabb" % prefix,  "type": TYPE_AABB,
 				"usage": PROPERTY_USAGE_DEFAULT})
 		TYPE_COLOR:
-			props.append({"name": "%s_color" % prefix, "type": TYPE_COLOR,
+			props.append({&"name": "%s_color" % prefix, "type": TYPE_COLOR,
 				"usage": PROPERTY_USAGE_DEFAULT})
-		_:  # TYPE_NIL — no property picked yet, hide all value fields.
+
+		# Discrete / threshold-flip types — value switches at flip_threshold.
+		# flip_threshold is appended after the value field so it sits directly
+		# below its From or To entry (shown once per subgroup, not duplicated).
+		TYPE_BOOL:
+			props.append({&"name": "%s_bool" % prefix, "type": TYPE_BOOL,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_STRING:
+			props.append({&"name": "%s_string" % prefix, "type": TYPE_STRING,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_STRING_NAME:
+			props.append({&"name": "%s_stringname" % prefix, "type": TYPE_STRING_NAME,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_NODE_PATH:
+			props.append({&"name": "%s_nodepath" % prefix, "type": TYPE_NODE_PATH,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_OBJECT:
+			props.append({&"name": "%s_object" % prefix, "type": TYPE_OBJECT,
+				"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "Resource",
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_PLANE:
+			props.append({&"name": "%s_plane" % prefix, "type": TYPE_PLANE,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_BASIS:
+			props.append({&"name": "%s_basis" % prefix, "type": TYPE_BASIS,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+		TYPE_PROJECTION:
+			props.append({&"name": "%s_projection" % prefix, "type": TYPE_PROJECTION,
+				"usage": PROPERTY_USAGE_DEFAULT})
+			props.append({&"name": "flip_threshold", "type": TYPE_FLOAT,
+				"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01",
+				"usage": PROPERTY_USAGE_DEFAULT})
+
+		_:
+			# TYPE_NIL — no property picked yet. Return empty so no value fields
+			# are shown until the user opens the picker and selects a property.
 			pass
+
 	return props
+
 
 
 func _set(property: StringName, value: Variant) -> bool:
