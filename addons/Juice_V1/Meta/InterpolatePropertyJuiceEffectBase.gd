@@ -1,8 +1,8 @@
 ## Interpolates arbitrary node properties from a FROM value to a TO value.
 ##
 ## Each InterpolatePropertyTarget entry specifies its own node, property,
-## capture modes, and from/to values. GDScript lerp() handles float, Vector2,
-## Vector3, and Color polymorphically. int is lerped as float then cast.
+## capture modes, and typed from/to values. Continuous types use lerp/slerp.
+## Discrete types (bool, String, Object, etc.) flip at a designer-set threshold.
 
 # =============================================================================
 # WHAT: Drives a list of arbitrary properties from configurable From to To
@@ -110,8 +110,10 @@ func _apply_effect(progress: float, _target: Node) -> void:
 # LERP CORE
 # =============================================================================
 
-# Compute the interpolated value for one entry at the given progress (0–1).
-# Returns null for TYPE_NIL (unknown) or mismatched from/to types.
+# Computes the interpolated value for one entry at the given progress (0.0–1.0).
+# Explicit type dispatch — avoids Variant lerp() polymorphism which is too
+# implicit and fails silently for integer and vector-int types.
+# Returns null if from/to are null or the type is not handled (caller skips write).
 func _compute_lerp(entry: InterpolatePropertyTarget, progress: float) -> Variant:
 	var from_val: Variant = entry.get_from()
 	var to_val:   Variant = entry.get_to()
@@ -119,18 +121,104 @@ func _compute_lerp(entry: InterpolatePropertyTarget, progress: float) -> Variant
 	if from_val == null or to_val == null:
 		return null
 
-	# TYPE_INT: lerp as float, cast back to int for clean integer properties.
-	if entry._detected_type == TYPE_INT:
-		return int(lerpf(float(from_val), float(to_val), progress))
+	match entry._detected_type:
 
-	# All other supported types: GDScript lerp() is polymorphic.
-	# float, Vector2, Vector3, Color all work natively.
-	if entry._detected_type in [TYPE_FLOAT, TYPE_VECTOR2, TYPE_VECTOR3, TYPE_COLOR]:
-		return lerp(from_val, to_val, progress)
+		# ----- Continuous types: lerp/slerp between from_val and to_val -----
 
-	# TYPE_NIL / unsupported — emit on first frame only to avoid spam.
+		TYPE_FLOAT:
+			# Direct float lerp — the most common case (alpha, progress, uniforms).
+			return lerpf(from_val, to_val, progress)
+
+		TYPE_INT:
+			# Lerp as float then truncate back to int so integer node properties
+			# (e.g. z_index, item count) receive a clean integer on every write.
+			return int(lerpf(float(from_val), float(to_val), progress))
+
+		TYPE_VECTOR2:
+			return (from_val as Vector2).lerp(to_val, progress)
+
+		TYPE_VECTOR2I:
+			# GDScript has no Vector2i.lerp(); promote to float, lerp, truncate.
+			var fv := Vector2(from_val.x, from_val.y)
+			var tv := Vector2(to_val.x,   to_val.y)
+			var r  := fv.lerp(tv, progress)
+			return Vector2i(int(r.x), int(r.y))
+
+		TYPE_RECT2:
+			# Rect2 has no lerp(); decompose, lerp position and size independently.
+			var f := from_val as Rect2
+			var t := to_val   as Rect2
+			return Rect2(f.position.lerp(t.position, progress),
+						 f.size.lerp(t.size, progress))
+
+		TYPE_RECT2I:
+			# Same decompose-and-lerp, then truncate back to int components.
+			var f := from_val as Rect2i
+			var t := to_val   as Rect2i
+			var p  := Vector2(f.position.x, f.position.y).lerp(
+					  Vector2(t.position.x, t.position.y), progress)
+			var s  := Vector2(f.size.x, f.size.y).lerp(
+					  Vector2(t.size.x,   t.size.y),   progress)
+			return Rect2i(int(p.x), int(p.y), int(s.x), int(s.y))
+
+		TYPE_VECTOR3:
+			return (from_val as Vector3).lerp(to_val, progress)
+
+		TYPE_VECTOR3I:
+			# Same float-promote pattern as Vector2i.
+			var fv := Vector3(from_val.x, from_val.y, from_val.z)
+			var tv := Vector3(to_val.x,   to_val.y,   to_val.z)
+			var r  := fv.lerp(tv, progress)
+			return Vector3i(int(r.x), int(r.y), int(r.z))
+
+		TYPE_VECTOR4:
+			# Vector4 has no built-in lerp(); component-wise lerpf.
+			var f := from_val as Vector4
+			var t := to_val   as Vector4
+			return Vector4(
+				lerpf(f.x, t.x, progress),
+				lerpf(f.y, t.y, progress),
+				lerpf(f.z, t.z, progress),
+				lerpf(f.w, t.w, progress))
+
+		TYPE_VECTOR4I:
+			# Same component-wise pattern, truncated back to int.
+			var f := from_val as Vector4i
+			var t := to_val   as Vector4i
+			return Vector4i(
+				int(lerpf(f.x, t.x, progress)),
+				int(lerpf(f.y, t.y, progress)),
+				int(lerpf(f.z, t.z, progress)),
+				int(lerpf(f.w, t.w, progress)))
+
+		TYPE_QUATERNION:
+			# slerp() avoids length drift and gimbal lock that lerp+normalize causes.
+			return (from_val as Quaternion).slerp(to_val, progress)
+
+		TYPE_AABB:
+			# Decompose and lerp position + size extents independently.
+			var f := from_val as AABB
+			var t := to_val   as AABB
+			return AABB(f.position.lerp(t.position, progress),
+						f.size.lerp(t.size, progress))
+
+		TYPE_COLOR:
+			# Color.lerp() handles all four channels (r, g, b, a) uniformly.
+			return (from_val as Color).lerp(to_val, progress)
+
+		# ----- Discrete / threshold-flip types -----
+		# At progress >= flip_threshold return to_val; before it return from_val.
+		# No interpolation — these types cannot be meaningfully lerped.
+
+		TYPE_BOOL, TYPE_STRING, TYPE_STRING_NAME, \
+		TYPE_NODE_PATH, TYPE_OBJECT, \
+		TYPE_PLANE, TYPE_BASIS, TYPE_PROJECTION:
+			return to_val if progress >= entry.flip_threshold else from_val
+
+	# TYPE_NIL or an unhandled type — warn once (first ~frame) to avoid log spam.
 	if progress < 0.02:
 		JuiceLogger.warn(self, _get_domain_tag(),
-				"property '%s' type unknown — set property_path first" % entry.property_path,
+				"property '%s' has unhandled type %d — pick a valid property first" \
+				% [entry.property_path, entry._detected_type],
 				debug_enabled)
 	return null
