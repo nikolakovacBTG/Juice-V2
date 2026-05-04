@@ -1,13 +1,27 @@
 ## Per-property config for InterpolatePropertyJuiceEffectBase.
 ##
-## Extends PropertyTarget with From/To values and capture modes.
-## CaptureMode controls whether from/to is typed manually, snapshotted
-## in the editor, or grabbed at runtime when the trigger fires.
+## Extends PropertyTarget with typed From/To values, a CaptureMode per
+## endpoint, and an optional flip_threshold for discrete types.
+##
+## Supported types:
+##   Continuous (lerped): int, float, Vector2/2i, Rect2/2i, Vector3/3i,
+##   Vector4/4i, Quaternion, AABB, Color.
+##   Discrete (flip at flip_threshold): bool, String, StringName, NodePath,
+##   Object (Resource), Plane, Basis, Projection.
+##
+## CaptureMode controls how each endpoint's value is sourced:
+##   CUSTOM — typed directly in the inspector.
+##   IN_EDITOR — snapshotted from the live node via the Capture button.
+##   ON_TRIGGER — grabbed from the node property at the moment animate_in() fires.
 
 # =============================================================================
-# WHAT: One "interpolate target slot" — node+property+from+to+capture modes.
-# WHY:  Separates per-property from/to config from shared effect settings.
-#       Capture modes give designers full control without writing scripts.
+# WHAT: One "interpolate target slot" — node + property + typed From/To + capture.
+# WHY:  Stores all per-property animation config as a resource so multiple
+#       targets can be stacked in one effect and serialized to .tres.
+#       Keeping From/To in typed backing vars (one per Godot type) preserves
+#       all values across type-switches without silent data loss.
+#       flip_threshold is shared across discrete-type targets in the same slot
+#       because a single property can only be discrete or continuous, never both.
 # SYSTEM: Juice System (addons/Juice_V1/Meta/)
 # =============================================================================
 
@@ -216,6 +230,14 @@ func _init() -> void:
 	# From/To fields would appear before node_path/property_path.
 	_subclass_owns_target_layout = true
 
+# Builds the complete inspector layout for this target slot.
+# Owns the full layout (including the inherited node_path/property_path from
+# PropertyTarget) because _subclass_owns_target_layout is set in _init —
+# this prevents Godot's child-first property order from inserting From/To
+# fields above the path fields.
+# The method emits only the fields relevant to the current detected_type and
+# capture modes — all 42 other backing vars are serialized via STORAGE-only rows
+# at the bottom so they survive type-switches without appearing in the inspector.
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 	# NOTE: do NOT call super._get_property_list() — we own the layout
