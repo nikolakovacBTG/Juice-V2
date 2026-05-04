@@ -35,6 +35,9 @@ signal properties_confirmed(paths: Array[String])
 
 var _target_node: Node = null
 var _initial_paths: Array[String] = []
+# The class name of the effect that opened the picker (e.g. "PropertyInterpolateControlJuiceEffect").
+# Used to show per-family redirect notes for ledger-managed properties.
+var _effect_family: String = ""
 
 var _search_edit: LineEdit
 var _restrict_check: CheckBox
@@ -45,19 +48,50 @@ var _tree: Tree
 # LEDGER-MANAGED PROPERTIES
 # =============================================================================
 
-# Properties owned by the JuiceLedger across all domains.
-# These are shown grayed-out in the picker with a redirect note so the user
-# knows which dedicated effect to use instead of the Property family.
-# Key: root property name (String). Value: redirect hint (String).
+# Properties owned by the JuiceLedger — Juice writes them every frame as part
+# of its delta-aggregation pipeline (position, rotation, scale, modulate, etc.).
+# These CANNOT be animated via the Property family without conflicting with Juice's
+# own writes. They are shown grayed-out in the picker so the designer knows to use
+# a dedicated Juice effect instead.
+# Key: root property name. Value: unused (notes are generated per effect family).
 const LEDGER_MANAGED_PROPERTIES: Dictionary = {
-	"position":          "Add Transform Effect to recipe",
-	"rotation":          "Add Transform Effect to recipe",
-	"rotation_degrees":  "Add Transform Effect to recipe",
-	"scale":             "Add Transform Effect to recipe",
-	"skew":              "Add Transform Effect to recipe",
-	"modulate":          "Add Appearance Effect to recipe",
-	"self_modulate":     "Add Appearance Effect to recipe",
+	"position":          true,
+	"rotation":          true,
+	"rotation_degrees":  true,
+	"scale":             true,
+	"skew":              true,
+	"modulate":          true,
+	"self_modulate":     true,
 }
+
+# Returns the exact redirect note for a ledger-managed property given the
+# opening effect's family name. Each property family knows which Juice effect
+# handles that concern. New families should be added here when ported.
+# prop: root property name (e.g. "position"). family: class_name of the effect.
+func _get_ledger_note(prop: String, family: String) -> String:
+	var is_transform := prop in ["position", "rotation", "rotation_degrees", "scale", "skew"]
+	var is_appearance := prop in ["modulate", "self_modulate"]
+
+	# Transform properties
+	if is_transform:
+		if "Noise" in family:
+			return "→ Use Shake or NoiseProperty Effect for transform noise"
+		if "Shake" in family:
+			return "→ Use Shake Effect (already the right family!)"
+		# Interpolate and others
+		return "→ Use Transform Interpolate Effect for smooth from/to moves"
+
+	# Appearance / color properties
+	if is_appearance:
+		if "Noise" in family:
+			return "→ Use Appearance Noise Effect for color/alpha noise"
+		if "Shake" in family:
+			return "→ Use Appearance Effect (Shake doesn't animate color)"
+		return "→ Use Appearance Interpolate Effect for color/alpha from/to"
+
+	# Unknown ledger property (future additions)
+	return "→ Managed by Juice — use the dedicated effect for this property"
+
 
 # Types that cannot be picked at all — they are internal engine handles with no
 # inspector-configurable value and no meaningful animation target.
@@ -77,7 +111,10 @@ const UNSUPPORTED_TYPES: Array[int] = [
 func _init() -> void:
 	title = "Pick Properties"
 	initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
-	min_size = Vector2i(460, 540)
+	# min_size covers the dialog chrome (title bar + buttons) plus tree content.
+	# The tree itself has a custom_minimum_size set in _build_ui so the first
+	# layout pass gives it meaningful height even before popup_centered fires.
+	min_size = Vector2i(480, 560)
 	exclusive = true
 	unresizable = false
 	visible = false  # Hidden until explicitly opened via open_for_node().
@@ -91,9 +128,12 @@ func _init() -> void:
 
 
 func _build_ui() -> void:
-	# AcceptDialog / ConfirmationDialog (which inherit from Window) do not automatically
-	# layout multiple custom children. We MUST wrap everything in a single container.
+	# AcceptDialog / ConfirmationDialog do not automatically layout multiple custom
+	# children — wrap everything in a single VBoxContainer that fills the content area.
 	var main_vbox := VBoxContainer.new()
+	# Give the VBox a minimum size so the first layout pass has something to work with.
+	# Without this, Tree gets 0 height on first open and the dialog renders broken.
+	main_vbox.custom_minimum_size = Vector2i(460, 460)
 	add_child(main_vbox)
 
 	# --- Top bar: search + filter ---
@@ -117,37 +157,43 @@ func _build_ui() -> void:
 	# --- Property tree ---
 	_tree = Tree.new()
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# Explicit minimum height so layout is stable on first open.
+	_tree.custom_minimum_size = Vector2i(0, 340)
 	_tree.hide_root = true
 	_tree.columns = 3
 	_tree.set_column_title(0, "Property")
 	_tree.set_column_title(1, "Type")
 	_tree.set_column_title(2, "Note")
 	_tree.set_column_titles_visible(true)
-	# Property column: expands to fill all remaining space.
+	# Property column: expands to fill remaining space.
 	_tree.set_column_expand(0, true)
-	# Type column: fixed narrow width.
+	_tree.set_column_custom_minimum_width(0, 120)
+	# Type column: fixed narrow width — type names are short.
 	_tree.set_column_expand(1, false)
 	_tree.set_column_custom_minimum_width(1, 68)
-	# Note column: fixed width — does NOT expand so Property column gets priority.
-	_tree.set_column_expand(2, false)
-	_tree.set_column_custom_minimum_width(2, 165)
+	# Note column: also expands so it widens when the window is stretched.
+	# Minimum keeps the column readable at narrow sizes.
+	_tree.set_column_expand(2, true)
+	_tree.set_column_custom_minimum_width(2, 140)
 	main_vbox.add_child(_tree)
 
-	# Status tip
+	# --- Footer: selection hint ---
 	var tip := Label.new()
 	tip.text = "✓ = already in list  |  Check to add, uncheck to remove"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	main_vbox.add_child(tip)
 
-	# Grayed-out notice — explains why some rows cannot be picked.
-	var ledger_tip := Label.new()
-	ledger_tip.text = ("Grayed-out properties are managed by the Juice system internally.\n"
-		+ "Use the dedicated effect shown in the Note column instead.")
-	ledger_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ledger_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ledger_tip.add_theme_color_override("font_color", Color(0.75, 0.55, 0.25))
-	main_vbox.add_child(ledger_tip)
+	# --- Footer: grayed + unsupported explanation ---
+	var info_tip := Label.new()
+	info_tip.text = (
+		"Grayed-out properties are controlled by the Juice system — the Note column\n"
+		+ "shows exactly which Juice Effect to add to the Recipe instead.\n"
+		+ "Some engine-internal properties (non-animatable handles) are not listed at all.")
+	info_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info_tip.add_theme_color_override("font_color", Color(0.75, 0.55, 0.25))
+	main_vbox.add_child(info_tip)
 
 	# --- Connections ---
 	_search_edit.text_changed.connect(func(_t): _populate_tree())
@@ -159,13 +205,15 @@ func _build_ui() -> void:
 # =============================================================================
 
 ## Open the dialog for a specific node, with optional pre-checked paths.
-## node: the resolved PropertyTarget._resolved_node (or any Node)
-## current_paths: Array[String] of already-configured property paths
-func open_for_node(node: Node, current_paths: Array[String]) -> void:
+## node: the resolved PropertyTarget._resolved_node (or any Node).
+## current_paths: Array[String] of already-configured property paths.
+## effect_family: class_name of the opening effect (used to pick per-family ledger notes).
+func open_for_node(node: Node, current_paths: Array[String], effect_family: String = "") -> void:
 	_target_node = node
 	_initial_paths = current_paths.duplicate()
+	_effect_family = effect_family
 	_populate_tree()
-	popup_centered(Vector2i(460, 540))
+	popup_centered(Vector2i(480, 560))
 
 
 # =============================================================================
@@ -205,17 +253,17 @@ func _populate_tree() -> void:
 
 		var type_id: int = prop.get("type", TYPE_NIL)
 
-		# Skip non-animatable types unless they are ledger-managed
-		# (those still appear grayed to explain the redirect).
-		if type_id in UNSUPPORTED_TYPES and not (name in LEDGER_MANAGED_PROPERTIES):
+		# Completely skip non-animatable engine-internal types (RID, Callable, Signal).
+		# These have no inspector-configurable value — hiding them avoids confusion.
+		if type_id in UNSUPPORTED_TYPES:
 			continue
 
 		if usage & PROPERTY_USAGE_EDITOR:
 			exported_items.append(prop)
 		elif name in LEDGER_MANAGED_PROPERTIES:
-			# Ledger-managed properties must always appear in the "Inspector Properties"
-			# section grayed-out, even if the engine marks them as storage-only.
-			# Without this, position/rotation/scale could be hidden by "Exports only".
+			# Ledger-managed properties always appear in "Inspector Properties"
+			# even if the engine marks them as storage-only. Without this, they
+			# could be hidden by the "Exports only" toggle.
 			exported_items.append(prop)
 		else:
 			engine_items.append(prop)
@@ -239,6 +287,7 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 	var header := _tree.create_item(root)
 	header.set_selectable(0, false)
 	header.set_selectable(1, false)
+	header.set_selectable(2, false)
 	header.set_text(0, section_name)
 	header.set_custom_color(0, Color(0.7, 0.7, 0.7))
 	header.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
@@ -250,20 +299,27 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 
 		var item := _tree.create_item(header)
 
-		# Ledger-managed: show grayed, non-checkable, with redirect note in col 2.
+		# Ledger-managed: shown grayed and non-selectable. Note column explains
+		# which specific Juice Effect handles this property for the current family.
 		if name in LEDGER_MANAGED_PROPERTIES:
 			item.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
 			item.set_selectable(0, false)
+			item.set_selectable(1, false)
+			item.set_selectable(2, false)
 			item.set_text(0, name)
 			item.set_custom_color(0, Color(0.5, 0.5, 0.5))
 			item.set_text(1, type_string(type_id))
 			item.set_custom_color(1, Color(0.5, 0.5, 0.5))
-			item.set_text(2, LEDGER_MANAGED_PROPERTIES[name])
+			item.set_text(2, _get_ledger_note(name, _effect_family))
 			item.set_custom_color(2, Color(0.8, 0.6, 0.3))
 			continue
 
+		# Normal checkable item.
 		item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		item.set_editable(0, true)
+		item.set_selectable(0, true)   # checkbox col is intentionally selectable
+		item.set_selectable(1, false)  # Type col: display only
+		item.set_selectable(2, false)  # Note col: display only
 		item.set_text(0, name)
 		item.set_meta("property_path", name)
 
@@ -273,7 +329,7 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 		if is_checked:
 			item.set_custom_color(0, Color(0.4, 1.0, 0.5))
 
-		# Type column.
+		# Type column — display only.
 		item.set_text(1, type_string(type_id))
 		item.set_custom_color(1, Color(0.6, 0.8, 1.0))
 
@@ -284,10 +340,6 @@ func _add_tree_section(section_name: String, items: Array[Dictionary]) -> void:
 
 # Check all material-type properties on the target node and add a picker
 # section for each one that holds a ShaderMaterial with a compiled shader.
-# Confirmed working via live editor-script test:
-#   node.get("material")          → CanvasItem / Sprite2D / Label etc.
-#   node.get("material_override") → MeshInstance3D / GeometryInstance3D
-#   node.get("material_overlay")  → MeshInstance3D second overlay layer
 func _add_shader_params_section(filter: String) -> void:
 	if not is_instance_valid(_target_node):
 		return
@@ -298,8 +350,7 @@ func _add_shader_params_section(filter: String) -> void:
 
 
 # Populate one amber section in the tree for a specific ShaderMaterial.
-# mat_prop: the node property name holding the material
-# ("material", "material_override", or "material_overlay").
+# mat_prop: the node property name holding the material.
 func _add_shader_section_for_material(
 		mat_prop: String, material: ShaderMaterial, filter: String) -> void:
 
@@ -314,11 +365,11 @@ func _add_shader_section_for_material(
 		return
 
 	# Section header — amber colour distinguishes shader params from node props.
-	# Label includes mat_prop so users know which material slot this targets.
 	var root := _tree.get_root()
 	var header := _tree.create_item(root)
 	header.set_selectable(0, false)
 	header.set_selectable(1, false)
+	header.set_selectable(2, false)
 	header.set_text(0, "Shader Parameters (%s)" % mat_prop)
 	header.set_custom_color(0, Color(0.9, 0.75, 0.3))
 	header.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
@@ -332,9 +383,10 @@ func _add_shader_section_for_material(
 		var is_texture: bool  = (utype == TYPE_OBJECT)
 
 		var item := _tree.create_item(header)
+		item.set_selectable(1, false)
+		item.set_selectable(2, false)
 		if is_texture:
 			# Sampler/texture uniforms cannot be lerped or noise-driven.
-			# Show them greyed and non-checkable so the user sees them but can't pick them.
 			item.set_cell_mode(0, TreeItem.CELL_MODE_STRING)
 			item.set_selectable(0, false)
 			item.set_text(0, uname + "  (sampler — not animatable)")
@@ -344,6 +396,7 @@ func _add_shader_section_for_material(
 		else:
 			item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 			item.set_editable(0, true)
+			item.set_selectable(0, true)
 			item.set_text(0, uname)
 			item.set_meta("property_path", full_path)
 			var is_checked := full_path in _initial_paths
