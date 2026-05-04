@@ -88,12 +88,16 @@ func test_scale_shake_applies() -> void:
 	var natural_scale := target.scale
 
 	juice.animate_in()
-	await wait_seconds(0.1)
+	# Scale amplitude (0.5) is smaller than position (2.0) or rotation (15°),
+	# so the shake needs more frames to reliably exceed the 0.01 assertion threshold.
+	# 0.25s matches the pattern used for other noise/shake tests with small amplitudes.
+	await wait_seconds(0.25)
 
 	assert_not_approx_vec3(target.scale, natural_scale,
 		"Scale should differ during shake", 0.01)
 
 	await cleanup(target)
+
 
 
 func test_returns_to_natural_after_completion() -> void:
