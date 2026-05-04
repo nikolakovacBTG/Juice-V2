@@ -33,32 +33,177 @@ enum CaptureMode {
 # =============================================================================
 
 ## How to determine the FROM value.
+## ON_TRIGGER snapshots the live property value the instant animate_in() fires.
+## IN_EDITOR uses a value captured via the Capture button at design time.
+## CUSTOM shows typed From/To fields below, matched to the detected property type.
 var capture_from: int = CaptureMode.ON_TRIGGER:
 	set(v): capture_from = v; notify_property_list_changed()
 
-# Manual FROM values — one per supported type (only relevant type shown).
-var from_int:   int   = 0
-var from_float: float = 0.0
-var from_vec2:  Vector2 = Vector2.ZERO
-var from_vec3:  Vector3 = Vector3.ZERO
-var from_color: Color   = Color.BLACK
-
-## Editor-time cached FROM value (set via Capture button).
+## Editor-time snapshot of the FROM value. Set by pressing Capture From Value.
+## Stored as Variant so any property type can be cached without casting.
 var _from_editor_cached: Variant = null
 
-## How to determine the TO value.
+## How to determine the TO value. See capture_from for mode descriptions.
 var capture_to: int = CaptureMode.CUSTOM:
 	set(v): capture_to = v; notify_property_list_changed()
 
-# Manual TO values.
-var to_int:   int   = 1
-var to_float: float = 1.0
-var to_vec2:  Vector2 = Vector2.ONE
-var to_vec3:  Vector3 = Vector3.ONE
-var to_color: Color   = Color.WHITE
-
-## Editor-time cached TO value (set via Capture button).
+## Editor-time snapshot of the TO value. Set by pressing Capture To Value.
 var _to_editor_cached: Variant = null
+
+# --- Threshold (shared by all discrete / threshold-flip types) ---------------
+## Progress at which discrete types flip from the FROM value to the TO value.
+## At progress >= flip_threshold the TO value is used; below it, FROM is used.
+## Applies to: bool, String, StringName, NodePath, Object, Plane, Basis, Projection.
+## Range 0.0–1.0. Default 0.5 = halfway through the animation.
+var flip_threshold: float = 0.5
+
+# --- Manual FROM values -------------------------------------------------------
+# One field per supported Godot type. Only the field matching the auto-detected
+# property type is shown in the inspector (Step B wires the conditional display).
+# All fields are always serialized so switching the target property never loses
+# previously typed values.
+
+## FROM value for bool properties (e.g. visible, disabled).
+## Flips to to_bool at flip_threshold progress.
+var from_bool: bool = false
+
+## FROM value for int properties. Stored as true int — no float promotion.
+## The lerp result is cast back to int on write so Godot's type stays intact.
+var from_int: int = 0
+
+## FROM value for float properties (e.g. modulate alpha, shader uniforms).
+var from_float: float = 0.0
+
+## FROM value for Vector2 properties (e.g. size, pivot_offset).
+var from_vec2: Vector2 = Vector2.ZERO
+
+## FROM value for Vector2i properties.
+var from_vec2i: Vector2i = Vector2i.ZERO
+
+## FROM value for Rect2 properties (e.g. region_rect on Sprite2D).
+## Position and size are lerped independently.
+var from_rect2: Rect2 = Rect2()
+
+## FROM value for Rect2i properties.
+var from_rect2i: Rect2i = Rect2i()
+
+## FROM value for Vector3 properties.
+var from_vec3: Vector3 = Vector3.ZERO
+
+## FROM value for Vector3i properties.
+var from_vec3i: Vector3i = Vector3i()
+
+## FROM value for Vector4 properties (primarily shader vec4 uniforms).
+## Four independent float channels with no clamping — unlike Color.
+var from_vec4: Vector4 = Vector4()
+
+## FROM value for Vector4i properties.
+var from_vec4i: Vector4i = Vector4i()
+
+## FROM value for Plane properties. Switches at flip_threshold (no lerp).
+var from_plane: Plane = Plane()
+
+## FROM value for Quaternion properties. Interpolated with slerp() for
+## correct smooth rotation without gimbal lock.
+var from_quat: Quaternion = Quaternion.IDENTITY
+
+## FROM value for AABB properties (e.g. custom_aabb on GeometryInstance3D).
+## Position and size extents are lerped independently.
+var from_aabb: AABB = AABB()
+
+## FROM value for Basis properties. Switches at flip_threshold (no lerp).
+## Direct Basis lerp is ambiguous — use Quaternion for smooth rotation instead.
+var from_basis: Basis = Basis.IDENTITY
+
+## FROM value for Projection (4×4 matrix) properties. Switches at flip_threshold.
+var from_projection: Projection = Projection.IDENTITY
+
+## FROM value for Color properties (e.g. shader color uniforms, custom colors).
+## Note: modulate and self_modulate are ledger-managed — use Appearance Effect.
+var from_color: Color = Color.BLACK
+
+## FROM value for String properties (e.g. text, animation names).
+## Switches at flip_threshold (no lerp — strings are discrete values).
+var from_string: String = ""
+
+## FROM value for StringName properties.
+## Switches at flip_threshold.
+var from_stringname: StringName = &""
+
+## FROM value for NodePath properties.
+## Switches at flip_threshold — useful to redirect which node is targeted.
+var from_nodepath: NodePath = NodePath()
+
+## FROM value for Resource/Object properties (e.g. Texture2D, Material, Mesh).
+## Switches at flip_threshold — enables texture swap, material swap, mesh swap effects.
+var from_object: Resource = null
+
+# --- Manual TO values ---------------------------------------------------------
+# Defaults use typical "arrived at" values so a new entry is already non-trivial.
+
+## TO value for bool properties.
+var to_bool: bool = true
+
+## TO value for int properties.
+var to_int: int = 1
+
+## TO value for float properties.
+var to_float: float = 1.0
+
+## TO value for Vector2 properties.
+var to_vec2: Vector2 = Vector2.ONE
+
+## TO value for Vector2i properties.
+var to_vec2i: Vector2i = Vector2i.ONE
+
+## TO value for Rect2 properties.
+var to_rect2: Rect2 = Rect2(0.0, 0.0, 1.0, 1.0)
+
+## TO value for Rect2i properties.
+var to_rect2i: Rect2i = Rect2i(0, 0, 1, 1)
+
+## TO value for Vector3 properties.
+var to_vec3: Vector3 = Vector3.ONE
+
+## TO value for Vector3i properties.
+var to_vec3i: Vector3i = Vector3i(1, 1, 1)
+
+## TO value for Vector4 properties.
+var to_vec4: Vector4 = Vector4(1.0, 1.0, 1.0, 1.0)
+
+## TO value for Vector4i properties.
+var to_vec4i: Vector4i = Vector4i(1, 1, 1, 1)
+
+## TO value for Plane properties. Switches at flip_threshold.
+var to_plane: Plane = Plane(0.0, 1.0, 0.0, 0.0)
+
+## TO value for Quaternion properties (the rotation state at progress = 1.0).
+var to_quat: Quaternion = Quaternion.IDENTITY
+
+## TO value for AABB properties.
+var to_aabb: AABB = AABB(Vector3.ZERO, Vector3.ONE)
+
+## TO value for Basis properties. Switches at flip_threshold.
+var to_basis: Basis = Basis.IDENTITY
+
+## TO value for Projection properties. Switches at flip_threshold.
+var to_projection: Projection = Projection.IDENTITY
+
+## TO value for Color properties.
+var to_color: Color = Color.WHITE
+
+## TO value for String properties. Switches at flip_threshold.
+var to_string: String = ""
+
+## TO value for StringName properties. Switches at flip_threshold.
+var to_stringname: StringName = &""
+
+## TO value for NodePath properties. Switches at flip_threshold.
+var to_nodepath: NodePath = NodePath()
+
+## TO value for Resource/Object properties. Switches at flip_threshold.
+var to_object: Resource = null
+
 
 
 # =============================================================================
