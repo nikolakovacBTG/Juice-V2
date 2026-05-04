@@ -438,22 +438,64 @@ func _value_props(prefix: String, _label: String) -> Array[Dictionary]:
 
 
 
+# Handles serialization writes for all backing vars that are not @export.
+# GDScript calls _set() for every property in _get_property_list() that has
+# PROPERTY_USAGE_STORAGE — without this, saved .tres files cannot reload values.
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
+		# Capture mode controllers — setters already call notify_property_list_changed().
 		&"capture_from":  capture_from = value;  return true
 		&"capture_to":    capture_to = value;    return true
-		&"from_int":      from_int = value;      return true
-		&"from_float":    from_float = value;    return true
-		&"from_vec2":     from_vec2 = value;     return true
-		&"from_vec3":     from_vec3 = value;     return true
-		&"from_color":    from_color = value;    return true
-		&"to_int":        to_int = value;        return true
-		&"to_float":      to_float = value;      return true
-		&"to_vec2":       to_vec2 = value;       return true
-		&"to_vec3":       to_vec3 = value;       return true
-		&"to_color":      to_color = value;      return true
+		# Threshold shared by all discrete/flip types.
+		&"flip_threshold": flip_threshold = value; return true
+		# --- FROM ---
+		&"from_bool":       from_bool = value;       return true
+		&"from_int":        from_int = value;        return true
+		&"from_float":      from_float = value;      return true
+		&"from_vec2":       from_vec2 = value;       return true
+		&"from_vec2i":      from_vec2i = value;      return true
+		&"from_rect2":      from_rect2 = value;      return true
+		&"from_rect2i":     from_rect2i = value;     return true
+		&"from_vec3":       from_vec3 = value;       return true
+		&"from_vec3i":      from_vec3i = value;      return true
+		&"from_vec4":       from_vec4 = value;       return true
+		&"from_vec4i":      from_vec4i = value;      return true
+		&"from_plane":      from_plane = value;      return true
+		&"from_quat":       from_quat = value;       return true
+		&"from_aabb":       from_aabb = value;       return true
+		&"from_basis":      from_basis = value;      return true
+		&"from_projection": from_projection = value; return true
+		&"from_color":      from_color = value;      return true
+		&"from_string":     from_string = value;     return true
+		&"from_stringname": from_stringname = value; return true
+		&"from_nodepath":   from_nodepath = value;   return true
+		&"from_object":     from_object = value;     return true
+		# --- TO ---
+		&"to_bool":         to_bool = value;         return true
+		&"to_int":          to_int = value;          return true
+		&"to_float":        to_float = value;        return true
+		&"to_vec2":         to_vec2 = value;         return true
+		&"to_vec2i":        to_vec2i = value;        return true
+		&"to_rect2":        to_rect2 = value;        return true
+		&"to_rect2i":       to_rect2i = value;       return true
+		&"to_vec3":         to_vec3 = value;         return true
+		&"to_vec3i":        to_vec3i = value;        return true
+		&"to_vec4":         to_vec4 = value;         return true
+		&"to_vec4i":        to_vec4i = value;        return true
+		&"to_plane":        to_plane = value;        return true
+		&"to_quat":         to_quat = value;         return true
+		&"to_aabb":         to_aabb = value;         return true
+		&"to_basis":        to_basis = value;        return true
+		&"to_projection":   to_projection = value;   return true
+		&"to_color":        to_color = value;        return true
+		&"to_string":       to_string = value;       return true
+		&"to_stringname":   to_stringname = value;   return true
+		&"to_nodepath":     to_nodepath = value;     return true
+		&"to_object":       to_object = value;       return true
+		# --- Editor cache ---
 		&"_from_editor_cached": _from_editor_cached = value; return true
 		&"_to_editor_cached":   _to_editor_cached = value;   return true
+		# --- Tool buttons (In Editor capture) ---
 		&"capture_from_now":
 			if value: _capture_from_in_editor_now()
 			return true
@@ -463,22 +505,61 @@ func _set(property: StringName, value: Variant) -> bool:
 	return super._set(property, value)
 
 
+# Handles serialization reads for all backing vars that are not @export.
+# GDScript calls _get() when the inspector or .tres loader needs a property value.
 func _get(property: StringName) -> Variant:
 	match property:
-		&"capture_from":  return capture_from
-		&"capture_to":    return capture_to
-		&"from_int":      return from_int
-		&"from_float":    return from_float
-		&"from_vec2":     return from_vec2
-		&"from_vec3":     return from_vec3
-		&"from_color":    return from_color
-		&"to_int":        return to_int
-		&"to_float":      return to_float
-		&"to_vec2":       return to_vec2
-		&"to_vec3":       return to_vec3
-		&"to_color":      return to_color
+		&"capture_from":    return capture_from
+		&"capture_to":      return capture_to
+		&"flip_threshold":  return flip_threshold
+		# --- FROM ---
+		&"from_bool":       return from_bool
+		&"from_int":        return from_int
+		&"from_float":      return from_float
+		&"from_vec2":       return from_vec2
+		&"from_vec2i":      return from_vec2i
+		&"from_rect2":      return from_rect2
+		&"from_rect2i":     return from_rect2i
+		&"from_vec3":       return from_vec3
+		&"from_vec3i":      return from_vec3i
+		&"from_vec4":       return from_vec4
+		&"from_vec4i":      return from_vec4i
+		&"from_plane":      return from_plane
+		&"from_quat":       return from_quat
+		&"from_aabb":       return from_aabb
+		&"from_basis":      return from_basis
+		&"from_projection": return from_projection
+		&"from_color":      return from_color
+		&"from_string":     return from_string
+		&"from_stringname": return from_stringname
+		&"from_nodepath":   return from_nodepath
+		&"from_object":     return from_object
+		# --- TO ---
+		&"to_bool":         return to_bool
+		&"to_int":          return to_int
+		&"to_float":        return to_float
+		&"to_vec2":         return to_vec2
+		&"to_vec2i":        return to_vec2i
+		&"to_rect2":        return to_rect2
+		&"to_rect2i":       return to_rect2i
+		&"to_vec3":         return to_vec3
+		&"to_vec3i":        return to_vec3i
+		&"to_vec4":         return to_vec4
+		&"to_vec4i":        return to_vec4i
+		&"to_plane":        return to_plane
+		&"to_quat":         return to_quat
+		&"to_aabb":         return to_aabb
+		&"to_basis":        return to_basis
+		&"to_projection":   return to_projection
+		&"to_color":        return to_color
+		&"to_string":       return to_string
+		&"to_stringname":   return to_stringname
+		&"to_nodepath":     return to_nodepath
+		&"to_object":       return to_object
+		# --- Editor cache ---
 		&"_from_editor_cached": return _from_editor_cached
 		&"_to_editor_cached":   return _to_editor_cached
+		# --- Display-only read-only rows (shown in inspector, not serialized) ---
 		&"_from_editor_cached_display":
 			return "Captured: %s" % str(_from_editor_cached)
 		&"_to_editor_cached_display":
@@ -545,14 +626,38 @@ func get_target_warnings() -> Array[String]:
 # HELPERS
 # =============================================================================
 
+# Returns the designer-typed CUSTOM value for FROM (is_to=false) or TO (is_to=true).
+# Discrete/threshold-flip types return their raw stored value here — the flip
+# decision (progress >= flip_threshold?) is made in _compute_lerp, not here.
+# Returns null for TYPE_NIL (no property picked yet) — callers must guard for null.
 func _custom_value(is_to: bool) -> Variant:
 	match _detected_type:
-		TYPE_INT:     return to_int   if is_to else from_int
-		TYPE_FLOAT:   return to_float if is_to else from_float
-		TYPE_VECTOR2: return to_vec2  if is_to else from_vec2
-		TYPE_VECTOR3: return to_vec3  if is_to else from_vec3
-		TYPE_COLOR:   return to_color if is_to else from_color
-	return null  # TYPE_NIL — unknown, can't provide a safe default.
+		# Continuous types — caller will lerp/slerp between from and to.
+		TYPE_INT:         return to_int         if is_to else from_int
+		TYPE_FLOAT:       return to_float       if is_to else from_float
+		TYPE_VECTOR2:     return to_vec2        if is_to else from_vec2
+		TYPE_VECTOR2I:    return to_vec2i       if is_to else from_vec2i
+		TYPE_RECT2:       return to_rect2       if is_to else from_rect2
+		TYPE_RECT2I:      return to_rect2i      if is_to else from_rect2i
+		TYPE_VECTOR3:     return to_vec3        if is_to else from_vec3
+		TYPE_VECTOR3I:    return to_vec3i       if is_to else from_vec3i
+		TYPE_VECTOR4:     return to_vec4        if is_to else from_vec4
+		TYPE_VECTOR4I:    return to_vec4i       if is_to else from_vec4i
+		TYPE_PLANE:       return to_plane       if is_to else from_plane
+		TYPE_QUATERNION:  return to_quat        if is_to else from_quat
+		TYPE_AABB:        return to_aabb        if is_to else from_aabb
+		TYPE_BASIS:       return to_basis       if is_to else from_basis
+		TYPE_PROJECTION:  return to_projection  if is_to else from_projection
+		TYPE_COLOR:       return to_color       if is_to else from_color
+		# Discrete types — caller will apply threshold-flip logic.
+		TYPE_BOOL:        return to_bool        if is_to else from_bool
+		TYPE_STRING:      return to_string      if is_to else from_string
+		TYPE_STRING_NAME: return to_stringname  if is_to else from_stringname
+		TYPE_NODE_PATH:   return to_nodepath    if is_to else from_nodepath
+		TYPE_OBJECT:      return to_object      if is_to else from_object
+	# TYPE_NIL — no property path picked yet; caller must treat null as "not ready".
+	return null
+
 
 
 func _capture_from_in_editor_now() -> void:
