@@ -6,9 +6,8 @@
 # ============================================================================
 # WHAT: Master EditorPlugin for Juice V1.
 # WHY:  Single entry point for all Juice editor features. Provides:
-#       1. PropertyPickerPlugin for inspector PropertyTarget rows
-#       2. Transport controls (play/pause/stop/scrub) for editor preview
-#       3. Bug report export via Project → Tools menu
+#       1. Transport controls (play/pause/stop/scrub) for editor preview
+#       2. Bug report export via Project → Tools menu
 # SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Implement effects (JuiceEffectBase subclasses), manage animation
 #           state (JuicePreviewDirector), or handle undo/redo.
@@ -22,9 +21,6 @@ const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn
 # =============================================================================
 # INTERNAL STATE
 # =============================================================================
-
-# PropertyPickerPlugin intercepts PropertyTarget resources in the inspector.
-var _picker_plugin: PropertyPickerPlugin = null
 
 # Menu item label — stored as a constant so _enter_tree and _exit_tree agree.
 const _BUG_REPORT_MENU_LABEL := "Export Juice Bug Report"
@@ -64,11 +60,6 @@ var _progress_warning_label: Label
 func _enter_tree() -> void:
 	# Register custom addon project settings
 	JuiceProjectSettings.register_settings()
-
-	_picker_plugin = PropertyPickerPlugin.new()
-	add_inspector_plugin(_picker_plugin)
-	# The dialog is a Window — it must live in the editor scene tree to popup.
-	_picker_plugin.add_dialog_to_editor(get_editor_interface().get_base_control())
 
 	# Register the bug report export action under Project → Tools.
 	add_tool_menu_item(_BUG_REPORT_MENU_LABEL, _on_export_bug_report)
@@ -110,11 +101,6 @@ func _deferred_restore_preview() -> void:
 
 
 func _exit_tree() -> void:
-	if _picker_plugin != null:
-		remove_inspector_plugin(_picker_plugin)
-		_picker_plugin.cleanup()
-		_picker_plugin = null
-
 	remove_tool_menu_item(_BUG_REPORT_MENU_LABEL)
 
 	if scene_changed.is_connected(_on_scene_changed):
