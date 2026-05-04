@@ -44,3 +44,36 @@ With the release of Godot 4.7 (specifically changes detailed in 4.7 dev snapshot
 - Simplify the layout shift detection logic.
 - Remove workarounds that exist purely to fight the old container behavior, leading to cleaner, more robust, and significantly more performant UI juice.
 - Re-evaluate if `_temporarily_undo_visual()` and `_temporarily_reapply_visual()` require any Control-specific container fighting logic going forward.
+
+---
+
+## 4. Property Effect Family — Ledger Refactor (Conflict Safety)
+
+**Status:** Deferred from V1.0. Shipped as an approved Direct-Write Exception.  
+**Full plan:** `Documentation/Future/PropertyFamily_Ledger_Refactor.md`
+
+**Why deferred:**
+The Property family (`InterpolateProperty*`, `NoiseProperty*`, `ShakeProperty*`, `ProgressProperty*`) bypasses the JuiceLedger and writes directly to the target node via `set_indexed()`. This was a deliberate V1.0 scope decision — the Ledger aggregates typed channels (position/rotation/scale/modulate) and extending it to arbitrary user-picked properties requires a new generic channel API and L2 domain changes across all three domains.
+
+**The V1.1 conflict being solved:**
+Two Property Effects in the same Recipe targeting the same property path simultaneously produce a last-writer-wins conflict. V1's Ledger delta aggregation solves this — but the Property family must first register deltas instead of writing directly.
+
+**Key work required:**
+- `JuiceLedger.gd`: generic property channel (`register_property_delta`, `flush_properties`)
+- `PropertyJuiceEffectBase.gd`: remove `set_indexed()`, register delta instead
+- All 3 domain nodes: call `JuiceLedger.flush_properties(target)` in `_post_tick_write()` and handle `_temporarily_undo/reapply_visual()` for property channels
+- `PropertyTarget.gd`: register base value with Ledger at capture time
+- Test suite: stacking, cleanup, and discrete-type priority tests required before shipping
+
+See `PropertyFamily_Ledger_Refactor.md` for full implementation order and test requirements.
+
+---
+
+## 5. Flaky Noise/Shake Test Timing Fix
+
+**Status:** Known pre-existing issue. Fix deferred.
+
+Several noise/shake property tests fail intermittently because they assert property changes after too few simulation frames. These effects need multiple frames of accumulation before output exceeds the assertion threshold.
+
+**Fix pattern:** Replace single-frame assertions with a frame-loop advancing simulation at least 10 frames before checking, consistent with how other noise/shake tests in the suite were previously corrected.
+
