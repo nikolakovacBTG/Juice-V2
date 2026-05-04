@@ -138,16 +138,25 @@ class PropertyPathEditorProperty extends EditorProperty:
 		_current_target = target
 		_parent_effect = _find_parent_effect()
 
+		# Bug 6 fix: collect paths from ALL sibling property_targets so the picker
+		# pre-checks every property already in the effect, not just the clicked one.
 		var current_paths: Array[String] = []
-		var cur: String = target.get("property_path")
-		if not cur.is_empty():
-			current_paths.append(cur)
+		if _parent_effect != null:
+			var targets = _parent_effect.get("property_targets")
+			if targets is Array:
+				for t in targets:
+					var p: String = t.get("property_path") if t != null else ""
+					if not p.is_empty():
+						current_paths.append(p)
+		else:
+			var cur: String = target.get("property_path")
+			if not cur.is_empty():
+				current_paths.append(cur)
 
 		if _dialog.properties_confirmed.is_connected(_on_properties_confirmed):
 			_dialog.properties_confirmed.disconnect(_on_properties_confirmed)
 
 		_dialog.properties_confirmed.connect(_on_properties_confirmed, CONNECT_ONE_SHOT)
-		# Pass the effect class name so the dialog can show per-family ledger notes.
 		var family := _parent_effect.get_class() if _parent_effect != null else ""
 		_dialog.open_for_node(node, current_paths, family)
 
@@ -155,31 +164,27 @@ class PropertyPathEditorProperty extends EditorProperty:
 		if paths.is_empty():
 			return
 
-		# Write directly on the resource before emit_changed. emit_changed triggers
-		# an inspector rebuild that creates a new PropertyPathEditorProperty instance.
-		# Setting the value here means the new instance's update_property() reads the
-		# correct string from the resource, not the old empty value.
-		get_edited_object().set("property_path", paths[0])
-		# Sync the display field immediately on this instance as belt-and-suspenders.
-		_display.text = paths[0]
-		_display.tooltip_text = "Current: %s\nClick to change." % paths[0]
-
-		# Register with undo/redo so Ctrl+Z works correctly.
+		# Bug 5 fix: do NOT call get_edited_object().set() directly before emit_changed.
+		# The property_path setter fires notify_property_list_changed() which causes Godot
+		# to rebuild the inspector synchronously — the new EditorProperty's update_property()
+		# then runs while the undo/redo DO action hasn't fired yet, so the resource still
+		# holds the old value and the display shows "Pick…".
+		# emit_changed alone routes through undo/redo which writes the value then rebuilds.
+		# We update _display.text deferred so it reflects the value after the rebuild.
 		emit_changed(get_edited_property(), paths[0])
+		_display.call_deferred("set", "text", paths[0])
+		_display.call_deferred("set", "tooltip_text",
+			"Current: %s\nClick to change." % paths[0])
 
-		# For each additional selected path, create a sibling PropertyTarget on the parent effect.
+		# Additional selected paths: create sibling PropertyTarget entries.
 		if paths.size() > 1 and _parent_effect != null and is_instance_valid(_parent_effect):
 			for i in range(1, paths.size()):
-				# Duplicate preserves node_path and any existing amplitude/strength config.
 				var new_target: PropertyTarget = _current_target.duplicate()
 				new_target.property_path = paths[i]
 				_parent_effect.property_targets.append(new_target)
-
-			# Notify Godot that property_targets changed so the inspector reflects new elements.
 			_parent_effect.notify_property_list_changed()
 			EditorInterface.get_inspector().refresh()
 
-		# Clear cached references.
 		_current_target = null
 		_parent_effect = null
 

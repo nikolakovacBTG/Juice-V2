@@ -230,6 +230,33 @@ func _init() -> void:
 	# From/To fields would appear before node_path/property_path.
 	_subclass_owns_target_layout = true
 
+# Override _detect_type to suppress the base-class TYPE_INT → TYPE_FLOAT
+# normalization. That normalization exists for Noise/Shake effects which use
+# float amplitude math — InterpolatePropertyTarget has explicit from_int/to_int
+# backing vars and _compute_lerp handles TYPE_INT as a first-class case.
+# Without this override, picking an int property would show float From/To fields.
+func _detect_type() -> void:
+	super._detect_type()
+	# Revert the normalizations that apply to Noise/Shake but not Interpolate.
+	# The base class sets TYPE_INT → TYPE_FLOAT, TYPE_VECTOR2I → TYPE_VECTOR2, etc.
+	# Re-detect from the raw property list to restore the true type.
+	if _detected_type in [TYPE_FLOAT, TYPE_VECTOR2, TYPE_VECTOR3]:
+		# Check whether the base property is actually an int or int-vector type.
+		var node := _resolve_node_for_editor()
+		if node == null:
+			return
+		var segments := property_path.split(":")
+		var base_prop := segments[0]
+		for p: Dictionary in node.get_property_list():
+			if p.get("name", "") == base_prop:
+				var raw: int = p.get("type", TYPE_NIL)
+				match raw:
+					TYPE_INT:      _detected_type = TYPE_INT
+					TYPE_VECTOR2I: _detected_type = TYPE_VECTOR2I
+					TYPE_VECTOR3I: _detected_type = TYPE_VECTOR3I
+				break
+
+
 # Builds the complete inspector layout for this target slot.
 # Owns the full layout (including the inherited node_path/property_path from
 # PropertyTarget) because _subclass_owns_target_layout is set in _init —
