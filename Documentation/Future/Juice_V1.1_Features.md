@@ -68,13 +68,4 @@ Two Property Effects in the same Recipe targeting the same property path simulta
 
 See `PropertyFamily_Ledger_Refactor.md` for full implementation order and test requirements.
 
----
-
-## 5. Flaky Noise/Shake Test Timing Fix
-
-**Status:** Known pre-existing issue. Fix deferred.
-
-Several noise/shake property tests fail intermittently because they assert property changes after too few simulation frames. These effects need multiple frames of accumulation before output exceeds the assertion threshold.
-
-**Fix pattern:** Replace single-frame assertions with a frame-loop advancing simulation at least 10 frames before checking, consistent with how other noise/shake tests in the suite were previously corrected.
 
