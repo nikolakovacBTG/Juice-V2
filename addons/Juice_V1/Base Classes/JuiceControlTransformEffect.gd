@@ -378,6 +378,7 @@ var _has_to_self_scale_snapshot: bool = false
 # LIFECYCLE — shared skeleton, calls virtual typed hooks
 # =============================================================================
 
+# Called by JuiceBase._ready() — captures base values before any triggers fire.
 func _on_host_ready(target: Node, host: Node) -> void:
 	_host_node = host
 	_do_capture_base(target)
@@ -402,6 +403,8 @@ func _on_editor_pre_save(target: Node) -> void:
 	_do_update_editor_cache(target)
 
 
+# Called by JuiceEffectBase.start() after _temporarily_undo_visual() has
+# restored the target to natural state.
 func _on_animate_start(target: Node) -> void:
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"animate_start: has_base=%s target=%s" % [
@@ -452,6 +455,8 @@ func _on_animate_start(target: Node) -> void:
 # CORE LOGIC
 # =============================================================================
 
+# Each concrete apply method stores a DELTA (desired − base) for the
+# domain node to aggregate — effects never write to the target directly.
 func _apply_effect(progress: float, target: Node) -> void:
 	match transform_target:
 		TransformTarget.POSITION: _apply_position_effect(progress, target)
@@ -472,6 +477,7 @@ func _restore_to_natural(_target: Node) -> void:
 	_clear_deltas()
 
 
+# Called by JuiceBase on target change or session reset.
 func _invalidate_base_cache() -> void:
 	_has_base = false
 	_pivot_applied = false
@@ -551,6 +557,8 @@ func _get_seq_contribution() -> Dictionary:
 	return d
 
 
+# Lets designers specify position offsets as fractions of own/parent/viewport
+# size instead of raw pixels.
 func _convert_to_pixels(position: Vector2, position_in: int, ctrl: Control) -> Vector2:
 	match position_in:
 		PositionIn.PIXELS:

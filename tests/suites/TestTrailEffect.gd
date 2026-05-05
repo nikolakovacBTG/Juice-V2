@@ -83,26 +83,12 @@ func test_trail_registered_in_2d_recipe() -> void:
 
 
 func test_trail_not_in_control_recipe() -> void:
-	var recipe := JuiceControlRecipe.new()
-	var props := recipe._get_property_list()
-	var whitelist := ""
-	for prop in props:
-		if prop.name == "effects":
-			whitelist = prop.get("hint_string", "")
-			break
-	assert_false("TrailJuiceEffect" in whitelist,
+	assert_false("TrailJuiceEffect" in JuiceControlRecipe._CONCRETE_EFFECTS,
 		"TrailJuiceEffect must NOT be in JuiceControlRecipe whitelist")
 
 
 func test_trail_not_in_3d_recipe() -> void:
-	var recipe := Juice3DRecipe.new()
-	var props := recipe._get_property_list()
-	var whitelist := ""
-	for prop in props:
-		if prop.name == "effects":
-			whitelist = prop.get("hint_string", "")
-			break
-	assert_false("TrailJuiceEffect" in whitelist,
+	assert_false("TrailJuiceEffect" in Juice3DRecipe._CONCRETE_EFFECTS,
 		"TrailJuiceEffect must NOT be in Juice3DRecipe whitelist")
 
 

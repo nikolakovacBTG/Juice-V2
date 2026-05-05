@@ -165,6 +165,10 @@ func _ready() -> void:
 			debug_enabled)
 
 
+# Called only while _is_inside is true. Routes to _get_tracked_local_pos
+# (shape-boundary point, not raw origin) for physics/area tracking, or falls
+# back to mouse position. Progress is then shaped by _calculate_shape_progress
+# and an optional falloff curve before driving all sibling JuiceBase nodes.
 func _process(_delta: float) -> void:
 	if not _is_inside:
 		return
@@ -231,6 +235,9 @@ func _on_mouse_exited() -> void:
 	JuiceLogger.log_info(self, "SoftTrigger", "Mouse exited", debug_enabled)
 
 
+# First-in-wins: only the first body or area to enter claims _tracked_node.
+# Subsequent entries are ignored until the tracked node exits. This prevents
+# multiple overlapping bodies from causing progress jumps.
 func _on_object_entered(object: Node2D) -> void:
 	# Track the first body/area that enters (first-in wins).
 	if _tracked_node == null:
@@ -250,6 +257,10 @@ func _on_object_exited(object: Node2D) -> void:
 				"Object exited: %s" % object.name, debug_enabled)
 
 
+# Two-step external release: send progress=0.0 first (effect reaches rest state),
+# then send -1.0 to signal JuiceBase to relinquish external control entirely.
+# Without the -1.0 step, the JuiceBase would remain locked in external mode
+# and ignore any subsequent animate_in/out calls.
 func _release_all() -> void:
 	_is_inside = false
 	set_process(false)
@@ -450,6 +461,9 @@ func _update_auto_shape_size() -> void:
 # SIBLING DISCOVERY
 # =============================================================================
 
+# Lazy dirty-flag cache: rebuilds the sibling list only when _juice_siblings_dirty
+# is true. Marked dirty by _mark_siblings_dirty, which is wired to the parent's
+# child_order_changed signal so additions/removals are picked up automatically.
 func _ensure_juice_siblings() -> void:
 	if not _juice_siblings_dirty:
 		return

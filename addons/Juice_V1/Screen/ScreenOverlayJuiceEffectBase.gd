@@ -160,6 +160,10 @@ var _overlay_texture_rect: TextureRect = null
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# Called at animation start. Fetches the overlay from JuiceScreenOverlayProvider
+# (not a static singleton — provider owns lifecycle). Skips texture/blend-mode
+# setup during the auto-reverse phase (_is_one_shot_return) to prevent a flicker
+# from re-applying settings while the overlay is already on screen.
 func _on_animate_start(_target: Node) -> void:
 	_overlay = JuiceScreenOverlayProvider.get_overlay()
 	if not is_instance_valid(_overlay):
@@ -184,6 +188,10 @@ func _on_animate_start(_target: Node) -> void:
 			debug_enabled)
 
 
+# Drives overlay alpha each frame. TO_COLOR: alpha rises with progress (0→max).
+# TO_CLEAR: alpha falls as progress rises (max→0). Handles TextureRect vs
+# ColorRect visual: if a texture is set, modulate the TextureRect and keep
+# the ColorRect transparent; otherwise write directly to ColorRect.color.
 func _apply_effect(progress: float, _target: Node) -> void:
 	if not is_instance_valid(_overlay):
 		_overlay = JuiceScreenOverlayProvider.get_overlay()
@@ -216,20 +224,29 @@ func _apply_effect(progress: float, _target: Node) -> void:
 			_overlay_texture_rect.visible = false
 
 
+# Locks the overlay at peak alpha (progress=1.0). Called when animate_in
+# completes so the overlay stays visible even if the curve drifts off 1.0.
 func _on_animate_in_complete(_target: Node) -> void:
 	_apply_effect(1.0, null)
 
 
+# Ensures the overlay is fully transparent (progress=0.0) after animate_out.
+# Mirrors _on_animate_in_complete — prevents alpha lingering from float imprecision.
 func _on_animate_out_complete(_target: Node) -> void:
 	_apply_effect(0.0, null)
 
 
+# Clears the provider's overlay so the screen-covering ColorRect is hidden.
+# Does not destroy the node — provider manages the node lifecycle.
 func _restore_to_natural(_target: Node) -> void:
 	# Clear the overlay when the effect stops.
 	JuiceScreenOverlayProvider.clear()
 	_overlay = null
 
 
+# Returns the script class as the interrupt identity so all three domain
+# subclasses (Control/2D/3D) interrupt each other. Two overlay effects running
+# simultaneously would fight for the same ColorRect alpha.
 func _get_interrupt_identity() -> Variant:
 	return get_script()
 

@@ -13,7 +13,7 @@
 # DOES NOT: Manage MeshInstance3D or surface materials — Juice3D does that.
 # ============================================================================
 #
-# OVERBRIGHT NOTE: Uses albedo_color with RGB > 1.0 (HDR-compatible path).
+# OVERBRIGHT: Uses albedo_color with RGB > 1.0 (HDR-compatible path).
 #   Works correctly with Godot's forward+ renderer + HDR enabled.
 #
 # FLICKER: Optional temporal modulation applied on top of animation progress.
@@ -435,6 +435,10 @@ func _on_animate_start(target: Node) -> void:
 				{"to_width_factor": to_width_factor, "outline_color": outline_color}, debug_enabled)
 
 
+# Core dispatcher: TINT/FADE/OVERBRIGHT write _albedo_factor and _alpha_factor for
+# Juice3D to apply to the working material. OUTLINE writes _computed_outline_amount
+# and _computed_outline_color for Juice3D to set on the next_pass material.
+# Unlike Control/2D, this effect never touches target.material — the domain node owns all material writes.
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_flicker_time()
 	var f := _compute_flicker_multiplier()
@@ -560,7 +564,9 @@ func _setup_flicker_noise() -> void:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Perform the actual From reference capture
+# Captures appearance reference values from the target's active StandardMaterial3D
+# albedo_color. Derives tint, alpha, and brightness from the single albedo source.
+# Skip-guarded: only captures once per animation cycle.
 func _perform_from_capture(target: Node) -> void:
 	if _has_from_self_snapshot:
 		return
@@ -584,7 +590,6 @@ func _perform_from_capture(target: Node) -> void:
 				"brightness": _captured_from_brightness}, debug_enabled)
 	_has_from_self_snapshot = true
 
-# Perform the actual To reference capture
 func _perform_to_capture(target: Node) -> void:
 	if _has_to_self_snapshot:
 		return

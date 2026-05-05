@@ -202,10 +202,15 @@ var _shake_noise: FastNoiseLite = null
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# SHAKE mode has no fixed endpoint — it oscillates until the chain stops it.
+# Sustain keeps _apply_effect ticking after animate_in peaks so the noise
+# continues. DETERMINISTIC mode completes naturally at progress=1.0.
 func _needs_sustain() -> bool:
 	return animation_mode == AnimationMode.SHAKE
 
 
+# Only runs for SHAKE mode: instantiates and configures the noise field used by _sample().
+# DETERMINISTIC mode needs no noise — _apply_effect uses the base-class curve directly.
 func _on_animate_start(_target: Node) -> void:
 	if animation_mode != AnimationMode.SHAKE:
 		return
@@ -215,6 +220,9 @@ func _on_animate_start(_target: Node) -> void:
 	_shake_noise.frequency = 1.0  # Rate driven externally via t * shake_frequency
 
 
+# Re-discovers (or bootstraps) CameraJuiceUtility every frame rather than caching it.
+# This handles mid-animation camera switches transparently at the cost of one
+# child-scan per frame — acceptable since Camera2D rarely has many children.
 func _apply_effect(progress: float, _target: Node) -> void:
 	# Re-discover (or bootstrap) utility every frame — handles camera switches.
 	var util := _find_or_create_utility()
@@ -231,6 +239,9 @@ func _on_animate_out_complete(_target: Node) -> void:
 	_remove_contribution()
 
 
+# Removes this effect's accumulated delta from the utility so other effects
+# and future animations start from an uncontaminated base. Skips if the
+# utility was already freed (e.g. camera switched or scene unloaded).
 func _restore_to_natural(_target: Node) -> void:
 	_remove_contribution()
 
@@ -239,6 +250,12 @@ func _restore_to_natural(_target: Node) -> void:
 # CHANNEL APPLY METHODS
 # =============================================================================
 
+# SHAKE: samples decorrelated X and Y noise (different row offsets prevent
+# diagonal lock-in from a single scalar multiply), scales by position_offset
+# and viewport size if PERCENT_VIEWPORT, then multiplies by the progress envelope.
+# DETERMINISTIC: evaluates the curve via _sample and scales by position_offset.
+# Both paths write desired, compute delta from last frame's _my_pos, and
+# accumulate into the utility — stacking correctly with other camera effects.
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
 	var desired: Vector3
 	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:

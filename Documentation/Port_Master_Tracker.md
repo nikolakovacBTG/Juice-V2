@@ -11,47 +11,47 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `JuiceBase` | `JuiceBase` + `JuiceEffectBase` | ✅ | `TestNodeProperties` | 2026-04-12 |
+| `JuiceBase` | `JuiceBase` + `JuiceEffectBase` | ✅ | ❌ `TestNodeProperties` | 2026-04-12 |
 
 ## Domain Nodes
 
 | V0 (implicit in comps) | V1 Class | Status | Tests | Last Verified |
 |------------------------|----------|--------|-------|---------------|
-| — | `JuiceControl` | ✅ | `TestTransformControl` | 2026-04-12 |
-| — | `Juice2D` | ✅ | `TestTransform2D` | 2026-04-12 |
-| — | `Juice3D` | ✅ | `TestTransform3D` | 2026-03-21 |
+| — | `JuiceControl` | ✅ | ❌ `TestTransformControl` | 2026-04-12 |
+| — | `Juice2D` | ✅ | ❌ `TestTransform2D` | 2026-04-12 |
+| — | `Juice3D` | ✅ | ❌ `TestTransform3D` | 2026-03-21 |
 
 ## Transform (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `TransformControlJuiceComp` | `TransformControlJuiceEffect` | ✅ | `TestTransformControl` | 2026-03-21 |
-| `Transform2DJuiceComp` | `Transform2DJuiceEffect` | ✅ | `TestTransform2D` | 2026-03-21 |
-| `Transform3DJuiceComp` | `Transform3DJuiceEffect` | ✅ | `TestTransform3D` | 2026-03-21 |
+| `TransformControlJuiceComp` | `TransformControlJuiceEffect` | ✅ | ❌ `TestTransformControl` | 2026-03-21 |
+| `Transform2DJuiceComp` | `Transform2DJuiceEffect` | ✅ | ❌ `TestTransform2D` | 2026-03-21 |
+| `Transform3DJuiceComp` | `Transform3DJuiceEffect` | ✅ | ❌ `TestTransform3D` | 2026-03-21 |
 
 ## SquashStretch (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `SquashStretchControlJuiceComp` | `SquashStretchControlJuiceEffect` | ✅ | `TestSquashStretchControl` | 2026-03-21 |
-| `SquashStretch2DJuiceComp` | `SquashStretch2DJuiceEffect` | ✅ | `TestSquashStretch2D` | 2026-03-21 |
-| `SquashStretch3DJuiceComp` | `SquashStretch3DJuiceEffect` | ✅ | `TestSquashStretch3D` | 2026-03-21 |
+| `SquashStretchControlJuiceComp` | `SquashStretchControlJuiceEffect` | ✅ | ❌ `TestSquashStretchControl` | 2026-03-21 |
+| `SquashStretch2DJuiceComp` | `SquashStretch2DJuiceEffect` | ✅ | ❌ `TestSquashStretch2D` | 2026-03-21 |
+| `SquashStretch3DJuiceComp` | `SquashStretch3DJuiceEffect` | ✅ | ❌ `TestSquashStretch3D` | 2026-03-21 |
 
 ## Noise (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `NoiseControlJuiceComp` | `NoiseControlJuiceEffect` | ✅ | `TestNoiseControl` | 2026-03-29 |
-| `Noise2DJuiceComp` | `Noise2DJuiceEffect` | ✅ | `TestNoise2D` | 2026-03-29 |
-| `Noise3DJuiceComp` | `Noise3DJuiceEffect` | ✅ | `TestNoise3D` | 2026-03-29 |
+| `NoiseControlJuiceComp` | `NoiseControlJuiceEffect` | ✅ | ❌ `TestNoiseControl` | 2026-03-29 |
+| `Noise2DJuiceComp` | `Noise2DJuiceEffect` | ✅ | ❌ `TestNoise2D` | 2026-03-29 |
+| `Noise3DJuiceComp` | `Noise3DJuiceEffect` | ✅ | ❌ `TestNoise3D` | 2026-03-29 |
 
 ## Shake (3 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ShakeControlJuiceComp` | `ShakeControlJuiceEffect` | ✅ | `TestShakeControl` | 2026-03-29 |
-| `Shake2DJuiceComp` | `Shake2DJuiceEffect` | ✅ | `TestShake2D` | 2026-03-29 |
-| `Shake3DJuiceComp` | `Shake3DJuiceEffect` | ✅ | `TestShake3D` | 2026-03-29 |
+| `ShakeControlJuiceComp` | `ShakeControlJuiceEffect` | ✅ | ❌ `TestShakeControl` | 2026-03-29 |
+| `Shake2DJuiceComp` | `Shake2DJuiceEffect` | ✅ | ❌ `TestShake2D` | 2026-03-29 |
+| `Shake3DJuiceComp` | `Shake3DJuiceEffect` | ✅ | ❌ `TestShake3D` | 2026-03-29 |
 
 ## Spring (3 effects — Cut, deferred)
 
@@ -65,18 +65,18 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `AppearanceControlJuiceComp` | `AppearanceControlJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
-| `Appearance2DJuiceComp` | `Appearance2DJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
-| `Appearance3DJuiceComp` | `Appearance3DJuiceEffect` | ✅ | `TestAppearanceEffects` | 2026-03-29 |
+| `AppearanceControlJuiceComp` | `AppearanceControlJuiceEffect` | ✅ | ❌ `TestAppearanceEffects` | 2026-03-29 |
+| `Appearance2DJuiceComp` | `Appearance2DJuiceEffect` | ✅ | ❌ `TestAppearanceEffects` | 2026-03-29 |
+| `Appearance3DJuiceComp` | `Appearance3DJuiceEffect` | ✅ | ❌ `TestAppearanceEffects` | 2026-03-29 |
 
 ## Progress (4 effects)
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ProgressTransformControlJuiceComp` | `ProgressTransformControlJuiceEffect` | 🧪 | `TestProgressTransformControl` | — |
-| `ProgressTransform2DJuiceComp` | `ProgressTransform2DJuiceEffect` | 🧪 | `TestProgressTransform2D` | — |
-| `ProgressTransform3DJuiceComp` | `ProgressTransform3DJuiceEffect` | 🧪 | `TestProgressTransform3D` | — |
-| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
+| `ProgressTransformControlJuiceComp` | `ProgressTransformControlJuiceEffect` | ✅ | ❌ `TestProgressTransformControl` | — |
+| `ProgressTransform2DJuiceComp` | `ProgressTransform2DJuiceEffect` | ✅ | ❌ `TestProgressTransform2D` | — |
+| `ProgressTransform3DJuiceComp` | `ProgressTransform3DJuiceEffect` | ✅ | ❌ `TestProgressTransform3D` | — |
+| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffect` | ➖ | ❌ `TestProgressProperty` | Deferred to V1.1 |
 
 > **Inspector note (2026-04-17):** Rate, Pivot, Bound demoted from top-level GROUPs to flat properties inside the Effect group. `bound_enabled` tooltip improved. `_leaf_owns_layout` applied to suppress duplicate Effect header.
 
@@ -94,9 +94,9 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `Camera2DJuiceComp` | `Camera2DJuiceEffect` | ✅ | `TestCameraJuice` | 2026-04-16 |
-| `Camera3DJuiceComp` | `Camera3DJuiceEffect` | 🧪 | `TestCameraJuice` (2D only tested headless) | 2026-04-16 |
-| `CameraJuiceUtility` | `CameraJuiceUtility` | ✅ | `TestCameraJuice` | 2026-04-16 |
+| `Camera2DJuiceComp` | `Camera2DJuiceEffect` | ✅ | 🧪 `TestCameraJuice` | 2026-04-16 |
+| `Camera3DJuiceComp` | `Camera3DJuiceEffect` | ✅ | 🧪 `TestCameraJuice` (2D only tested headless) | 2026-04-16 |
+| `CameraJuiceUtility` | `CameraJuiceUtility` | ✅ | 🧪 `TestCameraJuice` | 2026-04-16 |
 
 ## Screen (2 effects + ScreenJuiceUtility)
 
@@ -104,21 +104,20 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `ScreenMotionJuiceComp` | `ScreenMotionJuiceEffect` | 🔧 | — | — |
-| `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | 🧪 | `TestScreenOverlay` | — |
-| `ScreenJuiceUtility` | `ScreenJuiceUtility` | 🔧 | — | — |
+| `ScreenMotionJuiceComp` | `ScreenMotionJuiceEffect` | ✅ | ❌ — | — |
+| `ScreenOverlayJuiceComp` | `ScreenOverlayJuiceEffect` | ✅ | ❌ `TestScreenOverlay` | — |
+| `ScreenJuiceUtility` | `ScreenJuiceUtility` | ✅ | ❌ — | — |
 
 ## Property Family (7 effects — includes 4 NEW)
 
-> **Architecture note (2026-04-23):** The Property family uses a shared `PropertyTarget` resource with a custom picker dialog (`PropertyPickerDialog`). Integer variant types (Vector2i, Vector3i, int) are auto-normalized to float equivalents.
->
-> **Open polish (2026-04-23):** NodePath editor-time resolution is fragile (selection-based). Dialog theming via ConfirmationDialog landed but needs visual verification. Multi-select target addition needs UX testing.
+> **Status note (2026-05-05):** Deferred to V1.1 (Branch: `feature/v1.1-property-family`).
+> **Reason:** Currently bypasses the JuiceLedger (`set_indexed()`), causing conflicts with multiple writers targeting the same property. Requires a Ledger refactor to support generic property channels. See `Juice_V1.1_Features.md` for details.
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `NoisePropertyJuiceComp` | `PropertyNoise{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
-| `ShakePropertyJuiceComp` | `PropertyShake{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
-| NEW | `PropertyInterpolate{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestPropertyFamily` | 2026-04-23 |
+| `NoisePropertyJuiceComp` | `PropertyNoise{Control\|2D\| 3D}JuiceEffect` | ➖ | ❌ `TestPropertyFamily` | Deferred to V1.1 |
+| `ShakePropertyJuiceComp` | `PropertyShake{Control\|2D\| 3D}JuiceEffect` | ➖ | ❌ `TestPropertyFamily` | Deferred to V1.1 |
+| NEW | `PropertyInterpolate{Control\|2D\| 3D}JuiceEffect` | ➖ | ❌ `TestPropertyFamily` | Deferred to V1.1 |
 | `SpringPropertyJuiceComp` | — | ➖ | Physically reactive — deferred to future product |
 | `ShaderPropertyJuiceComp` | — | ➖ | Absorbed into PropertyInterpolate/Noise/Shake via shader_parameter/ path support |
 
@@ -134,8 +133,8 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `VFXJuiceComp` | `VFXJuiceEffect` (all 3 domains) | ✅ | `TestVFXEffect` (21 tests) | 2026-04-29 |
-| `TrailJuiceComp` | `TrailJuiceEffect` (2D only) | ✅ | `TestTrailEffect` (21 tests) | 2026-04-29 |
+| `VFXJuiceComp` | `VFXJuiceEffect` (all 3 domains) | ✅ | 🧪 `TestVFXEffect` (21 tests) | 2026-04-29 |
+| `TrailJuiceComp` | `TrailJuiceEffect` (2D only) | ✅ | ❌ `TestTrailEffect` (21 tests) | 2026-04-29 |
 
 ## Events & Flow (Legacy, absorbed by JuiceBase)
 
@@ -144,7 +143,7 @@
 | `SequencerJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Mode.SEQUENCER` |
 | `LooperJuiceComp` | `JuiceBase` | ➖ | Absorbed into `Loop` group |
 | `RandomJuiceComp` | `JuiceBase` | ➖ | Absorbed into `SequenceType.RANDOM` |
-| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control|2D|3D}JuiceEffect` | ✅ | `TestPauseEffect` | 2026-04-29 |
+| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control|2D| 3D}JuiceEffect` | ✅ | ❌ `TestPauseEffect` | 2026-04-29 |
 | NEW | `TriggerStackJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
 | NEW | `TriggerSequencerJuiceEffect` | ➖ | Surpassed by Signal Emit and Method Call utilities |
 
@@ -152,11 +151,11 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|-----------|
-| `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\|3D}JuiceEffect` | ✅ | `TestTimeEffect` | 2026-03-30 |
-| NEW | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
-| NEW | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\|3D}JuiceUtility` | ✅ | `TestMetaEffects` | 2026-04-17 |
-| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffectBase` + `PropertyProgress{Control\|2D\|3D}JuiceEffect` | 🧪 | `TestProgressProperty` | 2026-04-23 |
-| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control\|2D\|3D}JuiceEffect` | ✅ | `TestPauseEffect` | 2026-04-29 |
+| `TimeJuiceComp` | `TimeJuiceEffectBase` + `Time{Control\|2D\| 3D}JuiceEffect` | ✅ | ❌ `TestTimeEffect` | 2026-03-30 |
+| NEW | `SignalEmitJuiceUtilityBase` + `SignalEmit{Control\|2D\| 3D}JuiceUtility` | ✅ | ❌ `TestMetaEffects` | 2026-04-17 |
+| NEW | `CallMethodJuiceUtilityBase` + `CallMethod{Control\|2D\| 3D}JuiceUtility` | ✅ | ❌ `TestMetaEffects` | 2026-04-17 |
+| `ProgressPropertyJuiceComp` | `PropertyProgressJuiceEffectBase` + `PropertyProgress{Control\|2D\| 3D}JuiceEffect` | ➖ | ❌ `TestProgressProperty` | Deferred to V1.1 |
+| `PauseJuiceComp` | `PauseJuiceEffectBase` + `Pause{Control\|2D\| 3D}JuiceEffect` | ✅ | ❌ `TestPauseEffect` | 2026-04-29 |
 
 > **Inspector note (2026-04-17):** SignalEmit + CallMethod refactored — single "Trigger" group, crossfade_time hidden (no-op for meta effects), icons corrected (JuiceUtilitySignals / JuiceUtilityMethods / JuiceUtilityTimeCoord). Time2D/3D icons also corrected to JuiceUtilityTimeCoord.
 
@@ -164,16 +163,16 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `Interaction3DJuiceUtility` | Same | 🧪 | `TestInteraction3D` | — |
-| `Interaction2DJuiceUtility` | Same | 🧪 | `TestInteraction2D` | — |
-| `SoftTrigger3DJuiceUtility` | Same | 🧪 | `TestSoftTrigger3D` | — |
-| `SoftTrigger2DJuiceUtility` | Same | 🧪 | `TestSoftTrigger2D` | — |
-| `SoftTriggerControlJuiceUtility` | Same | 🧪 | `TestSoftTriggerControl` | — |
-| `SignalRelayJuiceUtility` | Same | 🧪 | `TestSignalRelay` | — |
-| `SceneActionJuiceUtility` | Same | ✅ | `TestSceneAction` | 2026-04-12 |
-| `CameraJuiceUtility` | Same | ✅ | `TestCameraJuice` | 2026-04-16 |
-| `ScreenJuiceUtility` | Same | 🔧 | — | — |
-| `TimeCoordinatorJuiceUtility` | Same | 🧪 | — | — |
+| `Interaction3DJuiceUtility` | Same | ✅ | ❌ `TestInteraction3D` | — |
+| `Interaction2DJuiceUtility` | Same | ✅ | ❌ `TestInteraction2D` | — |
+| `SoftTrigger3DJuiceUtility` | Same | ✅ | ❌ `TestSoftTrigger3D` | — |
+| `SoftTrigger2DJuiceUtility` | Same | ✅ | ❌ `TestSoftTrigger2D` | — |
+| `SoftTriggerControlJuiceUtility` | Same | ✅ | ❌ `TestSoftTriggerControl` | — |
+| `SignalRelayJuiceUtility` | Same | ✅ | ❌ `TestSignalRelay` | — |
+| `SceneActionJuiceUtility` | Same | ✅ | ❌ `TestSceneAction` | 2026-04-12 |
+| `CameraJuiceUtility` | Same | ✅ | 🧪 `TestCameraJuice` | 2026-04-16 |
+| `ScreenJuiceUtility` | Same | ✅ | ❌ — | — |
+| `TimeCoordinatorJuiceUtility` | Same | ✅ | ❌ — | — |
 
 ## Editor Tooling
 
@@ -185,15 +184,15 @@
 
 | V0 Class | V1 Class | Status | Tests | Last Verified |
 |----------|----------|--------|-------|---------------|
-| `JuicePreviewDirector` | `JuicePreviewDirector` + `juice_plugin.gd` | 🧪 | `TestTransport` (31 tests) | 2026-04-27 |
-| `juice_plugin.gd` | `juice_plugin.gd` | 🧪 | Transport UI: play/stop/loop/scrub/sustained-warning | 2026-04-27 |
+| `JuicePreviewDirector` | `JuicePreviewDirector` + `juice_plugin.gd` | ✅ | ❌ `TestTransport` (31 tests) | 2026-04-27 |
+| `juice_plugin.gd` | `juice_plugin.gd` | ✅ | ❌ Transport UI: play/stop/loop/scrub/sustained-warning | 2026-04-27 |
 
 ---
 
 ## Summary
 
 | Category | Total | Ported | Pending UX | In Progress | Not Started | Legacy/Cut |
-|----------|-------|--------|------------|-------------|-------------|--------|
+|----------|-------|--------| ------------ |-------------|-------------|--------|
 | Effects | ~43 | 32 | 7 | 1 | 0 | 12 |
 | Utilities | ~10 | 9 | 0 | 1 | 1 | 0 |
 | Infrastructure | 4 | 4 | 0 | 0 | 0 | 0 |

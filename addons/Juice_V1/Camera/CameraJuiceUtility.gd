@@ -91,6 +91,8 @@ var _initialized: bool = false
 # LIFECYCLE
 # =============================================================================
 
+# Detects the parent camera type and joins the juice_camera group so editor
+# tooling (e.g. JuicePreviewDirector) can discover all active utility nodes.
 func _ready() -> void:
 	_initialize_camera()
 	# Register to group so editor tooling can discover CameraJuiceUtility nodes.
@@ -102,6 +104,9 @@ func _ready() -> void:
 				debug_enabled)
 
 
+# Detects whether the parent is Camera2D or Camera3D and rescales the default
+# offset limits accordingly (3D units are metres; 2D units are pixels).
+# Idempotent — safe to call from bootstrap code before _ready() fires.
 func _initialize_camera() -> void:
 	if _initialized:
 		return  # Idempotent — safe to call from bootstrap before _ready() fires.
@@ -130,6 +135,10 @@ func _initialize_camera() -> void:
 		_initialized = false
 
 
+# Runs in _physics_process (after scripts, before rendering) to ensure offsets
+# are applied after the camera's own follow/movement logic has settled.
+# Idle guard: skips entirely when there is nothing to undo or apply, keeping
+# performance impact zero when no juice effects are active.
 func _physics_process(_delta: float) -> void:
 	if not _initialized:
 		return
@@ -156,6 +165,10 @@ func _physics_process(_delta: float) -> void:
 # APPLY
 # =============================================================================
 
+# Applies offsets to the Camera3D using the undo-then-reapply pattern:
+# true base = camera's current value minus what we applied last frame.
+# This is necessary because the camera script may have moved the camera
+# between frames — subtracting last-frame's contribution isolates its change.
 func _apply_to_3d() -> void:
 	var cam := _camera as Camera3D
 
@@ -183,6 +196,9 @@ func _apply_to_3d() -> void:
 	_applied_zoom_offset     = clamped_zoom
 
 
+# Same undo-then-reapply pattern as _apply_to_3d, adapted for Camera2D:
+# position writes to cam.offset (not global_position), rotation is Z-only,
+# and zoom is a Vector2 on Camera2D rather than a scalar FOV on Camera3D.
 func _apply_to_2d() -> void:
 	var cam := _camera as Camera2D
 

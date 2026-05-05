@@ -79,19 +79,19 @@ var _to_editor_cached_scale: Vector3 = Vector3.ONE
 # =============================================================================
 
 func _get_from_position_property() -> Array[Dictionary]:
-	return [{"name": "from_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	return [ {"name": "from_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
 func _get_to_position_property() -> Array[Dictionary]:
-	return [{"name": "to_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	return [ {"name": "to_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
 func _get_from_rotation_property() -> Array[Dictionary]:
-	var arr: Array[Dictionary] = [{"name": "from_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	var arr: Array[Dictionary] = [ {"name": "from_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 	arr.append({"name": "rotation_unit", "type": TYPE_INT, "usage": PROPERTY_USAGE_DEFAULT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Degrees,Radians"})
 	return arr
 
 func _get_to_rotation_property() -> Array[Dictionary]:
-	var arr: Array[Dictionary] = [{"name": "to_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	var arr: Array[Dictionary] = [ {"name": "to_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 	# Only show rotation_unit once — if from is CUSTOM it shows it already
 	if from_reference != TransformReference.CUSTOM:
 		arr.append({"name": "rotation_unit", "type": TYPE_INT, "usage": PROPERTY_USAGE_DEFAULT,
@@ -99,57 +99,57 @@ func _get_to_rotation_property() -> Array[Dictionary]:
 	return arr
 
 func _get_from_scale_property() -> Array[Dictionary]:
-	return [{"name": "from_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	return [ {"name": "from_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
 func _get_to_scale_property() -> Array[Dictionary]:
-	return [{"name": "to_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
+	return [ {"name": "to_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_DEFAULT}]
 
 func _get_from_editor_cache_storage_properties() -> Array[Dictionary]:
 	return [
 		{"name": "_from_editor_cached_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
 		{"name": "_from_editor_cached_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
-		{"name": "_from_editor_cached_scale",    "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_from_editor_cached_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
 	]
 
 func _get_to_editor_cache_storage_properties() -> Array[Dictionary]:
 	return [
 		{"name": "_to_editor_cached_position", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
 		{"name": "_to_editor_cached_rotation", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
-		{"name": "_to_editor_cached_scale",    "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
+		{"name": "_to_editor_cached_scale", "type": TYPE_VECTOR3, "usage": PROPERTY_USAGE_STORAGE},
 	]
 
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"from_position":                from_position = value;                return true
-		&"to_position":                  to_position = value;                  return true
-		&"from_rotation":                from_rotation = value;                return true
-		&"to_rotation":                  to_rotation = value;                  return true
-		&"from_scale":                   from_scale = value;                   return true
-		&"to_scale":                     to_scale = value;                     return true
+		&"from_position": from_position = value; return true
+		&"to_position": to_position = value; return true
+		&"from_rotation": from_rotation = value; return true
+		&"to_rotation": to_rotation = value; return true
+		&"from_scale": from_scale = value; return true
+		&"to_scale": to_scale = value; return true
 		&"_from_editor_cached_position": _from_editor_cached_position = value; return true
 		&"_from_editor_cached_rotation": _from_editor_cached_rotation = value; return true
-		&"_from_editor_cached_scale":    _from_editor_cached_scale = value;    return true
-		&"_to_editor_cached_position":   _to_editor_cached_position = value;   return true
-		&"_to_editor_cached_rotation":   _to_editor_cached_rotation = value;   return true
-		&"_to_editor_cached_scale":      _to_editor_cached_scale = value;      return true
+		&"_from_editor_cached_scale": _from_editor_cached_scale = value; return true
+		&"_to_editor_cached_position": _to_editor_cached_position = value; return true
+		&"_to_editor_cached_rotation": _to_editor_cached_rotation = value; return true
+		&"_to_editor_cached_scale": _to_editor_cached_scale = value; return true
 	return super._set(property, value)
 
 
 func _get(property: StringName) -> Variant:
 	match property:
-		&"from_position":                return from_position
-		&"to_position":                  return to_position
-		&"from_rotation":                return from_rotation
-		&"to_rotation":                  return to_rotation
-		&"from_scale":                   return from_scale
-		&"to_scale":                     return to_scale
+		&"from_position": return from_position
+		&"to_position": return to_position
+		&"from_rotation": return from_rotation
+		&"to_rotation": return to_rotation
+		&"from_scale": return from_scale
+		&"to_scale": return to_scale
 		&"_from_editor_cached_position": return _from_editor_cached_position
 		&"_from_editor_cached_rotation": return _from_editor_cached_rotation
-		&"_from_editor_cached_scale":    return _from_editor_cached_scale
-		&"_to_editor_cached_position":   return _to_editor_cached_position
-		&"_to_editor_cached_rotation":   return _to_editor_cached_rotation
-		&"_to_editor_cached_scale":      return _to_editor_cached_scale
+		&"_from_editor_cached_scale": return _from_editor_cached_scale
+		&"_to_editor_cached_position": return _to_editor_cached_position
+		&"_to_editor_cached_rotation": return _to_editor_cached_rotation
+		&"_to_editor_cached_scale": return _to_editor_cached_scale
 	return super._get(property)
 
 
@@ -207,7 +207,7 @@ func _do_capture_base(target: Node) -> void:
 	# Pre-compute fixed pivot position in parent space for rotation compensation
 	_fixed_pivot_parent = _base_transform.origin + _base_transform.basis * rotation_pivot_offset
 	_has_base = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "base",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "base",
 			"pos=%s scale=%s" % [_base_position, _base_scale],
 			debug_enabled)
 
@@ -226,7 +226,7 @@ func _do_update_editor_cache(target: Node) -> void:
 		_to_editor_cached_position = n3d.position
 		_to_editor_cached_rotation = n3d.rotation
 		_to_editor_cached_scale = n3d.scale
-	JuiceLogger.log_capture(self, _get_domain_tag(), "editor_cache",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "editor_cache",
 			"pos=%s rot=%s scale=%s" % [
 			n3d.position, n3d.rotation, n3d.scale],
 			debug_enabled)
@@ -259,7 +259,7 @@ func _capture_from_self_position_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_from_self_position_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_pos",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "from_self_pos",
 			"%s (mode=%s)" % [
 			_from_self_position_snapshot, CaptureAt.keys()[from_capture_at]],
 			debug_enabled)
@@ -275,7 +275,7 @@ func _capture_from_self_rotation_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_from_self_rotation_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_rot",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "from_self_rot",
 			"%s (mode=%s)" % [
 			_from_self_rotation_snapshot, CaptureAt.keys()[from_capture_at]],
 			debug_enabled)
@@ -291,7 +291,7 @@ func _capture_from_self_scale_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_from_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_from_self_scale_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "from_self_scale",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "from_self_scale",
 			"%s (mode=%s)" % [
 			_from_self_scale_snapshot, CaptureAt.keys()[from_capture_at]],
 			debug_enabled)
@@ -308,7 +308,7 @@ func _capture_to_self_position_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_position_snapshot = _ledger_base_snapshot.get("position", n3d.position if n3d else Vector3.ZERO)
 	_has_to_self_position_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_pos",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "to_self_pos",
 			"%s (mode=%s)" % [
 			_to_self_position_snapshot, CaptureAt.keys()[to_capture_at]],
 			debug_enabled)
@@ -324,7 +324,7 @@ func _capture_to_self_rotation_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_rotation_snapshot = _ledger_base_snapshot.get("rotation", n3d.rotation if n3d else Vector3.ZERO)
 	_has_to_self_rotation_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_rot",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "to_self_rot",
 			"%s (mode=%s)" % [
 			_to_self_rotation_snapshot, CaptureAt.keys()[to_capture_at]],
 			debug_enabled)
@@ -340,7 +340,7 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 		var n3d := target as Node3D
 		_to_self_scale_snapshot = _ledger_base_snapshot.get("scale", n3d.scale if n3d else Vector3.ONE)
 	_has_to_self_scale_snapshot = true
-	JuiceLogger.log_capture(self, _get_domain_tag(), "to_self_scale",
+	JuiceLogger.log_capture(self , _get_domain_tag(), "to_self_scale",
 			"%s (mode=%s)" % [
 			_to_self_scale_snapshot, CaptureAt.keys()[to_capture_at]],
 			debug_enabled)
@@ -350,17 +350,17 @@ func _scale_pivot_point_is_nonzero() -> bool:
 	return _scale_pivot_point != Vector3.ZERO
 
 
+# AUTO_CENTER estimates the scale pivot from the local AABB center of the target
+# mesh, with a recursive child scan fallback if the node itself has zero bounds.
+# This differs from 2D where the pivot is inferred from Sprite2D texture size.
 func _do_resolve_scale_pivot(target: Node) -> void:
 	var n3d := target as Node3D
 	match scale_pivot_mode:
 		PivotMode.AUTO_CENTER:
 			if n3d:
-				var bounds := _infer_node3d_local_bounds(n3d)
-				if bounds.size == Vector3.ZERO:
-					bounds = _infer_node3d_bounds_recursive(n3d)
-				_scale_pivot_point = bounds.get_center() if bounds.size != Vector3.ZERO else Vector3.ZERO
+				_scale_pivot_point = _infer_node3d_center(n3d)
 				JuiceLogger.log_capture(self, _get_domain_tag(), "scale_pivot_auto",
-						"bounds=%s center=%s" % [bounds, _scale_pivot_point],
+						"center=%s" % _scale_pivot_point,
 						debug_enabled)
 			else:
 				_scale_pivot_point = Vector3.ZERO
@@ -375,7 +375,7 @@ func _apply_position_effect(progress: float, target: Node) -> void:
 	if n3d == null:
 		return
 	var from_value := _resolve_from_position(n3d)
-	var to_value   := _resolve_to_position(n3d)
+	var to_value := _resolve_to_position(n3d)
 	var desired_absolute := from_value.lerp(to_value, progress)
 	_last_desired_pos = desired_absolute
 	_pos_delta = desired_absolute - _base_position
@@ -386,7 +386,7 @@ func _apply_rotation_effect(progress: float, target: Node) -> void:
 	if n3d == null:
 		return
 	var from_quat := _resolve_from_rotation_quat(n3d)
-	var to_quat   := _resolve_to_rotation_quat(n3d)
+	var to_quat := _resolve_to_rotation_quat(n3d)
 	var current_quat := from_quat.slerp(to_quat, progress)
 	var desired_euler := Basis(current_quat).get_euler()
 	_last_desired_rot = desired_euler
@@ -402,7 +402,7 @@ func _apply_scale_effect(progress: float, target: Node) -> void:
 	if n3d == null:
 		return
 	var from_value := _resolve_from_scale(n3d)
-	var to_value   := _resolve_to_scale(n3d)
+	var to_value := _resolve_to_scale(n3d)
 	var desired_absolute := from_value.lerp(to_value, progress)
 	_last_desired_scale = desired_absolute
 	_scale_delta = desired_absolute - _base_scale
@@ -551,18 +551,18 @@ func _resolve_node_path_to_node3d(path: NodePath, path_name: String) -> Node3D:
 		return null
 	if _host_node == null or not is_instance_valid(_host_node):
 		if debug_enabled:
-			JuiceLogger.warn(self, _get_domain_tag(),
+			JuiceLogger.warn(self , _get_domain_tag(),
 					"cannot resolve %s — no host node" % path_name, debug_enabled)
 		return null
 	var resolved := _host_node.get_node_or_null(path)
 	if resolved == null:
 		if debug_enabled:
-			JuiceLogger.warn(self, _get_domain_tag(),
+			JuiceLogger.warn(self , _get_domain_tag(),
 					"%s path '%s' could not be resolved" % [path_name, path], debug_enabled)
 		return null
 	if not (resolved is Node3D):
 		if debug_enabled:
-			JuiceLogger.warn(self, _get_domain_tag(),
+			JuiceLogger.warn(self , _get_domain_tag(),
 					"%s '%s' is not a Node3D (is %s)" % [path_name, resolved.name, resolved.get_class()], debug_enabled)
 		return null
 	return resolved as Node3D

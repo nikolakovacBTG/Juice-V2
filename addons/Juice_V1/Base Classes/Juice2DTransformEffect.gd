@@ -402,6 +402,8 @@ func _on_editor_pre_save(target: Node) -> void:
 	_do_update_editor_cache(target)
 
 
+# Unlike Control (which has native pivot_offset), 2D must resolve pivot
+# position and pre-compute compensation coords for rotation/scale.
 func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_do_capture_base(target)
@@ -587,6 +589,9 @@ func _infer_parent_size(target: Node) -> Vector2:
 	return Vector2.ZERO
 
 
+# Node2D has no .size property, so we walk known subtypes (Sprite2D,
+# AnimatedSprite2D, CollisionShape2D, Polygon2D) to estimate visual bounds.
+# Falls back to recursive child-bounds merge for container-like nodes.
 func _infer_node2d_size(node: Node2D) -> Vector2:
 	if node == null:
 		return Vector2.ZERO

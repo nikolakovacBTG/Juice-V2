@@ -20,9 +20,7 @@
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
 [ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V1/icons/JuiceBase.svg" id="15_ve81s"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="16_w3iwx"]
-[ext_resource type="Script" uid="uid://cwcgb8lcdbjw7" path="res://addons/Juice_V1/Meta/NoisePropertyTarget.gd" id="21_vyqmh"]
 [ext_resource type="Script" uid="uid://dni12p84dccqt" path="res://addons/Juice_V1/Meta/TrailJuiceEffect.gd" id="21_wdhjc"]
-[ext_resource type="Script" uid="uid://2e3xl0l68ioy" path="res://addons/Juice_V1/Meta/NoiseProperty2DJuiceEffect.gd" id="22_ve81s"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -342,42 +340,10 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://dni12p84dccqt"
 
-[sub_resource type="Resource" id="Resource_necpd"]
-script = ExtResource("21_vyqmh")
-node_path = NodePath("..")
-property_path = "visible"
-_detected_type = 1
-metadata/_custom_type_script = "uid://cwcgb8lcdbjw7"
-
-[sub_resource type="Resource" id="Resource_iawcc"]
-script = ExtResource("22_ve81s")
-noise_speed = 1.0
-noise_direction = 0
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-noise_type = 1
-noise_frequency = 1.0
-noise_seed = 0
-fractal_type = 0
-domain_warp_enabled = false
-clamp_min = -1.0
-clamp_max = 1.0
-property_targets = [SubResource("Resource_necpd")]
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://2e3xl0l68ioy"
-
 [sub_resource type="Resource" id="Resource_ev3yq"]
 resource_local_to_scene = true
 script = ExtResource("16_w3iwx")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_6i2li"), SubResource("Resource_iawcc")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_6i2li"), null])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [node name="MainDemoScene" type="Control" unique_id=75509961]
@@ -570,22 +536,26 @@ metadata/juice_active_ledger = {
 "modulate": {
 1891933166960: Color(1, 1, 1, 1),
 1899701017978: Color(1, 1, 1, 1),
-2502422502817: Color(1, 1, 1, 1)
+2502422502817: Color(1, 1, 1, 1),
+2989767072834: Color(1, 1, 1, 1)
 },
 "position": {
 1891933166960: Vector2(0, 0),
 1899701017978: Vector2(0, 0),
-2502422502817: Vector2(0, 0)
+2502422502817: Vector2(0, 0),
+2989767072834: Vector2(0, 0)
 },
 "rotation": {
 1891933166960: 0.0,
 1899701017978: 0.0,
-2502422502817: 0.0
+2502422502817: 0.0,
+2989767072834: 0.0
 },
 "scale": {
 1891933166960: Vector2(0, 0),
 1899701017978: Vector2(0, 0),
-2502422502817: Vector2(0, 0)
+2502422502817: Vector2(0, 0),
+2989767072834: Vector2(0, 0)
 }
 }
 }

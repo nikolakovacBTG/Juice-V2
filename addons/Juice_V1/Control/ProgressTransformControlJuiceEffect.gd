@@ -267,6 +267,10 @@ func _invalidate_base_cache() -> void:
 	_clear_deltas()
 
 
+# Stashes frame delta for _apply_effect (Resources have no _process).
+# Also intercepts the RESTART_REVERSED signal from bound checking — when
+# REVERSE_EASED fires, tick returns RESTART_REVERSED so the host re-triggers
+# animate_out then animate_in with the flipped direction.
 func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 	_last_delta = delta
 	_pending_restart_reversed = false
@@ -281,6 +285,9 @@ func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 # APPLY EFFECT
 # =============================================================================
 
+# Unlike From/To effects where progress lerps between two values, here progress
+# is a speed multiplier: accumulated += rate * delta * progress * direction.
+# At progress=0 (rest) accumulation freezes; at 1.0 (peak) it runs at full rate.
 func _apply_effect(progress: float, target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
@@ -434,6 +441,9 @@ func _wrap_accumulated() -> void:
 # HELPERS
 # =============================================================================
 
+# Fold accumulated delta into the base so the next accumulation cycle starts
+# from zero. Used by REVERSE/REVERSE_EASED to prevent oscillation drift
+# (without absorption, accumulated would double on each direction flip).
 func _absorb_accumulated_into_base() -> void:
 	match transform_target:
 		TransformTarget.POSITION:

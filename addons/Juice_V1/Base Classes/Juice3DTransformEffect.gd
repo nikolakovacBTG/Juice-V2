@@ -434,6 +434,8 @@ func _on_editor_pre_save(target: Node) -> void:
 	_do_update_editor_cache(target)
 
 
+# 3D splits pivot handling: rotation pivot is pre-computed during
+# _do_capture_base(), scale pivot is resolved lazily here on first start.
 func _on_animate_start(target: Node) -> void:
 	if not _has_base:
 		_do_capture_base(target)
@@ -607,6 +609,8 @@ func _infer_parent_size(target: Node) -> Vector3:
 	return Vector3.ZERO
 
 
+# Estimates visual size from MeshInstance3D AABB, CollisionShape3D geometry,
+# or any node exposing get_aabb(). Falls back to recursive child-bounds merge.
 func _infer_node3d_size(node: Node3D) -> Vector3:
 	if node == null:
 		return Vector3.ZERO
@@ -711,3 +715,12 @@ func _infer_node3d_local_bounds(node: Node3D) -> AABB:
 		return AABB(Vector3.ZERO, Vector3.ZERO)
 
 	return AABB(-size * 0.5, size)
+
+
+# Returns the local-space AABB center of node, with recursive child fallback.
+# Used by all 3D effects to resolve AUTO_CENTER pivot.
+func _infer_node3d_center(node: Node3D) -> Vector3:
+	var bounds := _infer_node3d_local_bounds(node)
+	if bounds.size == Vector3.ZERO:
+		bounds = _infer_node3d_bounds_recursive(node)
+	return bounds.get_center() if bounds.size != Vector3.ZERO else Vector3.ZERO

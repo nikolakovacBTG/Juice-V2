@@ -181,10 +181,14 @@ var _shake_noise: FastNoiseLite = null
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# SHAKE mode oscillates indefinitely — sustain keeps _apply_effect ticking after
+# animate_in peaks. DETERMINISTIC completes naturally at progress=1.0.
 func _needs_sustain() -> bool:
 	return animation_mode == AnimationMode.SHAKE
 
 
+# Only runs for SHAKE mode: instantiates and configures the noise field used by _sample().
+# DETERMINISTIC mode needs no noise — _apply_effect uses the base-class curve directly.
 func _on_animate_start(_target: Node) -> void:
 	if animation_mode != AnimationMode.SHAKE:
 		return
@@ -194,6 +198,8 @@ func _on_animate_start(_target: Node) -> void:
 	_shake_noise.frequency = 1.0  # Rate driven externally via t * shake_frequency
 
 
+# Re-discovers (or bootstraps) CameraJuiceUtility every frame.
+# This handles mid-animation camera switches — new camera gets its own utility immediately.
 func _apply_effect(progress: float, _target: Node) -> void:
 	var util := _find_or_create_utility()
 	if not is_instance_valid(util):
@@ -209,6 +215,8 @@ func _on_animate_out_complete(_target: Node) -> void:
 	_remove_contribution()
 
 
+# Subtracts this effect's accumulated delta from the utility to prevent
+# drift accumulation across animation cycles or after the effect is stopped.
 func _restore_to_natural(_target: Node) -> void:
 	_remove_contribution()
 
@@ -217,6 +225,11 @@ func _restore_to_natural(_target: Node) -> void:
 # CHANNEL APPLY
 # =============================================================================
 
+# SHAKE: decorrelated X/Y/Z noise (different row offsets per axis) scaled by
+# position_offset amplitude × progress envelope.
+# Both modes: if use_local_space, transforms the world-space desired vector
+# through cam.global_transform.basis so the shake follows camera orientation.
+# Delta from _my_pos is accumulated into the utility — stacks with other effects.
 func _apply_position(util: CameraJuiceUtility, progress: float) -> void:
 	var desired: Vector3
 	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
@@ -255,6 +268,8 @@ func _apply_rotation(util: CameraJuiceUtility, progress: float) -> void:
 	_my_rot = desired
 
 
+# FOV uses the utility's zoom_offset channel (shared between Camera2D zoom and
+# Camera3D FOV). The utility maps zoom_offset to cam.fov for 3D parents.
 func _apply_fov(util: CameraJuiceUtility, progress: float) -> void:
 	var desired := fov_offset * _sample(progress, 300.0)
 	var delta   := desired - _my_fov
@@ -341,6 +356,9 @@ func _bootstrap_utility_on(cam: Camera3D) -> CameraJuiceUtility:
 	return util
 
 
+# Resolves the active Camera3D via the host node's viewport.
+# Separate from _find_or_create_utility so _remove_contribution can look up the
+# camera without the bootstrap side-effect (should not create a utility on cleanup).
 func _find_camera_3d() -> Camera3D:
 	if not is_instance_valid(_host_node):
 		return null

@@ -129,10 +129,14 @@ func _get(property: StringName) -> Variant:
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# Called when the animation slot triggers. Fires all entries configured for ON_START.
+# No target resolution needed — juice_signal emits on this resource, not a node.
 func _on_animate_start(_target: Node) -> void:
 	_emit_for_timing(EmitTiming.ON_START, "ON_START")
 
 
+# Called when animate_in reaches progress=1.0. Fires entries configured for ON_COMPLETE.
+# Note: this is animate_in complete, not animate_out — the intent is "call when peaked".
 func _on_animate_in_complete(_target: Node) -> void:
 	_emit_for_timing(EmitTiming.ON_COMPLETE, "ON_COMPLETE")
 

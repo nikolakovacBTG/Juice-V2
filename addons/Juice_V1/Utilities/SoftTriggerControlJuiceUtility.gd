@@ -175,6 +175,9 @@ func _on_mouse_entered() -> void:
 	JuiceLogger.log_info(self, "SoftTrigger", "Mouse entered detection zone", debug_enabled)
 
 
+# Two-step external release: 0.0 first (effect returns to rest state while still
+# in external mode), then -1.0 to relinquish external control entirely so
+# JuiceBase can respond to animate_in/out calls again.
 func _on_mouse_exited() -> void:
 	_is_inside = false
 	set_process(false)

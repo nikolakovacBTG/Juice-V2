@@ -181,7 +181,7 @@ func _on_animate_start(target: Node) -> void:
 	_last_sine_sign = Vector3.ONE
 
 	if transform_target != TransformTarget.POSITION:
-		_compute_pivot_offset()
+		_compute_pivot_offset(target)
 		_contributes_position = (_contributes_position or _pivot_offset != Vector3.ZERO)
 
 	# Full config snapshot — every variable that feeds the computation chain.
@@ -380,10 +380,11 @@ func _update_direction_axis(sine_value: float, axis: int) -> void:
 # PIVOT / BASE HELPERS
 # =============================================================================
 
-func _compute_pivot_offset() -> void:
+func _compute_pivot_offset(target: Node) -> void:
+	var n3d := target as Node3D
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			_pivot_offset = Vector3.ZERO
+			_pivot_offset = _infer_node3d_center(n3d) if n3d else Vector3.ZERO
 		PivotMode.INHERIT:
 			_pivot_offset = Vector3.ZERO
 		PivotMode.CUSTOM:
