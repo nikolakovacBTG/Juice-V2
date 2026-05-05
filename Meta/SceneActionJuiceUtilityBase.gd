@@ -299,6 +299,11 @@ func _get(property: StringName) -> Variant:
 	return null
 
 
+# Hides properties that are meaningless or dangerous for this utility's modes.
+# Chaining (chain_to, interrupt_siblings, chained_preroll) is hidden for destructive
+# actions — RELOAD, QUIT, and SWITCH(THIS_SCENE) destroy the host scene before
+# the chain would resolve, so allowing it would produce silent no-ops or errors.
+# Looping/crossfade are hidden because this is a one-shot fire-and-forget utility.
 func _validate_property(property: Dictionary) -> void:
 	var prop_name := StringName(property.name)
 	var is_destructive := _is_destructive_action()
@@ -403,6 +408,8 @@ func _apply_effect(_progress: float, _target: Node) -> void:
 	pass  # No visual output — orchestrator handles everything.
 
 
+# Scene management actions destroy or replace the scene tree — there is no
+# safe state to restore after a preview, so editor preview is disabled.
 func _supports_editor_preview() -> bool:
 	return false
 

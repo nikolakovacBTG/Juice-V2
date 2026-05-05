@@ -114,6 +114,9 @@ var _was_active: bool = false
 # LIFECYCLE
 # =============================================================================
 
+# Registers as the singleton (instance = self), sets process_priority = 100 so
+# this runs after ScreenJuiceEffect writes (which process at priority 0),
+# and validates that a ShaderMaterial is present.
 func _ready() -> void:
 	if instance != null and instance != self:
 		JuiceLogger.log_info(self, "Screen",
@@ -133,6 +136,8 @@ func _ready() -> void:
 			"ready (static instance registered)", debug_enabled)
 
 
+# Clears the static instance so effects don't hold a freed-node reference
+# after scene transitions or manual utility removal.
 func _exit_tree() -> void:
 	if instance == self:
 		instance = null
@@ -140,6 +145,10 @@ func _exit_tree() -> void:
 				"removed (static instance cleared)", debug_enabled)
 
 
+# Runs each frame at priority 100. If no channel is active and nothing was
+# applied last frame, returns immediately (zero GPU work).
+# On the first idle frame after an active effect ends, resets shader to
+# passthrough and clears _was_active to prevent repeat reset calls.
 func _process(_delta: float) -> void:
 	var mat := material as ShaderMaterial
 	if not mat:
@@ -194,6 +203,9 @@ func _write_shader_uniforms(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("vignette_softness", vignette_softness)
 
 
+# Resets every shader uniform to its neutral value. Note: zoom_amount = 1.0
+# (not 0.0) because the shader multiplies UV by zoom_amount — 0 would collapse
+# the image, 1.0 is passthrough.
 func _reset_shader_to_passthrough(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("offset", Vector2.ZERO)
 	mat.set_shader_parameter("rotation_angle", 0.0)

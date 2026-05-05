@@ -351,6 +351,9 @@ var _shake_noise: FastNoiseLite = null
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# Re-discovers (or bootstraps) ScreenJuiceUtility on every call to handle
+# the case where the utility was freed and re-created between animation ticks.
+# Routes to the per-channel apply method via the channel config value.
 func _apply_effect(progress: float, _target: Node) -> void:
 	var util := _find_or_create_utility()
 	if not is_instance_valid(util):
@@ -480,6 +483,10 @@ func _apply_chromatic(util: ScreenJuiceUtility, envelope: float) -> void:
 # CONTRIBUTION CLEANUP
 # =============================================================================
 
+# Subtracts all seven channel deltas from the utility and resets last-write-wins
+# config fields (pivot_uv, vignette, wave_direction, chromatic_mode/time/seed).
+# The config reset is required because these fields are not accumulated — without
+# clearing them, their values persist and corrupt the next effect that uses the utility.
 func _remove_contribution() -> void:
 	var util := _find_utility()
 	if is_instance_valid(util):

@@ -383,6 +383,10 @@ func _on_host_ready(target: Node, host: Node) -> void:
 		_perform_to_capture(ctrl)
 
 
+# Orchestrates startup: flags modulate contribution (TINT/FADE/OVERBRIGHT) or shader
+# ownership (OUTLINE), captures From/To references, and initializes flicker.
+# OUTLINE installs a ShaderMaterial on target.material here — modulate effects don't
+# touch target.material since the domain node writes self_modulate instead.
 func _on_animate_start(target: Node) -> void:
 	var ctrl := target as Control
 	if ctrl == null:
@@ -444,6 +448,10 @@ func _on_animate_start(target: Node) -> void:
 				{"outline_width": outline_width, "outline_color": outline_color}, debug_enabled)
 
 
+# Core dispatcher: TINT/FADE/OVERBRIGHT compute a _modulate_factor that the domain
+# node multiplies into self_modulate. OUTLINE bypasses modulate entirely and writes
+# shader parameters (outline_width, outline_color) on target.material directly.
+# Flicker multiplier `f` modulates the output in all modes.
 func _apply_effect(progress: float, target: Node) -> void:
 	_advance_flicker_time()
 	var f := _compute_flicker_multiplier()
@@ -557,7 +565,6 @@ func _get_interrupt_identity() -> Variant:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Perform the actual From reference capture
 func _perform_from_capture(ctrl: Control) -> void:
 	if _has_from_self_snapshot:
 		return
@@ -571,7 +578,6 @@ func _perform_from_capture(ctrl: Control) -> void:
 	_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
 	_has_from_self_snapshot = true
 
-# Perform the actual To reference capture
 func _perform_to_capture(ctrl: Control) -> void:
 	if _has_to_self_snapshot:
 		return

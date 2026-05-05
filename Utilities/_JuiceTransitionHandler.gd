@@ -111,6 +111,10 @@ signal _overlay_animation_completed
 # LIFECYCLE
 # =============================================================================
 
+# Ticks _overlay_effect manually each frame. The effect is NOT in the scene
+# tree — it is a detached resource instantiated by _create_overlay_effect_cover.
+# When tick() returns COMPLETED, emits _overlay_animation_completed so the
+# awaiting coroutine in _execute_overlay_transition can advance.
 func _process(delta: float) -> void:
 	if _overlay_effect == null or not _overlay_effect.is_playing():
 		return
@@ -145,6 +149,10 @@ func execute() -> void:
 # TRANSITION PATHS
 # =============================================================================
 
+# Instant cut: performs the scene action immediately with no overlay.
+# Waits one process_frame after the action so the scene tree has settled
+# (nodes replaced, deferred calls flushed) before emitting completed.
+# QUIT_GAME skips the frame wait — the process is about to exit anyway.
 func _execute_no_transition() -> void:
 	# Instant cut — no visual transition
 	_emit_action_executed()
@@ -155,6 +163,13 @@ func _execute_no_transition() -> void:
 	_emit_completed()
 
 
+# 7-phase cover → action → reveal sequence with async load overlap:
+# Phase 1: Kick off background load (SWITCH_SCENE only) during cover.
+# Phase 2-3: Cover animation — blocks until _overlay_animation_completed.
+# Phase 4: Wait for async load to finish (overlapped with cover duration).
+# Phase 5: Execute scene action. QUIT_GAME exits early here.
+# Phase 6-7: Reveal — same effect instance reconfigured to TO_CLEAR direction.
+# Phase 8: Clean up overlay provider and emit completed.
 func _execute_overlay_transition() -> void:
 	# Phase 1: Start async loading (SWITCH_SCENE only)
 	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
@@ -203,6 +218,13 @@ func _execute_overlay_transition() -> void:
 	_emit_completed()
 
 
+# Instances the user's transition scene onto a dedicated CanvasLayer on root
+# so it renders above all gameplay content and survives scene switching.
+# Phase 3: Awaits 'screen_covered' signal OR a fallback timer if the scene
+# doesn't declare the expected signal contract.
+# Phase 6: Awaits 'transition_finished' OR a fallback timer — same duality.
+# Both awaits log a warning when falling back, so users can see they need to
+# add the signal contract to their custom transition scene.
 func _execute_scene_transition() -> void:
 	if transition_scene == null:
 		JuiceLogger.warn(self, "Transition",
@@ -279,6 +301,9 @@ func _execute_scene_transition() -> void:
 # SCENE ACTIONS
 # =============================================================================
 
+# Executes the configured scene action. For SWITCH_SCENE, prefers the
+# async-loaded resource (already in memory from background load) over the
+# original PackedScene reference to avoid a synchronous disk read.
 func _perform_scene_action() -> void:
 	match scene_action:
 		SceneAction.SWITCH_SCENE:
@@ -312,6 +337,10 @@ func _perform_scene_action() -> void:
 # OVERLAY EFFECT CREATION (ScreenOverlayJuiceEffectBase)
 # =============================================================================
 
+# Builds a ScreenOverlayJuiceEffectBase configured for the COVER direction:
+# TO_COLOR (clear → opaque). Sets PLAY_IN_ONLY so the effect stops at full
+# opacity rather than auto-reversing — the reveal is handled as a second
+# animation pass by _configure_overlay_effect_reveal.
 func _create_overlay_effect_cover() -> ScreenOverlayJuiceEffectBase:
 	var effect := ScreenOverlayJuiceEffectBase.new()
 	effect.overlay_color = overlay_color
@@ -330,6 +359,10 @@ func _create_overlay_effect_cover() -> ScreenOverlayJuiceEffectBase:
 	return effect
 
 
+# Mutates the existing cover effect in-place for the reveal pass.
+# Flips direction to TO_CLEAR (opaque → clear) and applies reveal timing.
+# Reusing the same instance avoids allocating a second effect and preserves
+# the overlay's current visual state (already at full opacity after cover).
 func _configure_overlay_effect_reveal(effect: ScreenOverlayJuiceEffectBase) -> void:
 	effect.direction = ScreenOverlayJuiceEffectBase.OverlayDirection.TO_CLEAR
 	effect.duration_in = reveal_duration
@@ -343,6 +376,9 @@ func _configure_overlay_effect_reveal(effect: ScreenOverlayJuiceEffectBase) -> v
 # ASYNC SCENE LOADING
 # =============================================================================
 
+# Kicks off a threaded background load. Skips if the resource is already
+# in cache (embedded PackedScenes and recently loaded scenes are cached).
+# The load runs concurrently with the cover animation to minimise stall time.
 func _start_async_load(path: String) -> void:
 	if path.is_empty():
 		return
@@ -356,6 +392,9 @@ func _start_async_load(path: String) -> void:
 			"Async load started: %s" % path, debug_enabled)
 
 
+# Frame-polling loop: yields to process_frame until ResourceLoader status
+# leaves THREAD_LOAD_IN_PROGRESS. Logs FAILED / INVALID_RESOURCE warnings
+# so users know when a scene path was invalid without a silent stall.
 func _await_async_load(path: String) -> void:
 	if path.is_empty():
 		return

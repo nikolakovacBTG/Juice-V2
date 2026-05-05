@@ -180,6 +180,11 @@ func _ready() -> void:
 			debug_enabled)
 
 
+# Explicitly routes between two progress calculations: _calculate_mouse_progress
+# (surface-projection — hit is ON the shape, not inside) when no tracked node
+# and detect_mouse is on; _calculate_shape_progress (volumetric distance) when
+# a physics body or area is tracked. Mouse mode also guards on _has_hit_point
+# to avoid calculating with a stale zero vector before first _input_event.
 func _process(_delta: float) -> void:
 	if not _is_inside:
 		return
@@ -275,6 +280,9 @@ func _on_object_exited(object: Node3D) -> void:
 				"Object exited: %s" % object.name, debug_enabled)
 
 
+# Two-step external release: send progress=0.0 (effect reaches rest state),
+# then -1.0 to relinquish external control. Without -1.0, JuiceBase stays
+# locked in external mode and ignores animate_in/out calls.
 func _release_all() -> void:
 	_is_inside = false
 	set_process(false)
@@ -486,6 +494,9 @@ func _progress_sphere(local_pos: Vector3, radius: float) -> float:
 # SHAPE AUTO-CREATION (@tool)
 # =============================================================================
 
+# Creates a CollisionShape3D with BoxShape3D (sized to detection_size) if none
+# exists and auto_create_shape is on. In editor, sets child.owner so it
+# serializes into the scene file. At runtime, only warns — no auto-create.
 func _ensure_collision_shape() -> void:
 	for child in get_children():
 		if child is CollisionShape3D:
@@ -514,6 +525,8 @@ func _ensure_collision_shape() -> void:
 			debug_enabled)
 
 
+# Editor-only: when detection_size changes in the inspector, sync the
+# auto-created BoxShape3D size. No-op at runtime — shape is owned by the scene.
 func _update_auto_shape_size() -> void:
 	if not Engine.is_editor_hint():
 		return
@@ -527,6 +540,9 @@ func _update_auto_shape_size() -> void:
 # SIBLING DISCOVERY
 # =============================================================================
 
+# Lazy dirty-flag cache: rebuilds the sibling list only when _juice_siblings_dirty
+# is true. Marked dirty by _mark_siblings_dirty, wired to parent's
+# child_order_changed so additions/removals are picked up automatically.
 func _ensure_juice_siblings() -> void:
 	if not _juice_siblings_dirty:
 		return

@@ -31,32 +31,32 @@ extends Juice2DAppearanceEffect
 
 enum AppearanceReference {
 	CUSTOM, ## Use explicit From/To values
-	SELF,   ## Capture from target at animation start
+	SELF, ## Capture from target at animation start
 }
 
 enum CaptureAt {
 	TRIGGER, ## Capture when animation starts
-	READY,   ## Capture when node enters tree
+	READY, ## Capture when node enters tree
 	IN_EDITOR, ## Capture immediately in editor
 }
 
 enum AppearanceEffect {
-	TINT,       ## Multiply modulate with a color overlay
-	FADE,       ## Animate modulate alpha to a target value
+	TINT, ## Multiply modulate with a color overlay
+	FADE, ## Animate modulate alpha to a target value
 	OVERBRIGHT, ## Boost brightness above 1.0 via modulate
-	OUTLINE,    ## Add colored outline via outline_2d.gdshader
+	OUTLINE, ## Add colored outline via outline_2d.gdshader
 }
 
 enum FlickerMode {
-	NONE,   ## No flicker — progress passes through unmodified
+	NONE, ## No flicker — progress passes through unmodified
 	RANDOM, ## FastNoiseLite-driven flicker
 	CUSTOM, ## Curve-driven flicker pattern
 }
 
 enum OutlineFlickerTarget {
-	WIDTH,       ## Flicker modulates outline width
+	WIDTH, ## Flicker modulates outline width
 	COLOR_ALPHA, ## Flicker modulates outline color alpha
-	COLOR,       ## Flicker lerps between outline_color and flicker_color_to
+	COLOR, ## Flicker lerps between outline_color and flicker_color_to
 }
 
 
@@ -350,7 +350,7 @@ var _has_to_self_snapshot: bool = false
 # Modulate effects (TINT/FADE/OVERBRIGHT) use _modulate_factor from the intermediate.
 var _natural_material: Material = null
 var _has_natural: bool = false
-var _active_material: Material = null  # Material we installed — tracked so restore doesn't clobber user materials.
+var _active_material: Material = null # Material we installed — tracked so restore doesn't clobber user materials.
 var _tick_delta: float = 0.0
 var _flicker_time: float = 0.0
 var _flicker_noise: FastNoiseLite = null
@@ -383,6 +383,10 @@ func _on_host_ready(target: Node, host: Node) -> void:
 		_perform_to_capture(n2d)
 
 
+# Orchestrates startup: flags modulate contribution or shader ownership, captures
+# From/To references, and initializes flicker. OUTLINE installs a ShaderMaterial on
+# target.material directly. TINT/FADE/OVERBRIGHT set _modulate_factor, which Juice2D
+# writes to modulate (not self_modulate — Node2D has no self_modulate).
 func _on_animate_start(target: Node) -> void:
 	var n2d := target as Node2D
 	if n2d == null:
@@ -459,7 +463,7 @@ func _apply_effect(progress: float, target: Node) -> void:
 			from_val = _resolve_from_tint(target)
 			to_val = _resolve_to_tint(target)
 			_modulate_factor = (from_val as Color).lerp(to_val, progress * f)
-			_modulate_factor.a = 1.0  # TINT does not alter alpha channel
+			_modulate_factor.a = 1.0 # TINT does not alter alpha channel
 
 		AppearanceEffect.FADE:
 			from_val = _resolve_from_alpha(target)
@@ -613,13 +617,15 @@ func _install_material(n2d: Node2D, mat: Material) -> void:
 # FROM/TO RESOLVERS
 # =============================================================================
 
-# Perform the actual From reference capture
+# Called during _on_animate_start and _on_host_ready (CaptureAt.READY path).
+# Reads directly from n2d.modulate to capture the node's current appearance state.
+# Skip-guarded: only captures once per animation cycle to prevent overwrite.
 func _perform_from_capture(n2d: Node2D) -> void:
 	if _has_from_self_snapshot:
 		return
 	# Capture TINT references
 	_captured_from_tint_color = n2d.modulate
-	_captured_from_tint_blend = 0.0  # SELF means no tint at progress=0
+	_captured_from_tint_blend = 0.0 # SELF means no tint at progress=0
 	# Capture FADE references
 	_captured_from_alpha = n2d.modulate.a
 	# Capture OVERBRIGHT references
@@ -645,39 +651,39 @@ func _perform_to_capture(n2d: Node2D) -> void:
 func _resolve_from_tint(_n2d: Node2D) -> Color:
 	if from_reference == AppearanceReference.SELF:
 		return lerp(Color.WHITE, _captured_from_tint_color, _captured_from_tint_blend)
-	else:  # CUSTOM
+	else: # CUSTOM
 		return lerp(Color.WHITE, from_tint_color, from_tint_blend)
 
 func _resolve_to_tint(_n2d: Node2D) -> Color:
 	if to_reference == AppearanceReference.SELF:
 		return lerp(Color.WHITE, _captured_to_tint_color, _captured_to_tint_blend)
-	else:  # CUSTOM
+	else: # CUSTOM
 		return lerp(Color.WHITE, tint_color, tint_blend)
 
 # FADE resolvers
 func _resolve_from_alpha(_n2d: Node2D) -> float:
 	if from_reference == AppearanceReference.SELF:
 		return _captured_from_alpha
-	else:  # CUSTOM
+	else: # CUSTOM
 		return from_alpha
 
 func _resolve_to_alpha(_n2d: Node2D) -> float:
 	if to_reference == AppearanceReference.SELF:
 		return _captured_to_alpha
-	else:  # CUSTOM
+	else: # CUSTOM
 		return fade_target_alpha
 
 # OVERBRIGHT resolvers
 func _resolve_from_brightness(_n2d: Node2D) -> float:
 	if from_reference == AppearanceReference.SELF:
 		return _captured_from_brightness
-	else:  # CUSTOM
+	else: # CUSTOM
 		return from_brightness
 
 func _resolve_to_brightness(_n2d: Node2D) -> float:
 	if to_reference == AppearanceReference.SELF:
 		return _captured_to_brightness
-	else:  # CUSTOM
+	else: # CUSTOM
 		return overbright_strength
 
 # =============================================================================

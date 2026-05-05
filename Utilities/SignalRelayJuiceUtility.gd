@@ -56,6 +56,10 @@ extends Node
 # LIFECYCLE
 # =============================================================================
 
+# Validates 5 conditions in sequence before wiring: source node exists,
+# listen_signal exists on it, emit_signal_name is set, signal bus exists,
+# bus has emit_signal_name. Connects _on_source_triggered (named method, not
+# lambda) so the connection survives potential GC of this node.
 func _ready() -> void:
 	var source: Node
 	if listen_source_path.is_empty():
@@ -102,6 +106,9 @@ func _ready() -> void:
 			debug_enabled)
 
 
+# Receives the source signal and re-emits on the bus without forwarding args.
+# Accepts an optional _interactor arg so it can connect to signals that pass
+# one argument (e.g. body_entered, area_entered) without a signature mismatch.
 func _on_source_triggered(_interactor: Variant = null) -> void:
 	var bus := _get_signal_bus()
 	if bus:

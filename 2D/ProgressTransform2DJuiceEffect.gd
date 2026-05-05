@@ -500,7 +500,10 @@ func _wrap_accumulated() -> void:
 # HELPERS
 # =============================================================================
 
-## Absorb accumulated into base, making current position the new pivot for bounds.
+# Fold accumulated delta into the base so the next accumulation cycle starts
+# from zero. Used by REVERSE/REVERSE_EASED to prevent oscillation drift.
+# For ROTATION: also recomputes _fixed_pivot_parent since the pivot arc
+# depends on _base_rotation (Node2D has no native pivot_offset).
 func _absorb_accumulated_into_base() -> void:
 	match transform_target:
 		TransformTarget.POSITION:

@@ -295,6 +295,9 @@ func _get_configuration_warnings() -> PackedStringArray:
 # LIFECYCLE
 # =============================================================================
 
+# Sets up mode-specific state: TRIGGER_ZONE disables input_pickable and wires
+# zone signals on self. INTERACTABLE enables picking (unless zone-gated), and
+# optionally wires a child TriggerZone to gate picking and input processing.
 func _ready() -> void:
 	_sync_user_signals()
 
@@ -341,6 +344,10 @@ func _ready() -> void:
 # SHAPE AUTO-CREATION (@tool)
 # =============================================================================
 
+# @tool method that creates a CollisionShape2D (r=24 for INTERACTABLE, r=48
+# for TRIGGER_ZONE) if none exists. Also creates or removes a child TriggerZone
+# Area2D (with its own CollisionShape2D at r=48) when zone-gating is toggled.
+# Removes the zone child when it is no longer needed to avoid stale collision.
 func _ensure_shapes() -> void:
 	if not Engine.is_editor_hint() or not is_inside_tree():
 		return
@@ -444,6 +451,9 @@ func _input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 # INPUT HANDLING: CUSTOM ACTIONS
 # =============================================================================
 
+# Routes to _handle_custom_actions only when input_priority == WORLD.
+# WORLD priority uses _unhandled_input so GUI elements (buttons, menus)
+# intercept the event first — standard game-world interaction.
 func _unhandled_input(event: InputEvent) -> void:
 	if Engine.is_editor_hint() or mode != Mode.INTERACTABLE:
 		return
@@ -452,6 +462,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	_handle_custom_actions(event)
 
 
+# Routes to _handle_custom_actions only when input_priority == ALWAYS.
+# ALWAYS priority uses _input so the event fires even when a GUI element
+# has already consumed it — needed for interactions behind UI overlays.
 func _input(event: InputEvent) -> void:
 	if Engine.is_editor_hint() or mode != Mode.INTERACTABLE:
 		return
@@ -502,6 +515,10 @@ func _has_custom_action_entries() -> bool:
 # TRIGGER ZONE HANDLING
 # =============================================================================
 
+# Connects body_entered, body_exited, area_entered, area_exited on zone_source
+# with duplicate guards. Safe to call multiple times (from _ready and from
+# _ensure_shapes). zone_source can be self (TRIGGER_ZONE) or a child Area2D
+# (INTERACTABLE with zone gating).
 func _wire_zone_signals(zone_source: Area2D) -> void:
 	zone_source.monitoring = true
 	if not zone_source.body_entered.is_connected(_on_zone_body_entered):
@@ -546,6 +563,9 @@ func _on_zone_area_exited(area: Area2D) -> void:
 	_on_zone_object_exited(area)
 
 
+# Increments the counter and acts only on the first entry (_bodies_inside == 1).
+# TRIGGER_ZONE: logs the enter event (native body_entered has already fired).
+# INTERACTABLE+zone: enables input_pickable and input processing on first entry.
 func _on_zone_object_entered(node: Node) -> void:
 	_bodies_inside += 1
 	if _bodies_inside == 1:
@@ -568,6 +588,9 @@ func _on_zone_object_entered(node: Node) -> void:
 					debug_enabled)
 
 
+# Decrements the counter and acts only on last exit (_bodies_inside == 0).
+# TRIGGER_ZONE: logs the exit event.
+# INTERACTABLE+zone: disables input_pickable and input processing on last exit.
 func _on_zone_object_exited(node: Node) -> void:
 	_bodies_inside = maxi(_bodies_inside - 1, 0)
 	if _bodies_inside == 0:
@@ -596,6 +619,9 @@ func _passes_filter(node: Node) -> bool:
 # DYNAMIC SIGNAL MANAGEMENT
 # =============================================================================
 
+# Computes which dynamic signal names are needed, then registers any new ones
+# via add_user_signal(). Godot provides no remove_user_signal() — signals from
+# removed entries persist harmlessly on this instance until scene reload.
 func _sync_user_signals() -> void:
 	var needed: Array[StringName] = []
 	for i in range(mini(action_count, _action_presets.size())):
@@ -633,6 +659,9 @@ func _get_signal_name_for_entry(index: int) -> StringName:
 # EXTERNAL API
 # =============================================================================
 
+## Enables or disables all input processing and mouse picking.
+## Call to programmatically suppress interaction (e.g., during cutscenes).
+## Respects zone-gating: re-enabling does not override a closed zone.
 func set_enabled(enabled: bool) -> void:
 	if not enabled:
 		set_process_unhandled_input(false)
@@ -651,12 +680,16 @@ func set_enabled(enabled: bool) -> void:
 			"set_enabled(%s)" % enabled, debug_enabled)
 
 
+## Clears the one-shot guard so the interaction can fire again.
+## Call after a one-shot trigger completes its effect to re-arm it.
 func reset() -> void:
 	_has_fired = false
 	JuiceLogger.log_info(self, "Interaction2D",
 			"reset() — one-shot guard cleared", debug_enabled)
 
 
+## Fires the signal for the configured click preset that matches button.
+## Useful for testing interaction logic without a physical mouse event.
 func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
 	for i in range(mini(action_count, _action_presets.size())):
 		var preset := _action_presets[i]
@@ -674,6 +707,8 @@ func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
 				emit_signal(sig)
 
 
+## Emits a registered dynamic signal by name without a real InputEvent.
+## Logs a warning if the signal is not registered (action_count / config issue).
 func simulate_input_action(action_name: StringName) -> void:
 	if has_signal(action_name):
 		JuiceLogger.log_info(self, "Interaction2D",
@@ -685,6 +720,8 @@ func simulate_input_action(action_name: StringName) -> void:
 				debug_enabled)
 
 
+## Simulates a body or area entering the trigger zone, activating zone-gating.
+## Drives the same path as a real physics enter event.
 func simulate_zone_enter(node: Node) -> void:
 	JuiceLogger.log_info(self, "Interaction2D",
 			"simulate_zone_enter(%s)" % (str(node.name) if node else "null"),
@@ -692,6 +729,8 @@ func simulate_zone_enter(node: Node) -> void:
 	_on_zone_object_entered(node)
 
 
+## Simulates a body or area exiting the trigger zone, deactivating zone-gating.
+## Drives the same path as a real physics exit event.
 func simulate_zone_exit(node: Node) -> void:
 	JuiceLogger.log_info(self, "Interaction2D",
 			"simulate_zone_exit(%s)" % (str(node.name) if node else "null"),
@@ -699,6 +738,8 @@ func simulate_zone_exit(node: Node) -> void:
 	_on_zone_object_exited(node)
 
 
+## Returns a snapshot of the current configuration as a Dictionary.
+## Useful for test assertions and debug output — not intended for runtime logic.
 func get_configuration_summary() -> Dictionary:
 	var summary := {
 		"mode": Mode.keys()[mode],

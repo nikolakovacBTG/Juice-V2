@@ -340,6 +340,9 @@ func _advance_noise_time(delta: float) -> void:
 		_noise_time += delta
 
 
+# Converts raw noise samples into transform deltas scaled by the progress envelope.
+# Each transform target uses separate noise offsets for X/Y to decorrelate axes.
+# Position applies unit conversion (pixels/own-size/parent/viewport) after scaling.
 func _compute_noise_deltas(intensity: float, target: Node2D) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector2.ZERO
@@ -401,6 +404,9 @@ func _compute_pivot_offset(target: Node) -> void:
 			_pivot_offset = _estimate_visual_center(target)
 
 
+# Heuristic for AUTO_CENTER: scans immediate children for a Sprite2D with a
+# texture and returns its visual center. Centered sprites use position directly;
+# non-centered sprites offset by half the texture size.
 func _estimate_visual_center(target: Node) -> Vector2:
 	if not is_instance_valid(target):
 		return Vector2.ZERO

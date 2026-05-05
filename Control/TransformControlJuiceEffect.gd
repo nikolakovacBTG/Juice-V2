@@ -152,6 +152,9 @@ var _to_self_scale_snapshot: Vector2 = Vector2.ONE
 # VIRTUAL HOOK IMPLEMENTATIONS
 # =============================================================================
 
+# Called by JuiceControlTransformEffect._on_animate_start before From/To resolution.
+# Reads from the JuiceLedger (not the target) to get the pre-Juice natural state even
+# when sibling effects are active. Skip-guarded to prevent mid-animation overwrite.
 func _do_capture_base(target: Node) -> void:
 	if _has_base:
 		JuiceLogger.log_info(self, _get_domain_tag(),
@@ -204,6 +207,9 @@ func _clear_to_editor_cache_typed() -> void:
 	_to_editor_cached_scale = Vector2.ONE
 
 
+# IN_EDITOR: uses the per-target ledger base instead of the single editor cache slot.
+# This fixes Sequencer multi-target stacking — one resource instance serves multiple
+# targets, so the cache can only hold one value while the ledger has per-target entries.
 func _capture_from_self_position_snapshot(target: Node) -> void:
 	if _has_from_self_position_snapshot:
 		JuiceLogger.log_info(self, _get_domain_tag(),

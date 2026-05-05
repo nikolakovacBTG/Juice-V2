@@ -127,11 +127,16 @@ var _resolved_targets: Array[Node] = []
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
+# Called when the animation slot triggers. Resolves all entry target nodes while
+# the host is alive, then fires all entries configured for ON_START timing.
 func _on_animate_start(target: Node) -> void:
 	_resolve_all_targets(target)
 	_call_entries_for_timing(CallTiming.ON_START, "ON_START")
 
 
+# Called when animate_in reaches progress=1.0. Fires entries configured for
+# ON_COMPLETE timing. Note: this is _animate_in_ complete, not animate_out —
+# the intent is "call when the animation peaks", not when it fully reverses.
 func _on_animate_in_complete(_target: Node) -> void:
 	_call_entries_for_timing(CallTiming.ON_COMPLETE, "ON_COMPLETE")
 
@@ -140,6 +145,8 @@ func _apply_effect(_progress: float, _target: Node) -> void:
 	pass  # No visual output — method calls happen in lifecycle hooks.
 
 
+# Clears the resolved target cache so stale freed-node references don't
+# persist between animation cycles or after the target changes.
 func _restore_to_natural(_target: Node) -> void:
 	_resolved_targets.clear()
 

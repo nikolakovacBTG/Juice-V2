@@ -647,6 +647,9 @@ func _get_signal_name_for_entry(index: int) -> StringName:
 # EXTERNAL API
 # =============================================================================
 
+## Enables or disables all input processing and ray picking.
+## Call to programmatically suppress interaction (e.g., during cutscenes).
+## Respects zone-gating: re-enabling does not override a closed zone.
 func set_enabled(enabled: bool) -> void:
 	if not enabled:
 		set_process_unhandled_input(false)
@@ -665,12 +668,16 @@ func set_enabled(enabled: bool) -> void:
 			"set_enabled(%s)" % enabled, debug_enabled)
 
 
+## Clears the one-shot guard so the interaction can fire again.
+## Call after a one-shot trigger completes its effect to re-arm it.
 func reset() -> void:
 	_has_fired = false
 	JuiceLogger.log_info(self, "Interaction3D",
 			"reset() — one-shot guard cleared", debug_enabled)
 
 
+## Fires the signal for the configured click preset that matches button.
+## Useful for testing interaction logic without a physical mouse event.
 func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
 	for i in range(mini(action_count, _action_presets.size())):
 		var preset := _action_presets[i]
@@ -688,6 +695,8 @@ func simulate_click(button: int = MOUSE_BUTTON_LEFT) -> void:
 				emit_signal(sig)
 
 
+## Emits a registered dynamic signal by name without a real InputEvent.
+## Logs a warning if the signal is not registered (action_count / config issue).
 func simulate_input_action(action_name: StringName) -> void:
 	if has_signal(action_name):
 		JuiceLogger.log_info(self, "Interaction3D",
@@ -699,6 +708,8 @@ func simulate_input_action(action_name: StringName) -> void:
 				debug_enabled)
 
 
+## Simulates a body or area entering the trigger zone, activating zone-gating.
+## Drives the same path as a real physics enter event.
 func simulate_zone_enter(node: Node) -> void:
 	JuiceLogger.log_info(self, "Interaction3D",
 			"simulate_zone_enter(%s)" % (str(node.name) if node else "null"),
@@ -706,6 +717,8 @@ func simulate_zone_enter(node: Node) -> void:
 	_on_zone_object_entered(node)
 
 
+## Simulates a body or area exiting the trigger zone, deactivating zone-gating.
+## Drives the same path as a real physics exit event.
 func simulate_zone_exit(node: Node) -> void:
 	JuiceLogger.log_info(self, "Interaction3D",
 			"simulate_zone_exit(%s)" % (str(node.name) if node else "null"),
@@ -713,6 +726,8 @@ func simulate_zone_exit(node: Node) -> void:
 	_on_zone_object_exited(node)
 
 
+## Returns a snapshot of the current configuration as a Dictionary.
+## Useful for test assertions and debug output — not intended for runtime logic.
 func get_configuration_summary() -> Dictionary:
 	var summary := {
 		"mode": Mode.keys()[mode],

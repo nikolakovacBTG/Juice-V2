@@ -157,6 +157,9 @@ var _to_self_scale_snapshot: Vector2 = Vector2.ONE
 # VIRTUAL HOOK IMPLEMENTATIONS
 # =============================================================================
 
+# Called by Juice2DTransformEffect._on_animate_start before From/To resolution.
+# Reads from the JuiceLedger (not the target) to get the pre-Juice natural state even
+# when sibling effects are active. Skip-guarded to prevent mid-animation overwrite.
 func _do_capture_base(target: Node) -> void:
 	if _has_base:
 		JuiceLogger.log_info(self, _get_domain_tag(),
@@ -312,6 +315,9 @@ func _capture_to_self_scale_snapshot(target: Node) -> void:
 			debug_enabled)
 
 
+# Node2D has no native pivot_offset. AUTO_CENTER estimates the visual center
+# from child bounds (Sprite2D, CollisionShape2D, etc.) with a recursive fallback
+# if the direct node has zero-size bounds. CUSTOM uses a raw pixel offset.
 func _do_resolve_pivot(target: Node) -> void:
 	var n2d := target as Node2D
 	match pivot_mode:

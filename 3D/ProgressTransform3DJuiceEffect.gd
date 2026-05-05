@@ -271,6 +271,10 @@ func _invalidate_base_cache() -> void:
 	_clear_deltas()
 
 
+# Stashes frame delta for _apply_effect (Resources have no _process).
+# Also intercepts the RESTART_REVERSED signal from bound checking — when
+# REVERSE_EASED fires, tick returns RESTART_REVERSED so the host re-triggers
+# animate_out then animate_in with the flipped direction.
 func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 	_last_delta = delta
 	_pending_restart_reversed = false
@@ -285,6 +289,9 @@ func tick(delta: float, target: Node) -> JuiceEffectBase.TickResult:
 # APPLY EFFECT
 # =============================================================================
 
+# Unlike From/To effects where progress lerps between two values, here progress
+# is a speed multiplier: accumulated += rate * delta * progress * direction.
+# At progress=0 (rest) accumulation freezes; at 1.0 (peak) it runs at full rate.
 func _apply_effect(progress: float, target: Node) -> void:
 	var n3d := target as Node3D
 	if n3d == null:
@@ -465,6 +472,12 @@ func _wrap_accumulated() -> void:
 # HELPERS
 # =============================================================================
 
+# Fold current accumulated delta into the base, then reset accumulation to zero.
+# Called when a bound triggers REVERSE or REVERSE_EASED, so the next cycle
+# starts from the current position without re-triggering the bound immediately.
+# _compute_pivot_position_delta() uses _accumulated_rotation alone (not
+# base+accumulated), so resetting accumulation automatically gives a correct
+# fresh pivot arc — no recomputation of the pivot point needed.
 func _absorb_accumulated_into_base() -> void:
 	match transform_target:
 		TransformTarget.POSITION:
@@ -521,28 +534,7 @@ func _resolve_pivot(target: Node) -> void:
 			"%s" % _pivot_point, debug_enabled)
 
 
-# Recursively sample child AABB to find visual center.
-func _infer_node3d_center(node: Node3D) -> Vector3:
-	var combined_aabb := AABB()
-	var found := false
-	_collect_aabb(node, node.global_transform, combined_aabb, found)
-	if found:
-		return node.to_local(combined_aabb.get_center())
-	return Vector3.ZERO
 
-
-func _collect_aabb(node: Node, root_transform: Transform3D, combined: AABB, found: bool) -> void:
-	if node is VisualInstance3D:
-		var vi := node as VisualInstance3D
-		var local_aabb := vi.get_aabb()
-		var world_origin := vi.global_transform.origin + local_aabb.position
-		if not found:
-			combined = AABB(world_origin, local_aabb.size)
-			found = true
-		else:
-			combined = combined.merge(AABB(world_origin, local_aabb.size))
-	for child in node.get_children():
-		_collect_aabb(child, root_transform, combined, found)
 
 
 # =============================================================================

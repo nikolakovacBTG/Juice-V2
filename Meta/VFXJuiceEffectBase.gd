@@ -382,10 +382,7 @@ func _discover_particle_children(source: Node) -> Array[Node]:
 	return result
 
 
-# Intensity applied per particle in TRIGGER_EXISTING mode.
-# Kept for backward compat — returns 1.0 since intensity now applies only in INSTANTIATE_NEW.
-func intensity_multiplier_for_trigger() -> float:
-	return 1.0
+
 
 
 # =============================================================================

@@ -110,7 +110,10 @@ var _base_scale: Vector2 = Vector2.ONE
 # VIRTUAL METHOD OVERRIDES
 # =============================================================================
 
-## Capture base scale when animation begins.
+## Capture base scale when animation begins and flag scale contribution.
+## No pivot system — Node2D has no built-in pivot_offset. Scale deformation
+## always originates from Node2D's own origin. For pivot control, adjust the
+## node hierarchy (parent empty node at desired pivot point).
 func _on_animate_start(target: Node) -> void:
 	_capture_base(target)
 

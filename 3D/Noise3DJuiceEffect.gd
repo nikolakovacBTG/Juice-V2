@@ -279,7 +279,7 @@ func _on_animate_start(target: Node) -> void:
 		_setup_noise()
 
 	if transform_target != TransformTarget.POSITION:
-		_compute_pivot_offset()
+		_compute_pivot_offset(target)
 		_contributes_position = (transform_target == TransformTarget.POSITION or _pivot_offset != Vector3.ZERO)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
@@ -342,6 +342,8 @@ func _advance_noise_time(delta: float) -> void:
 		_noise_time += delta
 
 
+# Converts raw noise samples into transform deltas scaled by the progress envelope.
+# Each transform target uses separate noise offsets per axis to decorrelate them.
 func _compute_noise_deltas(intensity: float, target: Node3D) -> void:
 	if intensity <= 0.0:
 		_pos_delta = Vector3.ZERO
@@ -408,10 +410,11 @@ func _compute_noise_deltas(intensity: float, target: Node3D) -> void:
 # PIVOT HELPERS
 # =============================================================================
 
-func _compute_pivot_offset() -> void:
+func _compute_pivot_offset(target: Node) -> void:
+	var n3d := target as Node3D
 	match pivot_mode:
 		PivotMode.AUTO_CENTER:
-			_pivot_offset = Vector3.ZERO
+			_pivot_offset = _infer_node3d_center(n3d) if n3d else Vector3.ZERO
 		PivotMode.INHERIT:
 			_pivot_offset = Vector3.ZERO
 		PivotMode.CUSTOM:
