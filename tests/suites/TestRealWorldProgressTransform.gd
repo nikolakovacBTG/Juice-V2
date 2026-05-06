@@ -41,10 +41,10 @@ func get_test_methods() -> Array[String]:
 		"test_control_stacked_deterministic",
 		"test_control_mixed_noise_no_interference",
 		# --- 3D domain (Phase A-6) ---
-		# "test_3d_position_non_zero_origin",          # Phase A-6
-		# "test_3d_rotation_non_zero_origin",          # Phase A-6
-		# "test_3d_bound_reverse_non_zero",            # Phase A-6
-		# "test_3d_mixed_noise_no_interference",       # Phase A-6
+		"test_3d_position_non_zero_origin",
+		"test_3d_rotation_non_zero_origin",
+		"test_3d_bound_reverse_non_zero",
+		"test_3d_mixed_noise_no_interference",
 	]
 
 
@@ -123,12 +123,13 @@ func _create_control_rig_at(
 
 
 # Creates a Juice3D + Node3D rig at the given position.
-# Returns [Juice3D, Node3D].
+# Creates a Juice3D + Node3D rig at the given position.
+# Returns [Juice3D, Node3D, effect].
 func _create_3d_rig_at(
 		pos: Vector3,
 		target_type: int = ProgressTransform3DJuiceEffect.TransformTarget.POSITION,
 		rate_pos: Vector3 = Vector3(100.0, 0.0, 0.0),
-		duration_in: float = 0.3
+		duration_in: float = 0.1
 ) -> Array:
 	var target := Node3D.new()
 	target.name = "RW3DTarget"
@@ -138,17 +139,22 @@ func _create_3d_rig_at(
 	var effect := ProgressTransform3DJuiceEffect.new()
 	effect.transform_target = target_type
 	effect.position_rate = rate_pos
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = duration_in
+	effect.auto_start = false
 
 	var recipe := Juice3DRecipe.new()
 	recipe.effects.append(effect)
 
 	var juice := Juice3D.new()
 	juice.name = "RW_Juice3D"
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	juice.recipe = recipe
 	target.add_child(juice)
 
-	return [juice, target]
+	await wait_frames(2)
+	return [juice, target, effect]
 
 
 # =============================================================================
@@ -734,5 +740,146 @@ func test_control_mixed_noise_no_interference() -> void:
 		"Control mixed noise stop: must not snap to (0,0). x=%.1f" % target.position.x)
 	assert_greater(target.position.y, 5.0,
 		"Control mixed noise stop: y must not snap to 0. y=%.1f" % target.position.y)
+
+	await cleanup(target)
+
+
+# =============================================================================
+# PHASE A-6: 3D DOMAIN
+# =============================================================================
+
+## Node3D at (5, 2, -3). ProgressTransform3D accumulates x.
+## After stop, position must not snap to (0, 0, 0).
+func test_3d_position_non_zero_origin() -> void:
+	const ORIGIN := Vector3(5.0, 2.0, -3.0)
+	var rig := await _create_3d_rig_at(ORIGIN,
+			ProgressTransform3DJuiceEffect.TransformTarget.POSITION,
+			Vector3(10.0, 0.0, 0.0), 0.1)
+	var juice: Juice3D = rig[0]
+	var target: Node3D = rig[1]
+
+	assert_approx_vec3(target.position, ORIGIN,
+		"3D pre-animate: must be at origin")
+
+	juice.animate_in()
+	await wait_seconds(0.5)
+
+	# Must have accumulated from ORIGIN.x, not from 0.
+	assert_greater(target.position.x, ORIGIN.x + 1.0,
+		"3D non-zero: x must exceed origin.x+1 (x=%.2f origin.x=%.2f)" % [
+		target.position.x, ORIGIN.x])
+	# Y and Z must remain near origin.
+	assert_approx_float(target.position.y, ORIGIN.y,
+		"3D non-zero: y must stay at origin.y (y=%.2f)" % target.position.y, 0.5)
+	assert_approx_float(target.position.z, ORIGIN.z,
+		"3D non-zero: z must stay at origin.z (z=%.2f)" % target.position.z, 0.5)
+
+	juice.stop()
+	await wait_frames(2)
+	assert_greater(target.position.x, 0.5,
+		"3D stop: must not snap to (0,0,0). x=%.2f" % target.position.x)
+
+	await cleanup(target)
+
+
+## Node3D at (5, 2, -3). Rotation accumulates; position must stay at origin.
+func test_3d_rotation_non_zero_origin() -> void:
+	const ORIGIN := Vector3(5.0, 2.0, -3.0)
+	var rig := await _create_3d_rig_at(ORIGIN,
+			ProgressTransform3DJuiceEffect.TransformTarget.ROTATION,
+			Vector3.ZERO, 0.1)
+	var juice: Juice3D = rig[0]
+	var target: Node3D = rig[1]
+	var effect: ProgressTransform3DJuiceEffect = rig[2]
+	effect.rotation_rate = Vector3(0.0, 90.0, 0.0)  # 90 deg/s around Y
+
+	juice.animate_in()
+	await wait_seconds(0.5)
+
+	# Must have rotated noticeably around Y.
+	assert_greater(absf(target.rotation.y), 0.3,
+		"3D rotation non-zero: must rotate > 0.3 rad around Y (rot.y=%.2f)" % target.rotation.y)
+	# Position must stay at origin.
+	assert_approx_vec3(target.position, ORIGIN,
+		"3D rotation non-zero: position must stay at origin (pos=%s)" % str(target.position))
+
+	await cleanup(target)
+
+
+## Node3D at (5, 2, -3). Bound REVERSE fires.
+## x must stay near the origin band, not drift toward global (0, 0, 0).
+func test_3d_bound_reverse_non_zero() -> void:
+	const ORIGIN := Vector3(5.0, 2.0, -3.0)
+	var rig := await _create_3d_rig_at(ORIGIN,
+			ProgressTransform3DJuiceEffect.TransformTarget.POSITION,
+			Vector3(30.0, 0.0, 0.0), 0.05)
+	var juice: Juice3D = rig[0]
+	var target: Node3D = rig[1]
+	var effect: ProgressTransform3DJuiceEffect = rig[2]
+
+	effect.bound_enabled = true
+	effect.bound_behaviour = ProgressTransform3DJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_value = 5.0  # 5 units delta from origin
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	assert_greater(target.position.x, ORIGIN.x - 6.0,
+		"3D REVERSE non-zero: x must not snap to global 0 (x=%.2f)" % target.position.x)
+	assert_approx_float(target.position.y, ORIGIN.y,
+		"3D REVERSE non-zero: y must stay at origin.y (y=%.2f)" % target.position.y, 0.5)
+	assert_approx_float(target.position.z, ORIGIN.z,
+		"3D REVERSE non-zero: z must stay at origin.z (z=%.2f)" % target.position.z, 0.5)
+
+	await cleanup(target)
+
+
+## ProgressTransform3D + Noise3D in same recipe on Node3D at (5, 2, -3).
+## Noise must not corrupt origin; after stop x must not be near (0, 0, 0).
+func test_3d_mixed_noise_no_interference() -> void:
+	const ORIGIN := Vector3(5.0, 2.0, -3.0)
+
+	var target := Node3D.new()
+	target.name = "RW3DNoiseTarget"
+	target.position = ORIGIN
+	_runner.add_child(target)
+
+	var prog := ProgressTransform3DJuiceEffect.new()
+	prog.transform_target = ProgressTransform3DJuiceEffect.TransformTarget.POSITION
+	prog.position_rate = Vector3(8.0, 0.0, 0.0)
+	prog.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog.duration_in = 0.1
+	prog.auto_start = false
+
+	var noise := Noise3DJuiceEffect.new()
+	noise.transform_target = Noise3DJuiceEffect.TransformTarget.POSITION
+	noise.noise_speed = 5.0
+	noise.position_amplitude = Vector3(2.0, 2.0, 2.0)
+	noise.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	noise.duration_in = 0.1
+	noise.duration_out = 0.1
+
+	var recipe := Juice3DRecipe.new()
+	recipe.effects.append(prog)
+	recipe.effects.append(noise)
+
+	var juice := Juice3D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	assert_greater(target.position.x, ORIGIN.x + 0.5,
+		"3D mixed noise: x must have accumulated past origin (x=%.2f)" % target.position.x)
+
+	juice.stop()
+	await wait_frames(4)
+
+	assert_greater(target.position.x, 0.5,
+		"3D mixed noise stop: must not snap to (0,0,0). x=%.2f" % target.position.x)
 
 	await cleanup(target)
