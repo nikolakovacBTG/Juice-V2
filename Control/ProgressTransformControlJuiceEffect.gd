@@ -103,7 +103,7 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "transform_target", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append_array(_get_effect_base_properties())
+	props.append_array(_get_progress_effect_base_properties())
 	props.append({"name": "auto_start", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "hold_on_stop", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 
@@ -188,6 +188,9 @@ func _get(property: StringName) -> Variant:
 var _accumulated_position: Vector2 = Vector2.ZERO
 var _accumulated_rotation: float = 0.0  # radians
 var _accumulated_scale: Vector2 = Vector2.ZERO
+var _absorbed_offset_position: Vector2 = Vector2.ZERO
+var _absorbed_offset_rotation: float = 0.0
+var _absorbed_offset_scale: Vector2 = Vector2.ZERO
 var _current_direction: float = 1.0
 # _has_base inherited from JuiceControlTransformEffect
 var _base_position: Vector2 = Vector2.ZERO
@@ -305,16 +308,20 @@ func _apply_effect(progress: float, target: Node) -> void:
 	match transform_target:
 		TransformTarget.POSITION:
 			_accumulated_position += position_rate * delta * progress * _current_direction
-			_pos_delta = _convert_to_pixels(_accumulated_position, position_unit, ctrl)
+			# Include offset from prior reversals so delta is continuous across bounds.
+			_pos_delta = _convert_to_pixels(
+					_absorbed_offset_position + _accumulated_position, position_unit, ctrl)
 
 		TransformTarget.ROTATION:
 			var speed_rad := deg_to_rad(rotation_rate) * progress * _current_direction
 			_accumulated_rotation += speed_rad * delta
-			_rot_delta = _accumulated_rotation
+			# Include offset from prior reversals.
+			_rot_delta = _absorbed_offset_rotation + _accumulated_rotation
 
 		TransformTarget.SCALE:
 			_accumulated_scale += scale_rate * delta * progress * _current_direction
-			_scale_delta = _accumulated_scale
+			# Include offset from prior reversals.
+			_scale_delta = _absorbed_offset_scale + _accumulated_scale
 
 	if bound_enabled and progress > 0.0:
 		_check_bounds()
@@ -445,15 +452,19 @@ func _wrap_accumulated() -> void:
 # from zero. Used by REVERSE/REVERSE_EASED to prevent oscillation drift
 # (without absorption, accumulated would double on each direction flip).
 func _absorb_accumulated_into_base() -> void:
+	# Fold current accumulation into _absorbed_offset_* so the next cycle's
+	# delta calculation starts from zero but the domain node sees continuous
+	# displacement (offset + new_accumulated). _base_position is never mutated
+	# here — only the Ledger base drives the absolute write, preventing snaps.
 	match transform_target:
 		TransformTarget.POSITION:
-			_base_position += _accumulated_position
+			_absorbed_offset_position += _accumulated_position
 			_accumulated_position = Vector2.ZERO
 		TransformTarget.ROTATION:
-			_base_rotation += _accumulated_rotation
+			_absorbed_offset_rotation += _accumulated_rotation
 			_accumulated_rotation = 0.0
 		TransformTarget.SCALE:
-			_base_scale += _accumulated_scale
+			_absorbed_offset_scale += _accumulated_scale
 			_accumulated_scale = Vector2.ZERO
 
 
@@ -461,6 +472,9 @@ func _reset_accumulated() -> void:
 	_accumulated_position = Vector2.ZERO
 	_accumulated_rotation = 0.0
 	_accumulated_scale = Vector2.ZERO
+	_absorbed_offset_position = Vector2.ZERO
+	_absorbed_offset_rotation = 0.0
+	_absorbed_offset_scale = Vector2.ZERO
 
 
 func _capture_base(target: Node) -> void:

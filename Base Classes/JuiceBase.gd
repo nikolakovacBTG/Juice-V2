@@ -811,7 +811,21 @@ func _enter_editor_preview() -> void:
 		_editor_preview_active = false
 		return
 
-	# Capture base values (domain subclasses: position, rotation, scale)
+	# DEFERRED: Capture base values after the current frame finishes.
+	# Some Godot-internal @tool nodes (e.g. TileMapLayer) use deferred init —
+	# reading their position synchronously here returns (0,0) before their own
+	# tool script has settled. Deferring matches the _post_ready_init() pattern,
+	# ensuring the ledger base is always the true editor-visible position.
+	call_deferred("_deferred_editor_preview_init")
+
+
+func _deferred_editor_preview_init() -> void:
+	# Guard: if the user deselected before the deferred call fired, abort.
+	if not _editor_preview_active or _target_node == null:
+		return
+
+	# Capture base values (domain subclasses: position, rotation, scale).
+	# At this point all deferred @tool inits have run, so position is correct.
 	_capture_base_values()
 
 	# Clone recipe effects into _runtime_effects for independent state

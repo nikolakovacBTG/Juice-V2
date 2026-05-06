@@ -202,6 +202,26 @@ func _get_effect_base_properties() -> Array[Dictionary]:
 			"usage": PROPERTY_USAGE_DEFAULT})
 	return props
 
+
+## Filtered variant for Progress-family effects (ProgressTransform2D/Control/3D).
+## Omits loop_count, ping_pong, loop_delay, and loop_phase_offset — these have no
+## effect on accumulation-driven motion, which runs continuously via the sustain
+## model (_needs_sustain() = true) and handles looping through the bound system.
+func _get_progress_effect_base_properties() -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+	props.append({"name": "trigger_behaviour", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Play In And Out,Play In Only,Play Out Only,Toggle,Set From Source",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "start_delay", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "crossfade_time", "type": TYPE_FLOAT,
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,10.0,0.01,or_greater",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	return props
+
+
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
