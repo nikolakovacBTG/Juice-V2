@@ -170,6 +170,19 @@ static func get_base(target: Node, prop: String, fallback: Variant) -> Variant:
 	return ledger["base"].get(prop, fallback)
 
 
+## Overwrites the stored base value for [param prop] with [param value].
+## Use only when the persisted base is known-stale — for example, when an
+## editor-preview init fires and the ledger was saved before a @tool node
+## (e.g. TileMapLayer) had finished its own deferred initialization.
+## Never call this during runtime animation.
+static func force_base(target: Node, prop: String, value: Variant) -> void:
+	if not target.has_meta(KEY):
+		return
+	var ledger: Dictionary = target.get_meta(KEY)
+	if ledger["base"].has(prop):
+		ledger["base"][prop] = value
+
+
 ## Returns the full "base" snapshot dictionary for [param target].
 ## Effect SELF-capture methods use this to read the true natural state
 ## instead of a dirty target.property that includes active animation.
