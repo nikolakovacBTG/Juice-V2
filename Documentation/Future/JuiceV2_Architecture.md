@@ -109,6 +109,43 @@ static var _store: Dictionary = {}  # keyed by target.get_instance_id()
 Never serialized. Purely in-memory. Self-cleaning via existing `cleanup_source` contract
 (called from `_exit_tree`). The V1 fix is the V2 implementation for this component.
 
+### 3.2b Runtime orchestration — the question of who drives `_process`
+
+In V1, the domain node (`Juice2D`) owns the `_process` tick and aggregates deltas itself.
+This is reasonable but conflates configuration ownership with execution ownership.
+
+A natural extension of the "born, do job, die" pattern to **runtime** would be:
+
+- Domain node: declarative configuration carrier only — recipe, target, trigger wiring
+- `JuiceRuntime` (autoload `Node`): central process tick, drives all active orchestrators
+- Per-animation `JuiceRuntimeBinding` (not a Node — a `RefCounted`): owns cloned effects,
+  ledger entries, delta accumulation for one active animation on one target
+
+```
+animate_in() called on Juice2D
+  → Creates JuiceRuntimeBinding(recipe, target)
+  → Registers it with JuiceRuntime autoload
+  → JuiceRuntime._process drives the binding each frame
+  → On completion or stop(): binding is unregistered and freed
+```
+
+**Benefits over V1:**
+- Domain node has no `_process` override — zero runtime overhead when idle
+- Retriggering is clean: deregister old binding, register new one
+- No flag-guarding needed — domain node is always in the same state
+- Sequencer spawns multiple bindings onto multiple targets from one process tick
+
+**Trade-off:** Introduces a singleton (`JuiceRuntime`). This is a deliberate architectural
+choice — animation systems with a central driver (like Godot's `AnimationMixer` or Unity's
+`Animator`) are well-established and performant. The binding is a `RefCounted`, not a
+`Node`, so tree overhead is zero. Allocation per animation start is acceptable — effects
+are already cloned in V1 per animation.
+
+**Decision point for V2 design:** Whether to keep the domain-node-driven `_process` (V1
+pattern, simpler) or move to the autoload-driven binding pattern (more correct separation).
+This affects Phase V2-B scope significantly. The orchestrator section below describes the
+editor preview side; the same conceptual pattern applies at runtime.
+
 ### 3.3 JuicePreviewOrchestrator — the "born, do job, die" pattern
 
 A dynamically instantiated `@tool` node, created by the plugin when a Juice node is
@@ -146,6 +183,32 @@ User deselects or clicks Stop
 - Transport preview tests now test `JuicePreviewOrchestrator` directly
 - Domain node tests are purely runtime and headless-compatible without special guards
 - The headless/editor tier distinction becomes less necessary for domain behavior
+
+**Relationship to JuiceEditorInspectorPlugin:**
+The inspector plugin and the preview orchestrator are independent. The inspector plugin
+handles *property display* — it never needs to know whether an orchestrator is active.
+The orchestrator handles *animation execution* — it never touches inspector state.
+They share no interface. The plugin spawns both independently: inspector plugin is
+registered once at plugin load; orchestrators are spawned/killed per selection event.
+
+**Spawning contracts — not just user selection:**
+Orchestrators (both editor and, if adopted, runtime bindings) must be spawnable by
+more than one caller:
+
+1. **User selection in editor** — `JuicePreviewDirector` spawns on inspector click
+2. **Sequencer orchestration** — the SEQUENCER mode imposes a recipe onto multiple
+   targets, potentially in sequence. Each target gets its own orchestrator/binding.
+   The sequencer must be able to spawn, control, and kill orchestrators for arbitrary
+   targets that are not necessarily the Juice node's own parent.
+3. **Nested scene targets** — a target may itself be an instanced scene containing
+   Juice nodes at multiple nesting levels. The spawning contract must not assume a
+   flat parent/child relationship. Orchestrators must accept any `Node` as target,
+   resolved via the same NodePath logic already in `_resolve_target()`.
+
+The spawning interface must therefore be a factory/service, not a method on the domain
+node. A `JuiceOrchestratorFactory.create(recipe, target, mode)` pattern decouples
+callers from orchestrator construction and allows sequencers and nested scenes to
+produce orchestrators identically to the transport preview path.
 
 ### 3.4 JuiceEditorInspectorPlugin — conditional inspector without `@tool`
 
@@ -249,6 +312,30 @@ removal, so the removal is clean.
   called by the plugin on scene change
 - Gate: warnings still appear correctly in editor; suite unchanged
 
+### Phase V2-E: Systematic effect porting
+
+All concrete effect classes (Transform, Shake, Noise, ProgressTransform, Appearance,
+VFX, Camera, Screen, Trail, etc.) currently contain editor-specific code paths — mainly
+`_on_editor_pre_save()` baking logic and any `_validate_property()` delegates.
+These must be audited and migrated as part of the @tool removal.
+
+**Porting checklist per effect:**
+- [ ] Remove any `Engine.is_editor_hint()` guards
+- [ ] Move `_on_editor_pre_save()` baking to the plugin's `_save_external_data()` call chain
+- [ ] Verify `CaptureAt` logic works without editor-specific branches
+- [ ] Confirm effect is registered in all three domain recipes (existing `/port` workflow gate)
+- [ ] Run per-domain test suite (headless) + Tier 2 MCP test for editor preview
+
+**Order:** Port effects in the same domain-first order as the `/port` workflow: 2D → Control
+→ 3D per effect family. This mirrors the existing testing infrastructure.
+
+**Risk area:** Effects that bake their From/To snapshots at `NOTIFICATION_EDITOR_PRE_SAVE`
+must be confirmed to produce identical baked output via the plugin's pre-save path.
+Write a regression test that compares baked values before and after the port.
+
+- Gate: all effect unit suites unchanged; baked cache regression test passes for all
+  CaptureAt.IN_EDITOR effects
+
 ---
 
 ## 5. Benefits Summary
@@ -295,6 +382,22 @@ removal, so the removal is clean.
    properties are declared. The existing `_validate_property` logic relies on property
    ordering (e.g. checking the value of `trigger_source` before deciding whether to show
    `trigger_source_path`). Verify Godot 4.x guarantees consistent ordering.
+
+4. **Runtime binding vs domain-node `_process`**: Section 3.2b presents two options —
+   keep domain-node-driven `_process` (simpler, V1 carry-forward) vs. introduce a
+   `JuiceRuntime` autoload with `JuiceRuntimeBinding` objects (cleaner separation, more
+   allocation). This decision gates Phase V2-B scope. Decide before starting V2-B.
+
+5. **Orchestrator factory interface**: `JuiceOrchestratorFactory` is proposed as the
+   common spawning path for editor preview, sequencer, and nested-scene targets.
+   Define the factory contract (what it receives, what it returns, how ownership is
+   tracked) before implementing either orchestrator or sequencer changes.
+
+6. **Sequencer + nested Juice nodes**: When a target scene contains its own Juice nodes,
+   and a sequencer from a parent scene imposes animation on that target, two Juice
+   systems may write to the same target simultaneously. Define the priority/merge
+   contract: does the parent sequencer suppress child Juice nodes? Co-exist via ledger
+   stacking? This is the deepest correctness question in V2.
 
 ---
 
