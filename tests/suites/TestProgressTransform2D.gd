@@ -20,6 +20,9 @@ func get_test_methods() -> Array[String]:
 		"test_hold_on_stop_true",
 		"test_hold_on_stop_false",
 		"test_bound_reverse",
+		"test_bound_no_snap_on_reversal",
+		"test_bound_continuous_after_reversal",
+		"test_bound_multiple_reversals",
 		"test_needs_sustain",
 	]
 
@@ -211,6 +214,129 @@ func test_bound_reverse() -> void:
 	# After hitting bound and reversing, position should be within bound range.
 	assert_true(absf(target.position.x) <= 55.0,
 		"Progress 2D BOUND REVERSE: position should stay within bound (x=%.1f)" % target.position.x)
+
+	await cleanup(target)
+
+
+func test_bound_no_snap_on_reversal() -> void:
+	# Regression guard: on bound-reversal the node must NOT jump back to (0,0).
+	# It should stay near the bound edge, not teleport to origin.
+	var target := Node2D.new()
+	target.name = "prog_no_snap_2d"
+	target.position = Vector2.ZERO
+	_runner.add_child(target)
+
+	var effect := ProgressTransform2DJuiceEffect.new()
+	effect.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	effect.position_rate = Vector2(500.0, 0.0)  # Very fast — hits bound in first frame
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.02
+	effect.bound_enabled = true
+	effect.bound_behaviour = ProgressTransform2DJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_value = 30.0
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	# Wait just past the first reversal
+	await wait_seconds(0.15)
+
+	# MUST NOT be near origin. The old bug snapped to (0,0) on every reversal.
+	assert_greater(absf(target.position.x), 5.0,
+		"No-snap regression: after reversal position must not return to origin (x=%.2f)" % target.position.x)
+
+	await cleanup(target)
+
+
+func test_bound_continuous_after_reversal() -> void:
+	# After reversing at the bound, the node must keep moving — it should
+	# travel back toward origin, not freeze at the bound edge.
+	var target := Node2D.new()
+	target.name = "prog_cont_2d"
+	target.position = Vector2.ZERO
+	_runner.add_child(target)
+
+	var effect := ProgressTransform2DJuiceEffect.new()
+	effect.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	effect.position_rate = Vector2(200.0, 0.0)
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.05
+	effect.bound_enabled = true
+	effect.bound_behaviour = ProgressTransform2DJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_value = 30.0
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	# Let it hit the bound and start reversing
+	await wait_seconds(0.25)
+	var pos_after_first_reversal: float = target.position.x
+
+	# Wait further — it should still be moving (returning toward origin)
+	await wait_seconds(0.2)
+	var pos_later: float = target.position.x
+
+	# Position must have changed between samples — proving continuous motion
+	assert_true(absf(pos_later - pos_after_first_reversal) > 3.0,
+		"Continuous-after-reversal: position must keep changing (was %.1f then %.1f)" % [
+			pos_after_first_reversal, pos_later])
+
+	await cleanup(target)
+
+
+func test_bound_multiple_reversals() -> void:
+	# Allow enough time for multiple bound reversals to confirm no cumulative
+	# drift, origin-snapping, or freeze develops over repeated absorb cycles.
+	var target := Node2D.new()
+	target.name = "prog_multi_rev_2d"
+	target.position = Vector2.ZERO
+	_runner.add_child(target)
+
+	var effect := ProgressTransform2DJuiceEffect.new()
+	effect.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	effect.position_rate = Vector2(300.0, 0.0)
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	effect.duration_in = 0.05
+	effect.bound_enabled = true
+	effect.bound_behaviour = ProgressTransform2DJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_value = 40.0
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(effect)
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	# Run long enough for 3+ full bounce cycles
+	await wait_seconds(1.2)
+
+	# After many reversals, node must remain within bound range — no runaway drift.
+	assert_true(absf(target.position.x) <= 50.0,
+		"Multiple reversals: must stay within bound after 1.2s (x=%.1f)" % target.position.x)
+	# And it must still be moving — not frozen.
+	var snap_a: float = target.position.x
+	await wait_seconds(0.05)
+	var snap_b: float = target.position.x
+	assert_true(absf(snap_b - snap_a) > 0.5,
+		"Multiple reversals: node must still be moving after many bounces (delta=%.3f)" % absf(snap_b - snap_a))
 
 	await cleanup(target)
 

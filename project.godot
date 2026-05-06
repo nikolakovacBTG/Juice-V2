@@ -113,6 +113,5 @@ jump={
 
 [juice]
 
-debug/enabled=true
 debug/log_to_file=true
 debug/verbose=true

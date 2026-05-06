@@ -108,7 +108,7 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "transform_target", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	props.append_array(_get_effect_base_properties())
+	props.append_array(_get_progress_effect_base_properties())
 	props.append({"name": "auto_start", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "hold_on_stop", "type": TYPE_BOOL, "usage": PROPERTY_USAGE_DEFAULT})
 
@@ -190,6 +190,9 @@ func _get(property: StringName) -> Variant:
 var _accumulated_position: Vector3 = Vector3.ZERO
 var _accumulated_rotation: Vector3 = Vector3.ZERO  # radians per axis
 var _accumulated_scale: Vector3 = Vector3.ZERO
+var _absorbed_offset_position: Vector3 = Vector3.ZERO
+var _absorbed_offset_rotation: Vector3 = Vector3.ZERO
+var _absorbed_offset_scale: Vector3 = Vector3.ZERO
 var _current_direction: float = 1.0
 # _has_base inherited from Juice3DTransformEffect
 var _base_position: Vector3 = Vector3.ZERO
@@ -300,7 +303,9 @@ func _apply_effect(progress: float, target: Node) -> void:
 	match transform_target:
 		TransformTarget.POSITION:
 			_accumulated_position += position_rate * _last_delta * progress * _current_direction
-			_pos_delta = _convert_to_world_units(_accumulated_position, position_unit, n3d)
+			# Include offset from prior reversals so delta is continuous across bounds.
+			_pos_delta = _convert_to_world_units(
+					_absorbed_offset_position + _accumulated_position, position_unit, n3d)
 
 		TransformTarget.ROTATION:
 			var rate_rad := Vector3(
@@ -309,14 +314,16 @@ func _apply_effect(progress: float, target: Node) -> void:
 				deg_to_rad(rotation_rate.z)
 			)
 			_accumulated_rotation += rate_rad * _last_delta * progress * _current_direction
-			_rot_delta = _accumulated_rotation
+			# Include offset from prior reversals.
+			_rot_delta = _absorbed_offset_rotation + _accumulated_rotation
 			# Pivot position compensation via Transform3D math
 			if _pivot_point != Vector3.ZERO:
 				_pos_delta = _compute_pivot_position_delta()
 
 		TransformTarget.SCALE:
 			_accumulated_scale += scale_rate * _last_delta * progress * _current_direction
-			_scale_delta = _accumulated_scale
+			# Include offset from prior reversals.
+			_scale_delta = _absorbed_offset_scale + _accumulated_scale
 			if _pivot_point != Vector3.ZERO:
 				_pos_delta = _compute_scale_pivot_position_delta()
 
@@ -336,7 +343,8 @@ func _apply_effect(progress: float, target: Node) -> void:
 ## Compute position delta so rotation appears to happen around _pivot_point.
 ## Uses Basis to rotate the offset vector.
 func _compute_pivot_position_delta() -> Vector3:
-	var total_rot := _accumulated_rotation
+	# Use total rotation (offset + accumulated) for correct arc across reversals.
+	var total_rot := _absorbed_offset_rotation + _accumulated_rotation
 	var basis := Basis.from_euler(total_rot)
 	var pivot_world := _base_position + _pivot_point
 	var new_pivot_pos := pivot_world - basis * _pivot_point
@@ -345,7 +353,8 @@ func _compute_pivot_position_delta() -> Vector3:
 
 ## Compute position delta so scaling appears to happen around _pivot_point.
 func _compute_scale_pivot_position_delta() -> Vector3:
-	var new_scale := _base_scale + _accumulated_scale
+	# Use total scale (offset + accumulated) for correct arc across reversals.
+	var new_scale := _base_scale + _absorbed_offset_scale + _accumulated_scale
 	var scale_ratio := Vector3(
 		new_scale.x / _base_scale.x if _base_scale.x != 0.0 else 1.0,
 		new_scale.y / _base_scale.y if _base_scale.y != 0.0 else 1.0,
@@ -479,15 +488,19 @@ func _wrap_accumulated() -> void:
 # base+accumulated), so resetting accumulation automatically gives a correct
 # fresh pivot arc — no recomputation of the pivot point needed.
 func _absorb_accumulated_into_base() -> void:
+	# Fold current accumulation into _absorbed_offset_* so the next cycle's
+	# delta calculation starts from zero but the domain node sees continuous
+	# displacement (offset + new_accumulated). _base_position is never mutated
+	# here — only the Ledger base drives the absolute write, preventing snaps.
 	match transform_target:
 		TransformTarget.POSITION:
-			_base_position += _accumulated_position
+			_absorbed_offset_position += _accumulated_position
 			_accumulated_position = Vector3.ZERO
 		TransformTarget.ROTATION:
-			_base_rotation += _accumulated_rotation
+			_absorbed_offset_rotation += _accumulated_rotation
 			_accumulated_rotation = Vector3.ZERO
 		TransformTarget.SCALE:
-			_base_scale += _accumulated_scale
+			_absorbed_offset_scale += _accumulated_scale
 			_accumulated_scale = Vector3.ZERO
 
 
@@ -495,6 +508,9 @@ func _reset_accumulated() -> void:
 	_accumulated_position = Vector3.ZERO
 	_accumulated_rotation = Vector3.ZERO
 	_accumulated_scale = Vector3.ZERO
+	_absorbed_offset_position = Vector3.ZERO
+	_absorbed_offset_rotation = Vector3.ZERO
+	_absorbed_offset_scale = Vector3.ZERO
 
 
 func _capture_base(target: Node) -> void:

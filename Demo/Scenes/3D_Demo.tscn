@@ -1,87 +1,87 @@
 [gd_scene format=3 uid="uid://bux4xeyti54rs"]
 
-[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/Base Classes/Juice3D.gd" id="1_7qp4h"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="2_6f2mv"]
-[ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="3_0iv50"]
-[ext_resource type="Script" uid="uid://d0qrq7m3dhui7" path="res://addons/Juice_V1/3D/SquashStretch3DJuiceEffect.gd" id="4_j1d5r"]
-[ext_resource type="Script" uid="uid://cytxx5icivdga" path="res://addons/Juice_V1/3D/Appearance3DJuiceEffect.gd" id="5_6f2mv"]
-[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/Base Classes/Juice3DRecipe.gd" id="5_nfb0a"]
+[sub_resource type="PrismMesh" id="PrismMesh_8s6m1"]
+size = Vector3(0.675, 1, 1.78)
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_v8ha8"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0360f"]
 
-[sub_resource type="Resource" id="Resource_gd0pe"]
-script = ExtResource("3_0iv50")
-transform_target = 0
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-from_reference = 1
-capture_at = 0
-to_reference = 0
-to_position_in = 1
-to_position = Vector3(0, 1, 0)
-duration_in = 2.0
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("2_6f2mv")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://88wafaejhpwm"
+[sub_resource type="Sky" id="Sky_ka5wy"]
+sky_material = SubResource("ProceduralSkyMaterial_0360f")
 
-[sub_resource type="Resource" id="Resource_8m8qx"]
-script = ExtResource("4_j1d5r")
-squash_amount = 0.3
-squash_axis = 1
-preserve_volume = true
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-pivot_offset = Vector3(0, 0, 0)
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("2_6f2mv")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://d0qrq7m3dhui7"
+[sub_resource type="Environment" id="Environment_lfoy6"]
+background_color = Color(0.47009146, 0.29990432, 0.4726135, 1)
+background_energy_multiplier = 0.0
+sky = SubResource("Sky_ka5wy")
+ambient_light_source = 2
+ambient_light_color = Color(0.0425068, 0.086540185, 0.16870695, 1)
+ambient_light_energy = 5.4
+reflected_light_source = 1
+tonemap_mode = 3
+tonemap_exposure = 2.01
+tonemap_white = 4.03
+ssr_enabled = true
+ssr_max_steps = 128
+ssr_depth_tolerance = 12.81
+ssao_enabled = true
+ssao_radius = 0.55
+ssao_intensity = 1.5
+ssao_power = 3.6934276
+ssao_light_affect = 0.19
+ssil_enabled = true
+ssil_radius = 2.43
+adjustment_enabled = true
+adjustment_brightness = 1.17
+adjustment_contrast = 1.115
+adjustment_saturation = 1.08
 
-[sub_resource type="Resource" id="Resource_6f2mv"]
-script = ExtResource("5_6f2mv")
-effect_type = 0
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-flicker_mode = 0
-from_reference = 1
-from_capture_at = 0
-to_reference = 1
-to_capture_at = 0
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("2_6f2mv")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cytxx5icivdga"
+[sub_resource type="PlaneMesh" id="PlaneMesh_ccvi0"]
 
-[sub_resource type="Resource" id="Resource_uaa1d"]
-script = ExtResource("5_nfb0a")
-effects = Array[ExtResource("2_6f2mv")]([SubResource("Resource_gd0pe"), SubResource("Resource_8m8qx"), SubResource("Resource_6f2mv")])
-metadata/_custom_type_script = "uid://cnyhp6eiv4xb1"
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_7qp4h"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_6f2mv"]
 
 [node name="3dDemo" type="Node3D" unique_id=508674959]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1295085492]
-mesh = SubResource("CylinderMesh_v8ha8")
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=160074487]
+transform = Transform3D(2.7665315, 0, 0, 0, 3.4592133, 0, 0, 0, 0.7227522, 1.6011347, 1.6735698, -6.7662973)
+mesh = SubResource("PrismMesh_8s6m1")
 
-[node name="Juice3D" type="Node" parent="MeshInstance3D" unique_id=313749577]
-script = ExtResource("1_7qp4h")
-trigger_behaviour = 3
-recipe = SubResource("Resource_uaa1d")
-metadata/_custom_type_script = "uid://b27b1xgkm8qyo"
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="." unique_id=1614243947]
+transform = Transform3D(2.7665315, 0, 0, 0, 3.4592133, 0, 0, 0, 0.7227522, -3.7974696, 1.6735698, 4.2332067)
+mesh = SubResource("PrismMesh_8s6m1")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="." unique_id=2108454403]
+transform = Transform3D(2.7665315, 0, 0, 0, 3.4592133, 0, 0, 0, 0.7227522, -3.5092702, 1.6735698, -6.783988)
+mesh = SubResource("PrismMesh_8s6m1")
+
+[node name="MeshInstance3D7" type="MeshInstance3D" parent="." unique_id=2141463471]
+transform = Transform3D(2.7665315, 0, 0, 0, 3.4592133, 0, 0, 0, 0.7227522, 2.7685728, 1.6735698, 6.3745947)
+mesh = SubResource("PrismMesh_8s6m1")
+
+[node name="MeshInstance3D8" type="MeshInstance3D" parent="." unique_id=1287462954]
+transform = Transform3D(2.7665315, 0, 0, 0, 3.4592133, 0, 0, 0, 0.7227522, 5.798912, 1.6735698, 0.15784359)
+mesh = SubResource("PrismMesh_8s6m1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1257689051]
+environment = SubResource("Environment_lfoy6")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="." unique_id=1057873468]
+transform = Transform3D(49.515522, 0, 0, 0, 0.9999994, 0, 0, 0, 204.78613, 0, 0, 0)
+mesh = SubResource("PlaneMesh_ccvi0")
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="." unique_id=1391536000]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0028508, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CharacterBody3D" unique_id=1198535647]
+transform = Transform3D(1, 0, 0, 0, 0.7760464, 0.6306758, 0, -0.6306758, 0.7760464, 0, 4.821, 2.9295073)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D" unique_id=62584939]
+shape = SubResource("CapsuleShape3D_7qp4h")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CharacterBody3D" unique_id=1198865359]
+mesh = SubResource("CapsuleMesh_6f2mv")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1222107488]
+transform = Transform3D(0.8564126, 0.22925748, -0.46259972, -0.09526438, 0.9507882, 0.29483303, 0.50742704, -0.20842949, 0.8361071, 1.6011347, 6.374737, -5.6523714)
+light_energy = 0.144
+shadow_enabled = true
