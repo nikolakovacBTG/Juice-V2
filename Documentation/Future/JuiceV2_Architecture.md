@@ -114,10 +114,9 @@ Never serialized. Purely in-memory. Self-cleaning via existing `cleanup_source` 
 The same pattern applies in both contexts. A domain node spawns an orchestrator when work
 begins; the orchestrator owns all transient state and `queue_free()`s when done.
 
-`JuiceOrchestrator` is a single class, tagged `@tool`. The `@tool` tag allows `_process`
-to run in the editor (required for transport preview). At runtime, `@tool` on a
-dynamically spawned, never-serialized node is harmless — it simply runs. There is no
-reason to maintain two mirrored classes.
+`JuiceOrchestrator` is a single `@tool` class. The tag allows `_process` to run in the
+editor for transport preview; at runtime, dynamically spawned nodes are never serialized
+so the tag carries no cost.
 
 **Lifecycle:**
 ```
