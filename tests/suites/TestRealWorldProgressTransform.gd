@@ -32,9 +32,9 @@ func get_test_methods() -> Array[String]:
 		"test_2d_scale_non_zero_origin",
 		"test_2d_stacked_deterministic",
 		# --- 2D Mixed + Retrigger (Phase A-4) ---
-		# "test_2d_mixed_shake_no_interference",       # Phase A-4
-		# "test_2d_mixed_noise_no_interference",       # Phase A-4
-		# "test_2d_retrigger_during_sustain",          # Phase A-4
+		"test_2d_mixed_shake_no_interference",
+		"test_2d_mixed_noise_no_interference",
+		"test_2d_retrigger_during_sustain",
 		# --- Control domain (Phase A-5) ---
 		# "test_control_position_non_zero_origin",     # Phase A-5
 		# "test_control_bound_reverse_non_zero",       # Phase A-5
@@ -393,5 +393,161 @@ func test_2d_stacked_deterministic() -> void:
 	# Y must be undisturbed (both effects only move X).
 	assert_approx_float(target.position.y, ORIGIN.y,
 		"Stacked deterministic: y must stay at origin.y (y=%.1f)" % target.position.y, 1.0)
+
+	await cleanup(target)
+
+
+# =============================================================================
+# PHASE A-4: 2D MIXED RECIPES (RANDOM) + RETRIGGER
+# =============================================================================
+
+## ProgressTransform2D + Shake2D in the same recipe on a target at (200, 150).
+## Shake is a random displacement — it adds noise but must not corrupt origin.
+## After stop, the target must return to the non-zero origin, not (0, 0).
+func test_2d_mixed_shake_no_interference() -> void:
+	const ORIGIN := Vector2(200.0, 150.0)
+
+	var target := Node2D.new()
+	target.name = "RW2DShakeTarget"
+	target.position = ORIGIN
+	_runner.add_child(target)
+
+	var prog := ProgressTransform2DJuiceEffect.new()
+	prog.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	prog.position_rate = Vector2(80.0, 0.0)
+	prog.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog.duration_in = 0.1
+	prog.auto_start = false
+
+	var shake := Shake2DJuiceEffect.new()
+	shake.transform_target = Shake2DJuiceEffect.TransformTarget.POSITION
+	shake.shake_frequency = 20.0
+	shake.position_strength = Vector2(15.0, 15.0)
+	shake.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	shake.duration_in = 0.1
+	shake.duration_out = 0.1
+
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(prog)
+	recipe.effects.append(shake)
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_seconds(0.4)  # Progress accumulates; shake jitters
+
+	# During sustain: position must be clearly past origin (progress accumulated).
+	assert_greater(target.position.x, ORIGIN.x + 5.0,
+		"Mixed shake: x must have accumulated past origin (x=%.1f)" % target.position.x)
+
+	# Stop and let shake settle.
+	juice.stop()
+	await wait_frames(4)
+
+	# After stop: position must be at the held position (hold_on_stop default).
+	# Key guard: must NOT be near global (0, 0).
+	assert_greater(target.position.x, 5.0,
+		"Mixed shake stop: position must not snap to (0,0). x=%.1f" % target.position.x)
+	assert_greater(target.position.y, 5.0,
+		"Mixed shake stop: y must not snap to 0. y=%.1f" % target.position.y)
+
+	await cleanup(target)
+
+
+## ProgressTransform2D + Noise2D in the same recipe on a target at (200, 150).
+## Noise adds continuous smooth displacement — it must not corrupt base or origin.
+## After stop, the target must not be at (0, 0).
+func test_2d_mixed_noise_no_interference() -> void:
+	const ORIGIN := Vector2(200.0, 150.0)
+
+	var target := Node2D.new()
+	target.name = "RW2DNoiseTarget"
+	target.position = ORIGIN
+	_runner.add_child(target)
+
+	var prog := ProgressTransform2DJuiceEffect.new()
+	prog.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	prog.position_rate = Vector2(80.0, 0.0)
+	prog.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog.duration_in = 0.1
+	prog.auto_start = false
+
+	var noise := Noise2DJuiceEffect.new()
+	noise.transform_target = Noise2DJuiceEffect.TransformTarget.POSITION
+	noise.noise_speed = 5.0
+	noise.position_amplitude = Vector2(15.0, 15.0)
+	noise.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	noise.duration_in = 0.1
+	noise.duration_out = 0.1
+
+	var recipe := Juice2DRecipe.new()
+	recipe.effects.append(prog)
+	recipe.effects.append(noise)
+
+	var juice := Juice2D.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	# During sustain: must have drifted past origin.
+	assert_greater(target.position.x, ORIGIN.x + 5.0,
+		"Mixed noise: x must have accumulated past origin (x=%.1f)" % target.position.x)
+
+	juice.stop()
+	await wait_frames(4)
+
+	# After stop: must NOT be near (0, 0).
+	assert_greater(target.position.x, 5.0,
+		"Mixed noise stop: position must not snap to (0,0). x=%.1f" % target.position.x)
+	assert_greater(target.position.y, 5.0,
+		"Mixed noise stop: y must not snap to 0. y=%.1f" % target.position.y)
+
+	await cleanup(target)
+
+
+## Retrigger ProgressTransform2D mid-sustain by calling animate_in() a second time.
+## The effect must restart cleanly — position must not snap to (0, 0) during restart.
+## Asserts: position never collapses to origin, accumulation continues after retrigger.
+func test_2d_retrigger_during_sustain() -> void:
+	const ORIGIN := Vector2(200.0, 150.0)
+	var rig := await _create_2d_rig_at(ORIGIN,
+			ProgressTransform2DJuiceEffect.TransformTarget.POSITION,
+			Vector2(100.0, 0.0), 0.1)
+	var juice: Juice2D = rig[0]
+	var target: Node2D = rig[1]
+
+	# First trigger — let it enter sustain.
+	juice.animate_in()
+	await wait_seconds(0.3)  # Past ramp; now in sustain
+
+	var pos_before_retrigger: float = target.position.x
+
+	# Retrigger mid-sustain.
+	juice.animate_in()
+	await wait_frames(2)  # Let the retrigger process
+
+	# Must not have snapped to (0, 0) or to ORIGIN during the restart.
+	assert_greater(target.position.x, 5.0,
+		"Retrigger: position must not snap to (0,0) immediately (x=%.1f)" % target.position.x)
+
+	# Continue running after retrigger — accumulation must resume.
+	await wait_seconds(0.3)
+
+	assert_greater(target.position.x, pos_before_retrigger - 5.0,
+		"Retrigger: x must be near or past pre-retrigger position (was %.1f now %.1f)" % [
+		pos_before_retrigger, target.position.x])
+	assert_greater(target.position.x, ORIGIN.x,
+		"Retrigger: x must remain past origin after retrigger (x=%.1f origin.x=%.1f)" % [
+		target.position.x, ORIGIN.x])
 
 	await cleanup(target)
