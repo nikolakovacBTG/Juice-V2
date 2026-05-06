@@ -98,6 +98,7 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestProgressTransform2D.gd").new())
 	_suites.append(load("res://tests/suites/TestProgressTransformControl.gd").new())
 	_suites.append(load("res://tests/suites/TestProgressTransform3D.gd").new())
+	_suites.append(load("res://tests/suites/TestRealWorldProgressTransform.gd").new())
 	_suites.append(load("res://tests/suites/TestIntegrationDemoSequencer.gd").new())
 	_suites.append(load("res://tests/suites/TestCameraJuice.gd").new())
 	_suites.append(load("res://tests/suites/TestScreenJuice.gd").new())
