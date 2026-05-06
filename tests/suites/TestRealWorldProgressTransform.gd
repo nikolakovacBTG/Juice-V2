@@ -28,9 +28,9 @@ func get_test_methods() -> Array[String]:
 		"test_2d_position_bound_reverse_non_zero",
 		"test_2d_position_bound_reverse_eased_non_zero",
 		# --- 2D Rotation + Scale + Stacking (Phase A-3) ---
-		# "test_2d_rotation_non_zero_origin",          # Phase A-3
-		# "test_2d_scale_non_zero_origin",             # Phase A-3
-		# "test_2d_stacked_deterministic",             # Phase A-3
+		"test_2d_rotation_non_zero_origin",
+		"test_2d_scale_non_zero_origin",
+		"test_2d_stacked_deterministic",
 		# --- 2D Mixed + Retrigger (Phase A-4) ---
 		# "test_2d_mixed_shake_no_interference",       # Phase A-4
 		# "test_2d_mixed_noise_no_interference",       # Phase A-4
@@ -270,5 +270,128 @@ func test_2d_position_bound_reverse_eased_non_zero() -> void:
 		"REVERSE_EASED non-zero: x must not drift to global 0 (x=%.1f)" % target.position.x)
 	assert_approx_vec2(Vector2(0.0, target.position.y), Vector2(0.0, ORIGIN.y),
 		"REVERSE_EASED non-zero: y must stay near origin.y (y=%.1f)" % target.position.y, 1.5)
+
+	await cleanup(target)
+
+
+# =============================================================================
+# PHASE A-3: 2D ROTATION + SCALE + DETERMINISTIC STACKING
+# =============================================================================
+
+## Rotation effect on a target at (200, 150).
+## Position must remain unchanged; rotation must accumulate.
+func test_2d_rotation_non_zero_origin() -> void:
+	const ORIGIN := Vector2(200.0, 150.0)
+	var rig := await _create_2d_rig_at(ORIGIN,
+			ProgressTransform2DJuiceEffect.TransformTarget.ROTATION,
+			Vector2.ZERO, 0.1)
+	var juice: Juice2D = rig[0]
+	var target: Node2D = rig[1]
+	var effect: ProgressTransform2DJuiceEffect = rig[2]
+	effect.rotation_rate = 90.0  # 90 deg/s
+
+	juice.animate_in()
+	await wait_seconds(0.5)  # 0.1s ramp + 0.4s sustain
+
+	# Must have rotated noticeably (>0.3 rad).
+	assert_greater(absf(target.rotation), 0.3,
+		"Rotation non-zero origin: must rotate > 0.3 rad (rot=%.2f)" % target.rotation)
+	# Position must remain at origin — rotation must not drift position.
+	assert_approx_vec2(target.position, ORIGIN,
+		"Rotation non-zero origin: position must stay at origin (pos=%s)" % str(target.position), 2.0)
+
+	await cleanup(target)
+
+
+## Scale effect on a target at (200, 150).
+## Position must remain unchanged; scale must grow beyond 1.
+func test_2d_scale_non_zero_origin() -> void:
+	const ORIGIN := Vector2(200.0, 150.0)
+	var rig := await _create_2d_rig_at(ORIGIN,
+			ProgressTransform2DJuiceEffect.TransformTarget.SCALE,
+			Vector2.ZERO, 0.1)
+	var juice: Juice2D = rig[0]
+	var target: Node2D = rig[1]
+	var effect: ProgressTransform2DJuiceEffect = rig[2]
+	effect.scale_rate = Vector2(0.5, 0.5)  # 0.5 units/s
+
+	juice.animate_in()
+	await wait_seconds(0.5)
+
+	# Scale must have grown past 1.0 (ramp-aware: 0.1s ramp + 0.4s sustain at 0.5 units/s).
+	assert_greater(target.scale.x, 1.04,
+		"Scale non-zero origin: scale.x must grow > 1.04 (scale.x=%.2f)" % target.scale.x)
+	# Position must remain at origin.
+	assert_approx_vec2(target.position, ORIGIN,
+		"Scale non-zero origin: position must stay at origin (pos=%s)" % str(target.position), 2.0)
+
+	await cleanup(target)
+
+
+## Two separate Juice2D nodes on the same Node2D target at (200, 0).
+## Juice A: Transform2DJuiceEffect tweening x by +80 (deterministic, assertable).
+## Juice B: ProgressTransform2DJuiceEffect accumulating x at 100 px/s.
+## Both effects run simultaneously; each must contribute independently.
+## Neither must snap the target to (0, 0) or overwrite the other's delta.
+func test_2d_stacked_deterministic() -> void:
+	const ORIGIN := Vector2(200.0, 0.0)
+
+	var target := Node2D.new()
+	target.name = "RW2DStackTarget"
+	target.position = ORIGIN
+	_runner.add_child(target)
+
+	# --- Juice A: Transform2D (tween to +80 from base) ---
+	var tween_effect := Transform2DJuiceEffect.new()
+	tween_effect.transform_target = Transform2DJuiceEffect.TransformTarget.POSITION
+	tween_effect.from_reference = Transform2DJuiceEffect.TransformReference.SELF
+	tween_effect.to_reference = Transform2DJuiceEffect.TransformReference.CUSTOM
+	tween_effect.to_position = Vector2(80.0, 0.0)
+	tween_effect.to_position_in = Transform2DJuiceEffect.PositionIn.PIXELS
+	tween_effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	tween_effect.duration_in = 0.2
+
+	var juice_a := Juice2D.new()
+	juice_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_a := Juice2DRecipe.new()
+	recipe_a.effects.append(tween_effect)
+	juice_a.recipe = recipe_a
+	target.add_child(juice_a)
+
+	# --- Juice B: ProgressTransform (accumulating x) ---
+	var prog_effect := ProgressTransform2DJuiceEffect.new()
+	prog_effect.transform_target = ProgressTransform2DJuiceEffect.TransformTarget.POSITION
+	prog_effect.position_rate = Vector2(100.0, 0.0)
+	prog_effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog_effect.duration_in = 0.1
+	prog_effect.auto_start = false
+
+	var juice_b := Juice2D.new()
+	juice_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_b := Juice2DRecipe.new()
+	recipe_b.effects.append(prog_effect)
+	juice_b.recipe = recipe_b
+	target.add_child(juice_b)
+
+	await wait_frames(2)
+
+	# Fire both simultaneously.
+	juice_a.animate_in()
+	juice_b.animate_in()
+	await wait_seconds(0.35)  # Tween completes (0.2s); progress accumulates for 0.35s
+
+	# Tween settled at ORIGIN.x + 80 = 280; progress added ~25px more.
+	# Conservative: x must exceed ORIGIN.x + 70 (tween alone gets us ~280).
+	assert_greater(target.position.x, ORIGIN.x + 70.0,
+		"Stacked deterministic: x must exceed base+70 from both effects (x=%.1f)" % target.position.x)
+	# Must never have snapped to (0, 0) — if it had, x would be < ORIGIN.x.
+	assert_greater(target.position.x, ORIGIN.x - 5.0,
+		"Stacked deterministic: x must not snap to global 0 (x=%.1f origin.x=%.1f)" % [
+		target.position.x, ORIGIN.x])
+	# Y must be undisturbed (both effects only move X).
+	assert_approx_float(target.position.y, ORIGIN.y,
+		"Stacked deterministic: y must stay at origin.y (y=%.1f)" % target.position.y, 1.0)
 
 	await cleanup(target)
