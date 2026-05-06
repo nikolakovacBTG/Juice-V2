@@ -1004,52 +1004,21 @@ tile_set = SubResource("TileSet_wwan6")
 metadata/juice_active_ledger = {
 "base": {
 "modulate": Color(1, 1, 1, 1),
-"position": Vector2(0, 0),
+"position": Vector2(200, -50),
 "rotation": 0.0,
 "scale": Vector2(1, 1)
 },
 "deltas": {
-"modulate": {
-1820009240776: Color(1, 1, 1, 1),
-1820411893953: Color(1, 1, 1, 1),
-1830629218497: Color(1, 1, 1, 1),
-2390048712881: Color(1, 1, 1, 1),
-4251933817490: Color(1, 1, 1, 1),
-5033886300282: Color(1, 1, 1, 1),
-368664037633426: Color(1, 1, 1, 1)
-},
-"position": {
-1820009240776: Vector2(0, 0),
-1820411893953: Vector2(0, 0),
-1830629218497: Vector2(0, 0),
-2390048712881: Vector2(0, 0),
-4251933817490: Vector2(0, 0),
-5033886300282: Vector2(0, 0),
-368664037633426: Vector2(0, 0)
-},
-"rotation": {
-1820009240776: 0.0,
-1820411893953: 0.0,
-1830629218497: 0.0,
-2390048712881: 0.0,
-4251933817490: 0.0,
-5033886300282: 0.0,
-368664037633426: 0.0
-},
-"scale": {
-1820009240776: Vector2(0, 0),
-1820411893953: Vector2(0, 0),
-1830629218497: Vector2(0, 0),
-2390048712881: Vector2(0, 0),
-4251933817490: Vector2(0, 0),
-5033886300282: Vector2(0, 0),
-368664037633426: Vector2(0, 0)
-}
+"modulate": {},
+"position": {},
+"rotation": {},
+"scale": {}
 }
 }
 
 [node name="Juice2D" type="Node" parent="Tile Map Layers/Platform 2" unique_id=1934000649]
 script = ExtResource("2_w2ktn")
+loop_count = -1
 recipe = SubResource("Resource_kjcfi")
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
