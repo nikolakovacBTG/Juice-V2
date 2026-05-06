@@ -109,42 +109,41 @@ static var _store: Dictionary = {}  # keyed by target.get_instance_id()
 Never serialized. Purely in-memory. Self-cleaning via existing `cleanup_source` contract
 (called from `_exit_tree`). The V1 fix is the V2 implementation for this component.
 
-### 3.2b Runtime orchestration — the question of who drives `_process`
+### 3.2b Runtime orchestration — the same "born, do job, die" pattern at runtime
 
-In V1, the domain node (`Juice2D`) owns the `_process` tick and aggregates deltas itself.
-This is reasonable but conflates configuration ownership with execution ownership.
-
-A natural extension of the "born, do job, die" pattern to **runtime** would be:
-
-- Domain node: declarative configuration carrier only — recipe, target, trigger wiring
-- `JuiceRuntime` (autoload `Node`): central process tick, drives all active orchestrators
-- Per-animation `JuiceRuntimeBinding` (not a Node — a `RefCounted`): owns cloned effects,
-  ledger entries, delta accumulation for one active animation on one target
+In V1, the domain node owns `_process` and drives effects itself. In V2, runtime animation
+follows the exact same pattern as editor preview — a dynamically spawned Node handles
+execution while the domain node becomes a pure configuration carrier.
 
 ```
 animate_in() called on Juice2D
-  → Creates JuiceRuntimeBinding(recipe, target)
-  → Registers it with JuiceRuntime autoload
-  → JuiceRuntime._process drives the binding each frame
-  → On completion or stop(): binding is unregistered and freed
+  → Spawn JuiceRuntimeOrchestrator(recipe, target)  — regular Node, NOT @tool
+  → Orchestrator owns cloned effects, ledger entries, delta accumulation
+  → Orchestrator._process drives animation each frame
+  → On completion or stop(): orchestrator queue_free()’s itself
 ```
 
-**Benefits over V1:**
-- Domain node has no `_process` override — zero runtime overhead when idle
-- Retriggering is clean: deregister old binding, register new one
-- No flag-guarding needed — domain node is always in the same state
-- Sequencer spawns multiple bindings onto multiple targets from one process tick
+The pattern is symmetric:
 
-**Trade-off:** Introduces a singleton (`JuiceRuntime`). This is a deliberate architectural
-choice — animation systems with a central driver (like Godot's `AnimationMixer` or Unity's
-`Animator`) are well-established and performant. The binding is a `RefCounted`, not a
-`Node`, so tree overhead is zero. Allocation per animation start is acceptable — effects
-are already cloned in V1 per animation.
+| Context | Orchestrator type | `@tool`? |
+|---------|-------------------|----------|
+| Editor transport preview | `JuicePreviewOrchestrator` | ✅ (needs editor `_process`) |
+| Runtime animation | `JuiceRuntimeOrchestrator` | ❌ (pure runtime) |
 
-**Decision point for V2 design:** Whether to keep the domain-node-driven `_process` (V1
-pattern, simpler) or move to the autoload-driven binding pattern (more correct separation).
-This affects Phase V2-B scope significantly. The orchestrator section below describes the
-editor preview side; the same conceptual pattern applies at runtime.
+No autoload singleton. No centralized driver. Each orchestrator is self-managing: it
+registers its ledger source on spawn, deregisters on free. The domain node (`Juice2D`)
+reduces to: hold recipe, resolve target, respond to triggers, spawn the orchestrator.
+
+Domain node `_process` is removed entirely. It has no process tick when idle — zero
+runtime overhead for inactive Juice nodes, which is the common case.
+
+**Lifecycle ownership:** The orchestrator is added as a child of the domain node (or a
+dedicated transient child of the scene root). When the scene is freed, it is freed
+automatically. Explicit cleanup via `stop()` calls `queue_free()` early.
+
+**Multi-writer stacking** is unchanged: the ledger handles multiple orchestrators writing
+to the same target simultaneously. This is already the V1 contract and carries forward
+without modification.
 
 ### 3.3 JuicePreviewOrchestrator — the "born, do job, die" pattern
 
@@ -383,21 +382,18 @@ Write a regression test that compares baked values before and after the port.
    ordering (e.g. checking the value of `trigger_source` before deciding whether to show
    `trigger_source_path`). Verify Godot 4.x guarantees consistent ordering.
 
-4. **Runtime binding vs domain-node `_process`**: Section 3.2b presents two options —
-   keep domain-node-driven `_process` (simpler, V1 carry-forward) vs. introduce a
-   `JuiceRuntime` autoload with `JuiceRuntimeBinding` objects (cleaner separation, more
-   allocation). This decision gates Phase V2-B scope. Decide before starting V2-B.
+4. **Runtime binding vs domain-node `_process`**: Resolved — use
+   `JuiceRuntimeOrchestrator` (dynamic Node, §3.2b). No autoload needed.
 
 5. **Orchestrator factory interface**: `JuiceOrchestratorFactory` is proposed as the
    common spawning path for editor preview, sequencer, and nested-scene targets.
    Define the factory contract (what it receives, what it returns, how ownership is
    tracked) before implementing either orchestrator or sequencer changes.
 
-6. **Sequencer + nested Juice nodes**: When a target scene contains its own Juice nodes,
-   and a sequencer from a parent scene imposes animation on that target, two Juice
-   systems may write to the same target simultaneously. Define the priority/merge
-   contract: does the parent sequencer suppress child Juice nodes? Co-exist via ledger
-   stacking? This is the deepest correctness question in V2.
+6. **Sequencer + nested Juice nodes**: Already solved by the V1 ledger. Multiple
+   orchestrators writing to the same target co-exist via delta stacking. No new contract
+   needed in V2 — confirm the orchestrator's `cleanup_source` call is symmetric with
+   the domain node's existing pattern.
 
 ---
 
