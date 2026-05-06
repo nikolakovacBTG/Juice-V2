@@ -109,105 +109,61 @@ static var _store: Dictionary = {}  # keyed by target.get_instance_id()
 Never serialized. Purely in-memory. Self-cleaning via existing `cleanup_source` contract
 (called from `_exit_tree`). The V1 fix is the V2 implementation for this component.
 
-### 3.2b Runtime orchestration — the same "born, do job, die" pattern at runtime
+### 3.3 Orchestrators — the "born, do job, die" pattern
 
-In V1, the domain node owns `_process` and drives effects itself. In V2, runtime animation
-follows the exact same pattern as editor preview — a dynamically spawned Node handles
-execution while the domain node becomes a pure configuration carrier.
+The same pattern applies in both contexts. A domain node spawns an orchestrator when work
+begins; the orchestrator owns all transient state and `queue_free()`s when done.
 
+`JuiceOrchestrator` is a single class, tagged `@tool`. The `@tool` tag allows `_process`
+to run in the editor (required for transport preview). At runtime, `@tool` on a
+dynamically spawned, never-serialized node is harmless — it simply runs. There is no
+reason to maintain two mirrored classes.
+
+**Lifecycle:**
 ```
-animate_in() called on Juice2D
-  → Spawn JuiceRuntimeOrchestrator(recipe, target)  — regular Node, NOT @tool
-  → Orchestrator owns cloned effects, ledger entries, delta accumulation
-  → Orchestrator._process drives animation each frame
-  → On completion or stop(): orchestrator queue_free()’s itself
-```
+# Editor transport preview (caller: JuicePreviewDirector)
+Orchestrator.setup(recipe, target, mode=PREVIEW)
+  → clone recipe, resolve target, prepare ledger state
+Orchestrator.play()
+  → _process loop begins, drives effects, writes to target
+Orchestrator.teardown()
+  → restore target to natural state → queue_free()
 
-The pattern is symmetric:
-
-| Context | Orchestrator type | `@tool`? |
-|---------|-------------------|----------|
-| Editor transport preview | `JuicePreviewOrchestrator` | ✅ (needs editor `_process`) |
-| Runtime animation | `JuiceRuntimeOrchestrator` | ❌ (pure runtime) |
-
-No autoload singleton. No centralized driver. Each orchestrator is self-managing: it
-registers its ledger source on spawn, deregisters on free. The domain node (`Juice2D`)
-reduces to: hold recipe, resolve target, respond to triggers, spawn the orchestrator.
-
-Domain node `_process` is removed entirely. It has no process tick when idle — zero
-runtime overhead for inactive Juice nodes, which is the common case.
-
-**Lifecycle ownership:** The orchestrator is added as a child of the domain node (or a
-dedicated transient child of the scene root). When the scene is freed, it is freed
-automatically. Explicit cleanup via `stop()` calls `queue_free()` early.
-
-**Multi-writer stacking** is unchanged: the ledger handles multiple orchestrators writing
-to the same target simultaneously. This is already the V1 contract and carries forward
-without modification.
-
-### 3.3 JuicePreviewOrchestrator — the "born, do job, die" pattern
-
-A dynamically instantiated `@tool` node, created by the plugin when a Juice node is
-selected, and destroyed on deselection.
-
-```
-Plugin.selection_changed(juice_node)
-  → Spawn JuicePreviewOrchestrator(juice_node)
-  → Orchestrator.setup() — clone recipe, resolve target, prepare ledger state
-  
-User clicks Play
-  → Orchestrator.play() — own _process loop begins, drives effects, writes to target
-
-User deselects or clicks Stop
-  → Orchestrator.teardown() — restore target to natural state
-  → queue_free() — all state destroyed, zero persistence
+# Runtime animation (caller: domain node)
+Orchestrator.setup(recipe, target, mode=RUNTIME)
+  → clone recipe, resolve target, register ledger source
+  → _process drives animation each frame
+  → On completion or stop(): queue_free()
 ```
 
-**Key properties of the orchestrator:**
-- IS `@tool` — owns its own `_process` tick in the editor
-- Clones the recipe effects into its own in-memory array (never touches recipe resources)
-- Uses the same delta/flush pattern as runtime Juice nodes — same output, different context
-- Zero persistent state. Nothing written to target nodes beyond animation deltas.
-- Holds a reference to the target; on teardown, restores natural state via its own ledger
-  (local to the orchestrator instance, freed when it is)
+**Properties common to all orchestrators:**
+- Clones recipe effects into own in-memory array — never mutates recipe resources
+- Uses the same delta/flush pattern via `JuiceLedger`
+- Zero persistent state — nothing survives `queue_free()`
+- Added as a child of the domain node; freed automatically with the scene
+- Registers its ledger source on spawn, deregisters on free
 
-**What this eliminates from domain nodes:**
-- `_enter_editor_preview()` / `_exit_editor_preview()`
-- `_editor_preview_active` flag
+**What this removes from domain nodes:**
+- `_enter_editor_preview()` / `_exit_editor_preview()` / `_editor_preview_active`
 - `_deferred_editor_preview_init()`
-- `_runtime_effects` (the cloned preview array) — orchestrator owns this instead
+- `_runtime_effects` cloning
 - All `Engine.is_editor_hint()` guards in `_process` and `_ready`
+- Domain node `_process` entirely — zero overhead when idle
 
-**What the test implications are:**
-- Transport preview tests now test `JuicePreviewOrchestrator` directly
-- Domain node tests are purely runtime and headless-compatible without special guards
-- The headless/editor tier distinction becomes less necessary for domain behavior
+**Inspector plugin independence:**
+`JuiceEditorInspectorPlugin` (property display) and orchestrators (animation execution)
+share no interface. The plugin registers the inspector plugin once at load and spawns
+orchestrators independently per selection event.
 
-**Relationship to JuiceEditorInspectorPlugin:**
-The inspector plugin and the preview orchestrator are independent. The inspector plugin
-handles *property display* — it never needs to know whether an orchestrator is active.
-The orchestrator handles *animation execution* — it never touches inspector state.
-They share no interface. The plugin spawns both independently: inspector plugin is
-registered once at plugin load; orchestrators are spawned/killed per selection event.
+**Spawning contracts — three callers:**
+1. **Editor selection** — `JuicePreviewDirector` spawns `JuiceOrchestrator` in PREVIEW mode
+2. **Sequencer** — imposes a recipe on multiple targets in sequence; each target gets
+   its own orchestrator, spawned and killed by the sequencer
+3. **Nested scene targets** — targets are resolved via `_resolve_target()` NodePath
+   logic; the orchestrator accepts any `Node`, no flat hierarchy assumption
 
-**Spawning contracts — not just user selection:**
-Orchestrators (both editor and, if adopted, runtime bindings) must be spawnable by
-more than one caller:
-
-1. **User selection in editor** — `JuicePreviewDirector` spawns on inspector click
-2. **Sequencer orchestration** — the SEQUENCER mode imposes a recipe onto multiple
-   targets, potentially in sequence. Each target gets its own orchestrator/binding.
-   The sequencer must be able to spawn, control, and kill orchestrators for arbitrary
-   targets that are not necessarily the Juice node's own parent.
-3. **Nested scene targets** — a target may itself be an instanced scene containing
-   Juice nodes at multiple nesting levels. The spawning contract must not assume a
-   flat parent/child relationship. Orchestrators must accept any `Node` as target,
-   resolved via the same NodePath logic already in `_resolve_target()`.
-
-The spawning interface must therefore be a factory/service, not a method on the domain
-node. A `JuiceOrchestratorFactory.create(recipe, target, mode)` pattern decouples
-callers from orchestrator construction and allows sequencers and nested scenes to
-produce orchestrators identically to the transport preview path.
+All three callers go through `JuiceOrchestratorFactory.create(recipe, target, mode)` —
+a single entry point that decouples callers from orchestrator construction.
 
 ### 3.4 JuiceEditorInspectorPlugin — conditional inspector without `@tool`
 
@@ -260,7 +216,7 @@ After V2:
 | Class | `@tool`? | Reason |
 |-------|----------|--------|
 | `juice_plugin.gd` | ✅ | EditorPlugin requires it |
-| `JuicePreviewOrchestrator` | ✅ | Must run `_process` in editor |
+| `JuiceOrchestrator` | ✅ | Single class; `@tool` needed for editor `_process`; harmless at runtime |
 | `JuiceEditorInspectorPlugin` | ✅ | EditorInspectorPlugin requires it |
 | `JuicePreviewDirector` | ✅ | Manages orchestrator lifecycle, owned by plugin |
 | `Juice2D`, `Juice3D`, `JuiceControl` | ❌ | Pure runtime |
@@ -382,18 +338,10 @@ Write a regression test that compares baked values before and after the port.
    ordering (e.g. checking the value of `trigger_source` before deciding whether to show
    `trigger_source_path`). Verify Godot 4.x guarantees consistent ordering.
 
-4. **Runtime binding vs domain-node `_process`**: Resolved — use
-   `JuiceRuntimeOrchestrator` (dynamic Node, §3.2b). No autoload needed.
-
-5. **Orchestrator factory interface**: `JuiceOrchestratorFactory` is proposed as the
+4. **Orchestrator factory interface**: `JuiceOrchestratorFactory` is proposed as the
    common spawning path for editor preview, sequencer, and nested-scene targets.
    Define the factory contract (what it receives, what it returns, how ownership is
    tracked) before implementing either orchestrator or sequencer changes.
-
-6. **Sequencer + nested Juice nodes**: Already solved by the V1 ledger. Multiple
-   orchestrators writing to the same target co-exist via delta stacking. No new contract
-   needed in V2 — confirm the orchestrator's `cleanup_source` call is symmetric with
-   the domain node's existing pattern.
 
 ---
 
