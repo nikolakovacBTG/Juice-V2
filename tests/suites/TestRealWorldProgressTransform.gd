@@ -36,10 +36,10 @@ func get_test_methods() -> Array[String]:
 		"test_2d_mixed_noise_no_interference",
 		"test_2d_retrigger_during_sustain",
 		# --- Control domain (Phase A-5) ---
-		# "test_control_position_non_zero_origin",     # Phase A-5
-		# "test_control_bound_reverse_non_zero",       # Phase A-5
-		# "test_control_stacked_deterministic",        # Phase A-5
-		# "test_control_mixed_noise_no_interference",  # Phase A-5
+		"test_control_position_non_zero_origin",
+		"test_control_bound_reverse_non_zero",
+		"test_control_stacked_deterministic",
+		"test_control_mixed_noise_no_interference",
 		# --- 3D domain (Phase A-6) ---
 		# "test_3d_position_non_zero_origin",          # Phase A-6
 		# "test_3d_rotation_non_zero_origin",          # Phase A-6
@@ -87,12 +87,12 @@ func _create_2d_rig_at(
 
 
 # Creates a JuiceControl + Button rig at the given position.
-# Returns [JuiceControl, Button].
+# Returns [JuiceControl, Button, effect].
 func _create_control_rig_at(
 		pos: Vector2,
 		target_type: int = ProgressTransformControlJuiceEffect.TransformTarget.POSITION,
 		rate_pos: Vector2 = Vector2(100.0, 0.0),
-		duration_in: float = 0.3
+		duration_in: float = 0.1
 ) -> Array:
 	var target := Button.new()
 	target.name = "RWControlTarget"
@@ -103,17 +103,23 @@ func _create_control_rig_at(
 	var effect := ProgressTransformControlJuiceEffect.new()
 	effect.transform_target = target_type
 	effect.position_rate = rate_pos
+	effect.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	effect.duration_in = duration_in
+	effect.auto_start = false
 
 	var recipe := JuiceControlRecipe.new()
 	recipe.effects.append(effect)
 
 	var juice := JuiceControl.new()
 	juice.name = "RW_JuiceControl"
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
 	juice.recipe = recipe
 	target.add_child(juice)
 
-	return [juice, target]
+	await wait_frames(2)
+	return [juice, target, effect]
+
 
 
 # Creates a Juice3D + Node3D rig at the given position.
@@ -549,5 +555,184 @@ func test_2d_retrigger_during_sustain() -> void:
 	assert_greater(target.position.x, ORIGIN.x,
 		"Retrigger: x must remain past origin after retrigger (x=%.1f origin.x=%.1f)" % [
 		target.position.x, ORIGIN.x])
+
+	await cleanup(target)
+
+
+# =============================================================================
+# PHASE A-5: CONTROL DOMAIN
+# =============================================================================
+
+## Button at (300, 200). ProgressTransformControl accumulates x.
+## After stop, position must not snap to (0, 0).
+func test_control_position_non_zero_origin() -> void:
+	const ORIGIN := Vector2(300.0, 200.0)
+	var rig := await _create_control_rig_at(ORIGIN,
+			ProgressTransformControlJuiceEffect.TransformTarget.POSITION,
+			Vector2(100.0, 0.0), 0.1)
+	var juice: JuiceControl = rig[0]
+	var target: Button = rig[1]
+
+	assert_approx_vec2(target.position, ORIGIN,
+		"Control pre-animate: must be at origin", 0.5)
+
+	juice.animate_in()
+	await wait_seconds(0.5)
+
+	assert_greater(target.position.x, ORIGIN.x + 10.0,
+		"Control non-zero: x must exceed origin.x+10 (x=%.1f origin.x=%.1f)" % [
+		target.position.x, ORIGIN.x])
+	assert_approx_vec2(Vector2(0.0, target.position.y), Vector2(0.0, ORIGIN.y),
+		"Control non-zero: y must stay at origin.y (y=%.1f origin.y=%.1f)" % [
+		target.position.y, ORIGIN.y], 2.0)
+
+	juice.stop()
+	await wait_frames(2)
+	assert_greater(target.position.x, 5.0,
+		"Control stop: must not snap to (0,0). x=%.1f" % target.position.x)
+
+	await cleanup(target)
+
+
+## Button at (300, 200). REVERSE bound fires mid-flight.
+## x must stay near the origin band, never near global (0, 0).
+func test_control_bound_reverse_non_zero() -> void:
+	const ORIGIN := Vector2(300.0, 200.0)
+	var rig := await _create_control_rig_at(ORIGIN,
+			ProgressTransformControlJuiceEffect.TransformTarget.POSITION,
+			Vector2(300.0, 0.0), 0.05)
+	var juice: JuiceControl = rig[0]
+	var target: Button = rig[1]
+	var effect: ProgressTransformControlJuiceEffect = rig[2]
+
+	effect.bound_enabled = true
+	effect.bound_behaviour = ProgressTransformControlJuiceEffect.BoundBehaviour.REVERSE
+	effect.bound_value = 50.0
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	assert_greater(target.position.x, ORIGIN.x - 60.0,
+		"Control REVERSE non-zero: x must not snap to global 0 (x=%.1f)" % target.position.x)
+	assert_approx_vec2(Vector2(0.0, target.position.y), Vector2(0.0, ORIGIN.y),
+		"Control REVERSE non-zero: y must stay at origin.y (y=%.1f)" % target.position.y, 2.0)
+
+	await cleanup(target)
+
+
+## Two separate JuiceControl nodes on the same Button at (300, 0).
+## Control A: TransformControlJuiceEffect tween +80px.
+## Control B: ProgressTransformControlJuiceEffect accumulating +100px/s.
+## Both must contribute; neither must snap the target to (0, 0).
+func test_control_stacked_deterministic() -> void:
+	const ORIGIN := Vector2(300.0, 0.0)
+
+	var target := Button.new()
+	target.name = "RWCtrlStackTarget"
+	target.position = ORIGIN
+	target.size = Vector2(80.0, 30.0)
+	_runner.add_child(target)
+
+	# --- JuiceControl A: tween +80px ---
+	var tween_eff := TransformControlJuiceEffect.new()
+	tween_eff.transform_target = TransformControlJuiceEffect.TransformTarget.POSITION
+	tween_eff.from_reference = TransformControlJuiceEffect.TransformReference.SELF
+	tween_eff.to_reference = TransformControlJuiceEffect.TransformReference.CUSTOM
+	tween_eff.to_position = Vector2(80.0, 0.0)
+	tween_eff.to_position_in = TransformControlJuiceEffect.PositionIn.PIXELS
+	tween_eff.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	tween_eff.duration_in = 0.2
+
+	var ctrl_a := JuiceControl.new()
+	ctrl_a.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	ctrl_a.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_a := JuiceControlRecipe.new()
+	recipe_a.effects.append(tween_eff)
+	ctrl_a.recipe = recipe_a
+	target.add_child(ctrl_a)
+
+	# --- JuiceControl B: progress accumulating ---
+	var prog_eff := ProgressTransformControlJuiceEffect.new()
+	prog_eff.transform_target = ProgressTransformControlJuiceEffect.TransformTarget.POSITION
+	prog_eff.position_rate = Vector2(100.0, 0.0)
+	prog_eff.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog_eff.duration_in = 0.1
+	prog_eff.auto_start = false
+
+	var ctrl_b := JuiceControl.new()
+	ctrl_b.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	ctrl_b.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	var recipe_b := JuiceControlRecipe.new()
+	recipe_b.effects.append(prog_eff)
+	ctrl_b.recipe = recipe_b
+	target.add_child(ctrl_b)
+
+	await wait_frames(2)
+
+	ctrl_a.animate_in()
+	ctrl_b.animate_in()
+	await wait_seconds(0.35)
+
+	# Tween: +80 from ORIGIN.x = 380; progress: ~25px more = ~405.
+	assert_greater(target.position.x, ORIGIN.x + 70.0,
+		"Control stacked: x must exceed base+70 (x=%.1f)" % target.position.x)
+	assert_greater(target.position.x, ORIGIN.x - 5.0,
+		"Control stacked: x must not snap to global 0 (x=%.1f)" % target.position.x)
+	assert_approx_float(target.position.y, ORIGIN.y,
+		"Control stacked: y must stay at origin.y (y=%.1f)" % target.position.y, 1.0)
+
+	await cleanup(target)
+
+
+## ProgressTransformControl + NoiseControl in same recipe on a Button at (300, 200).
+## Noise must not corrupt origin; after stop position must not be at (0, 0).
+func test_control_mixed_noise_no_interference() -> void:
+	const ORIGIN := Vector2(300.0, 200.0)
+
+	var target := Button.new()
+	target.name = "RWCtrlNoiseTarget"
+	target.position = ORIGIN
+	target.size = Vector2(80.0, 30.0)
+	_runner.add_child(target)
+
+	var prog := ProgressTransformControlJuiceEffect.new()
+	prog.transform_target = ProgressTransformControlJuiceEffect.TransformTarget.POSITION
+	prog.position_rate = Vector2(80.0, 0.0)
+	prog.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_ONLY
+	prog.duration_in = 0.1
+	prog.auto_start = false
+
+	var noise := NoiseControlJuiceEffect.new()
+	noise.transform_target = NoiseControlJuiceEffect.TransformTarget.POSITION
+	noise.noise_speed = 5.0
+	noise.position_amplitude = Vector2(15.0, 15.0)
+	noise.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	noise.duration_in = 0.1
+	noise.duration_out = 0.1
+
+	var recipe := JuiceControlRecipe.new()
+	recipe.effects.append(prog)
+	recipe.effects.append(noise)
+
+	var juice := JuiceControl.new()
+	juice.trigger_on = JuiceBase.TriggerEvent.MANUAL
+	juice.trigger_behaviour = JuiceEffectBase.TriggerBehaviour.PLAY_IN_AND_OUT
+	juice.recipe = recipe
+	target.add_child(juice)
+	await wait_frames(2)
+
+	juice.animate_in()
+	await wait_seconds(0.4)
+
+	assert_greater(target.position.x, ORIGIN.x + 5.0,
+		"Control mixed noise: x must have accumulated past origin (x=%.1f)" % target.position.x)
+
+	juice.stop()
+	await wait_frames(4)
+
+	assert_greater(target.position.x, 5.0,
+		"Control mixed noise stop: must not snap to (0,0). x=%.1f" % target.position.x)
+	assert_greater(target.position.y, 5.0,
+		"Control mixed noise stop: y must not snap to 0. y=%.1f" % target.position.y)
 
 	await cleanup(target)
