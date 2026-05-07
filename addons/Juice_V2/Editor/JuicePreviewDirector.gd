@@ -492,9 +492,11 @@ func _add_preview_node(node: JuiceBase) -> void:
 				"Node '%s' skipped: has no parent in tree" % node.name, debug_enabled)
 		return
 	node._enter_editor_preview()
-	# Spawn PREVIEW orchestrator for this node. PreviewDirector owns its lifetime;
-	# teardown() is called in deselect().
+	# Spawn PREVIEW orchestrator for this node. Add it as a child of the domain node
+	# so queue_free() is handled by the scene tree. PreviewDirector calls teardown()
+	# in deselect() which triggers queue_free() — no manual deferred freeing needed.
 	var orch := JuiceOrchestratorFactory.create(node, JuiceOrchestrator.Mode.PREVIEW)
+	node.add_child(orch)
 	_orchestrators[node] = orch
 	_preview_nodes.append(node)
 	_connect_node_signals(node)

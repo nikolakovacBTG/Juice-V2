@@ -38,13 +38,13 @@ func test_setup_stores_node_and_mode_preview() -> void:
 	await wait_frames(2)
 
 	var orch := JuiceOrchestrator.new()
+	juice.add_child(orch)  # must be in scene tree for queue_free() to work
 	orch.setup(juice, null, parent, JuiceOrchestrator.Mode.PREVIEW)
 
 	assert_true(orch._node == juice, "Node reference stored")
 	assert_true(orch._mode == JuiceOrchestrator.Mode.PREVIEW, "Mode stored as PREVIEW")
 
 	orch.teardown()
-	await wait_frames(1)
 	parent.queue_free()
 
 
@@ -56,12 +56,12 @@ func test_setup_stores_mode_runtime() -> void:
 	await wait_frames(2)
 
 	var orch := JuiceOrchestrator.new()
+	juice.add_child(orch)  # must be in scene tree for queue_free() to work
 	orch.setup(juice, null, parent, JuiceOrchestrator.Mode.RUNTIME)
 
 	assert_true(orch._mode == JuiceOrchestrator.Mode.RUNTIME, "Mode stored as RUNTIME")
 
 	orch.teardown()
-	await wait_frames(1)
 	parent.queue_free()
 
 
@@ -80,7 +80,7 @@ func test_teardown_frees_orchestrator() -> void:
 
 	assert_true(is_instance_valid(orch), "Orchestrator valid before teardown")
 	orch.teardown()
-	await wait_frames(1)  # free() is deferred — must wait one frame
+	await wait_frames(1)  # queue_free() dequeues at end of frame — wait one frame
 	assert_false(is_instance_valid(orch), "Orchestrator freed after teardown")
 
 	parent.queue_free()
@@ -98,7 +98,6 @@ func test_preview_play_in_does_not_crash() -> void:
 
 	assert_true(is_instance_valid(orch), "Orchestrator still valid after play_in()")
 	orch.teardown()
-	await wait_frames(1)
 	parent.queue_free()
 
 
@@ -119,7 +118,6 @@ func test_runtime_stop_keeps_orchestrator_alive() -> void:
 	assert_true(is_instance_valid(orch), "RUNTIME orchestrator alive after stop()")
 
 	orch.teardown()
-	await wait_frames(1)
 	parent.queue_free()
 
 
@@ -132,7 +130,7 @@ func test_runtime_teardown_frees_orchestrator() -> void:
 
 	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
 	orch.teardown()
-	await wait_frames(1)  # free() is deferred — must wait one frame
+	await wait_frames(1)  # queue_free() dequeues at end of frame — wait one frame
 	assert_false(is_instance_valid(orch), "RUNTIME orchestrator freed after teardown()")
 
 	parent.queue_free()
@@ -152,5 +150,4 @@ func test_runtime_reset_does_not_crash() -> void:
 	assert_true(is_instance_valid(orch), "RUNTIME orchestrator still alive after reset()")
 
 	orch.teardown()
-	await wait_frames(1)
 	parent.queue_free()
