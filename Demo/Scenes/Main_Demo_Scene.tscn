@@ -326,20 +326,6 @@ alignment = 1
 [node name="Control Demo" parent="MarginContainer/CenterContainer/Menu" unique_id=1202154354 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "Control Demo"
-metadata/juice_active_ledger = {
-"base": {
-"position": Vector2(0, 118)
-},
-"deltas": {
-"position": {
-1890372885879: Vector2(0, 0),
-1890641321343: Vector2(0, 0),
-1891731840359: Vector2(0, 0),
-1899533245809: Vector2(0, 0),
-1902821580157: Vector2(0, 0)
-}
-}
-}
 
 [node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/Control Demo" unique_id=1387513701]
 script = ExtResource("3_fay60")
@@ -350,20 +336,6 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 [node name="2D Demo" parent="MarginContainer/CenterContainer/Menu" unique_id=2058207870 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "2D demo"
-metadata/juice_active_ledger = {
-"base": {
-"position": Vector2(0, 189)
-},
-"deltas": {
-"position": {
-1890372885879: Vector2(0, 0),
-1890641321343: Vector2(0, 0),
-1891731840359: Vector2(0, 0),
-1899533245809: Vector2(0, 0),
-1902821580157: Vector2(0, 0)
-}
-}
-}
 
 [node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/2D Demo" unique_id=1613150336]
 script = ExtResource("3_fay60")
@@ -374,20 +346,6 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 [node name="3D Demo" parent="MarginContainer/CenterContainer/Menu" unique_id=690507037 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "3D demo"
-metadata/juice_active_ledger = {
-"base": {
-"position": Vector2(0, 260)
-},
-"deltas": {
-"position": {
-1890372885879: Vector2(0, 0),
-1890641321343: Vector2(0, 0),
-1891731840359: Vector2(0, 0),
-1899533245809: Vector2(0, 0),
-1902821580157: Vector2(0, 0)
-}
-}
-}
 
 [node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/3D Demo" unique_id=1350848518]
 script = ExtResource("3_fay60")
@@ -398,41 +356,6 @@ metadata/_custom_type_script = "uid://c7dye3orhby4j"
 [node name="Quit" parent="MarginContainer/CenterContainer/Menu" unique_id=1803873405 instance=ExtResource("2_bhrb6")]
 layout_mode = 2
 text = "Quit"
-metadata/juice_active_ledger = {
-"base": {
-"position": Vector2(0, 331),
-"rotation": 0.0,
-"scale": Vector2(1, 1),
-"self_modulate": Color(1, 1, 1, 1)
-},
-"deltas": {
-"position": {
-1890372885879: Vector2(0, 0),
-1890641321343: Vector2(0, 0),
-1891345964408: Vector2(0, 0),
-1891681508708: Vector2(0, 0),
-1891731840359: Vector2(0, 0),
-1899482914158: Vector2(0, 0),
-1899533245809: Vector2(0, 0),
-1902821580157: Vector2(0, 0)
-},
-"rotation": {
-1891345964408: 0.0,
-1891681508708: 0.0,
-1899482914158: 0.0
-},
-"scale": {
-1891345964408: Vector2(0, 0),
-1891681508708: Vector2(0, 0),
-1899482914158: Vector2(0, 0)
-},
-"self_modulate": {
-1891345964408: Color(1, 1, 1, 1),
-1891681508708: Color(1, 1, 1, 1),
-1899482914158: Color(1, 1, 1, 1)
-}
-}
-}
 
 [node name="JuiceControl2" type="Node" parent="MarginContainer/CenterContainer/Menu/Quit" unique_id=732351268]
 script = ExtResource("3_fay60")
@@ -465,40 +388,6 @@ position = Vector2(571, 314)
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1251152495]
 position = Vector2(232, 207)
 texture = ExtResource("14_vfjyb")
-metadata/juice_active_ledger = {
-"base": {
-"modulate": Color(1, 1, 1, 1),
-"position": Vector2(232, 207),
-"rotation": 0.0,
-"scale": Vector2(1, 1)
-},
-"deltas": {
-"modulate": {
-1891933166960: Color(1, 1, 1, 1),
-1899701017978: Color(1, 1, 1, 1),
-2502422502817: Color(1, 1, 1, 1),
-2989767072834: Color(1, 1, 1, 1)
-},
-"position": {
-1891933166960: Vector2(0, 0),
-1899701017978: Vector2(0, 0),
-2502422502817: Vector2(0, 0),
-2989767072834: Vector2(0, 0)
-},
-"rotation": {
-1891933166960: 0.0,
-1899701017978: 0.0,
-2502422502817: 0.0,
-2989767072834: 0.0
-},
-"scale": {
-1891933166960: Vector2(0, 0),
-1899701017978: Vector2(0, 0),
-2502422502817: Vector2(0, 0),
-2989767072834: Vector2(0, 0)
-}
-}
-}
 
 [node name="Juice2D" type="Node" parent="Sprite2D" unique_id=1857095484]
 script = ExtResource("14_6mvn5")

@@ -957,38 +957,9 @@ tile_map_data = PackedByteArray("AAAEAP7/AAADAAoAAAAFAP//AAAJAAkAAAAGAP//AAAIAAk
 tile_set = SubResource("TileSet_wwan6")
 
 [node name="Platform 1" type="TileMapLayer" parent="Tile Map Layers" unique_id=679444104]
+position = Vector2(147.80167, 0)
 tile_map_data = PackedByteArray("AAANAAYAAAAKAA4AAAAOAAYAAAALAA4AAAAPAAYAAAALAA4AAAAQAAYAAAALAA4AAAARAAYAAAALAA4AAAASAAYAAAAMAA4AAAA=")
 tile_set = SubResource("TileSet_wwan6")
-metadata/juice_active_ledger = {
-"base": {
-"modulate": Color(1, 1, 1, 1),
-"position": Vector2(0, 0),
-"rotation": 0.0,
-"scale": Vector2(1, 1)
-},
-"deltas": {
-"modulate": {
-1820411893953: Color(1, 1, 1, 1),
-1830629218497: Color(1, 1, 1, 1),
-368664037633426: Color(1, 1, 1, 1)
-},
-"position": {
-1820411893953: Vector2(0, 0),
-1830629218497: Vector2(0, 0),
-368664037633426: Vector2(0, 0)
-},
-"rotation": {
-1820411893953: 0.0,
-1830629218497: 0.0,
-368664037633426: 0.0
-},
-"scale": {
-1820411893953: Vector2(0, 0),
-1830629218497: Vector2(0, 0),
-368664037633426: Vector2(0, 0)
-}
-}
-}
 
 [node name="Juice2D" type="Node" parent="Tile Map Layers/Platform 1" unique_id=1490924566]
 script = ExtResource("2_w2ktn")
@@ -998,23 +969,9 @@ debug_enabled = true
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="Platform 2" type="TileMapLayer" parent="Tile Map Layers" unique_id=1292550143]
-position = Vector2(200, -50)
+position = Vector2(150, -78.7009)
 tile_map_data = PackedByteArray("AAADAAMAAAAKAA4AAAAEAAMAAAALAA4AAAAFAAMAAAALAA4AAAAGAAMAAAAOAA4AAAAHAAMAAAARAA4AAAA=")
 tile_set = SubResource("TileSet_wwan6")
-metadata/juice_active_ledger = {
-"base": {
-"modulate": Color(1, 1, 1, 1),
-"position": Vector2(200, -50),
-"rotation": 0.0,
-"scale": Vector2(1, 1)
-},
-"deltas": {
-"modulate": {},
-"position": {},
-"rotation": {},
-"scale": {}
-}
-}
 
 [node name="Juice2D" type="Node" parent="Tile Map Layers/Platform 2" unique_id=1934000649]
 script = ExtResource("2_w2ktn")
@@ -1025,28 +982,6 @@ metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 [node name="Sprite2D" type="Sprite2D" parent="Tile Map Layers" unique_id=2098660857]
 position = Vector2(797, 47)
 texture = ExtResource("9_cq53s")
-metadata/juice_active_ledger = {
-"base": {
-"modulate": Color(1, 1, 1, 1),
-"position": Vector2(797, 47),
-"rotation": 0.0,
-"scale": Vector2(1, 1)
-},
-"deltas": {
-"modulate": {
-3981250208899: Color(1, 1, 1, 1)
-},
-"position": {
-3981250208899: Vector2(0, 0)
-},
-"rotation": {
-3981250208899: 0.0
-},
-"scale": {
-3981250208899: Vector2(0, 0)
-}
-}
-}
 
 [node name="Juice2D" type="Node" parent="Tile Map Layers/Sprite2D" unique_id=1617169719]
 script = ExtResource("2_w2ktn")

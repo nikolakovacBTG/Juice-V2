@@ -261,28 +261,6 @@ script = ExtResource("12_lcm6r")
 
 [node name="TimeEffectTest" type="Node2D" parent="." unique_id=506428255]
 position = Vector2(800, 400)
-metadata/juice_active_ledger = {
-"base": {
-"modulate": Color(1, 1, 1, 1),
-"position": Vector2(800, 400),
-"rotation": 0.0,
-"scale": Vector2(1, 1)
-},
-"deltas": {
-"modulate": {
-1869787241618: Color(1, 1, 1, 1)
-},
-"position": {
-1869787241618: Vector2(0, 0)
-},
-"rotation": {
-1869787241618: 0.0
-},
-"scale": {
-1869787241618: Vector2(0, 0)
-}
-}
-}
 
 [node name="Sprite2D" type="Sprite2D" parent="TimeEffectTest" unique_id=1985938562]
 modulate = Color(0.8, 0.8, 0.2, 1)
