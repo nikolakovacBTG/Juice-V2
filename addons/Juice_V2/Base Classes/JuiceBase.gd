@@ -519,112 +519,15 @@ func _ready() -> void:
 
 
 
-## Drive one animation frame — routes to SEQUENCER or STACK based on mode.
-## Called by JuiceOrchestrator._process() in both PREVIEW and RUNTIME modes.
-## No-op when not playing — safe to call from the orchestrator every frame.
+## Drive one animation frame — SEQUENCER mode only after Phase 5C2.
+## The STACK tick body was moved to JuiceOrchestrator._process() in Phase 5C2.
+## Orch calls this for SEQUENCER delegation until Phase 5C4 migrates that path too.
+## No-op when not playing — safe to call every frame.
 func tick(delta: float) -> void:
-	# Nothing to do when no animation is active.
-	# _is_playing covers all active states including loop delays
-	# (_on_all_effects_completed re-sets _is_playing = true before _in_loop_delay).
 	if not _is_playing:
 		return
-	# Route SEQUENCER so a single orchestrator drives both modes.
 	if mode == Mode.SEQUENCER:
 		_seq_process_tick(delta)
-		return
-
-	# --- Node-level start_delay: hold before starting effects ---
-	if _in_node_start_delay:
-		_node_delay_elapsed += delta
-		if _node_delay_elapsed < start_delay:
-			# Write base state every frame to beat Container re-sorts
-			_post_tick_write()
-			return
-		_in_node_start_delay = false
-		_start_effects(_pending_play_in)
-		# Fall through to normal tick if effects started this frame
-
-	# --- Iteration delay ---
-	if _in_loop_delay:
-		_loop_delay_elapsed += delta
-		if _loop_delay_elapsed < loop_delay:
-			return
-		_in_loop_delay = false
-		_start_effects(true)
-		return
-
-	# --- Pre-tick: domain-specific external-move detection ---
-	_pre_tick()
-
-	# --- Tick all active effects ---
-	var all_done := true
-	var newly_completed: Array[int] = []
-
-	for idx in _active_effect_indices:
-		if idx < 0 or idx >= _runtime_effects.size():
-			continue
-		var effect := _runtime_effects[idx]
-		if effect == null or not effect.is_playing():
-			continue
-
-		all_done = false
-		var result := effect.tick(delta, _target_node)
-		if result == JuiceEffectBase.TickResult.COMPLETED:
-			newly_completed.append(idx)
-		elif result == JuiceEffectBase.TickResult.RESTART_REVERSED:
-			# REVERSE_EASED accumulation: direction already flipped — restart easing from 0
-			effect.start(_target_node, true, false, self)
-
-	# --- Chained preroll: start chained effects early for overlap ---
-	for idx in _active_effect_indices:
-		if idx < 0 or idx >= _runtime_effects.size():
-			continue
-		var effect := _runtime_effects[idx]
-		if effect == null or not effect.is_playing():
-			continue
-		if effect.chain_to.is_empty() or effect.chained_preroll <= 0.0:
-			continue
-		if effect._chained_preroll_triggered:
-			continue
-		if effect._get_time_to_completion() <= effect.chained_preroll:
-			for chained_effect in effect.chain_to:
-				var chain_idx := _runtime_effects.find(chained_effect)
-				if chain_idx >= 0 and chain_idx not in _active_effect_indices:
-					var chained := _runtime_effects[chain_idx]
-					if chained != null:
-						var play_in := effect._animation_progress >= 0.5
-						chained.start(_target_node, play_in, false, self)
-						_active_effect_indices.append(chain_idx)
-			effect._chained_preroll_triggered = true
-			JuiceLogger.log_info(self, _get_domain_tag(),
-					"Chained preroll: effect %d → %d effects (%.2fs early)" % [
-					idx, effect.chain_to.size(), effect.chained_preroll],
-					debug_enabled)
-
-	# --- Post-tick: domain-specific aggregation + write once ---
-	_post_tick_write()
-
-	# --- Handle completions (chaining) ---
-	for idx in newly_completed:
-		_on_effect_completed(idx)
-
-	# --- Check if ALL effects are done ---
-	if all_done and not newly_completed.is_empty():
-		_on_all_effects_completed()
-	elif all_done and _active_effect_indices.is_empty():
-		_on_all_effects_completed()
-
-	# Re-check: are ALL effects truly done?
-	var any_playing := false
-	for idx in _active_effect_indices:
-		if idx >= 0 and idx < _runtime_effects.size():
-			var eff := _runtime_effects[idx]
-			if eff != null and eff.is_playing():
-				any_playing = true
-				break
-
-	if not any_playing and not _in_loop_delay:
-		_on_all_effects_completed()
 
 
 func _exit_tree() -> void:

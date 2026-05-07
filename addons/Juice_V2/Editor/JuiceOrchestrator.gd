@@ -65,16 +65,115 @@ var active_effect_indices: Array[int] = []
 # LIFECYCLE
 # =============================================================================
 
-# Drive one PREVIEW tick per frame by calling the managed node's tick().
-# RUNTIME mode is excluded — JuiceBase drives its own _process() until Phase 5B2.
-# This method runs automatically because the orchestrator is a Node child of the
-# domain node; Godot's scene tree enables _process by default.
+# Drives one animation frame per scene-tree tick.
+# STACK mode: tick body is fully inlined here — no _node.tick() call needed, arrays are local.
+# SEQUENCER mode: delegates to _node.tick() → _seq_process_tick() until Phase 5C4.
 func _process(delta: float) -> void:
 	if not _is_node_valid():
 		return
-	# Drive tick() for both PREVIEW and RUNTIME modes.
-	# JuiceBase.tick() returns immediately when _is_playing is false — safe to call every frame.
-	_node.tick(delta)
+
+	# SEQUENCER: delegate to JuiceBase until Phase 5C4 migrates that body too.
+	if _node.mode == JuiceBase.Mode.SEQUENCER:
+		_node.tick(delta)
+		return
+
+	# No animation active — safe no-op every frame.
+	if not _node._is_playing:
+		return
+
+	# --- Node-level start_delay: hold before starting effects ---
+	if _node._in_node_start_delay:
+		_node._node_delay_elapsed += delta
+		if _node._node_delay_elapsed < _node.start_delay:
+			# Write base state every frame to beat Container re-sorts
+			_node._post_tick_write()
+			return
+		_node._in_node_start_delay = false
+		_node._start_effects(_node._pending_play_in)
+		# Fall through to normal tick if effects started this frame
+
+	# --- Iteration delay ---
+	if _node._in_loop_delay:
+		_node._loop_delay_elapsed += delta
+		if _node._loop_delay_elapsed < _node.loop_delay:
+			return
+		_node._in_loop_delay = false
+		_node._start_effects(true)
+		return
+
+	# --- Pre-tick: domain-specific external-move detection ---
+	_node._pre_tick()
+
+	# --- Tick all active effects ---
+	var all_done := true
+	var newly_completed: Array[int] = []
+
+	for idx in active_effect_indices:
+		if idx < 0 or idx >= runtime_effects.size():
+			continue
+		var effect := runtime_effects[idx]
+		if effect == null or not effect.is_playing():
+			continue
+
+		all_done = false
+		var result := effect.tick(delta, _node._target_node)
+		if result == JuiceEffectBase.TickResult.COMPLETED:
+			newly_completed.append(idx)
+		elif result == JuiceEffectBase.TickResult.RESTART_REVERSED:
+			# REVERSE_EASED accumulation: direction already flipped — restart easing from 0
+			effect.start(_node._target_node, true, false, _node)
+
+	# --- Chained preroll: start chained effects early for overlap ---
+	for idx in active_effect_indices:
+		if idx < 0 or idx >= runtime_effects.size():
+			continue
+		var effect := runtime_effects[idx]
+		if effect == null or not effect.is_playing():
+			continue
+		if effect.chain_to.is_empty() or effect.chained_preroll <= 0.0:
+			continue
+		if effect._chained_preroll_triggered:
+			continue
+		if effect._get_time_to_completion() <= effect.chained_preroll:
+			for chained_effect in effect.chain_to:
+				var chain_idx := runtime_effects.find(chained_effect)
+				if chain_idx >= 0 and chain_idx not in active_effect_indices:
+					var chained := runtime_effects[chain_idx]
+					if chained != null:
+						var play_in := effect._animation_progress >= 0.5
+						chained.start(_node._target_node, play_in, false, _node)
+						active_effect_indices.append(chain_idx)
+			effect._chained_preroll_triggered = true
+			JuiceLogger.log_info(_node, _node._get_domain_tag(),
+					"Chained preroll: effect %d \u2192 %d effects (%.2fs early)" % [
+					idx, effect.chain_to.size(), effect.chained_preroll],
+					debug_enabled)
+
+	# --- Post-tick: domain-specific aggregation + write once ---
+	_node._post_tick_write()
+
+	# --- Handle completions ---
+	for idx in newly_completed:
+		_node._on_effect_completed(idx)
+
+	# --- Check if ALL effects are done ---
+	if all_done and not newly_completed.is_empty():
+		_node._on_all_effects_completed()
+	elif all_done and active_effect_indices.is_empty():
+		_node._on_all_effects_completed()
+
+	# Re-check: are ALL effects truly done?
+	var any_playing := false
+	for idx in active_effect_indices:
+		if idx >= 0 and idx < runtime_effects.size():
+			var eff := runtime_effects[idx]
+			if eff != null and eff.is_playing():
+				any_playing = true
+				break
+
+	if not any_playing and not _node._in_loop_delay:
+		_node._on_all_effects_completed()
+
 
 
 # Clean up the ledger source when this orchestrator is freed.
