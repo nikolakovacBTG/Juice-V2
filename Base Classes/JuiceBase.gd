@@ -519,17 +519,6 @@ func _ready() -> void:
 
 
 
-## Drive one animation frame — SEQUENCER mode only after Phase 5C2.
-## The STACK tick body was moved to JuiceOrchestrator._process() in Phase 5C2.
-## Orch calls this for SEQUENCER delegation until Phase 5C4 migrates that path too.
-## No-op when not playing — safe to call every frame.
-func tick(delta: float) -> void:
-	if not _is_playing:
-		return
-	if mode == Mode.SEQUENCER:
-		_seq_process_tick(delta)
-
-
 func _exit_tree() -> void:
 	# Clean up: undo contributions and stop all effects
 	if _target_node != null:
