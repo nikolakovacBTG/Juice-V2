@@ -16,7 +16,6 @@
 #           Register or deregister the ledger (Phase 5). Drive _process itself.
 # ============================================================================
 
-@tool
 class_name JuiceOrchestrator
 extends Object
 

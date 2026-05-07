@@ -13,6 +13,7 @@
 #           Cache or pool orchestrators (Phase 5 concern if needed).
 # ============================================================================
 
+@tool
 class_name JuiceOrchestratorFactory
 
 
@@ -39,11 +40,19 @@ class_name JuiceOrchestratorFactory
 ##   # on node exit:
 ##   orch.teardown()
 static func create(node: JuiceBase, mode: JuiceOrchestrator.Mode) -> JuiceOrchestrator:
-	var orch := JuiceOrchestrator.new()
+	if node == null:
+		JuiceLogger.warn(null, "OrchestratorFactory",
+				"create() called with null node — returning null.", false)
+		return null
 	# Target resolution: parent is the default animation target for STACK mode.
 	# In Phase 5 this will resolve via JuiceBase._target_node — using parent now
 	# to match the Phase 4 delegating pattern without reaching into private state.
-	var target: Node = node.get_parent() if node != null else null
-	var recipe: JuiceRecipe = node.recipe if node != null else null
+	var target: Node = node.get_parent()
+	var recipe: JuiceRecipe = node.recipe
+	var mode_str := "PREVIEW" if mode == JuiceOrchestrator.Mode.PREVIEW else "RUNTIME"
+	JuiceLogger.log_info(node, "OrchestratorFactory",
+			"create() | node=%s | mode=%s" % [node.name, mode_str],
+			node.debug_enabled)
+	var orch := JuiceOrchestrator.new()
 	orch.setup(node, recipe, target, mode)
 	return orch
