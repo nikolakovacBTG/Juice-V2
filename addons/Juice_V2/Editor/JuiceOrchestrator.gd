@@ -65,16 +65,17 @@ var active_effect_indices: Array[int] = []
 # LIFECYCLE
 # =============================================================================
 
-# Drives one animation frame per scene-tree tick.
-# STACK mode: tick body is fully inlined here — no _node.tick() call needed, arrays are local.
-# SEQUENCER mode: delegates to _node.tick() → _seq_process_tick() until Phase 5C4.
+# Drives one animation frame per scene-tree tick for both modes.
+# STACK: full tick body inlined — arrays are local fields on this orch.
+# SEQUENCER: calls _seq_process_tick() directly on the node (no tick() indirection).
 func _process(delta: float) -> void:
 	if not _is_node_valid():
 		return
 
-	# SEQUENCER: delegate to JuiceBase until Phase 5C4 migrates that body too.
+	# SEQUENCER: call the sequencer tick body directly.
 	if _node.mode == JuiceBase.Mode.SEQUENCER:
-		_node.tick(delta)
+		if _node._is_playing:
+			_node._seq_process_tick(delta)
 		return
 
 	# No animation active — safe no-op every frame.
