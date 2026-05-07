@@ -294,15 +294,34 @@ func _validate_property(property: Dictionary) -> void:
 # =============================================================================
 
 
-# Runtime-cloned effects from the recipe (independent state per node).
-var _runtime_effects: Array[JuiceEffectBase] = []
+# Runtime-cloned effects — stored on the active orchestrator, not JuiceBase.
+# Computed property delegates to _runtime_orchestrator.runtime_effects so all 50+
+# existing callers in JuiceBase work unchanged. Returns [] when orch is absent
+# (non-preview editor context where _ready() returns early).
+var _runtime_effects: Array[JuiceEffectBase]:
+	get:
+		if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
+			return _runtime_orchestrator.runtime_effects
+		return []
+	set(v):
+		if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
+			_runtime_orchestrator.runtime_effects = v
 
 # True after set_external_progress has initialised effects for the first time.
 var _external_progress_initialized: bool = false
 
 
-# Which effects are currently active (being ticked).
-var _active_effect_indices: Array[int] = []
+# Active effect indices — stored on the orchestrator alongside runtime_effects.
+# Computed property for zero-change migration: all callers use _active_effect_indices
+# as before; reads and writes are transparently forwarded to the orch.
+var _active_effect_indices: Array[int]:
+	get:
+		if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
+			return _runtime_orchestrator.active_effect_indices
+		return []
+	set(v):
+		if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
+			_runtime_orchestrator.active_effect_indices = v
 
 # Target node — what effects animate (resolved at _ready).
 var _target_node: Node = null
@@ -415,6 +434,12 @@ func _ready() -> void:
 		if recipe != null:
 			JuiceEditorContext.register_recipe(recipe, self)
 		return
+
+	# Create RUNTIME orchestrator before any array access. Eager creation here (vs lazy
+	# in _start_effects) ensures _runtime_effects and _active_effect_indices computed
+	# properties route to the orch from the first _invalidate_runtime_effects() call.
+	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+	add_child(_runtime_orchestrator)
 
 	# Resolve target (what effects animate)
 	# STACK: single parent target. SEQUENCER: null here (targets resolved per-sequence).
@@ -1083,13 +1108,11 @@ func _start_effects(play_in: bool) -> void:
 
 
 
-	# Spawn RUNTIME orchestrator on first play — persists for the node's lifetime.
-	# In PREVIEW mode, PreviewDirector already set _runtime_orchestrator to the PREVIEW orch,
-	# so the null-check is a no-op (zero-allocation, no double-spawn in either mode).
+	# Safety guard — orch is created eagerly in _ready(), so this never fires in normal
+	# operation. Kept as a defensive check for edge cases (node never entered scene tree).
 	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
 		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
 		add_child(_runtime_orchestrator)
-	# else: existing orch already ticking — zero-allocation retrigger
 
 	# Log started effects with their type names so the orchestration chain is
 	# auditable: which specific effects are playing, not just how many.
@@ -1303,8 +1326,8 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
 
-	# Spawn RUNTIME orchestrator on first sequence start — persists for the node's lifetime.
-	# In PREVIEW mode, PreviewDirector already set _runtime_orchestrator to the PREVIEW orch.
+	# Safety guard — orch is always created in _ready(), so this is a no-op in normal
+	# operation. Defensive check only.
 	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
 		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
 		add_child(_runtime_orchestrator)
