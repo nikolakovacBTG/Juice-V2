@@ -32,10 +32,6 @@ class_name JuiceLedger
 # the tree_exiting auto-erase connected in ensure().
 static var _store: Dictionary = {}
 
-# Kept for backward compatibility with JuiceBase._sync_stale_editor_ledger_base.
-# Removed in Phase 3 when that patch is deleted.
-const KEY := &"juice_active_ledger"
-
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -183,10 +179,10 @@ static func get_base(target: Node, prop: String, fallback: Variant) -> Variant:
 
 
 ## Overwrites the stored base value for [param prop] with [param value].
-## Use only when the persisted base is known-stale — for example, when an
-## editor-preview init fires and the ledger was saved before a @tool node
-## (e.g. TileMapLayer) had finished its own deferred initialization.
-## Never call this during runtime animation.
+## Use to correct a base that was seeded with a placeholder before the true
+## natural value was available — for example, when appearance state is lazily
+## resolved after the working material is established.
+## Never call this during active animation.
 static func force_base(target: Node, prop: String, value: Variant) -> void:
 	if not _store.has(target.get_instance_id()):
 		return
