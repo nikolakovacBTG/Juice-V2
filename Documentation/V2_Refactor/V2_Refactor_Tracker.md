@@ -16,15 +16,15 @@
 | 3.1 | Plugin Shell + JuiceBase Migration | ✅ Complete | e76632d | Plugin created, show/hide migrated |
 | 3.2 | Domain Node Wrapper Migration | ✅ Complete | e76632d | _validate_property restored (hint-only, hybrid) |
 | 3.3 | TestEditorInspectorPlugin + MCP F1/F2 | ✅ Complete | e76632d | 8 headless + 2 MCP tests pass |
-| 4.1 | Orchestrator + Factory Skeletons | ❌ Not started | | |
-| 4.2 | PREVIEW Mode Lifecycle | ❌ Not started | | |
-| 4.3 | RUNTIME Mode + Zero-Alloc Retrigger | ❌ Not started | | |
-| 4.4 | Wire PreviewDirector + MCP Tests | ❌ Not started | | |
-| 5 | Gut Domain Nodes + Config Warnings | ❌ Not started | | |
+| 4A | Orchestrator + Factory Build | ✅ Complete | 91efe4d | JuiceOrchestrator + JuiceOrchestratorFactory |
+| 4B | Wire PreviewDirector + Tests | ✅ Complete | 91efe4d | transport 30/30, orchestrator 9/9, factory 5/5 |
+| 5 | Gut Domain Nodes + Config Warnings | ❌ Not started | | Tick loop extraction → JuiceOrchestrator |
 | 6 | Property Family Reintroduction | ❌ Not started | | |
 | 7 | Systematic Effect Audit | ❌ Not started | | |
 | 8 | Polish, Documentation & Merge | ❌ Not started | | |
 | 9 | Custom Inspector GUI | ❌ Not started | | |
+
+**Current test count: 610/610 (0 failures)**
 
 ---
 
