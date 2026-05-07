@@ -1213,7 +1213,7 @@ func _stop_matching_siblings() -> void:
 			var sib_identity: Variant = sib_effect._get_interrupt_identity()
 			for my_id in my_identities:
 				if typeof(sib_identity) == typeof(my_id) and sib_identity == my_id:
-					juice_sibling.stop()
+					juice_sibling.stop_and_hold()
 					JuiceLogger.log_info(self, _get_domain_tag(),
 							"Interrupted sibling '%s'" % sibling.name,
 							debug_enabled)
