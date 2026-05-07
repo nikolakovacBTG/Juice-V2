@@ -2,23 +2,23 @@
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_m8ohx"]
 [ext_resource type="PackedScene" uid="uid://cdlx8fqc3ne7y" path="res://Demo/Prefabs/juicy_button.tscn" id="2_bhrb6"]
-[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="3_fay60"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="4_bhrb6"]
-[ext_resource type="Script" uid="uid://bh4tgf0c85bbh" path="res://addons/Juice_V1/Meta/SceneActionControlJuiceUtility.gd" id="5_008jw"]
-[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="5_lfgkc"]
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V2/Base Classes/JuiceControl.gd" id="3_fay60"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="4_bhrb6"]
+[ext_resource type="Script" uid="uid://bh4tgf0c85bbh" path="res://addons/Juice_V2/Meta/SceneActionControlJuiceUtility.gd" id="5_008jw"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V2/Base Classes/JuiceControlRecipe.gd" id="5_lfgkc"]
 [ext_resource type="PackedScene" uid="uid://droed4gs2ot0i" path="res://Demo/Scenes/Control_Demo.tscn" id="6_3p8n2"]
 [ext_resource type="PackedScene" uid="uid://0jn7axm6pb17" path="res://Demo/Scenes/2D_Demo.tscn" id="8_3p8n2"]
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
-[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
-[ext_resource type="Script" uid="uid://y8nr8f3an3h3" path="res://addons/Juice_V1/Meta/VFXJuiceEffect.gd" id="13_q1ksy"]
-[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="14_6mvn5"]
+[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
+[ext_resource type="Script" uid="uid://y8nr8f3an3h3" path="res://addons/Juice_V2/Meta/VFXJuiceEffect.gd" id="13_q1ksy"]
+[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V2/Base Classes/Juice2D.gd" id="14_6mvn5"]
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
 [ext_resource type="PackedScene" uid="uid://hmywymxq54gw" path="res://Demo/Scenes/gpu_particles_2d.tscn" id="14_vyqmh"]
-[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
-[ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V1/icons/JuiceBase.svg" id="15_ve81s"]
-[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="16_w3iwx"]
-[ext_resource type="Script" uid="uid://dni12p84dccqt" path="res://addons/Juice_V1/Meta/TrailJuiceEffect.gd" id="21_wdhjc"]
+[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
+[ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V2/icons/JuiceBase.svg" id="15_ve81s"]
+[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V2/Base Classes/Juice2DRecipe.gd" id="16_w3iwx"]
+[ext_resource type="Script" uid="uid://dni12p84dccqt" path="res://addons/Juice_V2/Meta/TrailJuiceEffect.gd" id="21_wdhjc"]
 
 [sub_resource type="Gradient" id="Gradient_008jw"]
 interpolation_mode = 2
@@ -283,7 +283,7 @@ metadata/_custom_type_script = "uid://dni12p84dccqt"
 [sub_resource type="Resource" id="Resource_ev3yq"]
 resource_local_to_scene = true
 script = ExtResource("16_w3iwx")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_6i2li"), null])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_c2ixe"), SubResource("Resource_6i2li")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [node name="MainDemoScene" type="Control" unique_id=75509961]
@@ -368,6 +368,7 @@ script = ExtResource("3_fay60")
 mode = 1
 seq_stagger_delay = 0.3
 start_delay = 0.68
+loop_count = 0
 recipe = SubResource("Resource_bgrya")
 debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
