@@ -34,7 +34,7 @@ project/assembly_name="Juice Demo"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/Juice_V1/plugin.cfg", "res://addons/anthonyec.camera_preview/plugin.cfg", "res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/kenny_spritesheet_importer/plugin.cfg")
+enabled=PackedStringArray("res://addons/Juice_V2/plugin.cfg", "res://addons/anthonyec.camera_preview/plugin.cfg", "res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/kenny_spritesheet_importer/plugin.cfg")
 
 [gui]
 
@@ -111,7 +111,3 @@ jump={
 }]
 }
 
-[juice]
-
-debug/log_to_file=true
-debug/verbose=true
