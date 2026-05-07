@@ -65,9 +65,8 @@ var debug_enabled: bool = false
 func _process(delta: float) -> void:
 	if not _is_node_valid():
 		return
-	if _mode != Mode.PREVIEW:
-		# RUNTIME: JuiceBase._process() still drives tick(). Phase 5B2 moves this here.
-		return
+	# Drive tick() for both PREVIEW and RUNTIME modes.
+	# JuiceBase.tick() returns immediately when _is_playing is false — safe to call every frame.
 	_node.tick(delta)
 
 
