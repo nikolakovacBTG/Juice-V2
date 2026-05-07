@@ -1,22 +1,24 @@
 ## JuiceLedger — centralized delta-ledger for the Juice System.
 ##
-## Owns the per-target metadata dictionary that tracks each node's natural
+## Owns the per-target in-memory dictionary that tracks each node's natural
 ## (base) property values and all per-source deltas currently applied to it.
 ## Every domain node (_JuiceControl_, _Juice2D_, _Juice3D_) writes through this
 ## class instead of writing directly to the target — ensuring that multiple
 ## concurrent Juice sources are always summed correctly.
 
 # ============================================================================
-# WHAT: Typed static ledger API extracted from JuiceBase.
-# WHY:  Raw Dictionary-in-metadata with no type safety or isolation was
-#       untestable and fragile. A static class with a documented API is
-#       testable in isolation and enforces a single write path.
+# WHAT: Typed static ledger API for the Juice System.
+# WHY:  Ledger state is session-transient — it must not survive scene saves.
+#       A static Dictionary keyed by instance ID keeps all ledger data in
+#       process memory only, never in the Godot serialization pipeline.
+#       Node metadata is part of Godot's serialization path and caused stale
+#       base values to be baked into .tscn files, corrupting animation origins.
 # SYSTEM: Juice System (addons/Juice_V1/)
 # DOES NOT: Know about domains, effects, or recipes.
 #           Does not inherit from Node — pure static utility.
 # ============================================================================
 #
-# LEDGER SCHEMA (stored as Node metadata under KEY):
+# LEDGER SCHEMA (one entry per active target, keyed by get_instance_id()):
 #   {
 #     "base":   { "position": Vector2, "rotation": float, ... }
 #     "deltas": { "position": { source_id: delta, ... }, ... }
@@ -25,7 +27,13 @@
 
 class_name JuiceLedger
 
-# --- Private storage key ---
+# In-memory store: keyed by target.get_instance_id().
+# Never serialized. Created in ensure(), erased in cleanup_source() or via
+# the tree_exiting auto-erase connected in ensure().
+static var _store: Dictionary = {}
+
+# Kept for backward compatibility with JuiceBase._sync_stale_editor_ledger_base.
+# Removed in Phase 3 when that patch is deleted.
 const KEY := &"juice_active_ledger"
 
 # =============================================================================
@@ -42,17 +50,19 @@ static func zero_for(value: Variant) -> Variant:
 	return null
 
 
-## Ensures the ledger exists on [param target] and that each property in
+## Ensures the ledger exists for [param target] and that each property in
 ## [param props] has its base value recorded from the current node state.
 ## Prevents duplicate instantiations of the ledger while ensuring all requested properties are tracked before animation begins. Safe to call every frame.
 static func ensure(target: Node, props: Array[String]) -> Dictionary:
-	var ledger: Dictionary
-	if not target.has_meta(KEY):
-		ledger = {"base": {}, "deltas": {}}
-		target.set_meta(KEY, ledger)
-	else:
-		ledger = target.get_meta(KEY)
-
+	var id := target.get_instance_id()
+	if not _store.has(id):
+		var ledger: Dictionary = {"base": {}, "deltas": {}}
+		_store[id] = ledger
+		# Auto-erase when target leaves the tree. Covers the case where the
+		# target is freed before the Juice node's _exit_tree fires.
+		# CONNECT_ONE_SHOT auto-disconnects after the signal fires once.
+		target.tree_exiting.connect(func(): _store.erase(id), CONNECT_ONE_SHOT)
+	var ledger: Dictionary = _store[id]
 	for prop in props:
 		if not ledger["base"].has(prop):
 			ledger["base"][prop] = target.get(prop)
@@ -63,8 +73,9 @@ static func ensure(target: Node, props: Array[String]) -> Dictionary:
 ## and adjusts the ledger base accordingly so subsequent animation reads are correct.
 ## Ensures that external movement (like layout engines or game logic) doesn't cause the juice animation to snap back to an outdated origin. Container positions are handled with special idle-only logic to avoid axis corruption.
 static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
-	if not target.has_meta(KEY): return
-	var ledger: Dictionary = target.get_meta(KEY)
+	var id := target.get_instance_id()
+	if not _store.has(id): return
+	var ledger: Dictionary = _store[id]
 
 	for prop in props:
 		if not ledger["base"].has(prop): continue
@@ -137,8 +148,9 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 ## Registers [param delta] for [param prop] from [param source] on [param target].
 ## Allows multiple effects (e.g. hover and click) to independently contribute to the same property without overwriting each other. Re-registering from the same source replaces the previous value.
 static func register_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
-	if not target.has_meta(KEY): return
-	var ledger: Dictionary = target.get_meta(KEY)
+	var id := target.get_instance_id()
+	if not _store.has(id): return
+	var ledger: Dictionary = _store[id]
 	if not ledger["deltas"].has(prop):
 		ledger["deltas"][prop] = {}
 	var source_id := source.get_instance_id()
@@ -148,8 +160,8 @@ static func register_delta(target: Node, source: Node, prop: String, delta: Vari
 ## Returns the summed total delta for [param prop] across all registered sources.
 ## Aggregates all active effect contributions so the domain node can perform a single combined write per frame. Colors are multiplied (modulate factors); all other types are added.
 static func get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
-	if not target.has_meta(KEY): return zero_val
-	var ledger: Dictionary = target.get_meta(KEY)
+	if not _store.has(target.get_instance_id()): return zero_val
+	var ledger: Dictionary = _store[target.get_instance_id()]
 	if not ledger["deltas"].has(prop): return zero_val
 	var total: Variant = zero_val
 	for delta_val: Variant in ledger["deltas"][prop].values():
@@ -165,8 +177,8 @@ static func get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
 ## Returns the recorded natural (base) value for [param prop].
 ## Safely retrieves the unmodified property value, falling back to the current value if the ledger hasn't captured it yet.
 static func get_base(target: Node, prop: String, fallback: Variant) -> Variant:
-	if not target.has_meta(KEY): return fallback
-	var ledger: Dictionary = target.get_meta(KEY)
+	if not _store.has(target.get_instance_id()): return fallback
+	var ledger: Dictionary = _store[target.get_instance_id()]
 	return ledger["base"].get(prop, fallback)
 
 
@@ -176,9 +188,9 @@ static func get_base(target: Node, prop: String, fallback: Variant) -> Variant:
 ## (e.g. TileMapLayer) had finished its own deferred initialization.
 ## Never call this during runtime animation.
 static func force_base(target: Node, prop: String, value: Variant) -> void:
-	if not target.has_meta(KEY):
+	if not _store.has(target.get_instance_id()):
 		return
-	var ledger: Dictionary = target.get_meta(KEY)
+	var ledger: Dictionary = _store[target.get_instance_id()]
 	if ledger["base"].has(prop):
 		ledger["base"][prop] = value
 
@@ -189,18 +201,19 @@ static func force_base(target: Node, prop: String, value: Variant) -> void:
 ## Returns [code]{}[/code] when no ledger exists — effects fall back to
 ## target.property safely.
 static func get_base_dict(target: Node) -> Dictionary:
-	if target == null or not target.has_meta(KEY):
+	if target == null or not _store.has(target.get_instance_id()):
 		return {}
-	var ledger: Dictionary = target.get_meta(KEY)
+	var ledger: Dictionary = _store[target.get_instance_id()]
 	return ledger.get("base", {})
 
 
 ## Removes all deltas registered by [param source] from [param target]'s ledger.
 ## If [param permanently] is [code]true[/code] and no other sources remain,
-## restores all base values and removes the ledger metadata entirely.
+## restores all base values and removes the ledger entry entirely.
 static func cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
-	if not target.has_meta(KEY): return
-	var ledger: Dictionary = target.get_meta(KEY)
+	var id := target.get_instance_id()
+	if not _store.has(id): return
+	var ledger: Dictionary = _store[id]
 	var source_id := source.get_instance_id()
 
 	var any_remaining := false
@@ -217,7 +230,7 @@ static func cleanup_source(target: Node, source: Node, permanently: bool = true)
 			if prop.begins_with("_"):
 				continue
 			target.set(prop, ledger["base"][prop])
-		target.remove_meta(KEY)
+		_store.erase(id)
 
 
 ## Immediately writes the combined value for tracked properties to the target node.
@@ -229,8 +242,8 @@ static func cleanup_source(target: Node, source: Node, permanently: bool = true)
 ## properties are flushed.
 ## All REMAINING sources (e.g. an active hover) are preserved.
 static func flush(target: Node, props: Array[String] = []) -> void:
-	if not target.has_meta(KEY): return
-	var ledger: Dictionary = target.get_meta(KEY)
+	if not _store.has(target.get_instance_id()): return
+	var ledger: Dictionary = _store[target.get_instance_id()]
 	var keys: Array = props if not props.is_empty() else ledger["base"].keys()
 	for prop: String in keys:
 		# Skip synthetic keys (e.g. "_appearance_factor") — not real Node properties.
@@ -259,4 +272,9 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 ## Returns [code]true[/code] if [param target] has an active ledger.
 ## Quickly checks if a target is currently under Juice control without allocating.
 static func has_ledger(target: Node) -> bool:
-	return target != null and target.has_meta(KEY)
+	return target != null and _store.has(target.get_instance_id())
+
+
+## Returns the number of active ledger entries. For test verification only.
+static func _store_entry_count() -> int:
+	return _store.size()

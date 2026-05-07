@@ -28,6 +28,7 @@ func get_test_methods() -> Array[String]:
 		"test_cleanup_non_permanently_keeps_meta",
 		"test_sync_base_detects_external_move",
 		"test_zero_for_returns_correct_types",
+		"test_store_cleared_when_target_freed",
 	]
 
 # =============================================================================
@@ -214,3 +215,19 @@ func test_zero_for_returns_correct_types() -> void:
 
 	var col_zero: Variant = JuiceLedger.zero_for(Color.RED)
 	assert_true(col_zero is Color, "zero_for(Color) should return Color")
+
+func test_store_cleared_when_target_freed() -> void:
+	# Verify that the tree_exiting auto-erase in ensure() fires correctly.
+	# After queue_free() + one process frame, the target's ledger entry must
+	# be gone — regardless of whether the Juice node's _exit_tree fires first.
+	var target := create_2d_target()
+	var count_before := JuiceLedger._store_entry_count()
+	JuiceLedger.ensure(target, ["position"])
+	assert_true(JuiceLedger.has_ledger(target), "Ledger must exist after ensure")
+	assert_equal(JuiceLedger._store_entry_count(), count_before + 1,
+		"Store count must increase by 1 after ensure")
+	target.queue_free()
+	await _runner.get_tree().process_frame
+	# Do NOT touch target here — it may be freed. Check via count only.
+	assert_equal(JuiceLedger._store_entry_count(), count_before,
+		"Store entry must be erased when target is freed via tree_exiting")
