@@ -12,8 +12,8 @@
 #       Extends Node (not Object) so _process runs natively and queue_free()
 #       provides automatic scene-tree cleanup — no manual deferred freeing needed.
 # SYSTEM: Juice V2 Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Own the tick loop (JuiceBase does in Phase 4). Clone effects (Phase 5C).
-#           Register or deregister the ledger (Phase 5C). Drive _process itself (Phase 5B).
+# DOES NOT: Clone effects (Phase 5C). Register or deregister the ledger (Phase 5C).
+#           Drive RUNTIME ticks — JuiceBase still owns its _process in RUNTIME mode until Phase 5B2.
 # ============================================================================
 
 @tool
@@ -52,6 +52,23 @@ var _mode: Mode = Mode.PREVIEW
 
 # Debug flag — mirrors the managed node's debug_enabled by default.
 var debug_enabled: bool = false
+
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+# Drive one PREVIEW tick per frame by calling the managed node's tick().
+# RUNTIME mode is excluded — JuiceBase drives its own _process() until Phase 5B2.
+# This method runs automatically because the orchestrator is a Node child of the
+# domain node; Godot's scene tree enables _process by default.
+func _process(delta: float) -> void:
+	if not _is_node_valid():
+		return
+	if _mode != Mode.PREVIEW:
+		# RUNTIME: JuiceBase._process() still drives tick(). Phase 5B2 moves this here.
+		return
+	_node.tick(delta)
 
 
 # =============================================================================
