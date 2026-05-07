@@ -440,10 +440,6 @@ func _notification(what: int) -> void:
 			target = _resolve_target()
 		if target == null:
 			return
-		# Stale-ledger healing: before baking, sync the persisted ledger base to
-		# match the node's actual properties. Prevents a corrupted (0,0) base from
-		# being saved into the .tscn and then replayed as a snap on next load.
-		_sync_stale_editor_ledger_base(target)
 		for effect in recipe.effects:
 			if effect != null:
 				effect._on_editor_pre_save(target)
@@ -828,14 +824,6 @@ func _deferred_editor_preview_init() -> void:
 	if not _editor_preview_active or _target_node == null:
 		return
 
-	# Stale-ledger guard (editor only):
-	# The scene file may persist a ledger with base values captured before a
-	# @tool node (e.g. TileMapLayer) completed its own deferred init. If the
-	# stored base doesn't match the node's actual property, the ledger is stale
-	# and must be corrected before _capture_base_values() reads it — otherwise
-	# flush() will write the wrong (e.g. 0,0) position back to the node.
-	if Engine.is_editor_hint():
-		_sync_stale_editor_ledger_base(_target_node)
 
 	# Capture base values (domain subclasses: position, rotation, scale).
 	# At this point all deferred @tool inits have run, so position is correct.
@@ -2012,26 +2000,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 # =============================================================================
 
 # Compare every property in the persisted ledger base against the node's
-# actual current value. If they differ, force-correct the ledger entry.
-# Protects against stale serialized bases — e.g. a TileMapLayer whose
-# position was (0,0) when Juice first ran but was later moved and resaved.
-# Safe to call only from the editor deferred preview init path.
-func _sync_stale_editor_ledger_base(target: Node) -> void:
-	if not target.has_meta(JuiceLedger.KEY):
-		return
-	var ledger: Dictionary = target.get_meta(JuiceLedger.KEY)
-	var base: Dictionary = ledger.get("base", {})
-	for prop: String in base.keys():
-		var stored_val: Variant = base[prop]
-		var actual_val: Variant = target.get(prop)
-		if actual_val == null:
-			continue
-		# Comparison: vectors, floats, and Colors all support == natively.
-		if stored_val != actual_val:
-			JuiceLedger.force_base(target, prop, actual_val)
-			JuiceLogger.log_info(self, _get_domain_tag(),
-					"stale ledger corrected: prop='%s' was=%s now=%s" % [
-					prop, stored_val, actual_val], debug_enabled)
 
 # Resolve the source node for trigger_on hint building in _validate_property.
 # Returns null if not in editor, or when the source can't yet be resolved
