@@ -261,6 +261,11 @@ func test_director_loop_off_stops_at_end() -> void:
 	assert_false(director.loop_enabled,
 		"Director loop OFF: loop_enabled should be false")
 
+	# Wait one frame: select() schedules _deferred_editor_preview_init() async.
+	# Without this, the PREVIEW orch has empty runtime_effects when play() runs
+	# and _start_effects() returns early — leaving director.is_playing permanently true.
+	await wait_frames(1)
+
 	# Play, let it complete
 	director.play()
 	await wait_seconds(0.4)

@@ -82,6 +82,13 @@ func _process(delta: float) -> void:
 	if not _node._is_playing:
 		return
 
+	# Superseded guard: if this orchestrator has been replaced (e.g., PREVIEW orch
+	# took over after director.select()), the node routes all array reads/writes
+	# through the newer orch. Running here would call _on_all_effects_completed()
+	# on our empty active_effect_indices, aborting any animation the newer orch drives.
+	if _node._runtime_orchestrator != self:
+		return
+
 	# --- Node-level start_delay: hold before starting effects ---
 	if _node._in_node_start_delay:
 		_node._node_delay_elapsed += delta

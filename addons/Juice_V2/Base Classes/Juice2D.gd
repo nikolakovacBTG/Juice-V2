@@ -57,9 +57,6 @@ func _exit_tree() -> void:
 	if _target_node != null and is_instance_valid(_target_node):
 		JuiceLedger.cleanup_source(_target_node, self)
 
-func _process(delta: float) -> void:
-	super._process(delta)
-
 # =============================================================================
 # TARGET RESOLUTION (Override)
 # =============================================================================
