@@ -497,6 +497,10 @@ func _add_preview_node(node: JuiceBase) -> void:
 	# in deselect() which triggers queue_free() — no manual deferred freeing needed.
 	var orch := JuiceOrchestratorFactory.create(node, JuiceOrchestrator.Mode.PREVIEW)
 	node.add_child(orch)
+	# Register PREVIEW orch as the node's active orchestrator.
+	# _start_effects() uses (orch == null) to decide whether to spawn a RUNTIME orch —
+	# setting it here means PREVIEW mode triggers the no-spawn path automatically.
+	node._runtime_orchestrator = orch
 	_orchestrators[node] = orch
 	_preview_nodes.append(node)
 	_connect_node_signals(node)

@@ -414,7 +414,6 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		if recipe != null:
 			JuiceEditorContext.register_recipe(recipe, self)
-		set_process(false)
 		return
 
 	# Resolve target (what effects animate)
@@ -493,15 +492,6 @@ func _ready() -> void:
 	# already fired, so positions are correct.
 	call_deferred("_post_ready_init")
 
-
-func _process(delta: float) -> void:
-	# In PREVIEW mode, JuiceOrchestrator._process() drives ticks via tick().
-	if _editor_preview_active:
-		return
-	if Engine.is_editor_hint():
-		return
-
-	# STACK + SEQUENCER: _runtime_orchestrator drives tick() — Phase 5B2+5B3.
 
 
 ## Drive one animation frame — routes to SEQUENCER or STACK based on mode.
@@ -620,7 +610,7 @@ func _exit_tree() -> void:
 			if effect != null and effect.is_playing():
 				effect.stop(_target_node)
 	_active_effect_indices.clear()
-	set_process(false)
+
 
 # Deferred counterpart to _ready().
 # Runs after the Container engine has finished sorting its children for the
@@ -656,9 +646,7 @@ func _post_ready_init() -> void:
 	if trigger_on == TriggerEvent.ON_READY:
 		_handle_trigger({"play_in": true})
 
-	# Default to no processing. If ON_READY already set _is_playing, keep it.
-	if not _is_playing:
-		set_process(false)
+
 
 
 
@@ -1095,13 +1083,13 @@ func _start_effects(play_in: bool) -> void:
 
 
 
-	# Ensure RUNTIME orchestrator exists to drive tick() each frame.
-	# Skip in PREVIEW mode: the PREVIEW orchestrator is already driving tick().
-	# Reuse if already alive — zero-allocation retrigger (no new() call, no GC pressure).
-	if not _editor_preview_active:
-		if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
-			_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-			add_child(_runtime_orchestrator)
+	# Spawn RUNTIME orchestrator on first play — persists for the node's lifetime.
+	# In PREVIEW mode, PreviewDirector already set _runtime_orchestrator to the PREVIEW orch,
+	# so the null-check is a no-op (zero-allocation, no double-spawn in either mode).
+	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		add_child(_runtime_orchestrator)
+	# else: existing orch already ticking — zero-allocation retrigger
 
 	# Log started effects with their type names so the orchestration chain is
 	# auditable: which specific effects are playing, not just how many.
@@ -1315,13 +1303,12 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
 
-	# Ensure RUNTIME orchestrator exists to drive _seq_process_tick() each frame.
-	# Skip in PREVIEW mode: PREVIEW orch already drives tick().
-	# Reuse if already alive — zero-allocation retrigger.
-	if not _editor_preview_active:
-		if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
-			_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-			add_child(_runtime_orchestrator)
+	# Spawn RUNTIME orchestrator on first sequence start — persists for the node's lifetime.
+	# In PREVIEW mode, PreviewDirector already set _runtime_orchestrator to the PREVIEW orch.
+	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		add_child(_runtime_orchestrator)
+	# else: existing orch already ticking — zero-allocation retrigger
 
 	# Warmup BEFORE start_delay: pre-position targets at From state immediately
 	# so they don't flash at Self/natural position during the delay window.
