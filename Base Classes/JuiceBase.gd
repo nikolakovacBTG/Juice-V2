@@ -336,7 +336,8 @@ var _queued_trigger: Dictionary = {}
 # short-circuiting in editor and to gate preview-only code paths.
 var _editor_preview_active: bool = false
 # Holds the RUNTIME orchestrator driving tick() for STACK-mode animations.
-# Null when idle. Spawned in _start_effects(), freed in _free_runtime_orchestrator().
+# Alive from first play until JuiceBase exits the scene tree (freed automatically as a child).
+# Never freed mid-session — retriggers reuse the same instance (zero-allocation, no GC stutter).
 var _runtime_orchestrator: JuiceOrchestrator = null
 
 # --- Sequencer-specific state (SEQUENCER mode only) ---
@@ -692,7 +693,6 @@ func stop() -> void:
 	_in_loop_delay = false
 	# Write natural state (all effect contributions now cleared)
 	_post_tick_write()
-	_free_runtime_orchestrator()
 	JuiceLogger.log_info(self, _get_domain_tag(), "Stopped", debug_enabled)
 
 
@@ -706,7 +706,7 @@ func stop_and_hold() -> void:
 	_active_effect_indices.clear()
 	_is_playing = false
 	_in_loop_delay = false
-	_free_runtime_orchestrator()
+
 
 
 ## Toggle between animate_in and animate_out.
@@ -1095,13 +1095,13 @@ func _start_effects(play_in: bool) -> void:
 
 
 
-	# Spawn RUNTIME orchestrator — its _process() drives tick() each frame.
+	# Ensure RUNTIME orchestrator exists to drive tick() each frame.
 	# Skip in PREVIEW mode: the PREVIEW orchestrator is already driving tick().
-	# Spawning a second orchestrator here would double-tick every animation frame.
+	# Reuse if already alive — zero-allocation retrigger (no new() call, no GC pressure).
 	if not _editor_preview_active:
-		_free_runtime_orchestrator()  # silent free on loop-restart (no-op when null)
-		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-		add_child(_runtime_orchestrator)
+		if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
+			_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+			add_child(_runtime_orchestrator)
 
 	# Log started effects with their type names so the orchestration chain is
 	# auditable: which specific effects are playing, not just how many.
@@ -1165,13 +1165,11 @@ func _on_all_effects_completed() -> void:
 			_in_loop_delay = true
 			_loop_delay_elapsed = 0.0
 			_is_playing = true
-			# RUNTIME orchestrator stays alive — its _process() drives tick() through the delay.
 		else:
-			_start_effects(true)  # _start_effects frees old orch + spawns fresh one
+			_start_effects(true)
 		return
 
-	# Truly complete — free the orchestrator (halts tick driving for STACK)
-	_free_runtime_orchestrator()
+	# Truly complete
 	completed.emit()
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
@@ -1215,7 +1213,7 @@ func _stop_matching_siblings() -> void:
 			var sib_identity: Variant = sib_effect._get_interrupt_identity()
 			for my_id in my_identities:
 				if typeof(sib_identity) == typeof(my_id) and sib_identity == my_id:
-					juice_sibling.stop_and_hold()
+					juice_sibling.stop()
 					JuiceLogger.log_info(self, _get_domain_tag(),
 							"Interrupted sibling '%s'" % sibling.name,
 							debug_enabled)
@@ -1273,9 +1271,6 @@ func _seq_stop() -> void:
 			var target := target_variant as Node
 			if is_instance_valid(target):
 				_seq_restore_target_natural(target)
-				# Write-through: physically restore ctrl.position = base + remaining deltas.
-				# STACK stop() calls _post_tick_write() for this; SEQUENCER has no equivalent
-				# so without this, ctrl.position stays at the last animated value indefinitely.
 				JuiceLedger.flush(target)
 		for entry in _seq_held_entries:
 			var target := entry.get("target") as Node
@@ -1294,14 +1289,7 @@ func _seq_stop() -> void:
 			var effect: JuiceEffectBase = effect_variant as JuiceEffectBase
 			if effect != null and effect.is_playing() and target != null:
 				effect.stop(target)
-	# Clear the clone cache so the next play creates fresh effects.
-	# Without this, stop-then-replay and mid-loop-stop-then-replay reuse stale
-	# clones with _has_base=true, causing the next animate_in to snap instead
-	# of animate. Natural completion clears the cache in _seq_on_pass_complete;
-	# explicit stop must do the same here.
 	_seq_target_effects.clear()
-
-	_free_runtime_orchestrator()
 
 	JuiceLogger.log_info(self, _get_domain_tag(), "Seq stopped", debug_enabled)
 
@@ -1327,12 +1315,13 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
 
-	# Spawn RUNTIME orchestrator to drive _seq_process_tick() each frame.
-	# Skip in PREVIEW mode: the PREVIEW orchestrator is already driving tick().
+	# Ensure RUNTIME orchestrator exists to drive _seq_process_tick() each frame.
+	# Skip in PREVIEW mode: PREVIEW orch already drives tick().
+	# Reuse if already alive — zero-allocation retrigger.
 	if not _editor_preview_active:
-		_free_runtime_orchestrator()
-		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-		add_child(_runtime_orchestrator)
+		if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
+			_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+			add_child(_runtime_orchestrator)
 
 	# Warmup BEFORE start_delay: pre-position targets at From state immediately
 	# so they don't flash at Self/natural position during the delay window.
@@ -1752,7 +1741,7 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 
 	# --- Sequence fully complete ---
 	_is_playing = false
-	_free_runtime_orchestrator()  # halt tick() driving for SEQUENCER (Phase 5B3)
+	# Orch stays alive — idle no-op ticks until next sequence or node freed.
 	# Drop the per-target clone cache so the next play creates fresh effects.
 	# The cache is a live-session resource — effect clones accumulate base-capture
 	# state (_has_base=true) during a run. Keeping them alive across plays causes
@@ -1791,8 +1780,10 @@ func _capture_base_values() -> void:
 	pass
 
 
-# Free the RUNTIME orchestrator silently — no node.stop() call to avoid recursion.
-# Callers (stop, stop_and_hold, _on_all_effects_completed) handle stop state themselves.
+# Free the RUNTIME orchestrator explicitly.
+# NOT called in normal animation lifecycle (stop, complete, seq_stop) — the orch persists
+# for zero-allocation retriggers. Only call this for exceptional teardown (e.g. scene reload,
+# explicit destruction of the Juice node while wanting to shed the orch immediately).
 func _free_runtime_orchestrator() -> void:
 	if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
 		_runtime_orchestrator.queue_free()
