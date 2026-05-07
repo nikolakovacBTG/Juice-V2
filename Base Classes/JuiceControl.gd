@@ -201,6 +201,16 @@ func _capture_base_values() -> void:
 	JuiceLogger.log_capture(self, "Control", "scale", ctrl.scale, debug_enabled)
 	JuiceLogger.log_capture(self, "Control", "self_modulate", ctrl.self_modulate, debug_enabled)
 
+
+# Sequencer: seed the Ledger for an arbitrary Control target before warmup
+# reads it via JuiceLedger.get_base_dict(). On first preview the Ledger may
+# not yet exist for a button/panel target — this ensure() call seeds it with
+# the Container-managed natural position, fixing the "jump to 0,0" bug.
+func _seq_ensure_ledger_for_target(target: Node) -> void:
+	if target == null or not target is Control:
+		return
+	JuiceLedger.ensure(target, ["position", "rotation", "scale", "self_modulate"])
+
 ## Detect external displacement of the target (Container re-sort, game logic, tweens).
 ## Updates the Shared Target Ledger baseline so animation deltas ride cleanly.
 func _pre_tick() -> void:

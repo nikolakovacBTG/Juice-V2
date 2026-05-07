@@ -1185,13 +1185,16 @@ func _seq_stop() -> void:
 	_seq_target_active_indices.clear()
 	_seq_held_entries.clear()
 
-	# Stop all per-target effect clones
+	# Stop all per-target effect clones — call stop() unconditionally so that
+	# VFX effects (which complete near-instantly) still get _restore_to_natural()
+	# called. Without this, particles from a previous preview persist into replays
+	# because is_playing() returns false before stop is attempted.
 	for target_variant: Variant in _seq_target_effects.keys():
 		var target: Node = target_variant as Node
 		var effects: Array = _seq_target_effects.get(target_variant, []) as Array
 		for effect_variant: Variant in effects:
 			var effect: JuiceEffectBase = effect_variant as JuiceEffectBase
-			if effect != null and effect.is_playing() and target != null:
+			if effect != null and target != null:
 				effect.stop(target)
 	_seq_target_effects.clear()
 
@@ -1420,6 +1423,12 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 	var play_in := not is_reverse
 
 	for target in targets:
+		# Seed the Ledger with the target's current natural position BEFORE effects
+		# read it via JuiceLedger.get_base_dict(). On first preview the Ledger is
+		# empty (no STACK node has called _capture_base_values() yet), so SELF
+		# snapshots would fall back to Vector2.ZERO without this call.
+		_seq_ensure_ledger_for_target(target)
+
 		var effects := _seq_get_or_create_target_effects(target)
 		if effects.is_empty():
 			continue
@@ -1730,6 +1739,17 @@ func _temporarily_reapply_visual() -> void:
 ## erase the natural base that other JuiceControls (hover, scene-action, etc.) rely on.
 func _seq_restore_target_natural(target: Node) -> void:
 	JuiceLedger.cleanup_source(target, self, false)
+
+
+## Sequencer per-target ledger seeding — called once per target at warmup start.
+## Domain subclasses call JuiceLedger.ensure(target, domain_props) here so the
+## Ledger base is populated BEFORE effects read it via get_base_dict(). Without
+## this seed, the first preview run gets an empty ledger and SELF position
+## snapshots fall back to Vector2.ZERO, causing the "jump to 0,0" bug.
+## Non-sequencer (STACK) nodes never call this — they have their own
+## _capture_base_values() lifecycle.
+func _seq_ensure_ledger_for_target(_target: Node) -> void:
+	pass
 
 
 ## Sequencer RECIPE mode: aggregate effect deltas and write to target.
