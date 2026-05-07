@@ -1,126 +1,145 @@
 ---
-description: Comprehensive UX and Integration testing for Juice effects simulating real-world scenarios.
+description: Comprehensive UX and Integration testing for Juice V2 effects simulating real-world scenarios.
 ---
 
 You are in REALISTIC TEST MODE.
 
-This workflow is used to validate effects after they have been ported or developed. It goes beyond unit tests to verify how effects behave in complex, real-world scenes.
+This workflow validates effects after porting or development. It goes beyond unit tests to verify how effects behave in complex, real-world scenes — including both headless runtime logic and live editor behavior.
 
 **Parent workflow:** `/port` or `/architecture`
 
+**Skills auto-invoked:** `@realistic-test-design` — use the scenario libraries and quality check before writing any tests.
+
 ---
+
+## Authorization Gate (MANDATORY)
+
+**This workflow STOPS at bug detection.** When a test fails:
+1. Record the failure precisely: test name, expected value, actual value, reproduction steps
+2. Report it in the summary
+3. **STOP. Do NOT fix it.** Switch to `/bugfix` workflow for fixes.
+
+You may edit **test files only** to fix test setup bugs (wrong assertion, wrong rig) — NOT production code bugs.
+Any production code change requires explicit user authorization and switching to `/bugfix`.
+
+
 
 ## 1. Two Testing Tiers
 
-Juice realistic tests operate on **two tiers**. Both are required. Neither replaces the other.
+Both tiers are required. Neither replaces the other.
 
 | Tier | Runner | What it reaches | When to use |
 |------|--------|-----------------|-------------|
-| **Headless** | `run_tests.tscn` via `--headless` | Runtime logic, ledger math, accumulation, bounds, stacking, lifecycle | Always — fast CI regression |
-| **MCP Editor** | `mcp_godot-mcp_execute_editor_script` in live Godot editor | `@tool` paths, `_enter_editor_preview`, `_temporarily_undo_visual`, `NOTIFICATION_EDITOR_PRE_SAVE`, transport lifecycle | Required for any feature that fires in `Engine.is_editor_hint()` context |
+| **Tier 1 — Headless** | `run_tests.tscn` via `--headless` | Runtime logic, ledger math, accumulation, stacking, lifecycle, orchestrator RUNTIME mode | Always — fast CI regression |
+| **Tier 2 — MCP Editor** | `mcp_godot-mcp_execute_editor_script` in live editor | Orchestrator PREVIEW mode, inspector plugin property visibility, config warnings, editor save lifecycle | Required for any feature with editor-side behavior |
 
-**Never claim editor lifecycle features are tested with headless alone.**
-The headless runner never enters `_editor_preview_active` mode, never fires `NOTIFICATION_EDITOR_PRE_SAVE` the same way the editor does, and never exercises the plugin transport path.
+**Never claim editor lifecycle features are tested with Tier 1 alone.**
+The headless runner never enters PREVIEW mode, never fires `NOTIFICATION_EDITOR_PRE_SAVE` as the editor does, and never exercises the inspector plugin path.
 
 ---
 
-## 2. Setup Test Infrastructure
+## 2. Test Infrastructure Requirements
 
-Before writing realistic tests, ensure the required helper functions exist in `tests/JuiceTestSuite.gd`:
+Before writing realistic tests, verify these helpers exist in `tests/JuiceTestSuite.gd`:
 
-*   `_create_2d_rig_at(pos, target_type)`: Creates a Juice2D + Node2D at a specific non-zero position.
-*   `_create_control_rig_at(pos, target_type)`: Creates a JuiceControl + Button at a specific position.
-*   `_create_3d_rig_at(pos, target_type)`: Creates a Juice3D + Node3D at a specific position.
-*   `assert_changing_over_time(node, property, duration)`: Verifies a property continuously changes (for procedural effects).
-*   `assert_stable(node, property, value, duration)`: Verifies a property remains constant.
+- `_create_2d_rig_at(pos, target_type)` — Juice2D + Node2D at non-zero position
+- `_create_control_rig_at(pos, target_type)` — JuiceControl + Button at position
+- `_create_3d_rig_at(pos, target_type)` — Juice3D + Node3D at position
+- `assert_changing_over_time(node, property, duration)` — verifies continuous change
+- `assert_stable(node, property, value, duration)` — verifies property stays constant
 
 ---
 
 ## 3. Test Scene Layout
 
-Instead of testing a single target at `(0,0)`, realistic tests MUST use:
-*   **Control domain:** A grid of Buttons inside a `GridContainer`.
-*   **2D domain:** Node2D targets distributed at non-zero positions.
-*   **3D domain:** Node3D targets distributed at non-zero 3D positions.
+Realistic tests MUST NOT use targets at `(0,0)`. Use:
+- **Control:** grid of Buttons inside a `GridContainer`
+- **2D:** Node2D targets distributed at non-zero positions
+- **3D:** Node3D targets at non-zero 3D positions
 
 ---
 
-## 4. Required Test Scenarios (Headless Tier)
+## 4. Required Scenarios — Tier 1 (Headless)
 
-You must implement tests covering the following real-world categories for the target effect(s):
+**Use `@realistic-test-design` → `REFERENCES/tier1-scenarios.md` for the full scenario library.**
 
-| Scenario | Objective |
-| :--- | :--- |
-| **Position-relative tests** | Verify effects work correctly when the target is NOT at `(0,0)`. Test custom offsets. |
-| **Stacking — deterministic** | Apply a tween-based effect + the effect under test on the same target. Assert combined delta is correct and neither overwrites the other. |
-| **Stacking — random** | Apply Shake and Noise effects alongside the effect under test. Assert target returns to correct non-zero origin after stop. |
-| **Container tests (Control)** | Apply effects to children of `VBoxContainer`, `HBoxContainer`, or `GridContainer`. Verify Container hold pattern prevents `_sort_children()` from resetting positions. |
-| **Sequencer integration** | Test stagger forward, reverse, and random across a grid of targets. Verify timing and per-target cloning. |
-| **Sustained procedural** | For Noise/Shake/Progress: Use `PLAY_IN_ONLY` and verify continuous animation over time without decaying. |
-| **Toggle lifecycle** | Use the `TOGGLE` trigger on procedural effects. Verify it sustains between toggles and cleans up correctly. |
-| **Mixed recipes** | Combine the effect under test with both a deterministic effect and a random effect in the same recipe. Verify all execute without interference. |
-| **Chained effects** | Chain the effect under test to a Noise effect (`chain_to`). Test chaining with sustained effects. |
-| **Retrigger during sustain** | Trigger a `RESTART` policy on an already-sustaining effect. Verify it restarts cleanly without snapping. |
-| **Inspector registration** | Verify the effect is registered in the appropriate `_CONCRETE_EFFECTS` whitelist. Missing = invisible in inspector. |
+Scenarios are organized into user-behaviour families:
+
+| Family | User Action | Key Coverage |
+|--------|------------|-------------|
+| **A — First-time setup** | Add Juice node, assign recipe, call animate | Graceful failure, empty recipe, non-zero origin |
+| **B — Effect stacking** | Add multiple effects to one recipe, one target | Delta accumulation, two Juice nodes same target, mid-animation stop |
+| **B2 — Concurrent multi-source** | Two Juice nodes, same target, triggered at different times | Full/partial overlap, one stops early, different effect types, retrigger while other active |
+| **C — UI containers** | JuiceControl in VBox/Grid, animate | Container hold, stagger across 3×3 grid, resize mid-animation |
+| **D — Sequencer** | Sequencer across N targets, all stagger modes | Order correctness, retrigger mid-sequence |
+| **E — Triggers & chains** | Chain effects, toggle procedural, signal trigger | Chain timing, toggle state, signal wiring |
+| **K — Runtime robustness** | Spawn/free Juice at runtime, delete target mid-animation | No crash, ledger cleans up, PackedScene instances independent |
+
+**Minimum required:** at least one scenario from families A, B, and the relevant domain family (C for Control, D/E for others).
 
 ---
 
-## 5. Required Test Scenarios (MCP Editor Tier)
+## 5. Required Scenarios — Tier 2 (MCP Editor)
 
-These tests MUST be written for any effect that touches the editor lifecycle.
-Run them using `mcp_godot-mcp_execute_editor_script` against a live open scene.
+**Use `@realistic-test-design` → `REFERENCES/tier2-scenarios.md` for the full scenario library.**
 
-| Scenario | Objective |
-| :--- | :--- |
-| **Transport preview — base capture** | Call `_enter_editor_preview()` on a Juice node whose target is at a non-zero position. Sample the target's position at t+1, t+3, and t+5 deferred frames. Assert position never snaps to `(0,0)`. |
-| **Transport preview — ledger base accuracy** | After `_deferred_editor_preview_init` fires, read the ledger base via `JuiceLedger.get_base(target, "position", Vector2.ZERO)`. Assert it matches the actual `target.position`. |
-| **Editor save lifecycle** | With the transport active and the node mid-preview, simulate Ctrl+S by calling `_apply_changes()` on the plugin. Assert the target's position is restored to the natural value, not `(0,0)`. |
-| **Deselect restore** | Call `_exit_editor_preview()`. Assert target position is restored. |
-| **Special node types** | Repeat the above for `TileMapLayer`, `SubViewport`, or other Godot-internal `@tool` nodes that use deferred position initialization. |
+Scenarios simulate real developer actions inside the editor:
+
+| Family | User Action | Key Coverage |
+|--------|------------|-------------|
+| **F — Inspector configuration** | Add Juice node, assign recipe, add/configure effects | Config warnings, effect row visibility, value serialization |
+| **G — Transport preview** | Press Play/Stop in transport, deferred-init nodes | Base capture accuracy, restore to natural, no `(0,0)` snap |
+| **H — Save lifecycle** | Ctrl+S while transport idle or active | .tscn has natural position, no animation artifacts on reopen |
+| **I — Multi-node scenes** | Select between Juice nodes, two nodes same target | Inspector updates correctly, stacking works in editor |
+| **J — Concurrent preview stacking** | Preview two Juice nodes on same target, stop one | Sum of deltas, partial stop correct, save while both active |
+| **L — Editor robustness** | Ctrl+Z, Ctrl+D, copy-paste, move asset file | Undo reverts correctly, duplicates get independent resources |
+
+**Minimum required:** at least F (config warnings) and G (transport preview) for any effect with editor-side behavior.
 
 ### MCP Editor Test Pattern
 
 ```gdscript
-# Example execute_editor_script structure for transport preview tests:
 func run():
     var scene_root = EditorInterface.get_edited_scene_root()
-    var tile_layer = scene_root.find_child("Platform 2", true, false)
-    var juice_node = null
-    for child in tile_layer.get_children():
+    var target = scene_root.find_child("TargetNode", true, false)
+    var juice_node: Juice2D = null
+    for child in target.get_children():
         if child is Juice2D:
             juice_node = child
             break
 
-    var pos_before = tile_layer.position
-    juice_node._enter_editor_preview()
+    var pos_before = target.position
+    # Trigger PREVIEW orchestrator via PreviewDirector API
+    JuicePreviewDirector.preview(juice_node)
 
-    # Sample across multiple frames to catch deferred race conditions
-    var results = {"before": pos_before, "f1": null, "f3": null, "f5": null}
-    # (Use nested call_deferred or OS.delay_msec pattern per frame)
-    return results
+    # Sample across deferred frames to catch race conditions
+    return {
+        "before": pos_before,
+        "ledger_base": JuiceLedger.get_base(target, "position", Vector2.ZERO)
+    }
 ```
 
 ---
 
 ## 6. Execution & Validation
 
-### Headless tier
-1.  Write tests in `tests/suites/TestRealWorld[Category].gd`.
-2.  Register the suite in `JuiceTestRunner.gd`.
-3.  Run: `& "[GODOT_EXE]" --headless --path "[PROJECT_ROOT]" res://tests/run_tests.tscn`
-4.  If tests fail, diagnose effect vs. test setup bug, fix, re-run.
+### Tier 1 — Headless
+1. Write tests in `tests/suites/TestRealWorld[Category].gd`
+2. Register suite in `JuiceTestRunner.gd`
+3. Run: `& "[GODOT_EXE]" --headless --path "[PROJECT_ROOT]" res://tests/run_tests.tscn`
+4. Diagnose effect vs. test setup bug on failure, fix, re-run
 
-### MCP Editor tier
-1.  Write the diagnostic GDScript as a `func run():` block.
-2.  Execute via `mcp_godot-mcp_execute_editor_script`.
-3.  Assert the returned values meet expectations.
-4.  These tests are NOT registered in `JuiceTestRunner.gd` — they are MCP tool calls documented in the test file header.
+### Tier 2 — MCP Editor
+1. Write diagnostic GDScript as a `func run():` block
+2. Execute via `mcp_godot-mcp_execute_editor_script`
+3. Assert returned values meet expectations
+4. These tests are NOT registered in `JuiceTestRunner.gd` — document them in the test file header
 
 ---
 
 ## 7. Report
 
 Provide a summary covering:
-- Headless suite results (pass/fail count)
-- MCP editor test results (position values before/after across sampled frames)
+- Tier 1: headless suite results (pass/fail count per suite)
+- Tier 2: MCP editor test results (key values before/after, sampled frames)
 - Any edge cases discovered
