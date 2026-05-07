@@ -12,7 +12,7 @@
 #       Extends Node (not Object) so _process runs natively and queue_free()
 #       provides automatic scene-tree cleanup — no manual deferred freeing needed.
 # SYSTEM: Juice V2 Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Clone effects (Phase 5C1/5C2). Permanently remove ledger entries on stop —
+# DOES NOT: Permanently remove ledger entries on stop —
 #           only cleanup_source(permanent=false) fires in _exit_tree. Domain nodes handle
 #           permanent cleanup in NOTIFICATION_PREDELETE until Phase 5C-full removes them.
 # ============================================================================
@@ -53,6 +53,12 @@ var _mode: Mode = Mode.PREVIEW
 
 # Debug flag — mirrors the managed node's debug_enabled by default.
 var debug_enabled: bool = false
+
+# Effect arrays for the active animation session.
+# JuiceBase._runtime_effects and ._active_effect_indices are computed properties that
+# delegate reads and writes here — all existing JuiceBase callers need no changes.
+var runtime_effects: Array[JuiceEffectBase] = []
+var active_effect_indices: Array[int] = []
 
 
 # =============================================================================

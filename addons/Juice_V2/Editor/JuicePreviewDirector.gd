@@ -491,16 +491,14 @@ func _add_preview_node(node: JuiceBase) -> void:
 		JuiceLogger.warn(self, "Transport",
 				"Node '%s' skipped: has no parent in tree" % node.name, debug_enabled)
 		return
-	node._enter_editor_preview()
-	# Spawn PREVIEW orchestrator for this node. Add it as a child of the domain node
-	# so queue_free() is handled by the scene tree. PreviewDirector calls teardown()
-	# in deselect() which triggers queue_free() — no manual deferred freeing needed.
+	# Spawn PREVIEW orchestrator BEFORE calling _enter_editor_preview().
+	# Order is critical: SEQUENCER mode calls _invalidate_runtime_effects() synchronously
+	# inside _enter_editor_preview(). With _runtime_orchestrator set first, the computed
+	# property routes array writes to the orch rather than silently discarding them.
 	var orch := JuiceOrchestratorFactory.create(node, JuiceOrchestrator.Mode.PREVIEW)
-	node.add_child(orch)
-	# Register PREVIEW orch as the node's active orchestrator.
-	# _start_effects() uses (orch == null) to decide whether to spawn a RUNTIME orch —
-	# setting it here means PREVIEW mode triggers the no-spawn path automatically.
 	node._runtime_orchestrator = orch
+	node.add_child(orch)
+	node._enter_editor_preview()
 	_orchestrators[node] = orch
 	_preview_nodes.append(node)
 	_connect_node_signals(node)
