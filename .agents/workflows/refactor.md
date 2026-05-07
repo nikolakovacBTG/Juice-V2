@@ -4,7 +4,9 @@ description: Systematic, safe refactoring with backup, validation, and documenta
 
 You are in REFACTOR MODE.
 
-**Parent workflow:** `/architecture` - See `/architecture` for Juice V2 architecture context
+**Parent workflow:** `/architecture` — See `/architecture` for Juice V2 architecture context
+
+**Skills auto-invoked:** `@juice-architecture`, `@verify-claims`, `@doc-sweep`
 
 ---
 
@@ -87,7 +89,7 @@ This creates a safe rollback point.
 
 ### 4. Documentation Preparation
 
-Create or update `Documentation/!_REFRACTOR_PLAN.md`:
+Create or update `Documentation/!_REFACTOR_PLAN.md`:
 
 ```markdown
 # Refactor: [Name]
@@ -111,6 +113,7 @@ Status: In Progress
 - [ ] Godot project reloaded
 - [ ] No errors in output
 - [ ] Affected functionality tested
+- [ ] Headless test suite run and passing
 
 ## Rollback
 git revert to commit: [hash]
@@ -153,11 +156,19 @@ After ALL changes are complete:
 - [ ] All files exist at new locations
 - [ ] Git status shows expected changes
 
+#### Headless Test Run (MANDATORY)
+// turbo
+```powershell
+& "C:\Portable Software\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe" --headless --path "D:\Godot_projekti\juice-demo" res://tests/run_tests.tscn 2>&1 | Select-String "Tests complete"
+```
+- [ ] Test count unchanged from pre-refactor baseline
+- [ ] 0 new failures introduced
+
 #### Runtime Validation
 Using Godot MCP:
 // turbo
-- mcp0_get_godot_errors to check for load/parse errors
-- mcp0_play_scene to test affected functionality
+- `mcp_godot-mcp_get_godot_errors` — check for load/parse errors
+- `mcp_godot-mcp_play_scene` — test affected functionality
 
 Check for:
 - [ ] No "file not found" errors
@@ -168,6 +179,19 @@ Check for:
 #### Functional Validation
 - [ ] Test affected functionality manually
 - [ ] Confirm behavior is unchanged
+
+#### Documentation & Logging Quality Gate (per AGENTS.md — do NOT skip)
+For **every file modified or created** during the refactor:
+- [ ] `##` class tooltip present and action-oriented
+- [ ] `# WHAT / WHY / SYSTEM / DOES NOT` block present
+- [ ] Section banners (`# =============================================================================`)
+- [ ] `##` on every public method
+- [ ] `#` on every private helper
+- [ ] `JuiceLogger.log_info()` at all lifecycle entry points
+- [ ] `JuiceLogger.warn()` on all guard/fallback paths
+- [ ] No silent fallback paths (`else` that changes behaviour must log)
+- [ ] Script section ordering: Signals → Enums → Config → Internal State → Lifecycle → Public API → Core Logic → Helpers
+- [ ] No translation violations (no 'V0/V1/ported/refactored' history in comments — explain WHY instead)
 
 ---
 
@@ -246,7 +270,9 @@ Update `path` values when moving scripts.
 - [ ] No orphaned references (grep verified)
 - [ ] Godot project reloaded
 - [ ] No errors in Godot output
+- [ ] Headless test suite: count unchanged, 0 new failures
 - [ ] Affected functionality tested
+- [ ] Doc/logging quality gate passed for all modified files
 - [ ] Git commit with descriptive message
 - [ ] Refactor plan updated with completion status
 
