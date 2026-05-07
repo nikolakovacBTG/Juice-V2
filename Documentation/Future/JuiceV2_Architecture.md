@@ -83,19 +83,23 @@ Editor code and runtime code must not share a class. When they must share a targ
 they communicate through a defined interface, not through shared mutable state on the
 target.
 
-### 3.1 Domain nodes — runtime only, NOT `@tool`
+### 3.1 Domain nodes — `@tool` for config warnings only
 
-`Juice2D`, `Juice3D`, `JuiceControl` become pure runtime scripts:
+`Juice2D`, `Juice3D`, `JuiceControl` become near-pure runtime scripts:
 
-- No `@tool` tag
+- **Keep `@tool`** — required for `_get_configuration_warnings()` (yellow triangle in scene tree)
+- `_get_configuration_warnings()` is the **only** `@tool` surface that stays on domain nodes
 - No `Engine.is_editor_hint()` anywhere
 - No `_enter_editor_preview` / `_exit_editor_preview`
 - No `_editor_preview_active` flag
-- `_ready()` has one path. `_process()` has one path.
-- Responsibility: hold recipe, coordinate runtime animation via ledger, respond to triggers
+- No `_validate_property()` — moved to `JuiceEditorInspectorPlugin`
+- `_ready()` has one path. `_process()` removed entirely — owned by `JuiceOrchestrator`.
+- Responsibility: hold recipe, declare config warnings, respond to triggers (delegating to orchestrator)
 
-This reduces domain scripts by an estimated 30-40% in line count and eliminates all
-timing-sensitive editor guard code.
+**Rationale:** Removing `@tool` entirely would lose the yellow warning icon for unselected nodes in
+the scene tree. The icon only fires from `_get_configuration_warnings()` on a `@tool` script — the
+`EditorInspectorPlugin` cannot replicate this (it only fires on selection). Keeping `@tool` for
+config warnings only is a minimal, justified exception to the editor/runtime separation principle.
 
 ### 3.2 JuiceLedger — static in-memory dictionary (already fixed in V1)
 
@@ -114,9 +118,16 @@ Never serialized. Purely in-memory. Self-cleaning via existing `cleanup_source` 
 The same pattern applies in both contexts. A domain node spawns an orchestrator when work
 begins; the orchestrator owns all transient state and `queue_free()`s when done.
 
-`JuiceOrchestrator` is a single `@tool` class. The tag allows `_process` to run in the
-editor for transport preview; at runtime, dynamically spawned nodes are never serialized
-so the tag carries no cost.
+`JuiceOrchestrator` is a single `@tool` class that **extends Node**.
+The `@tool` + Node combination allows `_process` to run in the editor for transport preview.
+At runtime, the orchestrator is added as a child of the domain node — dynamically spawned
+nodes are never serialized so the `@tool` tag carries no serialization cost.
+
+**Why `extends Node`, not `extends Object`:**
+A Node orchestrator runs its own `_process` natively in the scene tree and cleans up via
+`queue_free()`. An Object-based orchestrator would require the domain node to keep its own
+`_process` alive to call `orch.tick(delta)` — which means domain nodes could never truly
+lose `_process`, defeating the core architectural goal.
 
 **Lifecycle:**
 ```
@@ -139,8 +150,10 @@ Orchestrator.setup(recipe, target, mode=RUNTIME)
 - Clones recipe effects into own in-memory array — never mutates recipe resources
 - Uses the same delta/flush pattern via `JuiceLedger`
 - Zero persistent state — nothing survives `queue_free()`
-- Added as a child of the domain node; freed automatically with the scene
-- Registers its ledger source on spawn, deregisters on free
+- Added as a child of the domain node via `domain_node.add_child(orch)` — freed automatically with the scene
+- Registers its ledger source on `play()`, deregisters on `teardown()`/`queue_free()`
+- In PREVIEW mode: PreviewDirector calls `teardown()` → `queue_free()`. Orchestrator restores target first.
+- In RUNTIME mode: orchestrator calls `queue_free()` on itself when animation completes or `stop()` is called.
 
 **What this removes from domain nodes:**
 - `_enter_editor_preview()` / `_exit_editor_preview()` / `_editor_preview_active`
@@ -208,24 +221,28 @@ property visibility. The existing `_validate_property` logic (which is already w
 documented per the project standards) maps directly to `_parse_property` conditions with
 no semantic loss.
 
-### 3.5 Plugin as the sole `@tool` surface
+### 3.5 `@tool` surface after V2
 
-After V2:
+After V2, `@tool` is confined to purpose-built editor classes and the config-warnings exception:
 
 | Class | `@tool`? | Reason |
 |-------|----------|--------|
 | `juice_plugin.gd` | ✅ | EditorPlugin requires it |
-| `JuiceOrchestrator` | ✅ | Single class; `@tool` needed for editor `_process`; harmless at runtime |
+| `JuiceOrchestrator` | ✅ | `extends Node`; `@tool` needed for `_process` in editor preview; harmless at runtime |
 | `JuiceEditorInspectorPlugin` | ✅ | EditorInspectorPlugin requires it |
 | `JuicePreviewDirector` | ✅ | Manages orchestrator lifecycle, owned by plugin |
-| `Juice2D`, `Juice3D`, `JuiceControl` | ❌ | Pure runtime |
-| `JuiceBase` | ❌ | Pure runtime base |
+| `Juice2D`, `Juice3D`, `JuiceControl` | ✅ *(minimal)* | **Config warnings only** — `_get_configuration_warnings()` requires `@tool` for the yellow triangle icon on unselected nodes. No other `@tool` behavior remains. |
+| `JuiceBase` | ✅ *(minimal)* | Same — base class must be `@tool` if subclasses are. No other `@tool` behavior. |
 | `JuiceLedger` | ❌ | Static utility, no editor dependency |
 | All effect resources | ❌ | Resource subclasses, no editor code |
 | All recipe resources | ❌ | Resource subclasses, no editor code |
 
-The editor surface is confined to four known, purpose-built classes. Everything else is
-runtime code that can be reasoned about without editor context.
+**The config-warnings exception:** `EditorInspectorPlugin` cannot replicate the scene tree
+yellow-triangle warning icon — it only fires on node selection. `_get_configuration_warnings()`
+on a `@tool` node fires unconditionally and is visible for all nodes in the scene tree.
+This is a minimal, justified exception. Domain nodes keep `@tool` for this reason only —
+no other `@tool` behavior (`_validate_property`, `Engine.is_editor_hint()` guards,
+editor preview lifecycle) remains on domain nodes.
 
 ---
 
@@ -252,19 +269,21 @@ removal, so the removal is clean.
   `_enter_editor_preview` / `_exit_editor_preview` on domain nodes
 - Gate: transport suite passes; manual preview test on all three domain types
 
-### Phase V2-C: Strip @tool from domain nodes
-- Remove `@tool` from `JuiceBase.gd`, `Juice2D.gd`, `Juice3D.gd`, `JuiceControl.gd`
-- Remove all `Engine.is_editor_hint()` guards
+### Phase V2-C: Strip editor-preview code from domain nodes (keep @tool)
+- **Keep `@tool`** on `JuiceBase.gd`, `Juice2D.gd`, `Juice3D.gd`, `JuiceControl.gd` — required for config warnings
+- Remove all `Engine.is_editor_hint()` guards (not needed once orchestrator owns preview)
 - Remove `_enter_editor_preview`, `_exit_editor_preview`, `_editor_preview_active`,
   `_deferred_editor_preview_init` from `JuiceBase.gd`
+- Remove `_process` from domain nodes entirely (orchestrator owns tick loop)
 - Remove `_runtime_effects` cloning (owned by orchestrator now)
 - Remove `NOTIFICATION_EDITOR_PRE_SAVE` handler (baking moved to plugin `_save_external_data`)
-- Gate: full headless suite unchanged; editor preview verified via MCP (Tier 2)
+- Remove `_validate_property()` from all domain nodes (moved to `JuiceEditorInspectorPlugin`)
+- Keep `_get_configuration_warnings()` on all domain nodes — this is the sole remaining `@tool` surface
+- Gate: full headless suite unchanged; editor preview verified via MCP (Tier 2); config warnings visible
 
-### Phase V2-D: Clean configuration warnings
-- Move `_get_configuration_warnings()` logic to inspector plugin or a dedicated checker
-  called by the plugin on scene change
-- Gate: warnings still appear correctly in editor; suite unchanged
+### Phase V2-D: *(Absorbed into V2-C)*
+Config warnings stay on domain nodes — no separate migration phase needed.
+The `@tool` decision resolves this cleanly.
 
 ### Phase V2-E: Systematic effect porting
 
