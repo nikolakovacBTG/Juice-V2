@@ -74,6 +74,16 @@ func setup(node: JuiceBase, recipe: JuiceRecipe, target: Node, mode: Mode) -> vo
 			debug_enabled)
 
 
+## Full-fidelity play — routes through the trigger pipeline.
+## Respects trigger_behaviour, start_delay, and retrigger policies.
+## Use this for transport "Play" button (full recipe). Use play_in() for quick preview.
+func play() -> void:
+	if not _is_node_valid():
+		return
+	JuiceLogger.log_info(self, "Orchestrator", "play() → %s._handle_trigger(play_in)" % _node.name, debug_enabled)
+	_node._handle_trigger({"play_in": true})
+
+
 ## Start the forward (IN) animation on the managed node.
 ## Delegates to JuiceBase.animate_in() — respects trigger_behaviour.
 func play_in() -> void:
@@ -135,7 +145,11 @@ func teardown() -> void:
 	_node   = null
 	_recipe = null
 	_target = null
-	free()
+	# Deferred free: avoids "Object is locked" errors when teardown() is called
+	# while node.stop() is mid-signal dispatch (e.g., completed → deferred checks).
+	# Callers that check is_instance_valid() after teardown must await at least 1 frame.
+	call_deferred("free")
+
 
 
 # =============================================================================

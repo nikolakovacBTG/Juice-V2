@@ -1,21 +1,88 @@
 ## TestOrchestratorFactory.gd
 ## ============================================================================
-## WHAT: Unit tests for JuiceOrchestratorFactory.create() entry point.
-## WHY:  Factory is the single creation path for all orchestrators — must verify
-##       correct mode assignment, recipe wiring, and target resolution.
-## SYSTEM: Tests (tests/)
-## DOES NOT: Test orchestrator animation tick or lifecycle state transitions.
+## WHAT: Unit tests for JuiceOrchestratorFactory — creation contract.
+## WHY:  Factory is the single creation entry point. Tests verify it returns a
+##       valid, correctly-configured orchestrator for both modes.
+## SYSTEM: Juice V2 Editor (addons/Juice_V2/Editor/)
+## DOES NOT: Test orchestrator behavior post-creation (see TestOrchestrator).
 ## ============================================================================
-## Tests written during: Phase 4 (Single Orchestrator & Factory)
+
 extends JuiceTestSuite
+
 
 func get_suite_name() -> String:
 	return "orchestrator_factory"
 
+
 func get_test_methods() -> Array[String]:
-	# Populated in Phase 4. Expected coverage:
-	# - create() returns correctly-typed JuiceOrchestrator
-	# - PREVIEW mode assigned correctly
-	# - RUNTIME mode assigned correctly
-	# - Null recipe / null target handled gracefully
-	return []
+	return [
+		"test_create_returns_orchestrator_instance",
+		"test_create_preview_mode_stored",
+		"test_create_runtime_mode_stored",
+		"test_create_stores_node_reference",
+	]
+
+
+func test_create_returns_orchestrator_instance() -> void:
+	var parent := Control.new()
+	_runner.add_child(parent)
+	var juice := JuiceControl.new()
+	parent.add_child(juice)
+	await wait_frames(2)
+
+	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+
+	assert_true(orch is JuiceOrchestrator, "Factory returns JuiceOrchestrator")
+	assert_true(is_instance_valid(orch), "Factory result is immediately valid")
+
+	orch.teardown()
+	await wait_frames(1)
+	parent.queue_free()
+
+
+func test_create_preview_mode_stored() -> void:
+	var parent := Control.new()
+	_runner.add_child(parent)
+	var juice := JuiceControl.new()
+	parent.add_child(juice)
+	await wait_frames(2)
+
+	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+
+	assert_true(orch._mode == JuiceOrchestrator.Mode.PREVIEW, "PREVIEW mode stored by factory")
+
+	orch.teardown()
+	await wait_frames(1)
+	parent.queue_free()
+
+
+func test_create_runtime_mode_stored() -> void:
+	var parent := Control.new()
+	_runner.add_child(parent)
+	var juice := JuiceControl.new()
+	parent.add_child(juice)
+	await wait_frames(2)
+
+	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
+
+	assert_true(orch._mode == JuiceOrchestrator.Mode.RUNTIME, "RUNTIME mode stored by factory")
+
+	orch.teardown()
+	await wait_frames(1)
+	parent.queue_free()
+
+
+func test_create_stores_node_reference() -> void:
+	var parent := Control.new()
+	_runner.add_child(parent)
+	var juice := JuiceControl.new()
+	parent.add_child(juice)
+	await wait_frames(2)
+
+	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+
+	assert_true(orch._node == juice, "Factory stores node reference in orchestrator")
+
+	orch.teardown()
+	await wait_frames(1)
+	parent.queue_free()
