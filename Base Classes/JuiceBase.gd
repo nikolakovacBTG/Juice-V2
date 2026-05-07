@@ -435,18 +435,19 @@ func _ready() -> void:
 			JuiceEditorContext.register_recipe(recipe, self)
 		return
 
-	# Create RUNTIME orchestrator before any array access. Eager creation here (vs lazy
-	# in _start_effects) ensures _runtime_effects and _active_effect_indices computed
-	# properties route to the orch from the first _invalidate_runtime_effects() call.
-	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-	add_child(_runtime_orchestrator)
-
-	# Resolve target (what effects animate)
-	# STACK: single parent target. SEQUENCER: null here (targets resolved per-sequence).
+	# Resolve target before creating the orchestrator. The factory now requires
+	# callers to provide target explicitly (no internal reads from the node).
+	# SEQUENCER resolves targets per-entry at runtime, so null here is valid.
 	_target_node = _resolve_target()
 	if _target_node == null and mode == Mode.STACK:
 		JuiceLogger.warn(self, _get_domain_tag(), "No valid target node found", debug_enabled)
 		return
+
+	# Create RUNTIME orchestrator eagerly with the resolved target.
+	# Eager creation ensures _runtime_effects computed property has a home before
+	# _invalidate_runtime_effects() fires (via deferred _post_ready_init).
+	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, recipe, _target_node, JuiceOrchestrator.Mode.RUNTIME)
+	add_child(_runtime_orchestrator)
 
 	# Resolve trigger source (where signals come from)
 	match trigger_source:
@@ -1003,7 +1004,7 @@ func _start_effects(play_in: bool) -> void:
 	# Safety guard — orch is created eagerly in _ready(), so this never fires in normal
 	# operation. Kept as a defensive check for edge cases (node never entered scene tree).
 	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
-		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, recipe, _target_node, JuiceOrchestrator.Mode.RUNTIME)
 		add_child(_runtime_orchestrator)
 
 	# Log started effects with their type names so the orchestration chain is
@@ -1221,7 +1222,7 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	# Safety guard — orch is always created in _ready(), so this is a no-op in normal
 	# operation. Defensive check only.
 	if _runtime_orchestrator == null or not is_instance_valid(_runtime_orchestrator):
-		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, recipe, _target_node, JuiceOrchestrator.Mode.RUNTIME)
 		add_child(_runtime_orchestrator)
 	# else: existing orch already ticking — zero-allocation retrigger
 
