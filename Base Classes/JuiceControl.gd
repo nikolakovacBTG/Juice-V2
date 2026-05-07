@@ -21,18 +21,20 @@ extends JuiceBase
 # CONDITIONAL EXPORT SYSTEM (Override)
 # =============================================================================
 
-## Hint string for JuiceControl: fallback when no trigger source node is resolvable.
-const _CONTROL_TRIGGER_HINT := "On Press (toggleable):0,On Release:1,On Mouse Entered (toggleable):2,On Mouse Exited:3,On Focus (toggleable):4,On Unfocus:5,On Show:6,On Hide:7,On Ready:8,Manual:9,On Left Click:10,On Right Click:11,On Middle Click:12"
-
+# Mutates trigger_on hint_string to show only events valid for the resolved
+# trigger source type (Button, generic Control, etc.). Falls back to the full
+# Control event list when no source node is resolvable yet.
+# Also narrows recipe to JuiceControlRecipe so the inspector only offers the
+# correct recipe type for this domain.
+# Note: show/hide of properties is handled by JuiceEditorInspectorPlugin.
 func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
 	if property.name == "trigger_on":
-		# Dynamically filter to only valid options for the current trigger source.
 		var source: Node = _resolve_hint_source_node()
 		property.hint_string = TriggerHintBuilder.build_hint(source, &"Control")
-	# Narrow recipe type so inspector only offers JuiceControlRecipe
 	if property.name == "recipe":
 		property.hint_string = "JuiceControlRecipe"
+
 
 # =============================================================================
 # INTERNAL STATE (Write Coordination)

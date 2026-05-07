@@ -267,24 +267,15 @@ enum TriggerSource {
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
+# Mutates trigger_behaviour's enum hint_string to show or hide the Toggle option.
+# Toggle only makes sense on triggers that have a natural paired counterpart:
+# ON_PRESS/ON_MOUSE_ENTERED/ON_FOCUS have a release/exit/unfocus counterpart;
+# MANUAL lets the caller supply the polarity. All other triggers are one-shot
+# with no natural reverse edge, so Toggle is meaningless for them.
+# Note: show/hide of ALL properties is handled by JuiceEditorInspectorPlugin,
+# not here. This method only mutates hint_string — EditorInspectorPlugin
+# cannot do that from _parse_property (receives hint as a value copy).
 func _validate_property(property: Dictionary) -> void:
-	# --- Trigger group: inline conditional display ---
-	# auto_connect_parent only relevant when source is PARENT
-	if property.name == "auto_connect_parent" and trigger_source != TriggerSource.PARENT:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-	# trigger_source_path only relevant when source is NODE
-	if property.name == "trigger_source_path" and trigger_source != TriggerSource.NODE:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-	# manual_trigger_signal only relevant when trigger_on is MANUAL
-	if property.name == "manual_trigger_signal" and trigger_on != TriggerEvent.MANUAL:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-
-	# --- Toggle filtering on trigger_behaviour ---
-	# Toggle only makes sense on triggers that have a natural paired counterpart:
-	# On Press (entry of press/release pair), On Mouse Entered (entry of hover pair),
-	# On Focus (entry of focus/unfocus pair), and Manual (caller may supply polarity).
-	# End-of-pair triggers (Release, Mouse Exited, Unfocus), one-shot triggers
-	# (Show, Hide, Ready, clicks, area events) have no meaningful toggle semantics.
 	if property.name == "trigger_behaviour":
 		var supports_toggle := trigger_on in [
 			TriggerEvent.ON_PRESS,
@@ -298,40 +289,10 @@ func _validate_property(property: Dictionary) -> void:
 		else:
 			property.hint_string = "Play In And Out:0,Play In Only:1,Play Out Only:2,Set From Source:4"
 
-	# --- Loop group ---
-	# Hide loop_delay when not looping
-	if property.name == "loop_delay" and loop_count == 1:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-
-	# --- Mode-specific: SEQUENCER settings hidden in STACK mode ---
-	var _seq_props := [
-		"juice_source", "target_scope", "seq_custom_targets", "seq_stack_name",
-		"sequence_type", "seq_stagger_delay", "seq_mirror_stagger_on_exit",
-		"seq_skip_invisible", "seq_skip_self", "seq_skip_juice_nodes",
-		"seq_hide_parent_on_reverse_complete",
-	]
-	if mode == Mode.STACK and property.name in _seq_props:
-		property.usage = PROPERTY_USAGE_NO_EDITOR
-
-	# --- Within SEQUENCER mode: conditional visibility ---
-	if mode == Mode.SEQUENCER:
-		# custom_targets only when target_scope == CUSTOM
-		if property.name == "seq_custom_targets" and target_scope != TargetScope.CUSTOM:
-			property.usage = PROPERTY_USAGE_NO_EDITOR
-		# stack_name only when juice_source == TARGETS_STACK
-		if property.name == "seq_stack_name" and juice_source != JuiceSource.TARGETS_STACK:
-			property.usage = PROPERTY_USAGE_NO_EDITOR
-		# stagger_delay hidden for ALL_AT_ONCE
-		if property.name == "seq_stagger_delay" and sequence_type == SequenceType.ALL_AT_ONCE:
-			property.usage = PROPERTY_USAGE_NO_EDITOR
-		# mirror_stagger_on_exit only for directional stagger types
-		if property.name == "seq_mirror_stagger_on_exit" \
-				and sequence_type not in [SequenceType.STAGGER_FORWARD, SequenceType.STAGGER_REVERSE]:
-			property.usage = PROPERTY_USAGE_NO_EDITOR
-
 # =============================================================================
 # INTERNAL STATE
 # =============================================================================
+
 
 # Runtime-cloned effects from the recipe (independent state per node).
 var _runtime_effects: Array[JuiceEffectBase] = []
@@ -2004,7 +1965,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 # Resolve the source node for trigger_on hint building in _validate_property.
 # Returns null if not in editor, or when the source can't yet be resolved
 # (e.g. during initial scene load before get_node is reliable).
-# Called only from _validate_property — never at runtime.
+# Domain nodes call this from their own _validate_property to get the
+# trigger source for TriggerHintBuilder — returns null at runtime (no-op).
 func _resolve_hint_source_node() -> Node:
 	if not Engine.is_editor_hint():
 		return null
@@ -2020,7 +1982,6 @@ func _resolve_hint_source_node() -> Node:
 				return null
 			return get_node_or_null(trigger_source_path)
 	return null
-
 
 ## Resolve the target node based on mode.
 ## Subclasses override to validate domain (Control, Node2D, Node3D).
