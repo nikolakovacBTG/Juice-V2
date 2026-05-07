@@ -17,6 +17,7 @@
 extends EditorPlugin
 
 const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
+const InspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceEditorInspectorPlugin.gd")
 
 # =============================================================================
 # INTERNAL STATE
@@ -32,6 +33,9 @@ var _dock: Control
 
 ## The preview director that manages animation state.
 var _director: JuicePreviewDirector
+
+# Inspector plugin instance — controls JuiceBase property visibility in editor.
+var _inspector_plugin: EditorInspectorPlugin
 
 # --- Buttons ---
 var _play_button: Button
@@ -63,6 +67,11 @@ func _enter_tree() -> void:
 
 	# Register the bug report export action under Project → Tools.
 	add_tool_menu_item(_BUG_REPORT_MENU_LABEL, _on_export_bug_report)
+
+	# Register inspector plugin — controls property visibility for all JuiceBase nodes.
+	# Must be registered before the editor opens any scene containing JuiceBase nodes.
+	_inspector_plugin = InspectorPluginScript.new()
+	add_inspector_plugin(_inspector_plugin)
 
 	# Build transport UI and director
 	_build_ui()
@@ -102,6 +111,11 @@ func _deferred_restore_preview() -> void:
 
 func _exit_tree() -> void:
 	remove_tool_menu_item(_BUG_REPORT_MENU_LABEL)
+
+	# Unregister inspector plugin so Godot cleans up the plugin instance.
+	if _inspector_plugin:
+		remove_inspector_plugin(_inspector_plugin)
+		_inspector_plugin = null
 
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)
