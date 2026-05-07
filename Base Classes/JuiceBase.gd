@@ -500,22 +500,21 @@ func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
 
-	# --- SEQUENCER mode: tick per-target effects ---
-	if mode == Mode.SEQUENCER:
-		_seq_process_tick(delta)
-		return
-
-	# STACK: _runtime_orchestrator._process() drives tick() — Phase 5B2.
+	# STACK + SEQUENCER: _runtime_orchestrator drives tick() — Phase 5B2+5B3.
 
 
-## Drive one STACK animation frame.
-## Called by _process() in RUNTIME and by JuiceOrchestrator._process() in PREVIEW.
+## Drive one animation frame — routes to SEQUENCER or STACK based on mode.
+## Called by JuiceOrchestrator._process() in both PREVIEW and RUNTIME modes.
 ## No-op when not playing — safe to call from the orchestrator every frame.
 func tick(delta: float) -> void:
 	# Nothing to do when no animation is active.
 	# _is_playing covers all active states including loop delays
 	# (_on_all_effects_completed re-sets _is_playing = true before _in_loop_delay).
 	if not _is_playing:
+		return
+	# Route SEQUENCER so a single orchestrator drives both modes.
+	if mode == Mode.SEQUENCER:
+		_seq_process_tick(delta)
 		return
 
 	# --- Node-level start_delay: hold before starting effects ---
@@ -1299,7 +1298,7 @@ func _seq_stop() -> void:
 	# explicit stop must do the same here.
 	_seq_target_effects.clear()
 
-	set_process(false)
+	_free_runtime_orchestrator()
 
 	JuiceLogger.log_info(self, _get_domain_tag(), "Seq stopped", debug_enabled)
 
@@ -1324,6 +1323,12 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 
 	targets = _apply_seq_stagger_order(targets, is_reverse)
 	_seq_active_animations = 0
+
+	# Spawn RUNTIME orchestrator to drive _seq_process_tick() each frame.
+	# _free first to handle loop-restart calls (previous orch may still be alive).
+	_free_runtime_orchestrator()
+	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+	add_child(_runtime_orchestrator)
 
 	# Warmup BEFORE start_delay: pre-position targets at From state immediately
 	# so they don't flash at Self/natural position during the delay window.
@@ -1427,8 +1432,6 @@ func _seq_animate_target_recipe(target: Node, is_reverse: bool) -> void:
 	# Write immediately so first-frame state is correct (same as STACK mode).
 	# Without this, the target sits at natural state for one frame → visible flash.
 	_seq_post_tick_write_target(target, effects)
-
-	set_process(true)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"Seq RECIPE: started %d roots on '%s'" % [root_indices.size(), target.name],
@@ -1544,9 +1547,6 @@ func _seq_warmup_recipe_targets(targets: Array[Node], is_reverse: bool) -> void:
 				"effects": effects,
 				"play_in": play_in,
 			})
-
-	if not _seq_held_entries.is_empty():
-		set_process(true)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"Seq warmup: %d targets, %d held" % [targets.size(), _seq_held_entries.size()],
@@ -1669,9 +1669,7 @@ func _seq_process_tick(delta: float) -> void:
 		_seq_target_active_indices.erase(done_target)
 		_seq_active_animations = maxi(0, _seq_active_animations - 1)
 
-	# Stop processing when no active targets remain
-	if _seq_target_active_indices.is_empty():
-		set_process(false)
+	# No set_process(false) here — _seq_on_pass_complete() frees the orchestrator when done.
 
 
 # Called when a full sequence pass completes (all targets done).
@@ -1750,6 +1748,7 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 
 	# --- Sequence fully complete ---
 	_is_playing = false
+	_free_runtime_orchestrator()  # halt tick() driving for SEQUENCER (Phase 5B3)
 	# Drop the per-target clone cache so the next play creates fresh effects.
 	# The cache is a live-session resource — effect clones accumulate base-capture
 	# state (_has_base=true) during a run. Keeping them alive across plays causes
