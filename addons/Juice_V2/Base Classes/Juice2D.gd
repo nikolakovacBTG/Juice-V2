@@ -183,6 +183,14 @@ func _capture_base_values() -> void:
 	JuiceLogger.log_capture(self, "2D", "scale", n2d.scale, debug_enabled)
 	JuiceLogger.log_capture(self, "2D", "modulate", n2d.modulate, debug_enabled)
 
+
+# Sequencer: seed the Ledger for an arbitrary Node2D target before warmup
+# reads it via JuiceLedger.get_base_dict(). Mirrors the JuiceControl override.
+func _seq_ensure_ledger_for_target(target: Node) -> void:
+	if target == null or not target is Node2D:
+		return
+	JuiceLedger.ensure(target, ["position", "rotation", "scale", "modulate"])
+
 ## Detect external displacement of the target (game logic, tweens, etc.).
 ## The Ledger handles external-displacement for all tracked properties.
 func _pre_tick() -> void:
