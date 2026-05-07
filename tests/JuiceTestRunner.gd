@@ -1,8 +1,9 @@
 ## JuiceTestRunner.gd
 ## ============================================================================
-## WHAT: Automated test runner for Juice V1 addon.
+## WHAT: Automated test runner for the Juice addon (V1 suites + V2 scaffolding).
 ## WHY: Verify all properties are live, all effects work correctly across all
-##      domains, and regressions are caught after refactors.
+##      domains, and regressions are caught after refactors. V2 suites start
+##      empty and are populated as phases complete.
 ## SYSTEM: Tests (tests/)
 ## DOES NOT: Replace manual visual testing — complements it with automation.
 ## ============================================================================
@@ -106,6 +107,18 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestPauseEffect.gd").new())
 	_suites.append(load("res://tests/suites/TestVFXEffect.gd").new())
 	_suites.append(load("res://tests/suites/TestTrailEffect.gd").new())
+
+	# --- V2 suites (empty stubs — populated per phase) ---
+	# Phase 3: EditorInspectorPlugin extraction
+	_suites.append(load("res://tests/suites/TestEditorInspectorPlugin.gd").new())
+	# Phase 4: Orchestrator + Factory
+	_suites.append(load("res://tests/suites/TestOrchestrator.gd").new())
+	_suites.append(load("res://tests/suites/TestOrchestratorFactory.gd").new())
+	# Phase 5: Config warnings after domain node gutting
+	_suites.append(load("res://tests/suites/TestConfigWarnings.gd").new())
+	# Phase 6: Property ledger V2 + stacking
+	_suites.append(load("res://tests/suites/TestPropertyLedger.gd").new())
+	_suites.append(load("res://tests/suites/TestPropertyStacking.gd").new())
 
 
 	# Apply suite filter
