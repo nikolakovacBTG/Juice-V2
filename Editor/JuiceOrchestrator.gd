@@ -1,23 +1,24 @@
 ## Manages the animation lifecycle for a single JuiceBase node.
 ##
 ## Single class with a mode enum — PREVIEW and RUNTIME differ only in
-## what happens on stop() and teardown(). Effect ticking and delta writes
-## remain owned by JuiceBase in Phase 4; the orchestrator delegates to
-## JuiceBase's public API. Phase 5 will move the tick loop here.
+## what happens on stop() and teardown(). Extends Node so _process runs
+## natively in the scene tree and queue_free() handles cleanup automatically.
+## The orchestrator is added as a child of its managed domain node.
 
 # ============================================================================
 # WHAT: Lifecycle container for one JuiceBase node's animation session.
 # WHY:  Decouples lifecycle management from PreviewDirector (which manages lists
 #       of nodes) and from JuiceBase (which owns the tick loop and ledger writes).
-#       PreviewDirector spawns one orchestrator per node; the orchestrator owns
-#       one node's play/stop/teardown contract.
+#       Extends Node (not Object) so _process runs natively and queue_free()
+#       provides automatic scene-tree cleanup — no manual deferred freeing needed.
 # SYSTEM: Juice V2 Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Own the tick loop (JuiceBase does). Clone effects (Phase 5).
-#           Register or deregister the ledger (Phase 5). Drive _process itself.
+# DOES NOT: Own the tick loop (JuiceBase does in Phase 4). Clone effects (Phase 5C).
+#           Register or deregister the ledger (Phase 5C). Drive _process itself (Phase 5B).
 # ============================================================================
 
+@tool
 class_name JuiceOrchestrator
-extends Object
+extends Node
 
 
 # =============================================================================
@@ -144,10 +145,9 @@ func teardown() -> void:
 	_node   = null
 	_recipe = null
 	_target = null
-	# Deferred free: avoids "Object is locked" errors when teardown() is called
-	# while node.stop() is mid-signal dispatch (e.g., completed → deferred checks).
-	# Callers that check is_instance_valid() after teardown must await at least 1 frame.
-	call_deferred("free")
+	# queue_free() is safe here: as a Node child, Godot handles scene-tree removal
+	# cleanly. Callers can check is_instance_valid() in the same frame after teardown.
+	queue_free()
 
 
 
