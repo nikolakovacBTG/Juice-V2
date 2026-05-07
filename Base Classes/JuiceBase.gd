@@ -1096,9 +1096,12 @@ func _start_effects(play_in: bool) -> void:
 
 
 	# Spawn RUNTIME orchestrator — its _process() drives tick() each frame.
-	_free_runtime_orchestrator()  # silent free on loop-restart (no-op when null)
-	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-	add_child(_runtime_orchestrator)
+	# Skip in PREVIEW mode: the PREVIEW orchestrator is already driving tick().
+	# Spawning a second orchestrator here would double-tick every animation frame.
+	if not _editor_preview_active:
+		_free_runtime_orchestrator()  # silent free on loop-restart (no-op when null)
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		add_child(_runtime_orchestrator)
 
 	# Log started effects with their type names so the orchestration chain is
 	# auditable: which specific effects are playing, not just how many.
@@ -1325,10 +1328,11 @@ func _seq_start_sequence(is_reverse: bool, is_one_shot_return: bool = false) -> 
 	_seq_active_animations = 0
 
 	# Spawn RUNTIME orchestrator to drive _seq_process_tick() each frame.
-	# _free first to handle loop-restart calls (previous orch may still be alive).
-	_free_runtime_orchestrator()
-	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
-	add_child(_runtime_orchestrator)
+	# Skip in PREVIEW mode: the PREVIEW orchestrator is already driving tick().
+	if not _editor_preview_active:
+		_free_runtime_orchestrator()
+		_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+		add_child(_runtime_orchestrator)
 
 	# Warmup BEFORE start_delay: pre-position targets at From state immediately
 	# so they don't flash at Self/natural position during the delay window.
