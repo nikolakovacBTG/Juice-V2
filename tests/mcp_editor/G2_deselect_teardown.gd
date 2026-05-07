@@ -25,8 +25,8 @@ func _run() -> void:
 	await Engine.get_main_loop().process_frame
 
 	# Simulate: PreviewDirector spawns two orchestrators (primary + sibling)
-	var orch_a := JuiceOrchestratorFactory.create(juice_a, JuiceOrchestrator.Mode.PREVIEW)
-	var orch_b := JuiceOrchestratorFactory.create(juice_b, JuiceOrchestrator.Mode.PREVIEW)
+	var orch_a := JuiceOrchestratorFactory.create(juice_a, juice_a.recipe, juice_a.get_parent(), JuiceOrchestrator.Mode.PREVIEW)
+	var orch_b := JuiceOrchestratorFactory.create(juice_b, juice_b.recipe, juice_b.get_parent(), JuiceOrchestrator.Mode.PREVIEW)
 
 	results["both_created"] = is_instance_valid(orch_a) and is_instance_valid(orch_b)
 

@@ -24,7 +24,7 @@ func _run() -> void:
 	await Engine.get_main_loop().process_frame
 
 	# Simulate: PreviewDirector._add_preview_node() spawns orchestrator
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice.get_parent(), JuiceOrchestrator.Mode.PREVIEW)
 
 	results["orchestrator_created"] = is_instance_valid(orch)
 	results["mode_is_preview"] = (orch._mode == JuiceOrchestrator.Mode.PREVIEW)

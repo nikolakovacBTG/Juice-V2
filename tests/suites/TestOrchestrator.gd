@@ -76,7 +76,7 @@ func test_teardown_frees_orchestrator() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.PREVIEW)
 
 	assert_true(is_instance_valid(orch), "Orchestrator valid before teardown")
 	orch.teardown()
@@ -93,7 +93,7 @@ func test_preview_play_in_does_not_crash() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.PREVIEW)
 	orch.play_in()  # delegates to animate_in() — must not crash
 
 	assert_true(is_instance_valid(orch), "Orchestrator still valid after play_in()")
@@ -112,7 +112,7 @@ func test_runtime_stop_keeps_orchestrator_alive() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.RUNTIME)
 	orch.stop()
 
 	assert_true(is_instance_valid(orch), "RUNTIME orchestrator alive after stop()")
@@ -128,7 +128,7 @@ func test_runtime_teardown_frees_orchestrator() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.RUNTIME)
 	orch.teardown()
 	await wait_frames(1)  # queue_free() dequeues at end of frame — wait one frame
 	assert_false(is_instance_valid(orch), "RUNTIME orchestrator freed after teardown()")
@@ -143,7 +143,7 @@ func test_runtime_reset_does_not_crash() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.RUNTIME)
 	orch.stop()
 	orch.reset()  # zero-alloc retrigger — must not crash
 

@@ -495,7 +495,7 @@ func _add_preview_node(node: JuiceBase) -> void:
 	# Order is critical: SEQUENCER mode calls _invalidate_runtime_effects() synchronously
 	# inside _enter_editor_preview(). With _runtime_orchestrator set first, the computed
 	# property routes array writes to the orch rather than silently discarding them.
-	var orch := JuiceOrchestratorFactory.create(node, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(node, node.recipe, node._target_node, JuiceOrchestrator.Mode.PREVIEW)
 	node._runtime_orchestrator = orch
 	node.add_child(orch)
 	node._enter_editor_preview()

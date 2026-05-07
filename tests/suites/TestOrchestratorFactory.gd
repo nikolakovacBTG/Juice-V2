@@ -30,7 +30,7 @@ func test_create_returns_orchestrator_instance() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.PREVIEW)
 	juice.add_child(orch)  # factory creates only; caller adds to scene tree
 
 	assert_true(orch is JuiceOrchestrator, "Factory returns JuiceOrchestrator")
@@ -47,7 +47,7 @@ func test_create_preview_mode_stored() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.PREVIEW)
 	juice.add_child(orch)  # factory creates only; caller adds to scene tree
 
 	assert_true(orch._mode == JuiceOrchestrator.Mode.PREVIEW, "PREVIEW mode stored by factory")
@@ -63,7 +63,7 @@ func test_create_runtime_mode_stored() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.RUNTIME)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.RUNTIME)
 	juice.add_child(orch)  # factory creates only; caller adds to scene tree
 
 	assert_true(orch._mode == JuiceOrchestrator.Mode.RUNTIME, "RUNTIME mode stored by factory")
@@ -79,7 +79,7 @@ func test_create_stores_node_reference() -> void:
 	parent.add_child(juice)
 	await wait_frames(2)
 
-	var orch := JuiceOrchestratorFactory.create(juice, JuiceOrchestrator.Mode.PREVIEW)
+	var orch := JuiceOrchestratorFactory.create(juice, juice.recipe, juice._target_node, JuiceOrchestrator.Mode.PREVIEW)
 	juice.add_child(orch)  # factory creates only; caller adds to scene tree
 
 	assert_true(orch._node == juice, "Factory stores node reference in orchestrator")
