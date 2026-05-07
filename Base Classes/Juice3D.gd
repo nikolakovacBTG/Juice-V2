@@ -447,10 +447,9 @@ func _ensure_appearance_working_mat() -> bool:
 	_appearance_setup = true
 	# Update the Ledger base with real natural albedo+alpha (was seeded with WHITE).
 	if _target_node != null and JuiceLedger.has_ledger(_target_node):
-		var ledger: Dictionary = _target_node.get_meta(JuiceLedger.KEY)
-		ledger["base"]["_appearance_factor"] = Color(
+		JuiceLedger.force_base(_target_node, "_appearance_factor", Color(
 			_appearance_natural_albedo.r, _appearance_natural_albedo.g,
-			_appearance_natural_albedo.b, _appearance_natural_alpha)
+			_appearance_natural_albedo.b, _appearance_natural_alpha))
 	return true
 
 
