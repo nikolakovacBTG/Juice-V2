@@ -491,10 +491,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# Block editor-mode ticking unless this node is actively being previewed
-	# by the transport director. _editor_preview_active is set by
-	# _enter_editor_preview() and cleared by _exit_editor_preview().
-	if Engine.is_editor_hint() and not _editor_preview_active:
+	# In PREVIEW mode, JuiceOrchestrator._process() drives ticks via tick().
+	if _editor_preview_active:
+		return
+	if Engine.is_editor_hint():
 		return
 
 	# --- SEQUENCER mode: tick per-target effects ---
@@ -502,7 +502,19 @@ func _process(delta: float) -> void:
 		_seq_process_tick(delta)
 		return
 
-	# --- STACK mode below ---
+	# --- STACK mode: delegate to tick() ---
+	tick(delta)
+
+
+## Drive one STACK animation frame.
+## Called by _process() in RUNTIME and by JuiceOrchestrator._process() in PREVIEW.
+## No-op when not playing — safe to call from the orchestrator every frame.
+func tick(delta: float) -> void:
+	# Nothing to do when no animation is active.
+	# _is_playing covers all active states including loop delays
+	# (_on_all_effects_completed re-sets _is_playing = true before _in_loop_delay).
+	if not _is_playing:
+		return
 
 	# --- Node-level start_delay: hold before starting effects ---
 	if _in_node_start_delay:
