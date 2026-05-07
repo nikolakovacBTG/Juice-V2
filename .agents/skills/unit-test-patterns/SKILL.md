@@ -1,6 +1,6 @@
 ---
 name: unit-test-patterns
-description: Unit testing patterns for Juice V1 effects. Auto-invoke during /port workflow.
+description: Unit testing patterns for Juice V2 effects and orchestrator. Auto-invoke during /port workflow.
 ---
 
 # Unit Testing Patterns
@@ -16,6 +16,12 @@ description: Unit testing patterns for Juice V1 effects. Auto-invoke during /por
   - `test_basic_effect_applies`
   - `test_returns_to_natural_after_completion`
   - Effect-specific property tests
+
+## Orchestrator Test Patterns
+- **RUNTIME lifecycle**: spawn → play → complete → idle → retrigger via `reset()` → verify no new node allocation
+- **PREVIEW lifecycle**: spawn → play → teardown → verify `queue_free()` fired and node is freed
+- **Ledger cleanup**: after both modes, verify `JuiceLedger.has_ledger(target)` returns `false`
+- **Retrigger allocation**: count children before/after `reset()` — must be identical (zero new nodes)
 
 ## Test Environment
 - Tests run headless via `.bat` file (see MCP integration rule)
