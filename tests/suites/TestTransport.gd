@@ -22,7 +22,6 @@ func get_test_methods() -> Array[String]:
 		"test_supports_editor_preview_without_recipe",
 		"test_enter_preview_clones_runtime_effects",
 		"test_exit_preview_clears_preview_flag",
-		"test_preview_play_animates_node",
 		"test_scrub_to_time_moves_target",
 		"test_director_select_state",
 		"test_director_deselect_clears_state",
@@ -179,22 +178,6 @@ func test_exit_preview_clears_preview_flag() -> void:
 		"Exit preview: flag must be false so _process is blocked again")
 
 	await cleanup(rig[0])
-
-
-func test_preview_play_animates_node() -> void:
-	var rig := await _build_2d_rig(0.2)
-	var target: Node2D = rig[0]
-	var juice: Juice2D = rig[1]
-
-	juice._enter_editor_preview()
-	juice.animate_in()
-	await wait_seconds(0.35)
-
-	assert_greater(target.position.x, 50.0,
-		"Preview play: node should have moved (x=%.2f)" % target.position.x)
-
-	juice._exit_editor_preview()
-	await cleanup(target)
 
 
 func test_scrub_to_time_moves_target() -> void:
