@@ -11,10 +11,15 @@
 | Phase | Name | Status | Commit | Notes |
 |-------|------|--------|--------|-------|
 | 0 | Branch Setup & V1 Baseline | ✅ Complete | — | Tag created, V1 `.gdignore`'d, V2 dir created |
-| 1 | SOP Authoring | ❌ Not started | | |
-| 2 | Test Infrastructure | ❌ Not started | | |
-| 3 | EditorInspectorPlugin Extraction | ❌ Not started | | |
-| 4 | Single Orchestrator & Factory | ❌ Not started | | |
+| 1 | SOP Authoring | ✅ Complete | — | Skipped formal phase — SOPs pre-existed |
+| 2 | Test Infrastructure | ✅ Complete | — | All 8 empty suite stubs registered in runner |
+| 3.1 | Plugin Shell + JuiceBase Migration | ✅ Complete | e76632d | Plugin created, show/hide migrated |
+| 3.2 | Domain Node Wrapper Migration | ✅ Complete | e76632d | _validate_property restored (hint-only, hybrid) |
+| 3.3 | TestEditorInspectorPlugin + MCP F1/F2 | ✅ Complete | e76632d | 8 headless + 2 MCP tests pass |
+| 4.1 | Orchestrator + Factory Skeletons | ❌ Not started | | |
+| 4.2 | PREVIEW Mode Lifecycle | ❌ Not started | | |
+| 4.3 | RUNTIME Mode + Zero-Alloc Retrigger | ❌ Not started | | |
+| 4.4 | Wire PreviewDirector + MCP Tests | ❌ Not started | | |
 | 5 | Gut Domain Nodes + Config Warnings | ❌ Not started | | |
 | 6 | Property Family Reintroduction | ❌ Not started | | |
 | 7 | Systematic Effect Audit | ❌ Not started | | |
