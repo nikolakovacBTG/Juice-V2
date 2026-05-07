@@ -335,6 +335,9 @@ var _queued_trigger: Dictionary = {}
 # Set by _enter/_exit_editor_preview(). Used to prevent _ready() from
 # short-circuiting in editor and to gate preview-only code paths.
 var _editor_preview_active: bool = false
+# Holds the RUNTIME orchestrator driving tick() for STACK-mode animations.
+# Null when idle. Spawned in _start_effects(), freed in _free_runtime_orchestrator().
+var _runtime_orchestrator: JuiceOrchestrator = null
 
 # --- Sequencer-specific state (SEQUENCER mode only) ---
 
@@ -502,8 +505,7 @@ func _process(delta: float) -> void:
 		_seq_process_tick(delta)
 		return
 
-	# --- STACK mode: delegate to tick() ---
-	tick(delta)
+	# STACK: _runtime_orchestrator._process() drives tick() — Phase 5B2.
 
 
 ## Drive one STACK animation frame.
@@ -691,7 +693,7 @@ func stop() -> void:
 	_in_loop_delay = false
 	# Write natural state (all effect contributions now cleared)
 	_post_tick_write()
-	set_process(false)
+	_free_runtime_orchestrator()
 	JuiceLogger.log_info(self, _get_domain_tag(), "Stopped", debug_enabled)
 
 
@@ -705,7 +707,7 @@ func stop_and_hold() -> void:
 	_active_effect_indices.clear()
 	_is_playing = false
 	_in_loop_delay = false
-	set_process(false)
+	_free_runtime_orchestrator()
 
 
 ## Toggle between animate_in and animate_out.
@@ -1094,7 +1096,10 @@ func _start_effects(play_in: bool) -> void:
 
 
 
-	set_process(true)
+	# Spawn RUNTIME orchestrator — its _process() drives tick() each frame.
+	_free_runtime_orchestrator()  # silent free on loop-restart (no-op when null)
+	_runtime_orchestrator = JuiceOrchestratorFactory.create(self, JuiceOrchestrator.Mode.RUNTIME)
+	add_child(_runtime_orchestrator)
 
 	# Log started effects with their type names so the orchestration chain is
 	# auditable: which specific effects are playing, not just how many.
@@ -1144,8 +1149,6 @@ func _on_effect_completed(idx: int) -> void:
 
 func _on_all_effects_completed() -> void:
 	_is_playing = false
-	set_process(false)
-
 	_current_iteration += 1
 
 	# Check recipe-level looping
@@ -1160,11 +1163,13 @@ func _on_all_effects_completed() -> void:
 			_in_loop_delay = true
 			_loop_delay_elapsed = 0.0
 			_is_playing = true
-			set_process(true)
+			# RUNTIME orchestrator stays alive — its _process() drives tick() through the delay.
 		else:
-			_start_effects(true)
+			_start_effects(true)  # _start_effects frees old orch + spawns fresh one
 		return
 
+	# Truly complete — free the orchestrator (halts tick driving for STACK)
+	_free_runtime_orchestrator()
 	completed.emit()
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
@@ -1781,6 +1786,14 @@ func _seq_on_pass_complete(is_reverse: bool, is_one_shot_return: bool, my_gen: i
 ## Called once in _ready() after target is resolved.
 func _capture_base_values() -> void:
 	pass
+
+
+# Free the RUNTIME orchestrator silently — no node.stop() call to avoid recursion.
+# Callers (stop, stop_and_hold, _on_all_effects_completed) handle stop state themselves.
+func _free_runtime_orchestrator() -> void:
+	if _runtime_orchestrator != null and is_instance_valid(_runtime_orchestrator):
+		_runtime_orchestrator.queue_free()
+	_runtime_orchestrator = null
 
 
 ## Returns the domain tag string for logging ("Control", "2D", "3D").
