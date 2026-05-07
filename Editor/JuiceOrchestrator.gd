@@ -12,8 +12,9 @@
 #       Extends Node (not Object) so _process runs natively and queue_free()
 #       provides automatic scene-tree cleanup — no manual deferred freeing needed.
 # SYSTEM: Juice V2 Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Clone effects (Phase 5C). Register or deregister the ledger (Phase 5C).
-#           Drive RUNTIME ticks — JuiceBase still owns its _process in RUNTIME mode until Phase 5B2.
+# DOES NOT: Clone effects (Phase 5C1/5C2). Permanently remove ledger entries on stop —
+#           only cleanup_source(permanent=false) fires in _exit_tree. Domain nodes handle
+#           permanent cleanup in NOTIFICATION_PREDELETE until Phase 5C-full removes them.
 # ============================================================================
 
 @tool
@@ -68,6 +69,18 @@ func _process(delta: float) -> void:
 	# Drive tick() for both PREVIEW and RUNTIME modes.
 	# JuiceBase.tick() returns immediately when _is_playing is false — safe to call every frame.
 	_node.tick(delta)
+
+
+# Clean up the ledger source when this orchestrator is freed.
+# Fires on queue_free() (animation complete, teardown, scene exit) — covers all normal paths.
+# Domain nodes retain a PREDELETE fallback for abnormal exits (Phase 5C-full removes it).
+func _exit_tree() -> void:
+	if _target != null and is_instance_valid(_target) \
+			and _node != null and is_instance_valid(_node):
+		JuiceLedger.cleanup_source(_target, _node, false)
+		JuiceLogger.log_info(self, "Orchestrator",
+				"_exit_tree: ledger cleanup for target=%s" % _target.name,
+				debug_enabled)
 
 
 # =============================================================================
