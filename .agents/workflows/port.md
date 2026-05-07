@@ -1,11 +1,12 @@
 ---
-description: Port a V0 Juice effect to V1 architecture (Sequential 2D → Control → 3D)
+description: Port a Juice V2 effect across domains (Sequential 2D → Control → 3D)
 ---
 
 You are in PORT MODE.
 
-This workflow ports a V0 Juice effect (comp) to V1 architecture (resource-based effect).
+This workflow ports a Juice V2 effect across all three domains.
 It enforces **strict sequential domain porting** (2D → Control → 3D) to prevent context overflow and ensure quality.
+Effects are Resources with `@tool` (for dynamic `_get_property_list()`). The orchestrator owns lifecycle — effects remain pure delta calculators.
 
 **Skills auto-invoked:** `@juice-architecture`, `@unit-test-patterns`, `@verify-claims`, `@doc-sweep`, `@juice-debug-logging`
 

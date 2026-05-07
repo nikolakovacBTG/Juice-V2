@@ -1,5 +1,5 @@
 ---
-description: Run the Juice V1 automated test suite (Unit & Realistic) and report results
+description: Run the Juice V2 automated test suite (Unit & Realistic) and report results
 ---
 
 You are in TEST MODE.

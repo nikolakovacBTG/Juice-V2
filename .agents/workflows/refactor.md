@@ -4,7 +4,7 @@ description: Systematic, safe refactoring with backup, validation, and documenta
 
 You are in REFACTOR MODE.
 
-**Parent workflow:** `/architecture` - See `/architecture` for Juice V1 architecture context
+**Parent workflow:** `/architecture` - See `/architecture` for Juice V2 architecture context
 
 ---
 
