@@ -169,6 +169,9 @@ func teardown() -> void:
 		JuiceLogger.log_info(self, "Orchestrator",
 				"teardown() → %s.stop() + free()" % _node.name, debug_enabled)
 		_node.stop()
+		# Clear the node's orch reference so it doesn't hold a dangling pointer after free.
+		if _node._runtime_orchestrator == self:
+			_node._runtime_orchestrator = null
 	else:
 		JuiceLogger.log_info(self, "Orchestrator", "teardown() — node invalid, freeing anyway", debug_enabled)
 	_node   = null
