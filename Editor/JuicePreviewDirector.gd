@@ -53,6 +53,11 @@ var _primary_node: JuiceBase = null
 # These are the nodes that receive play/stop/scrub commands.
 var _preview_nodes: Array = []
 
+# Orchestrators managing each preview node's animation lifecycle.
+# Keys: JuiceBase node. Values: JuiceOrchestrator (PREVIEW mode).
+# Populated in _add_preview_node, torn down in deselect().
+var _orchestrators: Dictionary = {}
+
 ## Whether the transport is currently playing.
 var is_playing: bool = false
 
@@ -149,7 +154,7 @@ func select(node: JuiceBase) -> void:
 
 
 ## Called by the plugin when selection changes away from a juice node.
-## Stops all previews and restores targets to natural state.
+## Stops all previews, tears down orchestrators, and restores targets to natural state.
 func deselect() -> void:
 	if _primary_node != null:
 		JuiceLogger.log_info(self, "Transport",
@@ -159,7 +164,11 @@ func deselect() -> void:
 		if is_instance_valid(node):
 			_disconnect_node_signals(node)
 			node._exit_editor_preview()
+		var orch: JuiceOrchestrator = _orchestrators.get(node)
+		if orch and is_instance_valid(orch):
+			orch.teardown()
 	_preview_nodes.clear()
+	_orchestrators.clear()
 	_primary_node = null
 	state_changed.emit()
 
@@ -169,7 +178,7 @@ func deselect() -> void:
 # =============================================================================
 
 ## Main Play button — full fidelity preview.
-## Routes through _handle_trigger() so trigger_behaviour and start_delay are respected.
+## Routes through the orchestrator which delegates to _handle_trigger().
 func play() -> void:
 	_stop_internal()
 	_recalculate_max_duration()
@@ -179,7 +188,9 @@ func play() -> void:
 	set_process(true)
 	for node in _preview_nodes:
 		if is_instance_valid(node):
-			node._handle_trigger({"play_in": true})
+			var orch: JuiceOrchestrator = _orchestrators.get(node)
+			if orch:
+				orch.play()
 	_bootstrap_preview_utilities()
 	JuiceLogger.log_info(self, "Transport",
 			"Play started | loop=%s | siblings=%s | preview_count=%d | max_dur=%.2fs" % [
@@ -200,7 +211,9 @@ func play_in() -> void:
 	set_process(true)
 	for node in _preview_nodes:
 		if is_instance_valid(node):
-			node.animate_in()
+			var orch: JuiceOrchestrator = _orchestrators.get(node)
+			if orch:
+				orch.play_in()
 	_bootstrap_preview_utilities()
 	JuiceLogger.log_info(self, "Transport",
 			"Play IN started | preview_count=%d" % _preview_nodes.size(),
@@ -218,7 +231,9 @@ func play_out() -> void:
 	set_process(true)
 	for node in _preview_nodes:
 		if is_instance_valid(node):
-			node.animate_out()
+			var orch: JuiceOrchestrator = _orchestrators.get(node)
+			if orch:
+				orch.play_out()
 	_bootstrap_preview_utilities()
 	JuiceLogger.log_info(self, "Transport",
 			"Play OUT started | preview_count=%d" % _preview_nodes.size(),
@@ -370,6 +385,7 @@ func restore_preview_visual() -> void:
 # =============================================================================
 
 # Stops all nodes without emitting state_changed (used internally before play/select).
+# Routes through orchestrators so the lifecycle contract is maintained.
 func _stop_internal() -> void:
 	var was_playing := is_playing
 	is_playing = false
@@ -378,7 +394,11 @@ func _stop_internal() -> void:
 	set_process(false)
 	for node in _preview_nodes:
 		if is_instance_valid(node):
-			node.stop()
+			var orch: JuiceOrchestrator = _orchestrators.get(node)
+			if orch and is_instance_valid(orch):
+				orch.stop()
+			else:
+				node.stop()  # fallback: no orchestrator for this node
 	_cleanup_preview_utilities()
 	if debug_enabled and was_playing:
 		JuiceLogger.log_info(self, "Transport", "Stopped (internal)", debug_enabled)
@@ -461,7 +481,7 @@ func _cleanup_preview_utilities() -> void:
 		JuiceLogger.log_info(self, "Transport", "Preview screen util removed", debug_enabled)
 
 
-# Enter editor preview for a node and add it to _preview_nodes.
+# Enter editor preview for a node, spawn its orchestrator, and add it to _preview_nodes.
 func _add_preview_node(node: JuiceBase) -> void:
 	if not node._supports_editor_preview():
 		JuiceLogger.warn(self, "Transport",
@@ -472,6 +492,10 @@ func _add_preview_node(node: JuiceBase) -> void:
 				"Node '%s' skipped: has no parent in tree" % node.name, debug_enabled)
 		return
 	node._enter_editor_preview()
+	# Spawn PREVIEW orchestrator for this node. PreviewDirector owns its lifetime;
+	# teardown() is called in deselect().
+	var orch := JuiceOrchestratorFactory.create(node, JuiceOrchestrator.Mode.PREVIEW)
+	_orchestrators[node] = orch
 	_preview_nodes.append(node)
 	_connect_node_signals(node)
 
