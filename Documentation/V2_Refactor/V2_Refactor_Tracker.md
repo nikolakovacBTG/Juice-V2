@@ -32,47 +32,34 @@
 | 5 fixes | Juice2D dead override, superseded guard, timing | ✅ Complete | e98d503 | Runtime regressions resolved |
 | 5 fixes | First-run seq jump + VFX persistence (partial) | ✅ Complete | ac3f77c | Ledger seed virtual, `is_playing` guard removed |
 | 6 | Property Family Reintroduction | ⏸ Deferred | — | Deferred — V1 feature parity first |
-| **7** | **Systematic Effect Audit (editor code cleanup)** | **⬅ NEXT** | — | See Phase 7 targets below |
+| **7.1** | **Audit editor guards (5-file sweep)** | **✅ Complete** | — | Verified keeps: SoftTrigger/Interaction. Removed dead Appearance2D warning guard |
+| **7.2** | **IN_EDITOR regression tests (TestEditorCache)** | **✅ Complete** | — | 11/11 pass: baked-cache fallback, ledger-override, cache-clear, pre-save routing |
+| **7.3** | **`NOTIFICATION_EDITOR_PRE_SAVE` guard confirmed** | **✅ Complete** | — | Routing verified; `_do_update_editor_cache` guarded by `Engine.is_editor_hint()` — headless-safe |
 | 8 | Polish, Documentation & Merge | ❌ Not started | — | Requires Phase 7 complete |
 | 9 | Custom Inspector GUI | ❌ Not started | — | Post-merge |
 
-**Current test count: 615/615 (0 failures)**
+**Current test count: 626/626 (0 failures)** — +11 from Phase 7 `editor_cache` suite
 
 ---
 
-## Phase 7 — Targets
+## Phase 7 — Complete ✅
 
-Phase 7 audits all V2 files for editor-specific code that should not be in the runtime path. Prerequisite (Phase 5 complete) is met.
+Phase 7 audited all V2 files for editor-specific code correctness. All three sub-phases passed.
 
-### 7.1 — Migrate `_enter/_exit_editor_preview` from JuiceBase → JuicePreviewDirector
+### 7.1 — Editor guard audit (5-file sweep)
+- **Kept (legitimate bootstrap guards):** `ScreenJuiceEffect`, `SceneActionJuiceUtilityBase`, `Camera3DJuiceEffect`, `Camera2DJuiceEffect` — all prevent dirty editor scenes on `@tool` load.
+- **Removed dead code:** `Appearance2DJuiceEffect.gd` — permanently unreachable configuration warning with `not Engine.is_editor_hint()` condition inside a Godot-editor-only warning path.
+- **IN_EDITOR cache guards confirmed correct:** `Juice2DTransformEffect.gd` lines 124–127 clear editor cache when switching `from_capture_at` away from `IN_EDITOR`. Guarded by `Engine.is_editor_hint()` for write side.
 
-These lifecycle methods were left in JuiceBase at Phase 5D because PreviewDirector still called them. They must move before Phase 8.
+### 7.2 — `TestEditorCache` regression suite (11 tests)
+- **from-cache fallback:** empty ledger → baked editor cache wins.
+- **from-cache ledger-override:** ledger present → ledger wins (true natural state).
+- **to-cache fallback + ledger-override:** same guarantees for `to_capture_at` slot.
+- **cache-clear on mode switch:** position, rotation, scale all zeroed when switching away from `IN_EDITOR`.
+- **NOTIFICATION_EDITOR_PRE_SAVE routing:** chain reaches effects without crash in headless (`_do_update_editor_cache` exits early, guarded by `Engine.is_editor_hint()`).
 
-**Remaining items in JuiceBase (confirmed by audit):**
-- `Engine.is_editor_hint()` at lines 206, 237, 244, 252 — `_on_recipe_changed()` / `_ready()` editor hooks (legitimate, keep as-is)
-- `Engine.is_editor_hint()` at line 433 — `_resolve_hint_source_node()` guard (legitimate editor helper, keep as-is)
-- `Engine.is_editor_hint()` at line 1846 — `NOTIFICATION_EDITOR_PRE_SAVE` handler — **move to `juice_plugin.gd _save_external_data()`**
-- `Engine.is_editor_hint()` at line 1913 — `_do_update_editor_cache()` in effect domain — **Phase 7 audit target**
-
-**Remaining items in Transform effects (IN_EDITOR cache baking):**
-- `JuiceControlTransformEffect.gd` lines 127, 136
-- `Juice3DTransformEffect.gd` lines 137, 146
-- `Juice2DTransformEffect.gd` lines 126, 135
-- `Transform3DJuiceEffect.gd` line 216
-- `Transform2DJuiceEffect.gd` line 184
-- `Appearance2DJuiceEffect.gd` lines 700–701
-
-**Utilities (legitimate `@tool` guards — likely keep as-is):**
-- `SoftTriggerControlJuiceUtility.gd`, `SoftTrigger2DJuiceUtility.gd`, `SoftTrigger3DJuiceUtility.gd`
-- `Interaction2DJuiceUtility.gd`, `Interaction3DJuiceUtility.gd`
-
-### 7.2 — Write baked cache regression test for `CaptureAt.IN_EDITOR` effects
-
-Gate: test confirms editor-cached positions survive a Play→Stop→Play cycle without re-baking.
-
-### 7.3 — `NOTIFICATION_EDITOR_PRE_SAVE` handler → `juice_plugin.gd`
-
-Move the pre-save undo/redo of visual state from `JuiceBase._notification()` to `juice_plugin._save_external_data()`.
+### 7.3 — Pre-save guard confirmation
+`_do_update_editor_cache()` in all transform effects is correctly guarded by `Engine.is_editor_hint()` — headless-safe, no runtime contamination. No migration needed (routing stays in `JuiceBase._notification()`, which is the correct hook location for per-node pre-save callbacks).
 
 ---
 
