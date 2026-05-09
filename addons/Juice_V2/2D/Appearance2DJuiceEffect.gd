@@ -696,10 +696,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Flicker mode is Custom but no flicker_curve is assigned. Flicker will not apply.")
 	if flicker_min > flicker_max:
 		warnings.append("flicker_min is greater than flicker_max — flicker behavior undefined.")
-	# Add warnings for invalid reference combinations
-	if (from_reference == AppearanceReference.SELF and from_capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint()) or \
-	   (to_reference == AppearanceReference.SELF and to_capture_at == CaptureAt.IN_EDITOR and not Engine.is_editor_hint()):
-		warnings.append("SELF reference with IN_EDITOR capture only works in editor.")
 	# Add warnings for OUTLINE without proper setup
 	if effect_type == AppearanceEffect.OUTLINE and outline_width <= 0.0:
 		warnings.append("OUTLINE effect requires outline_width > 0.0 to be visible.")
