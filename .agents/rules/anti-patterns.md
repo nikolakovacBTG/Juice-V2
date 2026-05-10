@@ -119,6 +119,7 @@ class GoodControlEffect extends JuiceControlEffectBase:
 - **NEVER assume** a feature is "not needed" without user confirmation
 - **ALWAYS discuss** scope reductions with user first
 - **NEVER dismiss** use cases as "rare" without explicit confirmation
+- **Signal words:** If you are about to write "fall back to", "not supported", "too niche", "excluded", "not needed", or "pragmatic fallback" — you are making a scope reduction. **STOP and ask the user first, regardless of the technical justification.**
 
 ### Using Comments as Design Intent
 - **NEVER use** script comments as authoritative design intent

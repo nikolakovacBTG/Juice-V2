@@ -50,6 +50,19 @@ If scope is not clear:
 
 ---
 
+### 1b. Sprint Contract Check (MANDATORY before any changes)
+
+State the sprint/phase goal in one sentence. Then explicitly answer:
+- Does this change's scope cover the full stated goal?
+- Is anything being left out, excluded, or handled with a lesser fallback?
+
+If yes to the second question — **STOP and ask the user before proceeding.**
+
+**Signal words that mean a scope reduction is happening:** "fall back to", "not supported", "too niche", "excluded", "not needed", "pragmatic fallback". Writing any of these is a hard stop — present the obstacle to the user and wait for authorization.
+
+---
+
+
 ### 2. Pre-Refactor Analysis
 
 #### Impact Assessment

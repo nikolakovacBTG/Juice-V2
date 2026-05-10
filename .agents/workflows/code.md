@@ -24,9 +24,11 @@ Authorization is given by a normal positive/negative answer to a direct authoriz
 ## 1. General Principles & Feature Completeness (MANDATORY)
 
 - **Complete the Design:** Implement ALL features from the approved design. Do NOT skip, simplify, or "phase" features unless authorized. If a design gap is found, STOP and ask.
+- **Sprint Contract Check:** Before writing any code, state the sprint/phase goal in one sentence. Confirm that every type, case, and code path you are about to implement covers the full goal. If anything is being left out — **STOP and ask first.** Signal words: "fall back to", "not supported", "too niche", "excluded", "not needed", "pragmatic fallback" — writing any of these is a hard stop.
 - **Goal:** Clarity over cleverness, simplicity over abstraction, predictable control flow.
 - **Style:** No shorthand logic that harms readability. Every script should be understandable in isolation. Explain WHY, not just WHAT.
 - **Godot Expectations:** Godot 4.x. Use composition-friendly patterns. Assume designers will tweak values.
+
 
 ---
 
