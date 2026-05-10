@@ -38,12 +38,27 @@ static var _store: Dictionary = {}
 
 ## Returns the zero value appropriate for the type of [param value].
 ## Used to create a starting accumulator before summing deltas dynamically.
+## Returns [code]null[/code] for types that have no additive arithmetic operator
+## in GDScript (Rect2, Rect2i, AABB) — callers that receive null must fall back
+## to direct-write instead of register_delta.
 static func zero_for(value: Variant) -> Variant:
-	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT: return 0.0
-	if typeof(value) == TYPE_VECTOR2: return Vector2.ZERO
-	if typeof(value) == TYPE_VECTOR3: return Vector3.ZERO
-	if typeof(value) == TYPE_COLOR: return Color.WHITE
-	return null
+	match typeof(value):
+		TYPE_FLOAT, TYPE_INT: return 0.0
+		TYPE_VECTOR2:         return Vector2.ZERO
+		TYPE_VECTOR2I:        return Vector2i.ZERO
+		TYPE_VECTOR3:         return Vector3.ZERO
+		TYPE_VECTOR3I:        return Vector3i.ZERO
+		TYPE_VECTOR4:         return Vector4.ZERO
+		TYPE_VECTOR4I:        return Vector4i.ZERO
+		# Quaternion uses component-wise + as additive identity (0,0,0,0).
+		# Single-effect delta works: base + (computed - base) = computed.
+		# Stacking two Quaternion-targeting effects produces a non-unit result
+		# (expected limitation — slerp composition requires multiplicative model).
+		TYPE_QUATERNION:      return Quaternion(0.0, 0.0, 0.0, 0.0)
+		TYPE_COLOR:           return Color.WHITE
+		# Rect2, Rect2i, AABB: no + operator in GDScript — cannot be delta-stacked.
+		# Property effects targeting these types fall back to direct set_indexed().
+		_: return null
 
 
 ## Ensures the ledger exists for [param target] and that each property in
@@ -78,13 +93,17 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 		var base_val: Variant = ledger["base"][prop]
 		var total_delta: Variant = zero_for(base_val)
 		if ledger["deltas"].has(prop):
-			for delta_val: Variant in ledger["deltas"][prop].values():
-				if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+			# Hoist type check outside loop — the delta type never changes mid-iteration.
+			# Key-iteration avoids the per-call Array allocation of .values().
+			var delta_dict: Dictionary = ledger["deltas"][prop]
+			if typeof(total_delta) == TYPE_COLOR:
+				for source_id in delta_dict:
 					var c_tot := total_delta as Color
-					var c_del := delta_val as Color
+					var c_del := delta_dict[source_id] as Color
 					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-				else:
-					total_delta += delta_val
+			else:
+				for source_id in delta_dict:
+					total_delta += delta_dict[source_id]
 
 		var expected_val: Variant = base_val
 		if typeof(total_delta) == TYPE_COLOR:
@@ -160,13 +179,17 @@ static func get_total(target: Node, prop: String, zero_val: Variant) -> Variant:
 	var ledger: Dictionary = _store[target.get_instance_id()]
 	if not ledger["deltas"].has(prop): return zero_val
 	var total: Variant = zero_val
-	for delta_val: Variant in ledger["deltas"][prop].values():
-		if typeof(total) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+	# Hoist type check outside loop — the delta type never changes mid-iteration.
+	# Key-iteration avoids the per-call Array allocation of .values().
+	var delta_dict: Dictionary = ledger["deltas"][prop]
+	if typeof(total) == TYPE_COLOR:
+		for source_id in delta_dict:
 			var c_tot := total as Color
-			var c_del := delta_val as Color
+			var c_del := delta_dict[source_id] as Color
 			total = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-		else:
-			total += delta_val
+	else:
+		for source_id in delta_dict:
+			total += delta_dict[source_id]
 	return total
 
 
@@ -248,13 +271,16 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 		if base_val == null: continue
 		var total_delta: Variant = zero_for(base_val)
 		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
-		for delta_val: Variant in delta_sources.values():
-			if typeof(total_delta) == TYPE_COLOR and typeof(delta_val) == TYPE_COLOR:
+		# Hoist type check outside loop — the delta type never changes mid-iteration.
+		# Key-iteration avoids the per-call Array allocation of .values().
+		if typeof(total_delta) == TYPE_COLOR:
+			for source_id in delta_sources:
 				var c_tot := total_delta as Color
-				var c_del := delta_val as Color
+				var c_del := delta_sources[source_id] as Color
 				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-			else:
-				total_delta += delta_val
+		else:
+			for source_id in delta_sources:
+				total_delta += delta_sources[source_id]
 		# Color properties use multiplicative accumulation (base × Πfactors).
 		# All other types use additive accumulation (base + Σdeltas).
 		if typeof(base_val) == TYPE_COLOR:
