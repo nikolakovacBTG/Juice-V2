@@ -273,9 +273,10 @@ func _post_tick_write() -> void:
 	JuiceLedger.register_delta(n3d, self, "rotation", new_rot)
 	JuiceLedger.register_delta(n3d, self, "scale", new_scale)
 
-	# Write: base + Σ(all source deltas) — single authoritative write via ledger.
-	# Only flushes transform properties; appearance uses multiplicative accumulation below.
-	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
+	# Flush all registered properties — transform (additive) and any property
+	# effects registered dynamically via PropertyJuiceEffectBase.
+	# Appearance (modulate/material) uses multiplicative accumulation below, handled separately.
+	JuiceLedger.flush(n3d)
 
 	var base_pos: Vector3 = JuiceLedger.get_base(n3d, "position", Vector3.ZERO)
 	var base_rot: Vector3 = JuiceLedger.get_base(n3d, "rotation", Vector3.ZERO)
@@ -396,8 +397,9 @@ func _temporarily_undo_visual() -> void:
 	# Strip our transform deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n3d, self, false)
 
-	# Flush remaining sibling transform contributions
-	JuiceLedger.flush(n3d, ["position", "rotation", "scale"])
+	# Flush all remaining contributions — Ledger handles transform properties
+	# and any property effects registered dynamically via PropertyJuiceEffectBase.
+	JuiceLedger.flush(n3d)
 
 	# Restore natural material so editor save doesn't serialise working material
 	if _appearance_setup and _appearance_mesh != null:

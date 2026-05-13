@@ -269,8 +269,9 @@ func _post_tick_write() -> void:
 	# automatically via per-source delta tracking (one entry per Juice2D node).
 	JuiceLedger.register_delta(n2d, self, "modulate", combined_modulate)
 
-	# Flush all properties — transform (additive) + modulate (multiplicative)
-	JuiceLedger.flush(n2d, ["position", "rotation", "scale", "modulate"])
+	# Flush all registered properties — transform (additive), modulate (multiplicative),
+	# and any property effects registered dynamically via PropertyJuiceEffectBase.
+	JuiceLedger.flush(n2d)
 	var written_modulate: Color = n2d.modulate
 	JuiceLogger.log_info(self, "2D",
 			"post_tick: modulate this_node_factor=%s total_written=%s" % [
@@ -306,9 +307,9 @@ func _temporarily_undo_visual() -> void:
 	# Strip our deltas from the ledger temporarily without destroying it
 	JuiceLedger.cleanup_source(n2d, self, false)
 
-	# Flush remaining sibling contributions — Ledger handles both additive
-	# (transform) and multiplicative (modulate) correctly.
-	JuiceLedger.flush(n2d, ["position", "rotation", "scale", "modulate"])
+	# Flush all remaining contributions — Ledger handles additive (transform),
+	# multiplicative (modulate), and property effects registered dynamically.
+	JuiceLedger.flush(n2d)
 
 
 ## Re-add contributions after temporary undo.

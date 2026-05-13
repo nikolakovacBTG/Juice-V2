@@ -118,6 +118,8 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestConfigWarnings.gd").new())
 	# Phase 6: Property ledger V2 + stacking
 	_suites.append(load("res://tests/suites/TestPropertyLedger.gd").new())
+	_suites.append(load("res://tests/suites/TestPropertyFamily.gd").new())
+	_suites.append(load("res://tests/suites/TestNoiseProperty.gd").new())
 	_suites.append(load("res://tests/suites/TestPropertyStacking.gd").new())
 	# Phase 7: Editor cache regression (IN_EDITOR CaptureAt stability)
 	_suites.append(load("res://tests/suites/TestEditorCache.gd").new())
