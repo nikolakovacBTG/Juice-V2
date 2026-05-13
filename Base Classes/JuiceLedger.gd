@@ -36,11 +36,12 @@ static var _store: Dictionary = {}
 # PUBLIC API
 # =============================================================================
 
-## Returns the zero value appropriate for the type of [param value].
-## Used to create a starting accumulator before summing deltas dynamically.
-## Returns [code]null[/code] for types that have no additive arithmetic operator
-## in GDScript (Rect2, Rect2i, AABB) — callers that receive null must fall back
-## to direct-write instead of register_delta.
+## Returns the additive identity for [param value]'s type, used as the accumulator
+## seed before summing deltas in [method flush] and [method get_total].
+## Returns [code]null[/code] for non-additive types — decomposed types
+## (Rect2, Rect2i, AABB) and hold/flip types (bool, String, StringName, NodePath,
+## Object, Plane, Basis, Projection). [method flush] inspects [code]typeof(base_val)[/code]
+## to route these types to their correct accumulation path.
 static func zero_for(value: Variant) -> Variant:
 	match typeof(value):
 		TYPE_FLOAT, TYPE_INT: return 0.0
@@ -51,13 +52,13 @@ static func zero_for(value: Variant) -> Variant:
 		TYPE_VECTOR4:         return Vector4.ZERO
 		TYPE_VECTOR4I:        return Vector4i.ZERO
 		# Quaternion uses component-wise + as additive identity (0,0,0,0).
-		# Single-effect delta works: base + (computed - base) = computed.
-		# Stacking two Quaternion-targeting effects produces a non-unit result
+		# Single-effect delta: base + (computed - base) = computed.
+		# Stacking two Quaternion effects produces a non-unit result
 		# (expected limitation — slerp composition requires multiplicative model).
 		TYPE_QUATERNION:      return Quaternion(0.0, 0.0, 0.0, 0.0)
 		TYPE_COLOR:           return Color.WHITE
-		# Rect2, Rect2i, AABB: no + operator in GDScript — cannot be delta-stacked.
-		# Property effects targeting these types fall back to direct set_indexed().
+		# All other types (Rect2, Rect2i, AABB, bool, String, NodePath, Plane, etc.)
+		# return null. flush() routes null to decomposed or hold accumulation paths.
 		_: return null
 
 
@@ -92,6 +93,9 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 		if not ledger["base"].has(prop): continue
 		var base_val: Variant = ledger["base"][prop]
 		var total_delta: Variant = zero_for(base_val)
+		# Decomposed and hold types (null from zero_for) do not support drift
+		# detection yet — PropertyTarget captures base before animation starts.
+		if total_delta == null: continue
 		if ledger["deltas"].has(prop):
 			# Hoist type check outside loop — the delta type never changes mid-iteration.
 			# Key-iteration avoids the per-call Array allocation of .values().
@@ -161,8 +165,11 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 
 
 ## Registers [param delta] for [param prop] from [param source] on [param target].
-## Allows multiple effects (e.g. hover and click) to independently contribute to the same property without overwriting each other. Re-registering from the same source replaces the previous value.
-static func register_delta(target: Node, source: Node, prop: String, delta: Variant) -> void:
+## Allows multiple effects (e.g. hover and click) to independently contribute to
+## the same property without overwriting each other.
+## Re-registering from the same source replaces the previous value.
+## [param source] may be a Node or a Resource — any Object with [method get_instance_id].
+static func register_delta(target: Node, source: Object, prop: String, delta: Variant) -> void:
 	var id := target.get_instance_id()
 	if not _store.has(id): return
 	var ledger: Dictionary = _store[id]
@@ -170,6 +177,26 @@ static func register_delta(target: Node, source: Node, prop: String, delta: Vari
 		ledger["deltas"][prop] = {}
 	var source_id := source.get_instance_id()
 	ledger["deltas"][prop][source_id] = delta
+
+
+## Registers [param value] as the desired hold state for [param prop] from
+## [param source] on [param target]. Used for discrete and flip-type properties
+## (bool, String, StringName, NodePath, Object, Plane, Basis, Projection) that
+## cannot be additively stacked.
+## [method flush] writes the most-recently-registered active source's value each
+## frame. When that source ends via [method cleanup_source], the previously
+## registered source's value is automatically restored — no manual bookkeeping needed.
+## Internally stored in the same deltas dict as register_delta; flush() routes
+## to the correct path by inspecting typeof(base_val).
+## [param source] may be a Node or a Resource — any Object with [method get_instance_id].
+static func register_hold(target: Node, source: Object, prop: String, value: Variant) -> void:
+	var id := target.get_instance_id()
+	if not _store.has(id): return
+	var ledger: Dictionary = _store[id]
+	if not ledger["deltas"].has(prop):
+		ledger["deltas"][prop] = {}
+	var source_id := source.get_instance_id()
+	ledger["deltas"][prop][source_id] = value
 
 
 ## Returns the summed total delta for [param prop] across all registered sources.
@@ -229,7 +256,8 @@ static func get_base_dict(target: Node) -> Dictionary:
 ## Removes all deltas registered by [param source] from [param target]'s ledger.
 ## If [param permanently] is [code]true[/code] and no other sources remain,
 ## restores all base values and removes the ledger entry entirely.
-static func cleanup_source(target: Node, source: Node, permanently: bool = true) -> void:
+## [param source] may be a Node or a Resource — any Object with [method get_instance_id].
+static func cleanup_source(target: Node, source: Object, permanently: bool = true) -> void:
 	var id := target.get_instance_id()
 	if not _store.has(id): return
 	var ledger: Dictionary = _store[id]
@@ -252,13 +280,16 @@ static func cleanup_source(target: Node, source: Node, permanently: bool = true)
 		_store.erase(id)
 
 
-## Immediately writes the combined value for tracked properties to the target node.
-## Additive properties (position, rotation, scale): [code]base + Σdeltas[/code].
-## Multiplicative properties (self_modulate, modulate): [code]base × Πfactors[/code].
-## Called after stop() or from [_temporarily_undo_visual] when no active
-## _process loop will perform the next write.
-## [param props] restricts which properties are written. If empty, all tracked
-## properties are flushed.
+## Immediately writes the combined value for all tracked (or specified) properties
+## to the target node, using one of three accumulation strategies per type:
+## [b]Additive[/b] (float, int, Vector2/2i/3/3i/4/4i, Quaternion): [code]base + Σdeltas[/code].
+## [b]Multiplicative[/b] (Color): [code]base × Πfactors[/code].
+## [b]Decomposed[/b] (Rect2, Rect2i, AABB): component-wise position + size sums.
+## [b]Hold[/b] (bool, String, StringName, NodePath, Object, Plane, Basis, Projection):
+## last-insertion-order active source wins; reverts to base when no holds remain.
+## Called from [method _post_tick_write] every frame, and from
+## [method _temporarily_undo_visual] / [method _temporarily_reapply_visual].
+## [param props] restricts which properties are flushed. Empty = flush all tracked.
 ## All REMAINING sources (e.g. an active hover) are preserved.
 static func flush(target: Node, props: Array[String] = []) -> void:
 	if not _store.has(target.get_instance_id()): return
@@ -269,26 +300,75 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 		if prop.begins_with("_"): continue
 		var base_val: Variant = ledger["base"].get(prop)
 		if base_val == null: continue
-		var total_delta: Variant = zero_for(base_val)
 		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
-		# Hoist type check outside loop — the delta type never changes mid-iteration.
-		# Key-iteration avoids the per-call Array allocation of .values().
-		if typeof(total_delta) == TYPE_COLOR:
-			for source_id in delta_sources:
-				var c_tot := total_delta as Color
-				var c_del := delta_sources[source_id] as Color
-				total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
-		else:
-			for source_id in delta_sources:
-				total_delta += delta_sources[source_id]
-		# Color properties use multiplicative accumulation (base × Πfactors).
-		# All other types use additive accumulation (base + Σdeltas).
-		if typeof(base_val) == TYPE_COLOR:
-			var b := base_val as Color
-			var t := total_delta as Color
-			target.set(prop, Color(b.r * t.r, b.g * t.g, b.b * t.b, b.a * t.a))
-		else:
-			target.set(prop, base_val + total_delta)
+		var total_delta: Variant = zero_for(base_val)
+
+		# --- Additive path: float, int, Vector2/2i/3/3i/4/4i, Quaternion ---
+		# --- Multiplicative path: Color ---
+		# zero_for() returns a non-null accumulator for these types.
+		if total_delta != null:
+			# Hoist type check outside loop — delta type never changes mid-iteration.
+			# Key-iteration avoids the per-call Array allocation of .values().
+			if typeof(total_delta) == TYPE_COLOR:
+				for source_id in delta_sources:
+					var c_tot := total_delta as Color
+					var c_del := delta_sources[source_id] as Color
+					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
+				var b := base_val as Color
+				var t := total_delta as Color
+				target.set(prop, Color(b.r * t.r, b.g * t.g, b.b * t.b, b.a * t.a))
+			else:
+				for source_id in delta_sources:
+					total_delta += delta_sources[source_id]
+				target.set(prop, base_val + total_delta)
+			continue
+
+		# --- Non-additive types: zero_for() returned null ---
+		# Route by base_val type to the correct accumulation strategy.
+		match typeof(base_val):
+			# Decomposed continuous: Rect2/Rect2i/AABB have no GDScript + operator.
+			# Component channels (position, size) are summed independently,
+			# preserving additive stacking semantics across concurrent effects.
+			TYPE_RECT2:
+				var base_r := base_val as Rect2
+				var dp := Vector2.ZERO
+				var ds := Vector2.ZERO
+				for source_id in delta_sources:
+					var d := delta_sources[source_id] as Rect2
+					dp += d.position
+					ds += d.size
+				target.set(prop, Rect2(base_r.position + dp, base_r.size + ds))
+			TYPE_RECT2I:
+				var base_ri := base_val as Rect2i
+				var dpi := Vector2i.ZERO
+				var dsi := Vector2i.ZERO
+				for source_id in delta_sources:
+					var d := delta_sources[source_id] as Rect2i
+					dpi += d.position
+					dsi += d.size
+				target.set(prop, Rect2i(base_ri.position + dpi, base_ri.size + dsi))
+			TYPE_AABB:
+				var base_a := base_val as AABB
+				var dp3 := Vector3.ZERO
+				var ds3 := Vector3.ZERO
+				for source_id in delta_sources:
+					var d := delta_sources[source_id] as AABB
+					dp3 += d.position
+					ds3 += d.size
+				target.set(prop, AABB(base_a.position + dp3, base_a.size + ds3))
+			# Hold / flip-discrete: bool, String, StringName, NodePath, Object,
+			# Plane, Basis, Projection. No arithmetic.
+			# GDScript Dictionaries preserve insertion order — the last key iterated
+			# is the most recently registered (newest) hold. When the newest ends
+			# via cleanup_source(), the previous source's value automatically becomes last.
+			_:
+				if delta_sources.is_empty():
+					target.set(prop, base_val)
+				else:
+					var last_hold: Variant = base_val
+					for source_id in delta_sources:
+						last_hold = delta_sources[source_id]
+					target.set(prop, last_hold)
 
 
 ## Returns [code]true[/code] if [param target] has an active ledger.
