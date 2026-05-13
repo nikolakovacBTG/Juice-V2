@@ -2,7 +2,7 @@
 
 ## Project Purpose
 
-This is the **Juice Demo Project** — a standalone Godot 4.x project that showcases every component of the Juice addon (`addons/juice/`). It serves as:
+This is the **Juice Demo Project** — a standalone Godot 4.x project that showcases every component of the Juice V1 (`addons/Juice_V1/`) and Juice V2 (`addons/Juice_V2/`) addons. It serves as:
 
 1. **Marketable demo** — polished visual demos for marketplace listing
 2. **Beta testing** — real usage exposes real bugs
@@ -120,13 +120,33 @@ The `# WHY:` block must define the class's architectural purpose and the constra
 
 ## Subtree Sync Commands
 
-```powershell
-# Pull latest Juice from standalone repo into Demo
-git subtree pull --prefix=addons/juice juice-standalone main --squash
+### Juice V1 (`addons/Juice_V1/` ↔ `https://github.com/nikolakovacBTG/Juice.git`, branch `v1`)
 
-# Push Demo fixes upstream to standalone repo
-git subtree push --prefix=addons/juice juice-standalone main
+```powershell
+# Pull latest V1 from standalone repo into Demo
+git subtree pull --prefix=addons/Juice_V1 juice-standalone v1 --squash
+
+# Push Demo V1 fixes upstream to standalone repo
+git subtree push --prefix=addons/Juice_V1 juice-standalone v1
 ```
+
+### Juice V2 (`addons/Juice_V2/` ↔ `https://github.com/nikolakovacBTG/Juice-V2.git`, branch `main`)
+
+```powershell
+# Pull latest V2 from standalone repo into Demo
+git subtree pull --prefix=addons/Juice_V2 juice-v2-standalone main --squash
+
+# Push Demo V2 fixes upstream to standalone repo
+git subtree push --prefix=addons/Juice_V2 juice-v2-standalone main
+```
+
+### Remotes Reference
+
+| Remote | URL | Used For |
+|--------|-----|----------|
+| `origin` | https://github.com/nikolakovacBTG/Juice-Demo.git | This demo repo |
+| `juice-standalone` | https://github.com/nikolakovacBTG/Juice.git | Juice V1 addon (`addons/Juice_V1/`) |
+| `juice-v2-standalone` | https://github.com/nikolakovacBTG/Juice-V2.git | Juice V2 addon (`addons/Juice_V2/`) |
 
 ## Godot Version
 
