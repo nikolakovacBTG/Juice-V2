@@ -73,6 +73,14 @@ func _compute_property_value(progress: float, prop: String, base_val: Variant, _
 func _needs_sustain() -> bool:
 	return false
 
+
+## Tells PropertyJuiceEffectBase which resource subclass to use for the
+## property_targets typed array in the inspector.
+## Without this override the inspector would offer base PropertyTarget entries,
+## hiding InterpolatePropertyTarget's From/To/CaptureMode fields.
+func _get_target_resource_type() -> String:
+	return "InterpolatePropertyTarget"
+
 # =============================================================================
 # CORE LOGIC
 # =============================================================================
