@@ -11,14 +11,9 @@
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
-[ext_resource type="Script" uid="uid://y8nr8f3an3h3" path="res://addons/Juice_V2/Meta/VFXJuiceEffect.gd" id="13_q1ksy"]
-[ext_resource type="Script" uid="uid://deo7v88rxw61q" path="res://addons/Juice_V2/Meta/NoisePropertyControlJuiceEffect.gd" id="13_wdhjc"]
 [ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V2/Base Classes/Juice2D.gd" id="14_6mvn5"]
-[ext_resource type="Script" uid="uid://bsan2h7g7njwx" path="res://addons/Juice_V2/Meta/PropertyTarget.gd" id="14_ve81s"]
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
-[ext_resource type="PackedScene" uid="uid://hmywymxq54gw" path="res://Demo/Scenes/gpu_particles_2d.tscn" id="14_vyqmh"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
-[ext_resource type="Script" uid="uid://cg0ivw8yuv6rj" path="res://addons/Juice_V2/Meta/InterpolatePropertyControlJuiceEffect.gd" id="15_tloff"]
 [ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V2/icons/JuiceBase.svg" id="15_ve81s"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V2/Base Classes/Juice2DRecipe.gd" id="16_w3iwx"]
 [ext_resource type="Script" uid="uid://dni12p84dccqt" path="res://addons/Juice_V2/Meta/TrailJuiceEffect.gd" id="21_wdhjc"]
@@ -178,31 +173,7 @@ script = ExtResource("5_lfgkc")
 effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_ve81s")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="Resource_37chk"]
-script = ExtResource("13_q1ksy")
-vfx_source = 1
-kill_previous_on_trigger = false
-intensity_multiplier = 1.0
-vfx_scene = ExtResource("14_vyqmh")
-spawn_offset = Vector3(1.26, 0, 0)
-inherit_rotation = true
-spawn_in_world_space = true
-auto_free_delay = 2.0
-max_living_instances = 0
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://y8nr8f3an3h3"
-
-[sub_resource type="Resource" id="Resource_gyyga"]
+[sub_resource type="Resource" id="Resource_gd4to"]
 script = ExtResource("10_ntvx2")
 transform_target = 0
 trigger_behaviour = 1
@@ -211,57 +182,25 @@ crossfade_time = 0.0
 loop_count = 1
 from_reference = 0
 from_position_in = 1
-from_position = Vector2(-0.88, 0)
+from_position = Vector2(-200, 0)
 to_reference = 1
 to_capture_at = 2
 _to_editor_cached_position = Vector2(0, 0)
 _to_editor_cached_rotation = 0.0
 _to_editor_cached_scale = Vector2(1, 1)
 duration_in = 0.3
-transition_in = 9
+transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([SubResource("Resource_37chk")])
+chain_to = Array[ExtResource("4_bhrb6")]([])
 interrupt_siblings = false
-chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
-
-[sub_resource type="Resource" id="Resource_uae5o"]
-script = ExtResource("13_wdhjc")
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://deo7v88rxw61q"
-
-[sub_resource type="Resource" id="Resource_necpd"]
-script = ExtResource("15_tloff")
-property_targets = Array[ExtResource("14_ve81s")]([null])
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_bhrb6")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cg0ivw8yuv6rj"
 
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gyyga"), SubResource("Resource_37chk"), SubResource("Resource_uae5o"), SubResource("Resource_necpd")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gd4to")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_tloff"]

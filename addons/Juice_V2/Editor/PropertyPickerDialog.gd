@@ -118,6 +118,7 @@ func _init() -> void:
 	# The tree itself has a custom_minimum_size set in _build_ui so the first
 	# layout pass gives it meaningful height even before popup_centered fires.
 	min_size = Vector2i(480, 560)
+	max_size = Vector2i(700, 720)  # Hard cap: prevents unbounded growth on first layout pass.
 	exclusive = true
 	unresizable = false
 	visible = false  # Hidden until explicitly opened via open_for_node().
@@ -160,19 +161,14 @@ func _build_ui() -> void:
 		+ "OFF: show all non-internal properties (including storage-only vars).")
 	top_bar.add_child(_restrict_check)
 
-	# --- ScrollContainer wrapping the Tree so the dialog never overflows the screen.
-	# The Tree itself is allowed to grow to any height; the ScrollContainer clips it
-	# to the available space and adds a scrollbar when needed.
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2i(0, 300)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	main_vbox.add_child(scroll)
-
+	# Tree directly in the VBoxContainer — no ScrollContainer wrapper.
+	# Godot's Tree has built-in scrollbars and handles overflow correctly.
+	# A ScrollContainer would give the Tree its full natural content height
+	# as minimum size, causing the dialog to balloon off-screen on first open.
 	_tree = Tree.new()
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tree.custom_minimum_size = Vector2i(0, 300)  # Ensures useful minimum height.
 	_tree.hide_root = true
 	_tree.columns = 3
 	_tree.set_column_title(0, "Property")
@@ -185,7 +181,7 @@ func _build_ui() -> void:
 	_tree.set_column_custom_minimum_width(1, 68)
 	_tree.set_column_expand(2, true)
 	_tree.set_column_custom_minimum_width(2, 140)
-	scroll.add_child(_tree)
+	main_vbox.add_child(_tree)
 
 	# --- Footer: selection hint ---
 	var tip := Label.new()
@@ -229,11 +225,9 @@ func open_for_node(node: Node, current_paths: Array[String], effect_family: Stri
 	_initial_paths = current_paths.duplicate()
 	_effect_family = effect_family
 	_populate_tree()
-	popup_centered(Vector2i(480, 560))
-	# Set size explicitly after popup so the first-open layout uses the correct dimensions.
-	# popup_centered() computes the position before the layout pass runs, which can
-	# produce incorrect centering on first open. Overwriting size here corrects it.
-	size = Vector2i(480, 560)
+	# popup_centered_clamped clamps position so the window stays fully on-screen
+	# even on the first open when Godot's layout pass hasn't finalised sizes yet.
+	popup_centered_clamped(Vector2i(480, 560))
 
 
 # =============================================================================
