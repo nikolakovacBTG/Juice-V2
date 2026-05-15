@@ -381,10 +381,6 @@ func _discover_particle_children(source: Node) -> Array[Node]:
 			result.append(child)
 	return result
 
-
-
-
-
 # =============================================================================
 # INSTANTIATE_NEW MODE
 # =============================================================================

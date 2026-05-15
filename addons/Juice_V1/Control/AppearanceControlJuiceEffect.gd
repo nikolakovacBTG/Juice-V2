@@ -565,6 +565,7 @@ func _get_interrupt_identity() -> Variant:
 # FROM/TO RESOLVERS
 # =============================================================================
 
+# Perform the actual From reference capture
 func _perform_from_capture(ctrl: Control) -> void:
 	if _has_from_self_snapshot:
 		return
@@ -578,6 +579,7 @@ func _perform_from_capture(ctrl: Control) -> void:
 	_captured_from_brightness = max(mod.r, max(mod.g, mod.b))
 	_has_from_self_snapshot = true
 
+# Perform the actual To reference capture
 func _perform_to_capture(ctrl: Control) -> void:
 	if _has_to_self_snapshot:
 		return
