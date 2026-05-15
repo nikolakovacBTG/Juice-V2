@@ -76,9 +76,12 @@ func _enter_tree() -> void:
 	_inspector_plugin = InspectorPluginScript.new()
 	add_inspector_plugin(_inspector_plugin)
 
-	# Register property picker so PropertyTarget sub-inspectors show a pick button.
+	# Register property picker so PropertyTarget sub-inspectors show a Pick… editor property.
+	# The picker uses a singleton dialog (created once in _init, reused per-open).
+	# add_dialog_to_editor() parents the dialog to the editor base control so popups are modal.
 	_property_picker_plugin = PropertyPickerPluginScript.new()
 	add_inspector_plugin(_property_picker_plugin)
+	_property_picker_plugin.add_dialog_to_editor(EditorInterface.get_base_control())
 
 	# Build transport UI and director
 	_build_ui()
@@ -124,6 +127,8 @@ func _exit_tree() -> void:
 		remove_inspector_plugin(_inspector_plugin)
 		_inspector_plugin = null
 	if _property_picker_plugin:
+		# cleanup() removes the singleton dialog from the editor tree before deregistration.
+		_property_picker_plugin.cleanup()
 		remove_inspector_plugin(_property_picker_plugin)
 		_property_picker_plugin = null
 
