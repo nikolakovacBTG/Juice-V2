@@ -43,8 +43,6 @@ extends PropertyTarget
 # INTERNAL STATE
 # =============================================================================
 
-# Detected GDScript type of the property, set by the domain effect base when
-# capture_base() resolves the first base value from the Ledger.
-# TYPE_NIL means no property has been detected yet (set by PropertyPickerPlugin
-# or manually in tests).
-var _detected_type: int = TYPE_NIL
+# _detected_type is inherited from PropertyTarget — do not redeclare here.
+# PropertyTarget._detect_type() auto-updates it from the property path; shadowing
+# it here would create a second slot that never syncs with the parent's slot.

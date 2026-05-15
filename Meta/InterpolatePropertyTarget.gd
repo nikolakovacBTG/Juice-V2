@@ -58,10 +58,10 @@ enum CaptureMode {
 # INTERNAL STATE
 # =============================================================================
 
-# Detected GDScript type of the property (set by capture_base() auto-detect,
-# or set externally by the PropertyPickerPlugin). Drives which backing var
-# get_from() / get_to() read in CUSTOM mode.
-var _detected_type: int = TYPE_NIL
+# _detected_type is inherited from PropertyTarget — do not redeclare here.
+# PropertyTarget._detect_type() updates it, and _get_property_list() serialises it.
+# Shadowing it in this subclass would cause PropertyTarget._set() and subclass
+# code to read/write different slots, breaking type detection permanently.
 
 # --- Custom FROM backing vars (one per supported type) ---
 var from_bool: bool        = false
