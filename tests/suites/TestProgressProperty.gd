@@ -1,15 +1,15 @@
-## Phase 6.5 tests for ProgressPropertyJuiceEffectBase and domain leaf nodes.
+## Phase 6.5 tests for ProgressPropertyJuiceEffectBase.
 ##
-## Validates that the progress envelope correctly drives a property from its
-## natural base toward the configured target value via the JuiceLedger, and
-## that the property is fully restored to its base when the effect stops.
+## Validates that the effect accumulates a property at a configured rate
+## (value += rate * delta * progress * direction), routes through JuiceLedger,
+## and that hold_on_stop controls whether accumulated state is preserved or
+## reset when the effect stops.
 
 # ============================================================================
 # WHAT: Automated tests for the ProgressProperty effect family.
-# WHY:  Confirms that ProgressPropertyJuiceEffectBase lerps base→to_* correctly
-#       through JuiceLedger (not direct write), and that _restore_to_natural()
-#       returns the property to its captured base — same invariants as all other
-#       Property-family effects.
+# WHY:  Confirms that ProgressPropertyJuiceEffectBase is a rate accumulator
+#       (not a lerp), routes deltas through JuiceLedger, and that the bound
+#       system and hold_on_stop behave correctly.
 # SYSTEM: Tests (tests/suites/)
 # ============================================================================
 
@@ -22,9 +22,10 @@ func get_suite_name() -> String:
 
 func get_test_methods() -> Array[String]:
 	return [
-		"test_progress_drives_float_property",
-		"test_progress_restores_base_after_stop",
-		"test_progress_drives_color_property",
+		"test_float_property_accumulates_at_rate",
+		"test_hold_on_stop_true_preserves_accumulated",
+		"test_hold_on_stop_false_resets_on_stop",
+		"test_reverse_bound_flips_direction",
 	]
 
 
@@ -32,32 +33,23 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # ---------------------------------------------------------------------------
 
-# Builds a ProgressProperty2DJuiceEffect targeting a float property.
-# to_val is the absolute target value at progress=1.0.
-func _make_float_effect(prop: String, to_val: float) -> ProgressProperty2DJuiceEffect:
+# Builds a ProgressProperty2DJuiceEffect for a float property.
+# Sets _current_delta manually so accumulation is deterministic in headless tests.
+func _make_float_effect(prop: String, rate: float) -> ProgressProperty2DJuiceEffect:
 	var effect := ProgressProperty2DJuiceEffect.new()
-	effect.to_float = to_val
-	var slot := PropertyTarget.new()
-	slot.property_path = prop
-	effect.property_targets.append(slot)
+	effect.property_path = prop
+	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.float_rate = rate
+	effect.hold_on_stop = true
 	return effect
 
 
-# Builds a ProgressPropertyControlJuiceEffect targeting a Color property.
-func _make_color_effect(prop: String, to_val: Color) -> ProgressPropertyControlJuiceEffect:
-	var effect := ProgressPropertyControlJuiceEffect.new()
-	effect.to_color = to_val
-	var slot := PropertyTarget.new()
-	slot.property_path = prop
-	effect.property_targets.append(slot)
-	return effect
-
-
-# Drives the effect through one apply cycle at the given progress.
-# ProgressProperty is deterministic — no time state — so a single
-# _apply_effect call at a known progress is sufficient to verify output.
-func _drive_progress(effect: PropertyJuiceEffectBase, target: Node, progress: float) -> void:
+# Drives one accumulation step with a fixed delta and progress.
+# _current_delta is set directly because there is no process() loop in tests.
+func _drive_one_step(effect: ProgressPropertyJuiceEffectBase, target: Node,
+		delta: float, progress: float) -> void:
 	effect._on_animate_start(target)
+	effect._current_delta = delta
 	effect._apply_effect(progress, target)
 	JuiceLedger.flush(target)
 
@@ -66,50 +58,94 @@ func _drive_progress(effect: PropertyJuiceEffectBase, target: Node, progress: fl
 # TESTS
 # ---------------------------------------------------------------------------
 
-## At progress=0.5, float property should be exactly halfway between base and to_float.
-## base=0.0, to_float=10.0 → lerp(0.0, 10.0, 0.5) = 5.0.
-## Verifies the Ledger path: delta = desired - base = 5.0, flush writes base+delta = 5.0.
-func test_progress_drives_float_property() -> void:
+## float_rate=10, delta=0.5, progress=1.0 → accumulated = 10 * 0.5 * 1.0 = 5.0.
+## Base rotation=0.0, so node.rotation should equal 5.0 after flush.
+func test_float_property_accumulates_at_rate() -> void:
 	var target := create_2d_target()
 	target.rotation = 0.0
 	var effect := _make_float_effect("rotation", 10.0)
-	_drive_progress(effect, target, 0.5)
+	_drive_one_step(effect, target, 0.5, 1.0)
 	assert_approx_float(target.rotation, 5.0,
-		"rotation should be ~5.0 at progress=0.5 (got %.4f)" % target.rotation, 0.01)
+		"rotation should be ~5.0 after rate=10, delta=0.5, progress=1.0 (got %.4f)" % target.rotation,
+		0.001)
 	JuiceLedger.cleanup_source(target, effect, true)
 	await cleanup(target)
 
 
-## After _restore_to_natural(), the property must return to its captured base.
-## Drives to progress=1.0 first to confirm the effect reaches to_float, then
-## stops and verifies the Ledger writes back the original base value.
-func test_progress_restores_base_after_stop() -> void:
+## With hold_on_stop=true, stopping does not reset accumulated.
+## Drive to 5.0, call _restore_to_natural, then re-drive without resetting.
+## Re-drive should add on top of the preserved 5.0, reaching ~10.0.
+func test_hold_on_stop_true_preserves_accumulated() -> void:
 	var target := create_2d_target()
-	target.rotation = 3.0
+	target.rotation = 0.0
 	var effect := _make_float_effect("rotation", 10.0)
-	_drive_progress(effect, target, 1.0)
-	assert_approx_float(target.rotation, 10.0,
-		"rotation should be ~10.0 at progress=1.0 (got %.4f)" % target.rotation, 0.01)
-	# Stop — cleanup_source(false) removes this source's delta, leaving base intact.
+	effect.hold_on_stop = true
+	# First drive: accumulated = 5.0
+	_drive_one_step(effect, target, 0.5, 1.0)
+	assert_approx_float(target.rotation, 5.0,
+		"rotation should be 5.0 after first drive (got %.4f)" % target.rotation, 0.001)
+	# Stop — hold_on_stop=true keeps _accumulated_float=5.0
 	effect._restore_to_natural(target)
 	JuiceLedger.flush(target)
-	assert_approx_float(target.rotation, 3.0,
-		"rotation should restore to 3.0 after stop (got %.4f)" % target.rotation, 0.001)
+	# Second drive: accumulated grows from 5.0 → 10.0
+	_drive_one_step(effect, target, 0.5, 1.0)
+	assert_approx_float(target.rotation, 10.0,
+		"rotation should be 10.0 after second drive (hold preserved, got %.4f)" % target.rotation,
+		0.001)
 	JuiceLedger.cleanup_source(target, effect, true)
 	await cleanup(target)
 
 
-## At progress=1.0, Color property should equal to_color exactly.
-## base=Color(1,1,1,1), to_color=Color(0.5,0.5,0.5,0.5) → desired=Color(0.5,0.5,0.5,0.5).
-## Factor = desired/base = Color(0.5,0.5,0.5,0.5); flush: base*factor = Color(0.5,0.5,0.5,0.5).
-func test_progress_drives_color_property() -> void:
-	var target := create_control_target("TestBtn")
-	target.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	var effect := _make_color_effect("modulate", Color(0.5, 0.5, 0.5, 0.5))
-	_drive_progress(effect, target, 1.0)
-	assert_approx_float(target.modulate.r, 0.5,
-		"modulate.r should be ~0.5 at progress=1.0 (got %.4f)" % target.modulate.r, 0.01)
-	assert_approx_float(target.modulate.a, 0.5,
-		"modulate.a should be ~0.5 at progress=1.0 (got %.4f)" % target.modulate.a, 0.01)
+## With hold_on_stop=false, stopping resets accumulated to 0.
+## Drive to 5.0, stop, verify property returns to base (0.0).
+## Then re-drive from zero; should reach 5.0 again.
+func test_hold_on_stop_false_resets_on_stop() -> void:
+	var target := create_2d_target()
+	target.rotation = 0.0
+	var effect := _make_float_effect("rotation", 10.0)
+	effect.hold_on_stop = false
+	# Drive to 5.0
+	_drive_one_step(effect, target, 0.5, 1.0)
+	assert_approx_float(target.rotation, 5.0,
+		"rotation should be 5.0 after drive (got %.4f)" % target.rotation, 0.001)
+	# Stop — hold_on_stop=false resets accumulated and removes Ledger delta
+	effect._restore_to_natural(target)
+	JuiceLedger.flush(target)
+	assert_approx_float(target.rotation, 0.0,
+		"rotation should return to 0.0 after stop with hold_on_stop=false (got %.4f)" % target.rotation,
+		0.001)
+	JuiceLedger.cleanup_source(target, effect, true)
+	await cleanup(target)
+
+
+## REVERSE bound: after accumulated >= bound_value, direction flips.
+## float_rate=10, delta=0.1, progress=1.0 → accumulated = 1.0 = bound_value.
+## Bound fires, direction flips to -1.0. Next step: accumulated -= 10*0.1 = 0.0.
+func test_reverse_bound_flips_direction() -> void:
+	var target := create_2d_target()
+	target.rotation = 0.0
+	var effect := _make_float_effect("rotation", 10.0)
+	effect.bound_enabled = true
+	effect.bound_value = 1.0
+	effect.bound_behaviour = ProgressPropertyJuiceEffectBase.BoundBehaviour.REVERSE
+
+	# Step 1: accumulate to bound (10 * 0.1 * 1.0 = 1.0 → bound fires → direction=-1)
+	effect._on_animate_start(target)
+	effect._current_delta = 0.1
+	effect._apply_effect(1.0, target)
+	JuiceLedger.flush(target)
+	assert_approx_float(target.rotation, 1.0,
+		"rotation should be clamped to bound 1.0 (got %.4f)" % target.rotation, 0.001)
+	assert_approx_float(effect._current_direction, -1.0,
+		"direction should flip to -1.0 after REVERSE bound (got %.4f)" % effect._current_direction,
+		0.001)
+
+	# Step 2: accumulate in reverse (1.0 + 10*0.1*(-1) = 0.0)
+	effect._current_delta = 0.1
+	effect._apply_effect(1.0, target)
+	JuiceLedger.flush(target)
+	assert_approx_float(target.rotation, 0.0,
+		"rotation should be ~0.0 after one reverse step (got %.4f)" % target.rotation, 0.01)
+
 	JuiceLedger.cleanup_source(target, effect, true)
 	await cleanup(target)
