@@ -84,6 +84,17 @@ var clamp_max: float = 1.0
 
 
 # =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+func _init() -> void:
+	# This class owns its own _get_property_list() which emits property_targets.
+	# Setting this flag prevents PropertyJuiceEffectBase from emitting a second
+	# property_targets entry, which would create duplicate rows in the inspector.
+	_subclass_owns_prop_layout = true
+
+
+# =============================================================================
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
 
@@ -93,8 +104,11 @@ var clamp_max: float = 1.0
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
-	# --- Effect group: noise settings + shared timing controls ---
-	props.append({"name": "Effect", "type": TYPE_NIL,
+	# --- Noise group: all noise-specific settings ---
+	# Timing fields (duration_in, start_delay, etc.) are emitted by JuiceEffectBase's
+	# _get_property_list() under the "Effect" group. We use "Noise" here to keep
+	# the two groups visually distinct without a conflicting duplicate header.
+	props.append({"name": "Noise", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	props.append({"name": "noise_speed", "type": TYPE_FLOAT,
 		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
@@ -146,20 +160,29 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "clamp_max", "type": TYPE_FLOAT,
 		"usage": PROPERTY_USAGE_DEFAULT})
 
-	# --- Property Targets array (typed to NoisePropertyTarget for inspector) ---
+	# --- Property Targets typed array ---
+	# PROPERTY_HINT_TYPE_STRING with "TYPE_OBJECT/RESOURCE_TYPE:ClassName" is the
+	# correct form for a typed Array[Resource] shown in the inspector.
 	props.append({
 		"name": "Property Targets", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	props.append({
 		"name": "property_targets",
 		"type": TYPE_ARRAY,
-		"hint": PROPERTY_HINT_ARRAY_TYPE,
+		"hint": PROPERTY_HINT_TYPE_STRING,
 		"hint_string": "%d/%d:%s" % [
 			TYPE_OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "NoisePropertyTarget"],
 		"usage": PROPERTY_USAGE_DEFAULT
 	})
 
 	return props
+
+
+## Tells PropertyJuiceEffectBase which resource subclass to use when the
+## parent's _get_property_list() is queried (not active here since
+## _subclass_owns_prop_layout = true, but kept for API completeness).
+func _get_target_resource_type() -> String:
+	return "NoisePropertyTarget"
 
 
 func _set(property: StringName, value: Variant) -> bool:
