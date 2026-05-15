@@ -5,7 +5,7 @@
 ## (runtime capture) modes for both the From and To values.
 
 # ============================================================================
-# WHAT: From/To target declaration for InterpolatePropertyJuiceEffectBase.
+# WHAT: From/To target declaration for PropertyInterpolateJuiceEffectBase.
 # WHY:  Each animated property needs independently-typed From and To values
 #       (float, Vector2, Color, bool, …) plus a per-direction capture-mode
 #       decision. Separating this into a sub-resource lets designers configure
@@ -14,7 +14,7 @@
 #       _detected_type is visible, keeping the inspector clean regardless of
 #       how many types are stored.
 # SYSTEM: Juice System (addons/Juice_V2/)
-# DOES NOT: Perform interpolation math — that is InterpolatePropertyJuiceEffectBase.
+# DOES NOT: Perform interpolation math — that is PropertyInterpolateJuiceEffectBase.
 #           Does not write to nodes — the base class routes through JuiceLedger.
 #           Does not provide a Capture button in the inspector — that is the
 #           PropertyPickerPlugin (EditorInspectorPlugin) on Phase 6.6.

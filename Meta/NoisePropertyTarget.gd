@@ -1,4 +1,4 @@
-## Per-property configuration slot for [NoisePropertyJuiceEffectBase].
+## Per-property configuration slot for [PropertyNoiseJuiceEffectBase].
 ##
 ## Extends [PropertyTarget] with a type-matched amplitude field.
 ## Add one [NoisePropertyTarget] per property to noise-animate.
@@ -12,7 +12,7 @@
 #       Inspector layout is conditional: only the amplitude field matching
 #       _detected_type is visible, keeping the inspector uncluttered.
 # SYSTEM: Juice System (addons/Juice_V2/)
-# DOES NOT: Compute noise values — that is NoisePropertyJuiceEffectBase's job.
+# DOES NOT: Compute noise values — that is PropertyNoiseJuiceEffectBase's job.
 # =============================================================================
 
 @tool

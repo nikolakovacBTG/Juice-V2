@@ -1,4 +1,4 @@
-## Per-property configuration slot for [ShakePropertyJuiceEffectBase].
+## Per-property configuration slot for [PropertyShakeJuiceEffectBase].
 ##
 ## Extends [PropertyTarget] with a type-matched amplitude field.
 ## Add one [ShakePropertyTarget] per property to shake-animate.
@@ -14,7 +14,7 @@
 #       Inspector layout is conditional: only the amplitude field matching
 #       _detected_type is visible, keeping the inspector uncluttered.
 # SYSTEM: Juice System (addons/Juice_V2/)
-# DOES NOT: Compute shake values — that is ShakePropertyJuiceEffectBase's job.
+# DOES NOT: Compute shake values — that is PropertyShakeJuiceEffectBase's job.
 #           Does not support discrete property types (bool, String, etc.) —
 #           shake displacement is continuous and only meaningful for numeric types.
 # =============================================================================
