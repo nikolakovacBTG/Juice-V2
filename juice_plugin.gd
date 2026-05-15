@@ -18,6 +18,7 @@ extends EditorPlugin
 
 const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
 const InspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceEditorInspectorPlugin.gd")
+const PropertyPickerPluginScript := preload("res://addons/Juice_V2/Editor/PropertyPickerPlugin.gd")
 
 # =============================================================================
 # INTERNAL STATE
@@ -36,6 +37,8 @@ var _director: JuicePreviewDirector
 
 # Inspector plugin instance — controls JuiceBase property visibility in editor.
 var _inspector_plugin: EditorInspectorPlugin
+# Property picker plugin — adds "Pick Property" button to PropertyTarget panels.
+var _property_picker_plugin: EditorInspectorPlugin
 
 # --- Buttons ---
 var _play_button: Button
@@ -72,6 +75,10 @@ func _enter_tree() -> void:
 	# Must be registered before the editor opens any scene containing JuiceBase nodes.
 	_inspector_plugin = InspectorPluginScript.new()
 	add_inspector_plugin(_inspector_plugin)
+
+	# Register property picker so PropertyTarget sub-inspectors show a pick button.
+	_property_picker_plugin = PropertyPickerPluginScript.new()
+	add_inspector_plugin(_property_picker_plugin)
 
 	# Build transport UI and director
 	_build_ui()
@@ -116,6 +123,9 @@ func _exit_tree() -> void:
 	if _inspector_plugin:
 		remove_inspector_plugin(_inspector_plugin)
 		_inspector_plugin = null
+	if _property_picker_plugin:
+		remove_inspector_plugin(_property_picker_plugin)
+		_property_picker_plugin = null
 
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)
