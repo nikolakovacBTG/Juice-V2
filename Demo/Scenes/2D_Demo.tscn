@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="3_rrb6h"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="5_n8ykl"]
 [ext_resource type="Texture2D" uid="uid://c2h0wt5po6fse" path="res://Textures/Kenney/spritesheet-tiles-default.png" id="6_n8ykl"]
-[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="6_wwan6"]
+[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="6_wwan6"]
 [ext_resource type="Script" uid="uid://05v3wpe3fa01" path="res://addons/Juice_V1/2D/Appearance2DJuiceEffect.gd" id="7_cq53s"]
 [ext_resource type="Texture2D" uid="uid://cqy0csvxav4m2" path="res://Textures/Kenney/spritesheet-characters-default.png" id="7_naj6s"]
 [ext_resource type="Script" uid="uid://bso8kvx4rdnkp" path="res://addons/Juice_V1/2D/ProgressTransform2DJuiceEffect.gd" id="8_6yyf2"]

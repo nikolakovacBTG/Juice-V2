@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
 [ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="8_5u77v"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="9_8ai6r"]
-[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V1/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
+[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
 [ext_resource type="Script" uid="uid://qwwny63s3kn3" path="res://addons/Juice_V1/Meta/Time2DJuiceEffect.gd" id="11_qm7d2"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="12_hvqsx"]
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V1/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]

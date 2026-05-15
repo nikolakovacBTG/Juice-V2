@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="5_32dbb"]
 [ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="5_i3blr"]
 [ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="6_i3blr"]
-[ext_resource type="Script" uid="uid://chkjoiswnmqg5" path="res://addons/Juice_V1/Control/NoiseControlJuiceEffect.gd" id="8_r7ray"]
+[ext_resource type="Script" uid="uid://chkjoiswnmqg5" path="res://addons/Juice_V2/Control/NoiseControlJuiceEffect.gd" id="8_r7ray"]
 [ext_resource type="Script" uid="uid://cgdw7reti11jj" path="res://addons/Juice_V1/Control/SpringControlJuiceEffect.gd" id="8_tx2cu"]
 
 [sub_resource type="Gradient" id="Gradient_8smnx"]
