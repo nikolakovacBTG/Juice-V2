@@ -55,8 +55,10 @@ var to_color: Color = Color.WHITE
 func _get_property_list() -> Array[Dictionary]:
 	var props: Array[Dictionary] = []
 
-	# --- Effect group: target values ---
-	props.append({"name": "Effect", "type": TYPE_NIL,
+	# --- Progress group: to_* target values ---
+	# Renamed from "Effect" to avoid colliding with JuiceEffectBase's own
+	# "Effect" timing group (duration_in, start_delay, etc.).
+	props.append({"name": "Progress", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
 	props.append({"name": "Target Values", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_SUBGROUP, "hint_string": ""})
@@ -69,17 +71,10 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "to_color", "type": TYPE_COLOR,
 		"usage": PROPERTY_USAGE_DEFAULT})
 
-	# --- Property Targets array (uses base PropertyTarget — no specialised sub-resource) ---
-	props.append({"name": "Property Targets", "type": TYPE_NIL,
-		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({
-		"name": "property_targets",
-		"type": TYPE_ARRAY,
-		"hint": PROPERTY_HINT_ARRAY_TYPE,
-		"hint_string": "%d/%d:%s" % [
-			TYPE_OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "PropertyTarget"],
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
+	# property_targets is intentionally NOT emitted here.
+	# PropertyJuiceEffectBase._get_property_list() already emits it with the
+	# correct PROPERTY_HINT_TYPE_STRING hint when _subclass_owns_prop_layout
+	# is false (the default). Emitting it here would create a duplicate row.
 
 	return props
 
