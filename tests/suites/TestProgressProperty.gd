@@ -1,4 +1,4 @@
-## Phase 6.5 tests for ProgressPropertyJuiceEffectBase.
+## Phase 6.5 tests for PropertyProgressJuiceEffectBase.
 ##
 ## Validates that the effect accumulates a property at a configured rate
 ## (value += rate * delta * progress * direction), routes through JuiceLedger,
@@ -7,7 +7,7 @@
 
 # ============================================================================
 # WHAT: Automated tests for the ProgressProperty effect family.
-# WHY:  Confirms that ProgressPropertyJuiceEffectBase is a rate accumulator
+# WHY:  Confirms that PropertyProgressJuiceEffectBase is a rate accumulator
 #       (not a lerp), routes deltas through JuiceLedger, and that the bound
 #       system and hold_on_stop behave correctly.
 # SYSTEM: Tests (tests/suites/)
@@ -33,12 +33,12 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # ---------------------------------------------------------------------------
 
-# Builds a ProgressProperty2DJuiceEffect for a float property.
+# Builds a PropertyProgress2DJuiceEffect for a float property.
 # Sets _current_delta manually so accumulation is deterministic in headless tests.
-func _make_float_effect(prop: String, rate: float) -> ProgressProperty2DJuiceEffect:
-	var effect := ProgressProperty2DJuiceEffect.new()
+func _make_float_effect(prop: String, rate: float) -> PropertyProgress2DJuiceEffect:
+	var effect := PropertyProgress2DJuiceEffect.new()
 	effect.property_path = prop
-	effect.property_type = ProgressPropertyJuiceEffectBase.PropertyType.FLOAT
+	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
 	effect.float_rate = rate
 	effect.hold_on_stop = true
 	return effect
@@ -46,7 +46,7 @@ func _make_float_effect(prop: String, rate: float) -> ProgressProperty2DJuiceEff
 
 # Drives one accumulation step with a fixed delta and progress.
 # _current_delta is set directly because there is no process() loop in tests.
-func _drive_one_step(effect: ProgressPropertyJuiceEffectBase, target: Node,
+func _drive_one_step(effect: PropertyProgressJuiceEffectBase, target: Node,
 		delta: float, progress: float) -> void:
 	effect._on_animate_start(target)
 	effect._current_delta = delta
@@ -127,7 +127,7 @@ func test_reverse_bound_flips_direction() -> void:
 	var effect := _make_float_effect("rotation", 10.0)
 	effect.bound_enabled = true
 	effect.bound_value = 1.0
-	effect.bound_behaviour = ProgressPropertyJuiceEffectBase.BoundBehaviour.REVERSE
+	effect.bound_behaviour = PropertyProgressJuiceEffectBase.BoundBehaviour.REVERSE
 
 	# Step 1: accumulate to bound (10 * 0.1 * 1.0 = 1.0 → bound fires → direction=-1)
 	effect._on_animate_start(target)

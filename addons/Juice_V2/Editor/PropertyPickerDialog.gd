@@ -123,11 +123,17 @@ func _init() -> void:
 	visible = false  # Hidden until explicitly opened via open_for_node().
 	ok_button_text = "OK"
 
-	_build_ui()
-
 	# ConfirmationDialog signals.
 	confirmed.connect(_on_ok_pressed)
 	# close_requested is already handled by ConfirmationDialog (closes on X and Cancel).
+
+
+# Deferred from _init() intentionally: _build_ui() relies on the editor theme
+# (font sizes, colors, stylebox) which is only available AFTER the dialog has
+# been added to the editor scene tree via add_dialog_to_editor().
+# Godot calls _ready() at that point, guaranteeing a correct first layout pass.
+func _ready() -> void:
+	_build_ui()
 
 
 func _build_ui() -> void:

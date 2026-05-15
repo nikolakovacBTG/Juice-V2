@@ -1,4 +1,4 @@
-## Phase 6.4 tests for ShakePropertyJuiceEffectBase and domain leaf nodes.
+## Phase 6.4 tests for PropertyShakeJuiceEffectBase and domain leaf nodes.
 ##
 ## Validates that sine-blend shake displacement is applied via the JuiceLedger
 ## (not direct write), that the property returns to its natural base after the
@@ -6,7 +6,7 @@
 
 # ============================================================================
 # WHAT: Automated tests for the ShakeProperty effect family.
-# WHY:  Confirms that ShakePropertyJuiceEffectBase routes shake deltas through
+# WHY:  Confirms that PropertyShakeJuiceEffectBase routes shake deltas through
 #       JuiceLedger and that _restore_to_natural() returns the property to its
 #       captured base — same invariants as all other Property-family effects.
 # SYSTEM: Tests (tests/suites/)
@@ -31,12 +31,12 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # ---------------------------------------------------------------------------
 
-# Builds a ShakeProperty2DJuiceEffect targeting a float property.
+# Builds a PropertyShake2DJuiceEffect targeting a float property.
 # randomness=0.0 → pure sine, no per-frame random jitter.
 # _shake_seed is overridden to 0.0 after _on_animate_start so the sine value
 # at _shake_time=0.25, freq=1.0 is sin(π/2) = 1.0 — exactly predictable.
-func _make_float_effect(prop: String, amplitude: float) -> ShakeProperty2DJuiceEffect:
-	var effect := ShakeProperty2DJuiceEffect.new()
+func _make_float_effect(prop: String, amplitude: float) -> PropertyShake2DJuiceEffect:
+	var effect := PropertyShake2DJuiceEffect.new()
 	effect.shake_frequency = 1.0   # 1 cycle/sec — at time=0.25: sin(π/2)=1.0
 	effect.randomness = 0.0        # Pure sine, no random component
 
@@ -48,10 +48,10 @@ func _make_float_effect(prop: String, amplitude: float) -> ShakeProperty2DJuiceE
 	return effect
 
 
-# Builds a ShakePropertyControlJuiceEffect targeting a Color property.
+# Builds a PropertyShakeControlJuiceEffect targeting a Color property.
 # Same deterministic config as float — randomness=0.0, freq=1.0.
-func _make_color_effect(prop: String, amplitude: float) -> ShakePropertyControlJuiceEffect:
-	var effect := ShakePropertyControlJuiceEffect.new()
+func _make_color_effect(prop: String, amplitude: float) -> PropertyShakeControlJuiceEffect:
+	var effect := PropertyShakeControlJuiceEffect.new()
 	effect.shake_frequency = 1.0
 	effect.randomness = 0.0
 
@@ -67,7 +67,7 @@ func _make_color_effect(prop: String, amplitude: float) -> ShakePropertyControlJ
 # Sets _shake_seed=0.0 and _shake_time=0.25 after _on_animate_start so
 # _sample_shake(0.0) = sin(0.25 * 1.0 * TAU + 0.0 + 0.0) = sin(π/2) = 1.0.
 # _apply_effect advances time by _current_delta (0.0 in tests) — time stays put.
-func _drive_shake(effect: ShakePropertyJuiceEffectBase, target: Node) -> void:
+func _drive_shake(effect: PropertyShakeJuiceEffectBase, target: Node) -> void:
 	effect._on_animate_start(target)
 	# Override seed AFTER _on_animate_start (which randomises it)
 	effect._shake_seed = 0.0

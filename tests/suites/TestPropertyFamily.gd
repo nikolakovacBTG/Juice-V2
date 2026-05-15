@@ -1,7 +1,7 @@
 ## TestPropertyFamily.gd
 ## ============================================================================
 ## WHAT: Integration tests for the InterpolateProperty effect family (Phase 6.2).
-## WHY:  Verifies that InterpolatePropertyJuiceEffectBase correctly drives the
+## WHY:  Verifies that PropertyInterpolateJuiceEffectBase correctly drives the
 ##       Ledger for continuous (float, Vector2, Color) and discrete (bool) types,
 ##       and that flush() writes the expected value to the target node at
 ##       various progress points.
@@ -18,17 +18,17 @@ extends JuiceTestSuite
 
 # Manually drives effect._on_animate_start → _apply_effect → flush.
 # Returns the target node so callers can assert its property values.
-func _drive(effect: InterpolatePropertyJuiceEffectBase, target: Node, progress: float) -> void:
+func _drive(effect: PropertyInterpolateJuiceEffectBase, target: Node, progress: float) -> void:
 	effect._on_animate_start(target)
 	effect._apply_effect(progress, target)
 	JuiceLedger.flush(target)
 
 
-# Builds a minimal InterpolateProperty2DJuiceEffect with one typed target.
+# Builds a minimal PropertyInterpolate2DJuiceEffect with one typed target.
 func _make_2d_effect(prop: String, detected_type: int,
 		from_v: Variant, to_v: Variant,
 		mode: InterpolatePropertyTarget.CaptureMode = InterpolatePropertyTarget.CaptureMode.CUSTOM
-) -> InterpolateProperty2DJuiceEffect:
+) -> PropertyInterpolate2DJuiceEffect:
 	var entry := InterpolatePropertyTarget.new()
 	entry.property_path = prop
 	entry._detected_type = detected_type
@@ -40,7 +40,7 @@ func _make_2d_effect(prop: String, detected_type: int,
 		TYPE_VECTOR2:     entry.from_vec2   = from_v; entry.to_vec2   = to_v
 		TYPE_COLOR:       entry.from_color  = from_v; entry.to_color  = to_v
 		TYPE_BOOL:        entry.from_bool   = from_v; entry.to_bool   = to_v
-	var effect := InterpolateProperty2DJuiceEffect.new()
+	var effect := PropertyInterpolate2DJuiceEffect.new()
 	effect.property_targets.append(entry)
 	return effect
 

@@ -1,4 +1,4 @@
-## Phase 6.3 tests for NoisePropertyJuiceEffectBase and domain leaf nodes.
+## Phase 6.3 tests for PropertyNoiseJuiceEffectBase and domain leaf nodes.
 ##
 ## Validates that noise displacement is applied via the JuiceLedger (not direct
 ## write), that the property returns to its natural base after the effect stops,
@@ -6,7 +6,7 @@
 
 # ============================================================================
 # WHAT: Automated tests for the NoiseProperty effect family.
-# WHY:  Confirms that NoisePropertyJuiceEffectBase routes noise deltas through
+# WHY:  Confirms that PropertyNoiseJuiceEffectBase routes noise deltas through
 #       JuiceLedger and that _restore_to_natural() returns the property to its
 #       captured base — same invariants as all other Property-family effects.
 # SYSTEM: Tests (tests/suites/)
@@ -31,14 +31,14 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # ---------------------------------------------------------------------------
 
-# Builds a NoiseProperty2DJuiceEffect targeting a float property.
+# Builds a PropertyNoise2DJuiceEffect targeting a float property.
 # Uses POSITIVE_ONLY + fixed seed so the sample at _noise_time=0.1 is deterministic
 # and guaranteed > 0 (absf of noise output).
-func _make_float_effect(prop: String, amplitude: float) -> NoiseProperty2DJuiceEffect:
-	var effect := NoiseProperty2DJuiceEffect.new()
+func _make_float_effect(prop: String, amplitude: float) -> PropertyNoise2DJuiceEffect:
+	var effect := PropertyNoise2DJuiceEffect.new()
 	effect.noise_seed = 42           # Fixed seed — deterministic output
 	effect.noise_speed = 10.0        # Fast advance: t = 0.1 * 10 = 1.0 — non-zero region
-	effect.noise_direction = NoisePropertyJuiceEffectBase.NoiseDirection.POSITIVE_ONLY
+	effect.noise_direction = PropertyNoiseJuiceEffectBase.NoiseDirection.POSITIVE_ONLY
 	effect.clamp_min = 0.0
 	effect.clamp_max = 1.0
 
@@ -50,12 +50,12 @@ func _make_float_effect(prop: String, amplitude: float) -> NoiseProperty2DJuiceE
 	return effect
 
 
-# Builds a NoisePropertyControlJuiceEffect targeting a Color property.
-func _make_color_effect(prop: String, amplitude: float) -> NoisePropertyControlJuiceEffect:
-	var effect := NoisePropertyControlJuiceEffect.new()
+# Builds a PropertyNoiseControlJuiceEffect targeting a Color property.
+func _make_color_effect(prop: String, amplitude: float) -> PropertyNoiseControlJuiceEffect:
+	var effect := PropertyNoiseControlJuiceEffect.new()
 	effect.noise_seed = 7
 	effect.noise_speed = 10.0
-	effect.noise_direction = NoisePropertyJuiceEffectBase.NoiseDirection.POSITIVE_ONLY
+	effect.noise_direction = PropertyNoiseJuiceEffectBase.NoiseDirection.POSITIVE_ONLY
 	effect.clamp_min = 0.0
 	effect.clamp_max = 1.0
 
@@ -69,7 +69,7 @@ func _make_color_effect(prop: String, amplitude: float) -> NoisePropertyControlJ
 
 # Drives effect: capture → set noise_time (bypass _advance guard for headless tests)
 # → apply at peak → flush.
-func _drive_noise(effect: NoisePropertyJuiceEffectBase, target: Node, noise_time: float = 0.1) -> void:
+func _drive_noise(effect: PropertyNoiseJuiceEffectBase, target: Node, noise_time: float = 0.1) -> void:
 	effect._on_animate_start(target)
 	# _advance_noise_time() is guarded by _target_progress > 0.0 — set it manually
 	# so the noise generator samples a non-zero point in the noise field.
