@@ -10,7 +10,7 @@
 # WHY:  Decouples preview orchestration from the plugin UI. The plugin owns
 #       buttons and layout; this script owns playback state and node lifecycle.
 #       This separation keeps the plugin script clean and testable.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Build UI (that's juice_plugin.gd). Does not manage runtime
 #           animation — only editor preview. Does not resolve chains
 #           (V1 chaining is effect-internal, handled by JuiceBase/JuiceRecipe).
@@ -454,7 +454,7 @@ func _bootstrap_preview_utilities() -> void:
 			util.anchor_bottom = 1.0
 			util.mouse_filter  = Control.MOUSE_FILTER_IGNORE
 			var mat := ShaderMaterial.new()
-			mat.shader = load("res://addons/Juice_V1/Screen/screen_juice.gdshader")
+			mat.shader = load("res://addons/Juice_V2/Screen/screen_juice.gdshader")
 			util.material = mat
 			canvas.add_child(util)  # owner intentionally null — not saved
 			ScreenJuiceUtility.instance = util

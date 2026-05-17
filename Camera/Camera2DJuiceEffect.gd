@@ -11,7 +11,7 @@
 # WHY:  Camera shake is authored on the entity that causes it — a chest, a sword,
 #       an explosion — not on the camera itself. This effect auto-discovers the
 #       active Camera2D, so camera switches mid-animation work automatically.
-# SYSTEM: Juice System (addons/Juice_V1/Camera/)
+# SYSTEM: Juice System (addons/Juice_V2/Camera/)
 # DOES NOT: Animate the JuiceBase target node — writes to camera only.
 # DOES NOT: Handle Camera3D — use Camera3DJuiceEffect for that.
 # DOES NOT: Auto-bootstrap in the editor — would dirty the scene on save.
@@ -20,7 +20,7 @@
 #        Optionally add CameraJuiceUtility manually to tune limits.
 # ============================================================================
 
-@icon("res://addons/Juice_V1/icons/JuiceBaseCamera2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseCamera2D.svg")
 @tool
 class_name Camera2DJuiceEffect
 extends JuiceEffectBase

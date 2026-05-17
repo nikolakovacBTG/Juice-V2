@@ -4,7 +4,7 @@
 ## as dynamically named signals.
 
 # ============================================================================
-# SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
+# SYSTEM: Juice Utility (addons/Juice_V2/Utilities/)
 #
 # DOES NOT:
 # - Wrap or replace native Area2D signals — they flow through unchanged
@@ -29,7 +29,7 @@
 # ================================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityArea2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityArea2D.svg")
 class_name Interaction2DJuiceUtility
 extends Area2D
 
@@ -351,7 +351,7 @@ func _ready() -> void:
 func _ensure_shapes() -> void:
 	if not Engine.is_editor_hint() or not is_inside_tree():
 		return
-	var scene_root := get_tree().edited_scene_root
+	var scene_root := get_tree().edited_scene_root if is_inside_tree() else null
 	if scene_root == null:
 		return
 

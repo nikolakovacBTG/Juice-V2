@@ -6,7 +6,7 @@
 # ============================================================================
 # WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
 # WHY: Replaces 3 separate scripts with one unified component.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use TransformControl/2DJuiceEffect.
 # DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
 #
@@ -38,7 +38,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Transform3DJuiceEffect
 extends Juice3DTransformEffect
 

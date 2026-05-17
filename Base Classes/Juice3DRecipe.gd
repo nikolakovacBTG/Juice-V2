@@ -7,7 +7,7 @@
 # WHAT: Recipe for 3D-domain juice effects.
 # WHY: Narrows the effects array type hint so the inspector dropdown only
 #      shows Juice3DEffectBase subclasses (not Control/2D effects).
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
 # ============================================================================
 

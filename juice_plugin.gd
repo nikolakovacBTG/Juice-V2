@@ -8,7 +8,7 @@
 # WHY:  Single entry point for all Juice editor features. Provides:
 #       1. Transport controls (play/pause/stop/scrub) for editor preview
 #       2. Bug report export via Project → Tools menu
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement effects (JuiceEffectBase subclasses), manage animation
 #           state (JuicePreviewDirector), or handle undo/redo.
 # ============================================================================

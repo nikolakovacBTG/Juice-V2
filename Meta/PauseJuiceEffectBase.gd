@@ -10,14 +10,14 @@
 # WHY:  Provides a chain-scoped delay with a single, unambiguous inspector setting.
 #       Unlike start_delay (which fires every trigger), PauseJuiceEffect occupies
 #       an explicit slot in the chain — the delay is structural, not per-trigger.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Write any visual property to the target node.
 # DOES NOT: Expose Animate In/Out, Trigger Behaviour, Start Delay, or Loop settings
 #           — these are irrelevant for a pure chain-delay effect.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseEvents.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseEvents.svg")
 class_name PauseJuiceEffectBase
 extends JuiceEffectBase
 

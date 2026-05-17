@@ -7,7 +7,7 @@
 # WHAT: Animates visual appearance properties of Node3D targets.
 # WHY: Maintains stackable invariant — effects do not write to the mesh
 #      material directly; the domain node (Juice3D) owns the working material.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use AppearanceControl/2DJuiceEffect.
 # DOES NOT: Animate position/rotation/scale — use Transform3DJuiceEffect.
 # DOES NOT: Manage MeshInstance3D or surface materials — Juice3D does that.
@@ -20,7 +20,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Appearance3DJuiceEffect
 extends Juice3DAppearanceEffect
 

@@ -8,7 +8,7 @@
 # WHY:  Consolidates shared From/To framework — enums, config, property list,
 #       lifecycle skeleton, and non-typed state — so concrete effects provide
 #       only the typed per-domain code (capture, apply, resolve, pivot).
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Apply any effect behavior — concrete subclasses implement virtuals.
 # DOES NOT: Handle Node2D or Node3D targets.
 # NOTES:
@@ -17,7 +17,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name JuiceControlTransformEffect
 extends JuiceControlEffectBase
 

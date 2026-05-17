@@ -10,7 +10,7 @@
 # WHY:  Trail is rendered as a Line2D — a fundamentally 2D primitive with no
 #       3D equivalent. Domain-agnostic registration is not appropriate here.
 #       The effect registers only in Juice2DRecipe so it never appears on 3D nodes.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Handle 3D trails. Does not compute any transform delta.
 #           Does not use _physics_process — point accumulation runs inside
 #           _apply_effect() which the host ticks every frame, matching V0 behavior.
@@ -22,7 +22,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseVFX.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseVFX.svg")
 class_name TrailJuiceEffect
 extends JuiceEffectBase
 

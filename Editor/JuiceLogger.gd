@@ -15,7 +15,7 @@ extends RefCounted
 #       Three-tier gating (OS.is_debug_build → master switch → per-node flag)
 #       ensures zero cost in release builds while keeping per-node isolation
 #       available during development.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Own the master-switch setting — JuiceProjectSettings does.
 #           Generate the final bug report — JuiceDebugReport assembles that
 #           from the file this class writes.

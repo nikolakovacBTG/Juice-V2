@@ -7,7 +7,7 @@
 # WHY:  SceneActionJuiceUtilityBase is a Resource without lifecycle. This
 #       ephemeral Node is spawned by the effect to handle scene tree mutations
 #       independently. A singleton guard prevents parallel scene actions.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Appear in the inspector or have a class_name (internal only).
 # DOES NOT: Hold back-references to the triggering effect Resource.
 # ============================================================================

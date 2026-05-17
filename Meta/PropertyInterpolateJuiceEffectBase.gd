@@ -36,7 +36,7 @@ func _on_animate_start(target: Node) -> void:
 	# Must call super first: registers all property paths in the Ledger so
 	# base values are captured before capture_runtime_values() reads them.
 	super._on_animate_start(target)
-	# Then capture ON_TRIGGER from/to values from the current (base) state.
+	# Then capture SELF+TRIGGER from/to values from the current (base) state.
 	for pt in property_targets:
 		var entry := pt as InterpolatePropertyTarget
 		if entry != null and entry.is_configured():
@@ -44,6 +44,16 @@ func _on_animate_start(target: Node) -> void:
 			JuiceLogger.log_capture(self, _get_domain_tag(), "interpolate_target",
 					{"path": entry.property_path, "from": entry.get_from(),
 					"to": entry.get_to()}, debug_enabled)
+
+
+## Captures SELF+READY snapshots for each target entry.
+## Called by [JuiceBase._post_ready_init] after Container layout has resolved,
+## so property values reflect the true editor-placed state.
+func _on_host_ready(target: Node, _host: Node) -> void:
+	for pt in property_targets:
+		var entry := pt as InterpolatePropertyTarget
+		if entry != null and entry.is_configured():
+			entry.capture_ready_values(target)
 
 # =============================================================================
 # PUBLIC API
@@ -77,7 +87,7 @@ func _needs_sustain() -> bool:
 ## Tells PropertyJuiceEffectBase which resource subclass to use for the
 ## property_targets typed array in the inspector.
 ## Without this override the inspector would offer base PropertyTarget entries,
-## hiding InterpolatePropertyTarget's From/To/CaptureMode fields.
+## hiding InterpolatePropertyTarget's From/To/ReferenceSource fields.
 func _get_target_resource_type() -> String:
 	return "InterpolatePropertyTarget"
 

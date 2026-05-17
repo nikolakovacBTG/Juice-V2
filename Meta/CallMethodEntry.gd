@@ -8,12 +8,12 @@
 #       Stores target node path, method name, arguments, and timing.
 # WHY:  Enables one CallMethod utility to trigger multiple distinct method calls
 #       at different lifecycle points — mirrors the recipe-item paradigm.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Execute the call — the parent utility does that in lifecycle hooks.
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityMethods.svg")
 class_name CallMethodEntry
 extends Resource
 

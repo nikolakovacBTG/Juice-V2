@@ -10,14 +10,14 @@
 #       with the curve acting as the amplitude envelope).
 # WHY:  Screen effects are authored on entities, not on a camera or global node.
 #       Auto-bootstrap means zero configuration — just drop the effect and go.
-# SYSTEM: Juice System (addons/Juice_V1/Screen/)
+# SYSTEM: Juice System (addons/Juice_V2/Screen/)
 # DOES NOT: Animate the JuiceBase target node — writes to ScreenJuiceUtility only.
 #
 # SETUP: None. The effect auto-bootstraps ScreenJuiceUtility at runtime.
 #        Place ScreenJuiceUtility manually only for custom layer/shader control.
 # ============================================================================
 
-@icon("res://addons/Juice_V1/icons/JuiceBaseScreen.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseScreen.svg")
 @tool
 class_name ScreenJuiceEffect
 extends JuiceEffectBase
@@ -569,7 +569,7 @@ func _bootstrap_utility() -> ScreenJuiceUtility:
 				debug_enabled)
 		return null
 
-	var tree := _host_node.get_tree()
+	var tree := _host_node.get_tree() if _host_node.is_inside_tree() else null
 	if not tree:
 		return null
 
@@ -587,7 +587,7 @@ func _bootstrap_utility() -> ScreenJuiceUtility:
 
 	# Assign the shader material
 	var mat := ShaderMaterial.new()
-	mat.shader = load("res://addons/Juice_V1/Screen/screen_juice.gdshader")
+	mat.shader = load("res://addons/Juice_V2/Screen/screen_juice.gdshader")
 	util.material = mat
 
 	canvas.add_child(util)

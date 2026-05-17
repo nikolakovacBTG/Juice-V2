@@ -9,7 +9,7 @@
 # WHY: Enables Balatro-style hover effects where juice intensity is proportional
 #      to spatial proximity, not just binary enter/exit. The spatial falloff
 #      IS the easing — no timing system needed.
-# SYSTEM: Juice System (addons/Juice_V1/) - 3D Domain
+# SYSTEM: Juice System (addons/Juice_V2/) - 3D Domain
 #
 # DOES NOT:
 # - Apply any visual effect itself (it's a sensor/driver, not an effect)
@@ -40,7 +40,7 @@
 # ====================================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityArea3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityArea3D.svg")
 class_name SoftTrigger3DJuiceUtility
 extends Area3D
 
@@ -516,7 +516,7 @@ func _ensure_collision_shape() -> void:
 	add_child(col)
 
 	if Engine.is_editor_hint():
-		var scene_root := get_tree().edited_scene_root if get_tree() else null
+		var scene_root := get_tree().edited_scene_root if is_inside_tree() else null
 		if scene_root:
 			col.owner = scene_root
 

@@ -8,12 +8,12 @@
 # WHY: Separates modulate accumulation from domain filtering. Effects that
 #      animate color/alpha via modulate extend this. Non-modulate effects
 #      (Transform, OUTLINE via ShaderMaterial) extend Juice2DEffectBase directly.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement any effect behavior — concrete subclasses do that.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name Juice2DAppearanceEffect
 extends Juice2DEffectBase
 

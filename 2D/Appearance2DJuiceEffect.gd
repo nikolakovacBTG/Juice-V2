@@ -7,7 +7,7 @@
 # WHAT: Animates visual appearance properties of Node2D targets.
 # WHY: Maintains stackable invariant — effects do not write to target
 #      directly; the domain node owns the single write per channel per frame.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node3D targets — use AppearanceControl/3DJuiceEffect.
 # DOES NOT: Animate position/rotation/scale — use Transform2DJuiceEffect.
 # ============================================================================
@@ -20,7 +20,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name Appearance2DJuiceEffect
 extends Juice2DAppearanceEffect
 
@@ -409,7 +409,7 @@ func _on_animate_start(target: Node) -> void:
 		if not _has_natural:
 			_natural_material = n2d.material
 			_has_natural = true
-		var mat := _create_shader_material("res://addons/Juice_V1/Shaders/outline_2d.gdshader")
+		var mat := _create_shader_material("res://addons/Juice_V2/Shaders/outline_2d.gdshader")
 		if mat:
 			mat.set_shader_parameter("outline_color", outline_color)
 			mat.set_shader_parameter("outline_width", 0.0)

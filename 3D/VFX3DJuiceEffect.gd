@@ -10,13 +10,13 @@
 #       domain-specific node properties (Node3D.global_position, global_rotation).
 #       3D particles do not need repositioning in TRIGGER_EXISTING mode because
 #       Node3D children naturally inherit their parent's global transform.
-# SYSTEM: Juice System (addons/Juice_V1/3D/)
+# SYSTEM: Juice System (addons/Juice_V2/3D/)
 # DOES NOT: Handle Control or Node2D target types.
 # DOES NOT: Compute transform deltas — side-effect exception (see base class).
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseVFX.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseVFX.svg")
 class_name VFX3DJuiceEffect
 extends VFXJuiceEffectBase
 

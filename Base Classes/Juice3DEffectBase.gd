@@ -5,7 +5,7 @@
 # WHY: Enables type-safe domain filtering — Juice3DRecipe uses
 #      Array[Juice3DEffectBase] so only 3D effects appear in the
 #      inspector dropdown. Prevents slotting Control/2D effects into 3D nodes.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement any effect behavior — concrete subclasses do that.
 # DOES NOT: Hold transform delta storage — see Juice3DTransformEffect.
 # ============================================================================
@@ -20,7 +20,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Juice3DEffectBase
 extends JuiceEffectBase
 

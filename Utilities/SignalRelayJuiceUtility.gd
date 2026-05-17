@@ -8,7 +8,7 @@
 # WHAT: Lightweight relay that listens for a signal on a local node and
 #       re-emits a named signal on a global signal bus autoload.
 # WHY: Bridges the gap between local triggers and remote juice components.
-# SYSTEM: Juice System (addons/Juice_V1/) - Utility
+# SYSTEM: Juice System (addons/Juice_V2/) - Utility
 # DOES NOT: Produce any visual effect. This is a pure signal-routing node.
 #
 # USAGE:
@@ -20,7 +20,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilitySignals.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilitySignals.svg")
 class_name SignalRelayJuiceUtility
 extends Node
 
