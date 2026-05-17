@@ -9,7 +9,7 @@
 #       Already-picked paths are pre-checked.
 # WHY:  Provides a better UX than typing property paths manually.
 #       Mirrors the paradigm of recipe array items — visual list of configs.
-# SYSTEM: Juice System (addons/Juice_V1/Editor/) — EDITOR ONLY.
+# SYSTEM: Juice System (addons/Juice_V2/Editor/) — EDITOR ONLY.
 # DOES NOT: Run in game — registered via juice_plugin.gd, stripped on export.
 # DOES NOT: Support per-surface shader materials on MeshInstance3D (surface_material_override/N
 #            is inaccessible via get_indexed — those require method calls, not property access).
@@ -42,6 +42,8 @@ var _effect_family: String = ""
 var _search_edit: LineEdit
 var _restrict_check: CheckBox
 var _tree: Tree
+# Cached per open_for_node call: true when the parent effect is a Progress effect.
+var _is_progress_family: bool = false
 
 
 # =============================================================================
@@ -104,6 +106,30 @@ const UNSUPPORTED_TYPES: Array[int] = [
 	TYPE_RID,       # Internal engine handle — cannot be set by user.
 	TYPE_CALLABLE,  # Function reference — not serializable or inspectable.
 	TYPE_SIGNAL,    # Signal reference — not inspectable.
+]
+
+# Types excluded from the picker when opening for a Progress (rate-accumulator)
+# effect. These types have no meaningful additive rate operation.
+# All numeric/math types (float, vectors, quaternion, basis, projection, plane,
+# rect2, aabb, color) remain available.
+const PROGRESS_EXCLUDED_TYPES: Array[int] = [
+	TYPE_BOOL,
+	TYPE_STRING,
+	TYPE_STRING_NAME,
+	TYPE_NODE_PATH,
+	TYPE_OBJECT,
+	TYPE_DICTIONARY,
+	TYPE_ARRAY,
+	TYPE_PACKED_BYTE_ARRAY,
+	TYPE_PACKED_INT32_ARRAY,
+	TYPE_PACKED_INT64_ARRAY,
+	TYPE_PACKED_FLOAT32_ARRAY,
+	TYPE_PACKED_FLOAT64_ARRAY,
+	TYPE_PACKED_STRING_ARRAY,
+	TYPE_PACKED_VECTOR2_ARRAY,
+	TYPE_PACKED_VECTOR3_ARRAY,
+	TYPE_PACKED_COLOR_ARRAY,
+	TYPE_PACKED_VECTOR4_ARRAY,
 ]
 
 
@@ -241,6 +267,7 @@ func _populate_tree() -> void:
 
 	var filter := _search_edit.text.strip_edges().to_lower()
 	var restrict := _restrict_check.button_pressed
+	_is_progress_family = "Progress" in _effect_family
 
 	var root := _tree.create_item()
 
@@ -270,6 +297,11 @@ func _populate_tree() -> void:
 		# Completely skip non-animatable engine-internal types (RID, Callable, Signal).
 		# These have no inspector-configurable value — hiding them avoids confusion.
 		if type_id in UNSUPPORTED_TYPES:
+			continue
+
+		# Progress-specific filter: exclude non-numeric types that can't
+		# be rate-accumulated. Better UX than showing a "not applicable" note.
+		if _is_progress_family and type_id in PROGRESS_EXCLUDED_TYPES:
 			continue
 
 		if usage & PROPERTY_USAGE_EDITOR:

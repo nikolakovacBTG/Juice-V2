@@ -16,8 +16,6 @@
 # SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Write to nodes directly — PropertyJuiceEffectBase._apply_effect()
 #           routes all writes via JuiceLedger.
-#           Does not support discrete property types (bool, String, etc.) —
-#           shake displacement is continuous and only meaningful for numeric types.
 # NOTE: The oscillation core (sine-blend + seed) mirrors ShakeControlJuiceEffect.
 #       GDScript has no mixins, so it is intentionally duplicated and kept in sync
 #       manually. Any shake-algorithm change must be applied in both places.
@@ -186,10 +184,8 @@ func _find_shake_entry(prop: String) -> ShakePropertyTarget:
 
 
 # Returns the absolute desired value for [param prop] at the given progress.
-# Computes base_val + shake_delta so PropertyJuiceEffectBase._apply_effect()
-# derives the correct Ledger delta (additive for numeric types, factor for Color).
-# Returns base_val unchanged when progress is 0 (no displacement) or when no
-# entry is found for the given prop — the Ledger then writes a no-op zero delta.
+# Computes base_val + shake_delta for continuous types.
+# For discrete types, returns State A or B based on shake threshold crossing.
 func _compute_property_value(progress: float, prop: String, base_val: Variant, _target: Node) -> Variant:
 	if progress <= 0.0:
 		return base_val
@@ -198,6 +194,20 @@ func _compute_property_value(progress: float, prop: String, base_val: Variant, _
 	if entry == null:
 		return base_val
 
+	# Discrete types: flip between State A / State B based on shake threshold.
+	var is_discrete := entry._detected_type in [TYPE_BOOL, TYPE_STRING, TYPE_STRING_NAME,
+			TYPE_NODE_PATH, TYPE_OBJECT, TYPE_PLANE, TYPE_BASIS, TYPE_PROJECTION]
+	if is_discrete:
+		var sample := _sample_shake(0.0)
+		var result: Variant = entry.get_b() if sample > entry.flip_threshold else entry.get_a()
+		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+				{"shake_time": _shake_time, "prop": prop,
+				"sample": sample, "threshold": entry.flip_threshold,
+				"result": result},
+				"property", debug_enabled)
+		return result if result != null else base_val
+
+	# Continuous types: base_val + shake_delta.
 	var delta: Variant = _compute_shake_delta(entry, progress)
 	if delta == null:
 		return base_val
@@ -211,21 +221,28 @@ func _compute_property_value(progress: float, prop: String, base_val: Variant, _
 
 
 # Computes the typed shake delta for one entry at the given progress.
-# Multi-axis types use different y_offsets into the sine field so each axis
-# oscillates independently — same as NoiseProperty's channel-separation approach.
-# Returns null for unsupported types (e.g. TYPE_NIL, TYPE_BOOL).
+# Covers all 13 continuous types. Integer variants use float-counterpart amplitude
+# and round to int. Discrete types are handled in _compute_property_value.
 func _compute_shake_delta(entry: ShakePropertyTarget, progress: float) -> Variant:
 	if progress <= 0.0:
 		return null
 
 	match entry._detected_type:
-		TYPE_FLOAT, TYPE_INT:
+		TYPE_FLOAT:
 			return entry.amplitude_float * _sample_shake(0.0) * progress
+
+		TYPE_INT:
+			return int(entry.amplitude_float * _sample_shake(0.0) * progress)
 
 		TYPE_VECTOR2:
 			return Vector2(
 				entry.amplitude_vec2.x * _sample_shake(0.0),
 				entry.amplitude_vec2.y * _sample_shake(100.0)) * progress
+
+		TYPE_VECTOR2I:
+			return Vector2i(
+				int(entry.amplitude_vec2.x * _sample_shake(0.0) * progress),
+				int(entry.amplitude_vec2.y * _sample_shake(100.0) * progress))
 
 		TYPE_VECTOR3:
 			return Vector3(
@@ -233,18 +250,66 @@ func _compute_shake_delta(entry: ShakePropertyTarget, progress: float) -> Varian
 				entry.amplitude_vec3.y * _sample_shake(100.0),
 				entry.amplitude_vec3.z * _sample_shake(200.0)) * progress
 
+		TYPE_VECTOR3I:
+			return Vector3i(
+				int(entry.amplitude_vec3.x * _sample_shake(0.0) * progress),
+				int(entry.amplitude_vec3.y * _sample_shake(100.0) * progress),
+				int(entry.amplitude_vec3.z * _sample_shake(200.0) * progress))
+
+		TYPE_VECTOR4:
+			return Vector4(
+				entry.amplitude_vec4.x * _sample_shake(0.0),
+				entry.amplitude_vec4.y * _sample_shake(100.0),
+				entry.amplitude_vec4.z * _sample_shake(200.0),
+				entry.amplitude_vec4.w * _sample_shake(300.0)) * progress
+
+		TYPE_VECTOR4I:
+			return Vector4i(
+				int(entry.amplitude_vec4.x * _sample_shake(0.0) * progress),
+				int(entry.amplitude_vec4.y * _sample_shake(100.0) * progress),
+				int(entry.amplitude_vec4.z * _sample_shake(200.0) * progress),
+				int(entry.amplitude_vec4.w * _sample_shake(300.0) * progress))
+
+		TYPE_QUATERNION:
+			var euler_rad := Vector3(
+				deg_to_rad(entry.amplitude_quat.x * _sample_shake(0.0)),
+				deg_to_rad(entry.amplitude_quat.y * _sample_shake(100.0)),
+				deg_to_rad(entry.amplitude_quat.z * _sample_shake(200.0))) * progress
+			return Quaternion.from_euler(euler_rad)
+
+		TYPE_RECT2:
+			return Rect2(
+				entry.amplitude_rect2.position.x * _sample_shake(0.0) * progress,
+				entry.amplitude_rect2.position.y * _sample_shake(100.0) * progress,
+				entry.amplitude_rect2.size.x * _sample_shake(200.0) * progress,
+				entry.amplitude_rect2.size.y * _sample_shake(300.0) * progress)
+
+		TYPE_RECT2I:
+			return Rect2i(
+				int(entry.amplitude_rect2.position.x * _sample_shake(0.0) * progress),
+				int(entry.amplitude_rect2.position.y * _sample_shake(100.0) * progress),
+				int(entry.amplitude_rect2.size.x * _sample_shake(200.0) * progress),
+				int(entry.amplitude_rect2.size.y * _sample_shake(300.0) * progress))
+
+		TYPE_AABB:
+			return AABB(
+				Vector3(
+					entry.amplitude_aabb.position.x * _sample_shake(0.0),
+					entry.amplitude_aabb.position.y * _sample_shake(100.0),
+					entry.amplitude_aabb.position.z * _sample_shake(200.0)) * progress,
+				Vector3(
+					entry.amplitude_aabb.size.x * _sample_shake(300.0),
+					entry.amplitude_aabb.size.y * _sample_shake(400.0),
+					entry.amplitude_aabb.size.z * _sample_shake(500.0)) * progress)
+
 		TYPE_COLOR:
-			# amplitude_color applies uniformly to all channels.
-			# Adding a Color delta to base_val gives the desired absolute Color;
-			# PropertyJuiceEffectBase converts it to a multiplicative Ledger factor.
 			return Color(
 				entry.amplitude_color * _sample_shake(0.0),
 				entry.amplitude_color * _sample_shake(100.0),
 				entry.amplitude_color * _sample_shake(200.0),
 				entry.amplitude_color * _sample_shake(300.0)) * progress
 
-	# Unsupported type (e.g. TYPE_NIL, TYPE_BOOL, TYPE_STRING).
-	# Shake displacement is only meaningful for continuous numeric types.
+	# Unknown continuous type.
 	return null
 
 

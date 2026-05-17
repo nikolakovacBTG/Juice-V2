@@ -12,7 +12,7 @@
 #       JSON file can be attached to a bug report and read by AI agents or
 #       support tooling without requiring manual log extraction or screenshots.
 #       JSON is preferred over plain text so field access is unambiguous.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Capture runtime animation state (effects ticking mid-frame) —
 #            that is the log file's job. Does not work in release builds.
 #            Does not clear the log file after export — that is a user action.

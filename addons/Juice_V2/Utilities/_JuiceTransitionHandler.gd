@@ -12,7 +12,7 @@
 # ============================================================================
 # JUICE TRANSITION HANDLER — Internal Runtime Helper
 # ============================================================================
-# SYSTEM: Juice System (addons/Juice_V1/Utilities/)
+# SYSTEM: Juice System (addons/Juice_V2/Utilities/)
 # DOES NOT HANDLE:
 # - OVERLAY_SCENE (the utility survives for that, no handler needed)
 # - Inspector configuration (all config is copied from the utility at creation)

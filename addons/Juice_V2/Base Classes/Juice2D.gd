@@ -8,12 +8,12 @@
 # WHAT: Juice node for Node2D targets (Sprite2D, CharacterBody2D, etc.).
 # WHY: Validates parent is Node2D, connects Area2D/CollisionObject2D signals,
 #      handles pivot compensation for rotation/scale (Node2D has no pivot_offset).
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name Juice2D
 extends JuiceBase
 

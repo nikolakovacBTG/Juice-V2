@@ -27,13 +27,13 @@ func _drive(effect: PropertyInterpolateJuiceEffectBase, target: Node, progress: 
 # Builds a minimal PropertyInterpolate2DJuiceEffect with one typed target.
 func _make_2d_effect(prop: String, detected_type: int,
 		from_v: Variant, to_v: Variant,
-		mode: InterpolatePropertyTarget.CaptureMode = InterpolatePropertyTarget.CaptureMode.CUSTOM
+		ref_source: int = PropertyTarget.ReferenceSource.CUSTOM
 ) -> PropertyInterpolate2DJuiceEffect:
 	var entry := InterpolatePropertyTarget.new()
 	entry.property_path = prop
 	entry._detected_type = detected_type
-	entry.capture_from = mode
-	entry.capture_to = mode
+	entry.from_reference = ref_source
+	entry.to_reference = ref_source
 	# Assign the backing var matching detected_type.
 	match detected_type:
 		TYPE_FLOAT:       entry.from_float  = from_v; entry.to_float  = to_v

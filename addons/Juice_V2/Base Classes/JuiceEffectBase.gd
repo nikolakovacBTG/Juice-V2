@@ -10,7 +10,7 @@
 #      concrete effects only implement their specific visual/audio behavior.
 #      Effects are Resources (not Nodes) — they hold config + math + state
 #      but have no scene tree lifecycle. A host node (JuiceControl etc.) ticks them.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement any visual/audio effect — subclasses do that.
 # DOES NOT: Auto-connect signals or manage triggers — the host node does that.
 # DOES NOT: Store persistent references to Nodes — target is always passed in.

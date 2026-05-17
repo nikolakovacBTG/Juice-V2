@@ -1,8 +1,8 @@
-## Defines From/To values and capture mode for a single interpolated property.
+## Defines From/To values and reference mode for a single interpolated property.
 ##
 ## Add one [InterpolatePropertyTarget] per property to animate.
-## Supports Custom (typed fields), In-Editor (capture button), and On-Trigger
-## (runtime capture) modes for both the From and To values.
+## Supports Custom (typed fields), Self (capture at Trigger/Ready/In Editor),
+## and Target Node (live read from another node) for both From and To values.
 
 # ============================================================================
 # WHAT: From/To target declaration for PropertyInterpolateJuiceEffectBase.
@@ -25,36 +25,38 @@ class_name InterpolatePropertyTarget
 extends PropertyTarget
 
 # =============================================================================
-# ENUMS
-# =============================================================================
-
-enum CaptureMode {
-	## Use the manually typed From/To values shown in the inspector.
-	CUSTOM    = 0,
-	## Capture the property value once in the editor via the Capture button.
-	IN_EDITOR = 1,
-	## Capture the property value at the moment the animation is triggered.
-	ON_TRIGGER = 2,
-}
-
-# =============================================================================
 # CONFIGURATION  (managed via _get_property_list so ordering is controlled)
 # =============================================================================
 
-# Where the FROM value comes from.
-# Setter calls notify_property_list_changed() so the inspector redraws
-# immediately — showing/hiding the Custom backing field without requiring a
-# scene reload.
-var capture_from: CaptureMode = CaptureMode.CUSTOM:
+# --- From reference model ---
+var from_reference: int = ReferenceSource.CUSTOM:
 	set(value):
-		capture_from = value
+		from_reference = value
 		notify_property_list_changed()
 
-# Where the TO value comes from.
-var capture_to: CaptureMode = CaptureMode.CUSTOM:
+var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
-		capture_to = value
+		from_capture_at = value
+		if value != CaptureAt.IN_EDITOR:
+			_from_editor_cached = null
 		notify_property_list_changed()
+
+var from_target_node: NodePath = NodePath()
+
+# --- To reference model ---
+var to_reference: int = ReferenceSource.CUSTOM:
+	set(value):
+		to_reference = value
+		notify_property_list_changed()
+
+var to_capture_at: int = CaptureAt.TRIGGER:
+	set(value):
+		to_capture_at = value
+		if value != CaptureAt.IN_EDITOR:
+			_to_editor_cached = null
+		notify_property_list_changed()
+
+var to_target_node: NodePath = NodePath()
 
 # Flip threshold for discrete types (bool, String, NodePath, etc.).
 # Progress must cross this value before the property switches from FROM to TO.
@@ -111,9 +113,18 @@ var to_stringname: StringName = &""
 var to_nodepath: NodePath     = NodePath()
 var to_object: Resource       = null
 
-# --- Runtime capture (ON_TRIGGER mode) ---
+# --- Runtime capture (SELF + TRIGGER mode) ---
 var _runtime_from: Variant = null
 var _runtime_to:   Variant = null
+
+# --- Ready capture (SELF + READY mode) ---
+var _ready_from: Variant = null
+var _ready_to:   Variant = null
+
+# --- Target Node resolution cache (TARGET_NODE mode) ---
+# Resolved once during capture_base() so get_from()/get_to() can read live.
+var _from_target_resolved: Node = null
+var _to_target_resolved:   Node = null
 
 # --- Editor capture (IN_EDITOR mode) ---
 var _from_editor_cached: Variant = null
@@ -163,30 +174,46 @@ func _get_property_list() -> Array[Dictionary]:
 	# --- From block ---
 	props.append({"name": "From", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "capture_from", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,In Editor,On Trigger",
+	props.append({"name": "from_reference", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,Self,Target Node",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	if capture_from == CaptureMode.CUSTOM:
+	if from_reference == ReferenceSource.CUSTOM:
 		_emit_value_field(props, false)
-	elif capture_from == CaptureMode.IN_EDITOR:
-		# Cached value displayed read-only so designer can confirm capture.
-		props.append({"name": "_from_cached_display", "type": TYPE_STRING,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
-		props.append({"name": "_from_editor_cached", "type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_STORAGE})
-	# ON_TRIGGER: nothing to configure in the inspector.
+	elif from_reference == ReferenceSource.SELF:
+		props.append({"name": "from_capture_at", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		if from_capture_at == CaptureAt.IN_EDITOR:
+			props.append({"name": "_from_cached_display", "type": TYPE_STRING,
+				"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
+	elif from_reference == ReferenceSource.TARGET_NODE:
+		props.append({"name": "from_target_node", "type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT})
 
 	# --- To block ---
 	props.append({"name": "To", "type": TYPE_NIL,
 		"usage": PROPERTY_USAGE_GROUP, "hint_string": ""})
-	props.append({"name": "capture_to", "type": TYPE_INT,
-		"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,In Editor,On Trigger",
+	props.append({"name": "to_reference", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM, "hint_string": "Custom,Self,Target Node",
 		"usage": PROPERTY_USAGE_DEFAULT})
-	if capture_to == CaptureMode.CUSTOM:
+	if to_reference == ReferenceSource.CUSTOM:
 		_emit_value_field(props, true)
-	elif capture_to == CaptureMode.IN_EDITOR:
-		props.append({"name": "_to_cached_display", "type": TYPE_STRING,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
+	elif to_reference == ReferenceSource.SELF:
+		props.append({"name": "to_capture_at", "type": TYPE_INT,
+			"hint": PROPERTY_HINT_ENUM, "hint_string": "Trigger,Ready,In Editor",
+			"usage": PROPERTY_USAGE_DEFAULT})
+		if to_capture_at == CaptureAt.IN_EDITOR:
+			props.append({"name": "_to_cached_display", "type": TYPE_STRING,
+				"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY})
+	elif to_reference == ReferenceSource.TARGET_NODE:
+		props.append({"name": "to_target_node", "type": TYPE_NODE_PATH,
+			"usage": PROPERTY_USAGE_DEFAULT})
+
+	# --- Editor cache storage (serialized only when SELF + IN_EDITOR) ---
+	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.IN_EDITOR:
+		props.append({"name": "_from_editor_cached", "type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_STORAGE})
+	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.IN_EDITOR:
 		props.append({"name": "_to_editor_cached", "type": TYPE_NIL,
 			"usage": PROPERTY_USAGE_STORAGE})
 
@@ -213,9 +240,27 @@ func _get_property_list() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"capture_from":          capture_from = value;         return true
-		&"capture_to":            capture_to = value;           return true
-		&"flip_threshold":        flip_threshold = value;       return true
+		# --- Reference model ---
+		&"from_reference":       from_reference = value;       return true
+		&"from_capture_at":      from_capture_at = value;      return true
+		&"from_target_node":     from_target_node = value;     return true
+		&"to_reference":         to_reference = value;         return true
+		&"to_capture_at":        to_capture_at = value;        return true
+		&"to_target_node":       to_target_node = value;       return true
+		&"flip_threshold":       flip_threshold = value;       return true
+		# --- Migration: old CaptureMode (CUSTOM=0, IN_EDITOR=1, ON_TRIGGER=2) ---
+		&"capture_from":
+			match value:
+				0: from_reference = ReferenceSource.CUSTOM
+				1: from_reference = ReferenceSource.SELF; from_capture_at = CaptureAt.IN_EDITOR
+				2: from_reference = ReferenceSource.SELF; from_capture_at = CaptureAt.TRIGGER
+			return true
+		&"capture_to":
+			match value:
+				0: to_reference = ReferenceSource.CUSTOM
+				1: to_reference = ReferenceSource.SELF; to_capture_at = CaptureAt.IN_EDITOR
+				2: to_reference = ReferenceSource.SELF; to_capture_at = CaptureAt.TRIGGER
+			return true
 		# node_path and property_path are handled by PropertyTarget._set()
 		# --- FROM backing vars ---
 		&"from_bool":             from_bool = value;            return true
@@ -269,9 +314,14 @@ func _set(property: StringName, value: Variant) -> bool:
 
 func _get(property: StringName) -> Variant:
 	match property:
-		&"capture_from":          return capture_from
-		&"capture_to":            return capture_to
-		&"flip_threshold":        return flip_threshold
+		# --- Reference model ---
+		&"from_reference":       return from_reference
+		&"from_capture_at":      return from_capture_at
+		&"from_target_node":     return from_target_node
+		&"to_reference":         return to_reference
+		&"to_capture_at":        return to_capture_at
+		&"to_target_node":       return to_target_node
+		&"flip_threshold":       return flip_threshold
 		# FROM backing vars
 		&"from_bool":             return from_bool
 		&"from_int":              return from_int
@@ -344,43 +394,74 @@ func is_configured() -> bool:
 ## [param host] is the juiced node (the node JuiceBase is attached to).
 func capture_base(host: Node) -> void:
 	super.capture_base(host)
-	# _detected_type may have been set by PropertyTarget._detect_type() during
-	# super.capture_base(). If it is still NIL (e.g. Ledger had no entry yet),
-	# try reading it from the freshly registered Ledger base.
 	if _detected_type == TYPE_NIL and not property_path.is_empty() and host != null:
 		var base_val: Variant = JuiceLedger.get_base(host, property_path, null)
 		if base_val != null:
 			_detected_type = typeof(base_val)
+	# Resolve TARGET_NODE references once so get_from()/get_to() can live-read.
+	if host != null:
+		if from_reference == ReferenceSource.TARGET_NODE and from_target_node != NodePath():
+			_from_target_resolved = host.get_node_or_null(from_target_node)
+		if to_reference == ReferenceSource.TARGET_NODE and to_target_node != NodePath():
+			_to_target_resolved = host.get_node_or_null(to_target_node)
 
 
-## Captures ON_TRIGGER From/To values from the current property state on [param target].
+## Captures SELF+TRIGGER From/To values from the current property state on [param target].
 ## Call in [method _on_animate_start] after [method capture_base].
 func capture_runtime_values(target: Node) -> void:
 	if target == null or property_path.is_empty():
 		return
 	var current: Variant = target.get_indexed(property_path)
-	if capture_from == CaptureMode.ON_TRIGGER:
+	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.TRIGGER:
 		_runtime_from = current
-	if capture_to == CaptureMode.ON_TRIGGER:
+	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.TRIGGER:
 		_runtime_to = current
 
 
-## Returns the resolved FROM value based on the capture mode.
+## Captures SELF+READY From/To values from the current property state on [param target].
+## Call once during [code]_ready()[/code] from the owning effect.
+func capture_ready_values(target: Node) -> void:
+	if target == null or property_path.is_empty():
+		return
+	var current: Variant = target.get_indexed(property_path)
+	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.READY:
+		_ready_from = current
+	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.READY:
+		_ready_to = current
+
+
+## Returns the resolved FROM value based on the reference mode.
 ## Returns [code]null[/code] if not yet captured or not configured.
 func get_from() -> Variant:
-	match capture_from:
-		CaptureMode.IN_EDITOR:  return _from_editor_cached
-		CaptureMode.ON_TRIGGER: return _runtime_from
-		_:                      return _custom_value(false)
+	match from_reference:
+		ReferenceSource.SELF:
+			match from_capture_at:
+				CaptureAt.IN_EDITOR: return _from_editor_cached
+				CaptureAt.READY:     return _ready_from
+				_:                   return _runtime_from
+		ReferenceSource.TARGET_NODE:
+			if is_instance_valid(_from_target_resolved) and not property_path.is_empty():
+				return _from_target_resolved.get_indexed(property_path)
+			return null
+		_:
+			return _custom_value(false)
 
 
-## Returns the resolved TO value based on the capture mode.
+## Returns the resolved TO value based on the reference mode.
 ## Returns [code]null[/code] if not yet captured or not configured.
 func get_to() -> Variant:
-	match capture_to:
-		CaptureMode.IN_EDITOR:  return _to_editor_cached
-		CaptureMode.ON_TRIGGER: return _runtime_to
-		_:                      return _custom_value(true)
+	match to_reference:
+		ReferenceSource.SELF:
+			match to_capture_at:
+				CaptureAt.IN_EDITOR: return _to_editor_cached
+				CaptureAt.READY:     return _ready_to
+				_:                   return _runtime_to
+		ReferenceSource.TARGET_NODE:
+			if is_instance_valid(_to_target_resolved) and not property_path.is_empty():
+				return _to_target_resolved.get_indexed(property_path)
+			return null
+		_:
+			return _custom_value(true)
 
 # =============================================================================
 # HELPERS

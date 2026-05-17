@@ -10,7 +10,7 @@
 #       that causes them (a boss, a door, an explosion) -- not on the camera.
 #       This effect auto-discovers the active Camera3D each tick so camera
 #       switches are handled correctly without any manual rewiring.
-# SYSTEM: Juice System (addons/Juice_V1/Camera/)
+# SYSTEM: Juice System (addons/Juice_V2/Camera/)
 # DOES NOT: Animate the JuiceBase target node -- writes to the camera only.
 # DOES NOT: Handle Camera2D -- use Camera2DJuiceEffect for that.
 # DOES NOT: Auto-bootstrap in the editor -- would dirty the scene on save.
@@ -21,7 +21,7 @@
 #        utility on first use. Old utility persists idle at zero cost.
 # ============================================================================
 
-@icon("res://addons/Juice_V1/icons/JuiceBaseCamera3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseCamera3D.svg")
 @tool
 class_name Camera3DJuiceEffect
 extends JuiceEffectBase

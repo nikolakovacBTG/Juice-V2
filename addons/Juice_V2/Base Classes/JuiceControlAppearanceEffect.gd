@@ -8,12 +8,12 @@
 # WHY: Separates modulate accumulation from domain filtering. Effects that
 #      animate color/alpha via modulate extend this. Non-modulate effects
 #      (Transform, OUTLINE via StyleBox) extend JuiceControlEffectBase directly.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement any effect behavior — concrete subclasses do that.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name JuiceControlAppearanceEffect
 extends JuiceControlEffectBase
 

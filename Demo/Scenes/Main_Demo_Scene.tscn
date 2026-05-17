@@ -11,7 +11,10 @@
 [ext_resource type="PackedScene" uid="uid://bm1h2ov2228a4" path="res://Demo/Scenes/Dummy.tscn" id="9_008jw"]
 [ext_resource type="PackedScene" uid="uid://bux4xeyti54rs" path="res://Demo/Scenes/3D_Demo.tscn" id="9_ntvx2"]
 [ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="10_ntvx2"]
+[ext_resource type="Script" uid="uid://bmjvcwyint4kk" path="res://addons/Juice_V2/Meta/NoisePropertyTarget.gd" id="12_5ihny"]
+[ext_resource type="Script" uid="uid://bgfbt4h7sw6kn" path="res://addons/Juice_V2/Meta/PropertyNoiseControlJuiceEffect.gd" id="13_n7dmy"]
 [ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V2/Base Classes/Juice2D.gd" id="14_6mvn5"]
+[ext_resource type="Script" uid="uid://bsan2h7g7njwx" path="res://addons/Juice_V2/Meta/PropertyTarget.gd" id="14_ve81s"]
 [ext_resource type="Texture2D" uid="uid://c38jo5ggsy408" path="res://Textures/Logo/slice8.png" id="14_vfjyb"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="15_gd4to"]
 [ext_resource type="Texture2D" uid="uid://bwh5u5sq4lw5f" path="res://addons/Juice_V2/icons/JuiceBase.svg" id="15_ve81s"]
@@ -181,7 +184,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 0
-from_position_in = 1
+from_position_in = 0
 from_position = Vector2(-200, 0)
 to_reference = 1
 to_capture_at = 2
@@ -197,10 +200,46 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
+[sub_resource type="Resource" id="Resource_uae5o"]
+script = ExtResource("12_5ihny")
+node_path = NodePath("../Quit")
+property_path = ""
+_detected_type = 0
+amplitude_float = 5.0
+amplitude_vec2 = Vector2(5, 5)
+amplitude_vec3 = Vector3(5, 5, 5)
+amplitude_color = 0.1
+metadata/_custom_type_script = "uid://bmjvcwyint4kk"
+
+[sub_resource type="Resource" id="Resource_gyyga"]
+script = ExtResource("13_n7dmy")
+noise_speed = 1.0
+noise_direction = 0
+noise_type = 1
+noise_frequency = 1.0
+noise_seed = 0
+fractal_type = 0
+domain_warp_enabled = false
+clamp_min = -1.0
+clamp_max = 1.0
+property_targets = Array[ExtResource("14_ve81s")]([SubResource("Resource_uae5o")])
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("4_bhrb6")]([])
+interrupt_siblings = false
+debug_enabled = false
+metadata/_custom_type_script = "uid://bgfbt4h7sw6kn"
+
 [sub_resource type="Resource" id="Resource_bgrya"]
 resource_local_to_scene = true
 script = ExtResource("5_lfgkc")
-effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gd4to")])
+effects = Array[ExtResource("4_bhrb6")]([SubResource("Resource_gd4to"), SubResource("Resource_gyyga"), null])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_tloff"]

@@ -10,7 +10,7 @@
 # WHY:  Screen-space effects must composite AFTER everything renders. A ColorRect
 #       with hint_screen_texture reads the final frame and re-samples it with
 #       UV transforms — the correct Godot pattern for fullscreen effects.
-# SYSTEM: Juice System (addons/Juice_V1/Screen/)
+# SYSTEM: Juice System (addons/Juice_V2/Screen/)
 # DOES NOT: Handle Juice timing or triggering — ScreenJuiceEffect does that.
 # DOES NOT: Need manual placement — ScreenJuiceEffect auto-bootstraps this.
 #           Optionally add manually to a CanvasLayer for custom layer/shader control.
@@ -19,7 +19,7 @@
 # CHANNELS: See ScreenJuiceEffect for authoring. Utility only accumulates and writes.
 # ============================================================================
 
-@icon("res://addons/Juice_V1/icons/JuiceUtilityScreen.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityScreen.svg")
 class_name ScreenJuiceUtility
 extends ColorRect
 

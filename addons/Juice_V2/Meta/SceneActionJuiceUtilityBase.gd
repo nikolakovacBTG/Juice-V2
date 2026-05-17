@@ -10,7 +10,7 @@
 # WHY:  Allows designers to build complete game flow purely in the inspector.
 #       As a Resource in the recipe stack, it participates in chaining,
 #       start_delay, and sequencing without custom scripting.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Produce any visual effect — control/flow only.
 # DOES NOT: Hold scene tree references persistently — NodePaths resolved at trigger.
 # DOES NOT: Survive scene destruction — the orchestrator does that.
@@ -23,12 +23,12 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityMethods.svg")
 class_name SceneActionJuiceUtilityBase
 extends JuiceEffectBase
 
 # Preload the orchestrator script (no class_name — internal only)
-const _Orchestrator := preload("res://addons/Juice_V1/Meta/_JuiceSceneActionOrchestrator.gd")
+const _Orchestrator := preload("res://addons/Juice_V2/Meta/_JuiceSceneActionOrchestrator.gd")
 
 
 # =============================================================================

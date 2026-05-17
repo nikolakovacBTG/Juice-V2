@@ -9,7 +9,7 @@ extends RefCounted
 # WHAT: Wrapper for Juice-related ProjectSettings.
 # WHY: Centralizes property names and types. Prevents typos. Allows us to
 #      provide safe default values if the setting hasn't been registered yet.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Register the settings into Godot. That is done by juice_plugin.gd
 # ============================================================================
 

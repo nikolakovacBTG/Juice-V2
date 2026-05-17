@@ -4,7 +4,7 @@
 #       Uses sin(time * frequency) blended with per-frame randomness.
 #       Progress envelope controls intensity (fade-in, sustain, fade-out).
 # WHY: Unified shake component — one effect handles all transform targets.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use ShakeControl/Shake2DJuiceEffect.
 # ============================================================================
 #
@@ -16,7 +16,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Shake3DJuiceEffect
 extends Juice3DTransformEffect
 

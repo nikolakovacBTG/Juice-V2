@@ -7,7 +7,7 @@
 #       that opens the visual property picker dialog.
 # WHY:  Browsing available properties from a dropdown is far better UX than
 #       typing indexed paths manually.
-# SYSTEM: Juice System (addons/Juice_V1/Editor/) — EDITOR ONLY.
+# SYSTEM: Juice System (addons/Juice_V2/Editor/) — EDITOR ONLY.
 # DOES NOT: Run at runtime — registered/deregistered via juice_plugin.gd.
 # DOES NOT: Handle the dialog UI itself — that lives in PropertyPickerDialog.
 # =============================================================================
@@ -86,6 +86,10 @@ class PropertyPathEditorProperty extends EditorProperty:
 	# Stored at pick time so _on_properties_confirmed can access them.
 	var _current_target: PropertyTarget = null
 	var _parent_effect: PropertyJuiceEffectBase = null
+	# Paths already configured when the picker was opened (all sibling paths).
+	# Used by _on_properties_confirmed to compute which paths are newly selected
+	# vs already present, so we don't create duplicate targets on OK.
+	var _initial_paths: Array[String] = []
 
 	func _init(dialog: PropertyPickerDialog) -> void:
 		_dialog = dialog
@@ -104,16 +108,20 @@ class PropertyPathEditorProperty extends EditorProperty:
 	## Called by the inspector to sync the display field with the current resource value.
 	## This runs on every inspector rebuild (including after emit_changed fires a new
 	## EditorProperty instance) — so the text always reflects the true resource state.
-	func update_property() -> void:
+	func _update_property() -> void:
 		_updating = true
 		var current: String = get_edited_object().get(get_edited_property())
 		if current.is_empty():
 			_display.text = ""
 			_display.placeholder_text = "Pick…"
 			_display.tooltip_text = "No property selected. Click to browse."
+			# Dim placeholder color — nothing selected yet.
+			_display.add_theme_color_override("font_uneditable_color", Color(0.45, 0.45, 0.45))
 		else:
 			_display.text = current
 			_display.tooltip_text = "Current: %s\nClick to change." % current
+			# Bright color so the selected property name is clearly visible.
+			_display.add_theme_color_override("font_uneditable_color", Color(0.85, 0.95, 1.0))
 		_updating = false
 
 	# Opens the picker dialog on left-click. Right-click and other events pass through.
@@ -153,35 +161,89 @@ class PropertyPathEditorProperty extends EditorProperty:
 			if not cur.is_empty():
 				current_paths.append(cur)
 
+		# Cache for use in _on_properties_confirmed — must be set before dialog opens.
+		_initial_paths = current_paths.duplicate()
+
 		if _dialog.properties_confirmed.is_connected(_on_properties_confirmed):
 			_dialog.properties_confirmed.disconnect(_on_properties_confirmed)
 
 		_dialog.properties_confirmed.connect(_on_properties_confirmed, CONNECT_ONE_SHOT)
-		var family := _parent_effect.get_class() if _parent_effect != null else ""
+		# get_class() returns the native base ("Resource") for GDScript objects.
+		# Use get_script().get_global_name() to get the actual class_name.
+		var family: String = ""
+		if _parent_effect != null and _parent_effect.get_script() != null:
+			family = _parent_effect.get_script().get_global_name()
 		_dialog.open_for_node(node, current_paths, family)
 
 	func _on_properties_confirmed(paths: Array[String]) -> void:
-		if paths.is_empty():
+		# Full sync model: after confirmation the array mirrors exactly what's
+		# checked in the picker.  Newly checked → added as siblings,
+		# unchecked → removed from the array, current target's own path is
+		# preserved when still checked.
+
+		# Compute deltas.
+		var newly_added: Array[String] = []
+		for p in paths:
+			if p not in _initial_paths:
+				newly_added.append(p)
+		var removed: Array[String] = []
+		for p in _initial_paths:
+			if p not in paths:
+				removed.append(p)
+
+		# If nothing changed at all, bail early.
+		if newly_added.is_empty() and removed.is_empty():
+			_current_target = null
+			_parent_effect = null
 			return
 
-		# Bug 5 fix: do NOT call get_edited_object().set() directly before emit_changed.
-		# The property_path setter fires notify_property_list_changed() which causes Godot
-		# to rebuild the inspector synchronously — the new EditorProperty's update_property()
-		# then runs while the undo/redo DO action hasn't fired yet, so the resource still
-		# holds the old value and the display shows "Pick…".
-		# emit_changed alone routes through undo/redo which writes the value then rebuilds.
-		# We update _display.text deferred so it reflects the value after the rebuild.
-		emit_changed(get_edited_property(), paths[0])
-		_display.call_deferred("set", "text", paths[0])
-		_display.call_deferred("set", "tooltip_text",
-			"Current: %s\nClick to change." % paths[0])
+		var current_path: String = ""
+		if _current_target != null:
+			current_path = _current_target.get("property_path")
 
-		# Additional selected paths: create sibling PropertyTarget entries.
-		if paths.size() > 1 and _parent_effect != null and is_instance_valid(_parent_effect):
-			for i in range(1, paths.size()):
+		# Only set when the array structure changes (siblings added/removed).
+		# A simple single-target pick only needs emit_changed, not a full
+		# inspector rebuild (which collapses the sub-resource fold state).
+		var array_changed: bool = false
+
+		# --- Remove unchecked targets from the array ---
+		if not removed.is_empty() and _parent_effect != null and is_instance_valid(_parent_effect):
+			var targets_arr = _parent_effect.get("property_targets")
+			if targets_arr is Array:
+				# Walk backwards so indices stay valid during removal.
+				for i in range(targets_arr.size() - 1, -1, -1):
+					var t = targets_arr[i]
+					if t == null:
+						continue
+					var t_path: String = t.get("property_path")
+					if t_path in removed:
+						# Don't remove the current target object — clear its path instead.
+						if t == _current_target:
+							_current_target.set("property_path", "")
+							emit_changed(get_edited_property(), "")
+							current_path = ""
+						else:
+							targets_arr.remove_at(i)
+				array_changed = true
+
+		# --- Handle current target's path ---
+		if current_path.is_empty() and not newly_added.is_empty():
+			# Empty target (first-time pick or just cleared) — assign first new pick.
+			var primary: String = newly_added.pop_front()
+			# Direct write ensures update_property() on the rebuilt inspector
+			# reads the correct value (emit_changed → undo/redo timing gap).
+			_current_target.set("property_path", primary)
+			emit_changed(get_edited_property(), primary)
+
+		# --- Add remaining newly checked paths as sibling targets ---
+		if not newly_added.is_empty() and _parent_effect != null and is_instance_valid(_parent_effect):
+			for p in newly_added:
 				var new_target: PropertyTarget = _current_target.duplicate()
-				new_target.property_path = paths[i]
+				new_target.property_path = p
 				_parent_effect.property_targets.append(new_target)
+			array_changed = true
+
+		if array_changed and _parent_effect != null and is_instance_valid(_parent_effect):
 			_parent_effect.notify_property_list_changed()
 			EditorInterface.get_inspector().refresh()
 

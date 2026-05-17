@@ -23,6 +23,25 @@ extends Resource
 
 
 # =============================================================================
+# ENUMS — shared by all PropertyTarget subclasses
+# =============================================================================
+
+## Reference source for From/To or State A/B values.
+enum ReferenceSource {
+	CUSTOM      = 0, ## Explicit user-supplied value in the inspector.
+	SELF        = 1, ## This node's own captured snapshot (see CaptureAt).
+	TARGET_NODE = 2, ## Another node's live value via NodePath.
+}
+
+## When to capture the Self snapshot (only applies when ReferenceSource == SELF).
+enum CaptureAt {
+	TRIGGER   = 0, ## At animation start (default).
+	READY     = 1, ## At scene load (_ready).
+	IN_EDITOR = 2, ## Baked WYSIWYG value stored in the scene file.
+}
+
+
+# =============================================================================
 # CONFIGURATION
 # =============================================================================
 
@@ -281,20 +300,32 @@ func _find_juice_base_from_selection() -> Node:
 
 
 # Human-readable type name for the read-only _type_display inspector field.
+# Subclasses may override _get() to return a more specific label for TYPE_BOOL
+# (e.g. "Bool (flip)" for Noise/Shake vs "Bool (hold)" for Interpolate).
 func _type_name_for(t: int) -> String:
 	match t:
-		TYPE_FLOAT:   return "Float"
-		TYPE_VECTOR2: return "Vector2"
-		TYPE_VECTOR3: return "Vector3"
-		TYPE_COLOR:   return "Color"
-		TYPE_BOOL:    return "Bool (hold)"
-		TYPE_STRING:  return "String (hold)"
-		TYPE_INT:     return "Int"
-		TYPE_RECT2:   return "Rect2"
-		TYPE_AABB:    return "AABB"
-		TYPE_PLANE:   return "Plane (flip)"
-		TYPE_BASIS:   return "Basis (flip)"
-		_:            return "Unknown (type %d)" % t
+		TYPE_FLOAT:      return "Float"
+		TYPE_INT:        return "Int"
+		TYPE_VECTOR2:    return "Vector2"
+		TYPE_VECTOR2I:   return "Vector2i"
+		TYPE_VECTOR3:    return "Vector3"
+		TYPE_VECTOR3I:   return "Vector3i"
+		TYPE_VECTOR4:    return "Vector4"
+		TYPE_VECTOR4I:   return "Vector4i"
+		TYPE_QUATERNION: return "Quaternion"
+		TYPE_COLOR:      return "Color"
+		TYPE_RECT2:      return "Rect2"
+		TYPE_RECT2I:     return "Rect2i"
+		TYPE_AABB:       return "AABB"
+		TYPE_BOOL:       return "Bool"
+		TYPE_STRING:     return "String"
+		TYPE_STRING_NAME: return "StringName"
+		TYPE_NODE_PATH:  return "NodePath"
+		TYPE_OBJECT:     return "Object"
+		TYPE_PLANE:      return "Plane"
+		TYPE_BASIS:      return "Basis"
+		TYPE_PROJECTION: return "Projection"
+		_:               return "type %d" % t
 
 
 # =============================================================================

@@ -13,7 +13,7 @@
 #       CallMethodJuiceUtility (standalone Node) with a chainable Resource that
 #       participates in the recipe stack: start_delay, chain_to, loop all work.
 #       Upgraded from single-entry to array to match recipe-item paradigm.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Produce any visual effect — control/flow only.
 # DOES NOT: Handle return values from called methods.
 # DOES NOT: Block animation completion — calls and immediately completes.
@@ -27,7 +27,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityMethods.svg")
 class_name CallMethodJuiceUtilityBase
 extends JuiceEffectBase
 

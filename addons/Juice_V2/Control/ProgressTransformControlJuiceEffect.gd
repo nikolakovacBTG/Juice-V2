@@ -6,7 +6,7 @@
 # =============================================================================
 # WHAT: Control-domain continuous-accumulation (Progress) effect.
 # WHY:  Defines a resource-based progress driver for Control targets.
-# SYSTEM: Juice System (addons/Juice_V1/Control/)
+# SYSTEM: Juice System (addons/Juice_V2/Control/)
 # DOES NOT: Handle Node2D or Node3D targets.
 # DOES NOT: Handle arbitrary property accumulation -- use ProgressPropertyJuiceEffectBase.
 #
@@ -16,7 +16,7 @@
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name ProgressTransformControlJuiceEffect
 extends JuiceControlTransformEffect
 

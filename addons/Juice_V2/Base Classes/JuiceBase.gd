@@ -8,7 +8,7 @@
 # WHAT: Unified base node that drives JuiceEffectBase resources via a recipe.
 # WHY: Replaces per-effect Node architecture with a single node per target.
 #      Manages triggers, animation lifecycle, chaining, and looping.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Know about domain specifics — subclasses (JuiceControl, Juice2D,
 #           Juice3D) handle target type validation and domain auto-connect.
 # ============================================================================
@@ -27,7 +27,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase.svg")
 class_name JuiceBase
 extends Node
 

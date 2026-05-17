@@ -5,7 +5,7 @@
 #       domain warp options. Progress envelope controls intensity.
 # WHY: Unified noise component — one effect handles all transform targets
 #      with conditional inspector properties.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use NoiseControl/Noise2DJuiceEffect.
 # DOES NOT: Handle arbitrary property noise — use NoisePropertyJuiceEffect.
 # ============================================================================
@@ -18,7 +18,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Noise3DJuiceEffect
 extends Juice3DTransformEffect
 

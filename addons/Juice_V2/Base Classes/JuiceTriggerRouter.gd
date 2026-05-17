@@ -4,7 +4,7 @@
 ## WHY:  Extracts the signal-routing algorithm out of JuiceBase so it can be
 ##       read, modified and tested without wading through 2000 lines of lifecycle
 ##       code. All methods are pure static functions — zero coupling to JuiceBase.
-## SYSTEM: Juice System (addons/Juice_V1/)
+## SYSTEM: Juice System (addons/Juice_V2/)
 ## DOES NOT: Hold state, own connections, or touch JuiceBase internals.
 ## ============================================================================
 

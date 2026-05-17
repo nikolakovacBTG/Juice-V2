@@ -16,8 +16,6 @@
 # SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Write to nodes directly — PropertyJuiceEffectBase._apply_effect()
 #           routes all writes via JuiceLedger.
-#           Does not support discrete property types (bool, String, etc.) —
-#           noise displacement is continuous and meaningful only for numeric types.
 #           Does not handle shader parameters via picker — type
 #           "material:shader_parameter/name" manually; set_indexed() handles it.
 # NOTE: The noise algorithm here mirrors NoiseControlJuiceEffect /
@@ -298,10 +296,11 @@ func _find_noise_entry(prop: String) -> NoisePropertyTarget:
 
 
 # Returns the absolute desired value for [param prop] at the given progress.
-# Computes base_val + noise_delta so that PropertyJuiceEffectBase._apply_effect()
-# can derive the correct Ledger delta (additive for numeric types, factor for Color).
-# Returns base_val unchanged when progress is 0 (no displacement) or when no entry
-# is found for the given prop, so the Ledger writes a no-op delta.
+# Computes base_val + noise_delta for continuous types so that
+# PropertyJuiceEffectBase._apply_effect() can derive the correct Ledger delta.
+# For discrete types, returns the resolved State A or B value directly based on
+# whether the noise sample crosses the flip_threshold.
+# Returns base_val unchanged when progress is 0 or when no entry is found.
 func _compute_property_value(progress: float, prop: String, base_val: Variant, _target: Node) -> Variant:
 	if progress <= 0.0:
 		return base_val
@@ -310,6 +309,20 @@ func _compute_property_value(progress: float, prop: String, base_val: Variant, _
 	if entry == null:
 		return base_val
 
+	# Discrete types: flip between State A / State B based on noise threshold.
+	var is_discrete := entry._detected_type in [TYPE_BOOL, TYPE_STRING, TYPE_STRING_NAME,
+			TYPE_NODE_PATH, TYPE_OBJECT, TYPE_PLANE, TYPE_BASIS, TYPE_PROJECTION]
+	if is_discrete:
+		var sample := _sample_noise(0.0)
+		var result: Variant = entry.get_b() if sample > entry.flip_threshold else entry.get_a()
+		JuiceLogger.log_delta(self, _get_domain_tag(), progress,
+				{"noise_time": _noise_time, "prop": prop,
+				"sample": sample, "threshold": entry.flip_threshold,
+				"result": result},
+				"property", debug_enabled)
+		return result if result != null else base_val
+
+	# Continuous types: base_val + noise_delta.
 	var delta: Variant = _compute_noise_delta(entry, progress)
 	if delta == null:
 		return base_val
@@ -324,8 +337,9 @@ func _compute_property_value(progress: float, prop: String, base_val: Variant, _
 
 # Compute the noise delta for one entry at the given progress (0–1).
 # Returns a Variant typed to match the entry's _detected_type, or null if unsupported.
-# The delta is always near zero (amplitude * sample); adding it to base_val
-# gives the desired value, which the base class then routes via the Ledger.
+# Covers all 13 continuous types. Integer variants use their float-counterpart
+# amplitude and round to int at the end. Discrete types are handled in
+# _compute_property_value directly — they don't produce a delta.
 func _compute_noise_delta(entry: NoisePropertyTarget, progress: float) -> Variant:
 	if progress <= 0.0:
 		return null
@@ -334,10 +348,18 @@ func _compute_noise_delta(entry: NoisePropertyTarget, progress: float) -> Varian
 		TYPE_FLOAT:
 			return entry.amplitude_float * _sample_noise(0.0) * progress
 
+		TYPE_INT:
+			return int(entry.amplitude_float * _sample_noise(0.0) * progress)
+
 		TYPE_VECTOR2:
 			return Vector2(
 				entry.amplitude_vec2.x * _sample_noise(0.0),
 				entry.amplitude_vec2.y * _sample_noise(100.0)) * progress
+
+		TYPE_VECTOR2I:
+			return Vector2i(
+				int(entry.amplitude_vec2.x * _sample_noise(0.0) * progress),
+				int(entry.amplitude_vec2.y * _sample_noise(100.0) * progress))
 
 		TYPE_VECTOR3:
 			return Vector3(
@@ -345,18 +367,67 @@ func _compute_noise_delta(entry: NoisePropertyTarget, progress: float) -> Varian
 				entry.amplitude_vec3.y * _sample_noise(100.0),
 				entry.amplitude_vec3.z * _sample_noise(200.0)) * progress
 
+		TYPE_VECTOR3I:
+			return Vector3i(
+				int(entry.amplitude_vec3.x * _sample_noise(0.0) * progress),
+				int(entry.amplitude_vec3.y * _sample_noise(100.0) * progress),
+				int(entry.amplitude_vec3.z * _sample_noise(200.0) * progress))
+
+		TYPE_VECTOR4:
+			return Vector4(
+				entry.amplitude_vec4.x * _sample_noise(0.0),
+				entry.amplitude_vec4.y * _sample_noise(100.0),
+				entry.amplitude_vec4.z * _sample_noise(200.0),
+				entry.amplitude_vec4.w * _sample_noise(300.0)) * progress
+
+		TYPE_VECTOR4I:
+			return Vector4i(
+				int(entry.amplitude_vec4.x * _sample_noise(0.0) * progress),
+				int(entry.amplitude_vec4.y * _sample_noise(100.0) * progress),
+				int(entry.amplitude_vec4.z * _sample_noise(200.0) * progress),
+				int(entry.amplitude_vec4.w * _sample_noise(300.0) * progress))
+
+		TYPE_QUATERNION:
+			# amplitude_quat is Vector3 euler degrees — convert to radian offset.
+			var euler_rad := Vector3(
+				deg_to_rad(entry.amplitude_quat.x * _sample_noise(0.0)),
+				deg_to_rad(entry.amplitude_quat.y * _sample_noise(100.0)),
+				deg_to_rad(entry.amplitude_quat.z * _sample_noise(200.0))) * progress
+			return Quaternion.from_euler(euler_rad)
+
+		TYPE_RECT2:
+			return Rect2(
+				entry.amplitude_rect2.position.x * _sample_noise(0.0) * progress,
+				entry.amplitude_rect2.position.y * _sample_noise(100.0) * progress,
+				entry.amplitude_rect2.size.x * _sample_noise(200.0) * progress,
+				entry.amplitude_rect2.size.y * _sample_noise(300.0) * progress)
+
+		TYPE_RECT2I:
+			return Rect2i(
+				int(entry.amplitude_rect2.position.x * _sample_noise(0.0) * progress),
+				int(entry.amplitude_rect2.position.y * _sample_noise(100.0) * progress),
+				int(entry.amplitude_rect2.size.x * _sample_noise(200.0) * progress),
+				int(entry.amplitude_rect2.size.y * _sample_noise(300.0) * progress))
+
+		TYPE_AABB:
+			return AABB(
+				Vector3(
+					entry.amplitude_aabb.position.x * _sample_noise(0.0),
+					entry.amplitude_aabb.position.y * _sample_noise(100.0),
+					entry.amplitude_aabb.position.z * _sample_noise(200.0)) * progress,
+				Vector3(
+					entry.amplitude_aabb.size.x * _sample_noise(300.0),
+					entry.amplitude_aabb.size.y * _sample_noise(400.0),
+					entry.amplitude_aabb.size.z * _sample_noise(500.0)) * progress)
+
 		TYPE_COLOR:
-			# amplitude_color applies uniformly to all channels.
-			# Adding a Color delta to base_val gives the absolute desired Color;
-			# PropertyJuiceEffectBase converts to a multiplicative Ledger factor.
 			return Color(
 				entry.amplitude_color * _sample_noise(0.0),
 				entry.amplitude_color * _sample_noise(100.0),
 				entry.amplitude_color * _sample_noise(200.0),
 				entry.amplitude_color * _sample_noise(300.0)) * progress
 
-	# Unsupported type (e.g. TYPE_NIL, TYPE_BOOL, TYPE_STRING).
-	# Noise displacement is only meaningful for continuous numeric types.
+	# Unknown continuous type — return null (no displacement).
 	return null
 
 
