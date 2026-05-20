@@ -68,6 +68,9 @@ var _file_dialog: EditorFileDialog = null
 var _file_dialog_action: StringName = &""
 var _file_dialog_index: int = -1
 
+# Tracks which array index the type picker should fill (-1 = append mode).
+var _type_picker_target_index: int = -1
+
 # Guard against re-entrant _update_property calls during our own emit_changed.
 var _updating: bool = false
 
@@ -238,10 +241,17 @@ func _rebuild_rows(array: Array) -> void:
 func _create_sub_inspector(index: int, resource: Resource) -> void:
 	var sub_inspector := EditorInspector.new()
 	sub_inspector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sub_inspector.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# EditorInspector needs a minimum height to render its contents.
+	# Without this, it collapses to a few pixels. 100px is a reasonable
+	# starting minimum — the inspector auto-expands as properties load.
+	sub_inspector.custom_minimum_size = Vector2(0, 100)
+
 	# Indent the sub-inspector to visually nest it under the row.
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	margin.add_child(sub_inspector)
 
 	# Insert the margin container right after the row in the VBox.
@@ -251,7 +261,8 @@ func _create_sub_inspector(index: int, resource: Resource) -> void:
 		_rows_container.add_child(margin)
 		_rows_container.move_child(margin, row_idx + 1)
 
-	sub_inspector.edit(resource)
+	# Defer edit() so the inspector has time to be added to the tree first.
+	sub_inspector.call_deferred("edit", resource)
 	_sub_inspectors[index] = margin
 
 
@@ -376,6 +387,22 @@ func _add_single_type_element() -> void:
 
 # Multi-type add: show a popup with available types.
 func _show_type_picker() -> void:
+	_type_picker_target_index = -1  # -1 = append mode
+	_show_type_picker_at(_add_button)
+
+
+# Multi-type replace: show a popup to fill an empty slot at a specific index.
+func _show_type_picker_for_index(index: int) -> void:
+	_type_picker_target_index = index
+	var row := _get_row_at(index)
+	if row:
+		_show_type_picker_at(row)
+	else:
+		_show_type_picker_at(_add_button)
+
+
+# Show the type picker popup positioned below the given control.
+func _show_type_picker_at(anchor: Control) -> void:
 	if _type_popup == null:
 		_type_popup = PopupMenu.new()
 		_type_popup.id_pressed.connect(_on_type_selected)
@@ -384,19 +411,20 @@ func _show_type_picker() -> void:
 	_type_popup.clear()
 	for i in range(_concrete_classes.size()):
 		var cls_name: String = _concrete_classes[i]
-		_type_popup.add_item(cls_name, i)
-		# Try to set the icon from the editor theme.
 		var icon := _get_class_icon(cls_name)
 		if icon:
-			_type_popup.set_item_icon(i, icon)
+			_type_popup.add_icon_item(icon, cls_name, i)
+		else:
+			_type_popup.add_item(cls_name, i)
 
-	# Position the popup below the Add button.
-	var button_rect := _add_button.get_global_rect()
-	_type_popup.position = Vector2i(int(button_rect.position.x), int(button_rect.end.y))
+	# Position the popup below the anchor control.
+	var anchor_rect := anchor.get_global_rect()
+	_type_popup.position = Vector2i(int(anchor_rect.position.x), int(anchor_rect.end.y))
 	_type_popup.popup()
 
 
 # Type picker selection callback.
+# Appends to array if _type_picker_target_index is -1, otherwise replaces that index.
 func _on_type_selected(id: int) -> void:
 	if id < 0 or id >= _concrete_classes.size():
 		return
@@ -405,7 +433,14 @@ func _on_type_selected(id: int) -> void:
 	if resource == null:
 		return
 	var array := _get_current_array().duplicate()
-	array.append(resource)
+
+	if _type_picker_target_index >= 0 and _type_picker_target_index < array.size():
+		# Replace mode: fill the specific slot.
+		array[_type_picker_target_index] = resource
+	else:
+		# Append mode: add to end.
+		array.append(resource)
+
 	_commit_array(array)
 
 
@@ -414,14 +449,31 @@ func _on_type_selected(id: int) -> void:
 # =============================================================================
 
 # Row expand/collapse toggled.
+# If the slot is empty (null resource) and this is a single-type array,
+# auto-create a resource instead of trying to expand nothing.
 func _on_row_expand_toggled(index: int) -> void:
+	var array := _get_current_array()
+	if index < 0 or index >= array.size():
+		return
+
+	# Handle empty slot: auto-create for single-type, show picker for multi-type.
+	if array[index] == null:
+		if _is_single_type and not _element_class_name.is_empty():
+			var new_res := _instantiate_class(_element_class_name)
+			if new_res:
+				var new_array := array.duplicate()
+				new_array[index] = new_res
+				_commit_array(new_array)
+		else:
+			_show_type_picker_for_index(index)
+		return
+
 	var was_expanded: bool = _expanded.get(index, false)
 	_expanded[index] = not was_expanded
 
 	if _expanded[index]:
 		# Expand: create sub-inspector.
-		var array := _get_current_array()
-		if index < array.size() and array[index] is Resource:
+		if array[index] is Resource:
 			_create_sub_inspector(index, array[index] as Resource)
 	else:
 		# Collapse: remove sub-inspector.
@@ -624,13 +676,30 @@ func _find_resource_index(resource: Resource) -> int:
 # =============================================================================
 
 # Get the editor theme icon for a class name.
+# Checks the @icon annotation in the global class list for GDScript classes,
+# then falls back to EditorIcons for native classes.
 func _get_class_icon(class_name_str: String) -> Texture2D:
+	# Strategy 1: GDScript @icon annotation from global class list.
+	var global_classes: Array[Dictionary] = ProjectSettings.get_global_class_list()
+	var current := class_name_str
+	for _depth in range(20):
+		for cls: Dictionary in global_classes:
+			if cls.get("class", "") == current:
+				var icon_path: String = cls.get("icon", "")
+				if not icon_path.is_empty():
+					var tex := load(icon_path) as Texture2D
+					if tex:
+						return tex
+				current = cls.get("base", "")
+				break
+		if current.is_empty():
+			break
+
+	# Strategy 2: Native class icon from EditorIcons theme.
 	var base := _get_theme_source()
-	if base == null:
-		return null
-	if base.has_theme_icon(class_name_str, "EditorIcons"):
+	if base and base.has_theme_icon(class_name_str, "EditorIcons"):
 		return base.get_theme_icon(class_name_str, "EditorIcons")
-	return base.get_theme_icon("Resource", "EditorIcons")
+	return null
 
 
 # Find a valid theme source control.

@@ -181,23 +181,12 @@ func _build_ui() -> void:
 	# --- Context menu (⋮) ---
 	# MenuButton for resource operations: Save, Save As, Load, Quick Load,
 	# Copy, Paste, Clear. Placed left of the name, away from the delete button.
+	# Icons match Godot's native resource context menu (see Image 4 in user feedback).
 	_menu_button = MenuButton.new()
 	_menu_button.flat = true
 	_menu_button.tooltip_text = "Resource actions"
 	_menu_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# Populate menu items.
-	var popup := _menu_button.get_popup()
-	popup.add_item("Save", 0)
-	popup.add_item("Save As...", 1)
-	popup.add_separator()
-	popup.add_item("Load...", 2)
-	popup.add_item("Quick Load...", 3)
-	popup.add_separator()
-	popup.add_item("Copy", 4)
-	popup.add_item("Paste", 5)
-	popup.add_separator()
-	popup.add_item("Clear", 6)
-	popup.id_pressed.connect(_on_menu_id_pressed)
+	# Items are populated in _ready() after theme icons are available.
 	add_child(_menu_button)
 
 	# --- Resource icon ---
@@ -259,8 +248,10 @@ func _apply_theme_icons() -> void:
 		if ctx_icon:
 			_menu_button.icon = ctx_icon
 		else:
-			# Fallback: use the text "⋮" if the icon isn't available.
 			_menu_button.text = "⋮"
+
+		# Populate menu items with icons matching Godot's native resource menu.
+		_populate_context_menu(base)
 
 
 # Find a valid theme source control for fetching editor icons.
@@ -298,24 +289,67 @@ func _get_display_name() -> String:
 
 
 # Get the editor theme icon for the resource's class.
+# Uses the @icon annotation from ProjectSettings global class list for GDScript
+# classes, since they are not registered in the EditorIcons theme type.
 func _get_resource_icon() -> Texture2D:
 	if _resource == null:
 		return null
-	var base := _get_theme_source()
-	if base == null:
-		return null
-	# Try script class_name first (e.g. "InterpolatePropertyTarget").
+	# For GDScript resources: check the global class list for an @icon path.
 	var script := _resource.get_script() as GDScript
 	if script != null:
 		var global_name := script.get_global_name()
-		if not global_name.is_empty() and base.has_theme_icon(global_name, "EditorIcons"):
-			return base.get_theme_icon(global_name, "EditorIcons")
-	# Fallback to native class name.
+		if not global_name.is_empty():
+			var icon_tex := _get_global_class_icon(global_name)
+			if icon_tex:
+				return icon_tex
+	# Fallback: try native class icon from EditorIcons theme.
+	var base := _get_theme_source()
+	if base == null:
+		return null
 	var native_class := _resource.get_class()
 	if base.has_theme_icon(native_class, "EditorIcons"):
 		return base.get_theme_icon(native_class, "EditorIcons")
-	# Final fallback: generic Resource icon.
-	return base.get_theme_icon("Resource", "EditorIcons")
+	return null
+
+
+# Look up the @icon path for a GDScript global class name.
+# Walks the inheritance chain to find the nearest class with an icon.
+func _get_global_class_icon(class_name_str: String) -> Texture2D:
+	var global_classes: Array[Dictionary] = ProjectSettings.get_global_class_list()
+	var current := class_name_str
+	for _depth in range(20):
+		for cls: Dictionary in global_classes:
+			if cls.get("class", "") == current:
+				var icon_path: String = cls.get("icon", "")
+				if not icon_path.is_empty():
+					var tex := load(icon_path) as Texture2D
+					if tex:
+						return tex
+				# No icon on this class — try the parent.
+				current = cls.get("base", "")
+				break
+		if current.is_empty():
+			break
+	return null
+
+
+# Populate the ⋮ context menu with icons matching Godot's native resource menu.
+# Called from _apply_theme_icons() after the theme source is available.
+func _populate_context_menu(base: Control) -> void:
+	var popup := _menu_button.get_popup()
+	popup.clear()
+	# Match Godot's native order and icons (see user reference Image 4).
+	popup.add_icon_item(base.get_theme_icon("Save", "EditorIcons"), "Save", 0)
+	popup.add_icon_item(base.get_theme_icon("Save", "EditorIcons"), "Save As...", 1)
+	popup.add_separator()
+	popup.add_icon_item(base.get_theme_icon("Load", "EditorIcons"), "Load...", 2)
+	popup.add_icon_item(base.get_theme_icon("Search", "EditorIcons"), "Quick Load...", 3)
+	popup.add_separator()
+	popup.add_icon_item(base.get_theme_icon("ActionCopy", "EditorIcons"), "Copy", 4)
+	popup.add_icon_item(base.get_theme_icon("ActionPaste", "EditorIcons"), "Paste", 5)
+	popup.add_separator()
+	popup.add_icon_item(base.get_theme_icon("Clear", "EditorIcons"), "Clear", 6)
+	popup.id_pressed.connect(_on_menu_id_pressed)
 
 
 # =============================================================================
