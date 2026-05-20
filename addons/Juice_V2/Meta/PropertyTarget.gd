@@ -59,6 +59,7 @@ var node_path: NodePath = NodePath():
 var property_path: String = "":
 	set(value):
 		property_path = value
+		resource_name = value if not value.is_empty() else ""
 		_detect_type()
 		notify_property_list_changed()
 

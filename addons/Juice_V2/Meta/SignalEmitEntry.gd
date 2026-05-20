@@ -53,7 +53,10 @@ func _get_property_list() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"signal_description": signal_description = value; return true
+		&"signal_description":
+			signal_description = value
+			resource_name = value if not value.is_empty() else ""
+			return true
 		&"payload":            payload            = value; return true
 		&"emit_on":            emit_on            = value; return true
 	return false

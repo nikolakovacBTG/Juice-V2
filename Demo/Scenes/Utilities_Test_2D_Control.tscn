@@ -123,8 +123,9 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
-chain_to = Array[ExtResource("9_8ai6r")]([])
+chain_to = Array[ExtResource("9_8ai6r")]([null])
 interrupt_siblings = false
+chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://s2n3dgutlx06"
 
@@ -254,6 +255,24 @@ metadata/_custom_type_script = "uid://cuf4h2xsn7arv"
 [sub_resource type="Resource" id="Resource_7yq7o"]
 script = ExtResource("15_hvqsx")
 node_path = NodePath("")
+property_path = "clip_children"
+_detected_type = 3
+float_rate = 1.0
+vec2_rate = Vector2(1, 0)
+vec3_rate = Vector3(1, 0, 0)
+color_rate = Color(0.1, 0, 0, 0)
+vec4_rate = Vector4(1, 0, 0, 0)
+quat_rate = Vector3(0, 0, 0)
+rect2_rate = Rect2(0, 0, 0, 0)
+aabb_rate = AABB(0, 0, 0, 0, 0, 0)
+plane_rate = Plane(0, 0, 0, 0)
+basis_rate = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
+projection_rate = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+metadata/_custom_type_script = "uid://blkt0ha3dnjot"
+
+[sub_resource type="Resource" id="Resource_b0p5q"]
+script = ExtResource("15_hvqsx")
+node_path = NodePath("")
 property_path = ""
 _detected_type = 0
 float_rate = 1.0
@@ -273,7 +292,7 @@ metadata/_custom_type_script = "uid://blkt0ha3dnjot"
 script = ExtResource("15_uhtl6")
 auto_start = false
 hold_on_stop = true
-property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_7yq7o")])
+property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_7yq7o"), SubResource("Resource_b0p5q")])
 bound_enabled = false
 trigger_behaviour = 1
 start_delay = 0.0
