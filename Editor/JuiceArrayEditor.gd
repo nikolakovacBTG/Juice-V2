@@ -238,21 +238,38 @@ func _rebuild_rows(array: Array) -> void:
 # Create an embedded EditorInspector below the row at the given index.
 # This shows the resource's properties inline, matching Godot's native
 # sub-resource expansion behavior.
+# - Scrolling is DISABLED so the inspector expands to full content height.
+# - Background uses Godot's theme-native sub_inspector_bg StyleBox for
+#   proper depth coloring that works with all editor themes.
 func _create_sub_inspector(index: int, resource: Resource) -> void:
 	var sub_inspector := EditorInspector.new()
 	sub_inspector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sub_inspector.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# EditorInspector needs a minimum height to render its contents.
-	# Without this, it collapses to a few pixels. 100px is a reasonable
-	# starting minimum — the inspector auto-expands as properties load.
-	sub_inspector.custom_minimum_size = Vector2(0, 100)
+	# CRITICAL: Disable scrolling so the inspector sizes to its content
+	# instead of clipping into a fixed scroll area. This matches how Godot's
+	# native array inspector embeds sub-resource editors inline.
+	sub_inspector.set_vertical_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
+	sub_inspector.set_horizontal_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
 
-	# Indent the sub-inspector to visually nest it under the row.
+	# Wrap in a PanelContainer with the native sub-inspector depth background.
+	# Godot provides sub_inspector_bg0..4 in EditorStyles for nested depth coloring.
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var editor_theme := EditorInterface.get_editor_theme()
+	if editor_theme:
+		# Use depth 1 by default (the first nesting level).
+		var depth_style := editor_theme.get_stylebox("sub_inspector_bg1", "EditorStyles")
+		if depth_style:
+			panel.add_theme_stylebox_override("panel", depth_style)
+	panel.add_child(sub_inspector)
+
+	# Indent the panel to visually nest it under the row.
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(sub_inspector)
+	margin.add_child(panel)
 
 	# Insert the margin container right after the row in the VBox.
 	var row_node := _get_row_at(index)

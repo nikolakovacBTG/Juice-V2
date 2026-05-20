@@ -48,6 +48,11 @@ var _base_captured: bool = false
 # LIFECYCLE
 # =============================================================================
 
+func _init() -> void:
+	if recipe == null:
+		recipe = JuiceControlRecipe.new()
+
+
 func _ready() -> void:
 	super._ready()
 

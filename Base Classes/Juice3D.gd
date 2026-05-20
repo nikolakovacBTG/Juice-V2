@@ -76,6 +76,11 @@ var _outline_material: ShaderMaterial = null
 # LIFECYCLE
 # =============================================================================
 
+func _init() -> void:
+	if recipe == null:
+		recipe = Juice3DRecipe.new()
+
+
 func _ready() -> void:
 	super._ready()
 
