@@ -19,6 +19,7 @@ extends EditorPlugin
 const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
 const InspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceEditorInspectorPlugin.gd")
 const PropertyPickerPluginScript := preload("res://addons/Juice_V2/Editor/PropertyPickerPlugin.gd")
+const ArrayInspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceArrayInspectorPlugin.gd")
 
 # =============================================================================
 # INTERNAL STATE
@@ -39,6 +40,8 @@ var _director: JuicePreviewDirector
 var _inspector_plugin: EditorInspectorPlugin
 # Property picker plugin — adds "Pick Property" button to PropertyTarget panels.
 var _property_picker_plugin: EditorInspectorPlugin
+# Array inspector plugin — replaces native array editors on Juice resources.
+var _array_inspector_plugin: EditorInspectorPlugin
 
 # --- Buttons ---
 var _play_button: Button
@@ -82,6 +85,11 @@ func _enter_tree() -> void:
 	_property_picker_plugin = PropertyPickerPluginScript.new()
 	add_inspector_plugin(_property_picker_plugin)
 	_property_picker_plugin.add_dialog_to_editor(EditorInterface.get_base_control())
+
+	# Register array inspector plugin — replaces native array editors on Juice objects
+	# with JuiceArrayEditor for consistent row UX (type-coded strips, ⋮ menu, drag reorder).
+	_array_inspector_plugin = ArrayInspectorPluginScript.new()
+	add_inspector_plugin(_array_inspector_plugin)
 
 	# Build transport UI and director
 	_build_ui()
@@ -131,6 +139,9 @@ func _exit_tree() -> void:
 		_property_picker_plugin.cleanup()
 		remove_inspector_plugin(_property_picker_plugin)
 		_property_picker_plugin = null
+	if _array_inspector_plugin:
+		remove_inspector_plugin(_array_inspector_plugin)
+		_array_inspector_plugin = null
 
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)

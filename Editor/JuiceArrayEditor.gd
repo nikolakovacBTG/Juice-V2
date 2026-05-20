@@ -14,8 +14,8 @@
 #       and provides a ⋮ context menu for resource operations — all in a
 #       uniform layout that matches Godot conventions.
 # SYSTEM: Juice System (addons/Juice_V2/Editor/) — EDITOR ONLY.
-# DOES NOT: Implement ⋮ menu action handlers (Phase 2C). Does not handle
-#           chain_to arrays (Phase 3). Does not modify the resource data model.
+# DOES NOT: Handle chain_to sibling-reference arrays (Phase 3). Does not
+#           modify the resource data model — only reads/writes the array.
 # =============================================================================
 
 @tool
@@ -60,6 +60,13 @@ var _sub_inspectors: Dictionary = {}
 
 # Multi-type popup menu (created lazily).
 var _type_popup: PopupMenu = null
+
+# File dialog for Save As / Load (created lazily, reused).
+var _file_dialog: EditorFileDialog = null
+
+# Tracks which action the file dialog is performing and for which index.
+var _file_dialog_action: StringName = &""
+var _file_dialog_index: int = -1
 
 # Guard against re-entrant _update_property calls during our own emit_changed.
 var _updating: bool = false
@@ -218,6 +225,7 @@ func _rebuild_rows(array: Array) -> void:
 		row.expand_toggled.connect(_on_row_expand_toggled)
 		row.delete_requested.connect(_on_row_delete)
 		row.menu_action_requested.connect(_on_row_menu_action)
+		row.drag_reorder_requested.connect(_on_row_reorder)
 
 		# If expanded, create the sub-inspector below this row.
 		if row.is_expanded and resource != null:
@@ -445,7 +453,22 @@ func _on_row_delete(index: int) -> void:
 	_commit_array(array)
 
 
-# Row context menu action (Phase 2C will implement handlers).
+# Row drag-reorder completed.
+func _on_row_reorder(from_index: int, to_index: int) -> void:
+	var array := _get_current_array().duplicate()
+	if from_index < 0 or from_index >= array.size():
+		return
+	if to_index < 0 or to_index >= array.size():
+		return
+	var element = array[from_index]
+	array.remove_at(from_index)
+	array.insert(to_index, element)
+	# Reset expand state — indices shifted.
+	_expanded.clear()
+	_commit_array(array)
+
+
+# Row context menu action.
 func _on_row_menu_action(index: int, action: StringName) -> void:
 	var array := _get_current_array()
 	if index < 0 or index >= array.size():
@@ -459,13 +482,20 @@ func _on_row_menu_action(index: int, action: StringName) -> void:
 			_paste_resource(index)
 		&"clear":
 			_clear_resource(index)
-		&"save", &"save_as", &"load", &"quick_load":
-			# Placeholder — Phase 2C will implement file dialog handlers.
-			push_warning("[JuiceArrayEditor] '%s' action not yet implemented." % action)
+		&"save":
+			_save_resource(resource)
+		&"save_as":
+			_save_resource_as(index)
+		&"load":
+			_load_resource(index)
+		&"quick_load":
+			# Quick Load uses the same file dialog as Load for now.
+			# A search-based quick picker could be added later.
+			_load_resource(index)
 
 
 # =============================================================================
-# MENU ACTION HANDLERS (basic set for Phase 2B)
+# MENU ACTION HANDLERS
 # =============================================================================
 
 # Copy a resource to the editor clipboard.
@@ -494,6 +524,99 @@ func _clear_resource(index: int) -> void:
 		return
 	array[index] = null
 	_commit_array(array)
+
+
+# Save a resource to its existing path. If no path, fall through to Save As.
+func _save_resource(resource: Resource) -> void:
+	if resource == null:
+		return
+	if resource.resource_path.is_empty() or resource.resource_path.begins_with("res://.godot"):
+		# No saved path — redirect to Save As.
+		var index := _find_resource_index(resource)
+		if index >= 0:
+			_save_resource_as(index)
+		return
+	var err := ResourceSaver.save(resource, resource.resource_path)
+	if err != OK:
+		push_error("[JuiceArrayEditor] Failed to save resource: %s" % error_string(err))
+
+
+# Save As — open file dialog to pick destination.
+func _save_resource_as(index: int) -> void:
+	_ensure_file_dialog()
+	_file_dialog_action = &"save_as"
+	_file_dialog_index = index
+	_file_dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
+	_file_dialog.title = "Save Resource As..."
+	_file_dialog.filters = PackedStringArray(["*.tres ; Resource Files"])
+	_file_dialog.popup_centered_ratio(0.5)
+
+
+# Load — open file dialog to pick a .tres file.
+func _load_resource(index: int) -> void:
+	_ensure_file_dialog()
+	_file_dialog_action = &"load"
+	_file_dialog_index = index
+	_file_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
+	_file_dialog.title = "Load Resource..."
+	_file_dialog.filters = PackedStringArray(["*.tres ; Resource Files"])
+	_file_dialog.popup_centered_ratio(0.5)
+
+
+# Create the file dialog lazily (only once, reused for all operations).
+func _ensure_file_dialog() -> void:
+	if _file_dialog != null:
+		return
+	_file_dialog = EditorFileDialog.new()
+	_file_dialog.access = EditorFileDialog.ACCESS_RESOURCES
+	_file_dialog.file_selected.connect(_on_file_dialog_selected)
+	# Must be in the editor tree to display as a popup.
+	EditorInterface.get_base_control().add_child(_file_dialog)
+
+
+# File dialog selection callback — routes to save or load based on stored action.
+func _on_file_dialog_selected(path: String) -> void:
+	if _file_dialog_action == &"save_as":
+		_do_save_as(path)
+	elif _file_dialog_action == &"load":
+		_do_load(path)
+	_file_dialog_action = &""
+	_file_dialog_index = -1
+
+
+# Execute Save As: save the resource at _file_dialog_index to the selected path.
+func _do_save_as(path: String) -> void:
+	var array := _get_current_array()
+	if _file_dialog_index < 0 or _file_dialog_index >= array.size():
+		return
+	var resource: Resource = array[_file_dialog_index] as Resource
+	if resource == null:
+		return
+	var err := ResourceSaver.save(resource, path)
+	if err != OK:
+		push_error("[JuiceArrayEditor] Save As failed: %s" % error_string(err))
+
+
+# Execute Load: load the resource from the selected path into the array.
+func _do_load(path: String) -> void:
+	var loaded := load(path)
+	if loaded == null or not loaded is Resource:
+		push_warning("[JuiceArrayEditor] Could not load resource from '%s'." % path)
+		return
+	var array := _get_current_array().duplicate()
+	if _file_dialog_index < 0 or _file_dialog_index >= array.size():
+		return
+	array[_file_dialog_index] = loaded
+	_commit_array(array)
+
+
+# Find the index of a resource in the current array.
+func _find_resource_index(resource: Resource) -> int:
+	var array := _get_current_array()
+	for i in range(array.size()):
+		if array[i] == resource:
+			return i
+	return -1
 
 
 # =============================================================================
