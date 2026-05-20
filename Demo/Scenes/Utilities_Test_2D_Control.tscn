@@ -253,8 +253,9 @@ debug_enabled = false
 metadata/_custom_type_script = "uid://cuf4h2xsn7arv"
 
 [sub_resource type="Resource" id="Resource_7yq7o"]
+resource_name = "clip_children"
 script = ExtResource("15_hvqsx")
-node_path = NodePath("")
+node_path = NodePath("../Sprite2D")
 property_path = "clip_children"
 _detected_type = 3
 float_rate = 1.0
@@ -271,10 +272,11 @@ projection_rate = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 metadata/_custom_type_script = "uid://blkt0ha3dnjot"
 
 [sub_resource type="Resource" id="Resource_b0p5q"]
+resource_name = "process_physics_priority"
 script = ExtResource("15_hvqsx")
-node_path = NodePath("")
-property_path = ""
-_detected_type = 0
+node_path = NodePath("../../MethodSignalTest/Sprite2D")
+property_path = "process_physics_priority"
+_detected_type = 3
 float_rate = 1.0
 vec2_rate = Vector2(1, 0)
 vec3_rate = Vector3(1, 0, 0)
