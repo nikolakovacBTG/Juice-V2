@@ -175,7 +175,6 @@ func _build_ui() -> void:
 	_index_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_index_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_index_label.add_theme_font_size_override("font_size", 11)
-	_index_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.5))
 	add_child(_index_label)
 
 	# --- Context menu (⋮) ---

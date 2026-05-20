@@ -30,10 +30,12 @@ func get_test_methods() -> Array[String]:
 # =============================================================================
 
 func test_no_recipe_warns() -> void:
-	# JuiceControl defaults to recipe = null — the most common user mistake.
+	# Domain nodes auto-create a recipe in _init(). Explicitly nullify to
+	# simulate the user clearing the recipe, which is the real warning scenario.
 	var parent := Control.new()
 	_runner.add_child(parent)
 	var juice := JuiceControl.new()
+	juice.recipe = null
 	parent.add_child(juice)
 	await wait_frames(1)
 

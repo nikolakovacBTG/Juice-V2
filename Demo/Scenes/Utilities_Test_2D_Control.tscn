@@ -7,20 +7,12 @@
 [ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V2/Utilities/Interaction2DJuiceUtility.gd" id="6_6bkf5"]
 [ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V2/2D/Transform2DJuiceEffect.gd" id="8_5u77v"]
 [ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="9_8ai6r"]
-[ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="10_agm7c"]
+[ext_resource type="Script" uid="uid://qmbe1vjmb1ko" path="res://addons/Juice_V2/Meta/SceneAction2DJuiceUtility.gd" id="9_agm7c"]
 [ext_resource type="Script" uid="uid://bsan2h7g7njwx" path="res://addons/Juice_V2/Meta/PropertyTarget.gd" id="10_hw176"]
-[ext_resource type="Script" uid="uid://bmjvcwyint4kk" path="res://addons/Juice_V2/Meta/NoisePropertyTarget.gd" id="11_hvqsx"]
-[ext_resource type="Script" uid="uid://qwwny63s3kn3" path="res://addons/Juice_V2/Meta/Time2DJuiceEffect.gd" id="11_qm7d2"]
-[ext_resource type="Script" uid="uid://db8bttsttl7oa" path="res://addons/Juice_V2/Meta/PropertyNoise2DJuiceEffect.gd" id="12_6ksaf"]
 [ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V2/Base Classes/Juice2DRecipe.gd" id="12_hvqsx"]
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V2/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
-[ext_resource type="Script" uid="uid://6wx10dr1q41q" path="res://addons/Juice_V2/Meta/InterpolatePropertyTarget.gd" id="13_5p8ic"]
-[ext_resource type="Script" uid="uid://cuf4h2xsn7arv" path="res://addons/Juice_V2/Meta/PropertyInterpolate2DJuiceEffect.gd" id="14_tf6rc"]
-[ext_resource type="Script" uid="uid://blkt0ha3dnjot" path="res://addons/Juice_V2/Meta/ProgressPropertyTarget.gd" id="15_hvqsx"]
 [ext_resource type="Script" uid="uid://b5y8ky876cg0d" path="res://addons/Juice_V2/Meta/PropertyProgress2DJuiceEffect.gd" id="15_uhtl6"]
-[ext_resource type="Script" uid="uid://c7hj0ho5fcywo" path="res://addons/Juice_V2/Meta/ShakePropertyTarget.gd" id="16_b0p5q"]
 [ext_resource type="Script" uid="uid://dcukxt4bkdw4g" path="res://addons/Juice_V2/Meta/PropertyShake2DJuiceEffect.gd" id="17_pmn3f"]
-[ext_resource type="Script" uid="uid://t5034epraygu" path="res://addons/Juice_V2/Meta/CallMethod2DJuiceUtility.gd" id="19_b0p5q"]
 [ext_resource type="Script" uid="uid://b432gm11skduw" path="res://addons/sparkle_lite/players/feedback_player_lite.gd" id="20_uhtl6"]
 [ext_resource type="Script" uid="uid://c2mscmakyx0aa" path="res://addons/sparkle_lite/feedbacks/feedback_base_lite.gd" id="21_b0p5q"]
 [ext_resource type="Script" uid="uid://g77pfphvu4vi" path="res://addons/sparkle_lite/feedbacks/feedback_scale_punch_lite.gd" id="22_pmn3f"]
@@ -97,25 +89,23 @@ script = ExtResource("12_hvqsx")
 effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_qph6c")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
-[sub_resource type="Resource" id="Resource_trt1j"]
-script = ExtResource("10_agm7c")
-transform_target = 0
-position_unit = 1
-position_amplitude = Vector2(2, 2)
-noise_speed = 1.0
-noise_direction = 0
-trigger_behaviour = 4
+[sub_resource type="Resource" id="Resource_hw176"]
+script = ExtResource("9_agm7c")
+action = 0
+from = 0
+trigger_behaviour = 0
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
-noise_type = 1
-noise_frequency = 1.0
-noise_seed = 0
-fractal_type = 0
-domain_warp_enabled = false
-position_axis_speed = Vector2(1, 1)
-clamp_min = -1.0
-clamp_max = 1.0
+overlay_type = 0
+loop_count = 1
+ping_pong = false
+loop_delay = 0.0
+loop_phase_offset = 0.0
+crossfade_time = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+chained_preroll = 0.0
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -123,58 +113,16 @@ hold_at_peak = 0.0
 duration_out = 0.3
 transition_out = 4
 ease_out = 0
-chain_to = Array[ExtResource("9_8ai6r")]([null])
+chain_to = Array[ExtResource("9_8ai6r")]([])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
-metadata/_custom_type_script = "uid://s2n3dgutlx06"
 
-[sub_resource type="Resource" id="Resource_pnrhh"]
-script = ExtResource("11_hvqsx")
-node_path = NodePath("../../MethodSignalTest/Juice2D")
-property_path = "editor_description"
-_detected_type = 4
-amplitude_float = 5.0
-amplitude_vec2 = Vector2(5, 5)
-amplitude_vec3 = Vector3(5, 5, 5)
-amplitude_color = 0.1
-amplitude_vec4 = Vector4(5, 5, 5, 5)
-amplitude_quat = Vector3(5, 5, 5)
-amplitude_rect2 = Rect2(5, 5, 5, 5)
-amplitude_aabb = AABB(5, 5, 5, 5, 5, 5)
-a_reference = 0
-value_a_string = ""
-b_reference = 0
-value_b_string = ""
-flip_threshold = 0.0
-value_a_bool = false
-value_a_stringname = &""
-value_a_nodepath = NodePath("")
-value_a_plane = Plane(0, 0, 0, 0)
-value_a_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-value_a_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-value_b_bool = true
-value_b_stringname = &""
-value_b_nodepath = NodePath("")
-value_b_plane = Plane(0, 0, 0, 0)
-value_b_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-value_b_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-_editor_cache_a = null
-_editor_cache_b = null
-metadata/_custom_type_script = "uid://bmjvcwyint4kk"
-
-[sub_resource type="Resource" id="Resource_t2c5f"]
-script = ExtResource("12_6ksaf")
-noise_speed = 1.0
-noise_direction = 0
-noise_type = 1
-noise_frequency = 1.0
-noise_seed = 0
-fractal_type = 0
-domain_warp_enabled = false
-clamp_min = -1.0
-clamp_max = 1.0
-property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_pnrhh")])
+[sub_resource type="Resource" id="Resource_hvqsx"]
+script = ExtResource("17_pmn3f")
+shake_frequency = 20.0
+randomness = 0.5
+property_targets = Array[ExtResource("10_hw176")]([])
 trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
@@ -186,115 +134,12 @@ hold_at_peak = 0.0
 chain_to = Array[ExtResource("9_8ai6r")]([])
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://db8bttsttl7oa"
 
-[sub_resource type="Resource" id="Resource_kgngp"]
-script = ExtResource("13_5p8ic")
-node_path = NodePath("../Sprite2D")
-property_path = "clip_children"
-_detected_type = 3
-from_reference = 2
-from_target_node = NodePath("")
-to_reference = 0
-to_float = 1.0
-flip_threshold = 0.5
-metadata/_custom_type_script = "uid://6wx10dr1q41q"
-
-[sub_resource type="Resource" id="Resource_ujn26"]
-script = ExtResource("13_5p8ic")
-node_path = NodePath("../Sprite2D")
-property_path = "process_mode"
-_detected_type = 3
-from_reference = 2
-from_target_node = NodePath("")
-to_reference = 0
-to_float = 1.0
-flip_threshold = 0.5
-metadata/_custom_type_script = "uid://6wx10dr1q41q"
-
-[sub_resource type="Resource" id="Resource_0up1n"]
-script = ExtResource("13_5p8ic")
-node_path = NodePath("../Sprite2D")
-property_path = "process_physics_priority"
-_detected_type = 3
-from_reference = 2
-from_target_node = NodePath("")
-to_reference = 0
-to_float = 1.0
-flip_threshold = 0.5
-metadata/_custom_type_script = "uid://6wx10dr1q41q"
-
-[sub_resource type="Resource" id="Resource_qx1ce"]
-script = ExtResource("13_5p8ic")
-node_path = NodePath("../Sprite2D")
-property_path = "physics_interpolation_mode"
-_detected_type = 3
-from_reference = 2
-from_target_node = NodePath("")
-to_reference = 0
-to_float = 1.0
-flip_threshold = 0.5
-metadata/_custom_type_script = "uid://6wx10dr1q41q"
-
-[sub_resource type="Resource" id="Resource_kgkn2"]
-script = ExtResource("14_tf6rc")
-property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_kgngp"), SubResource("Resource_ujn26"), SubResource("Resource_0up1n"), SubResource("Resource_qx1ce"), null, null])
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://cuf4h2xsn7arv"
-
-[sub_resource type="Resource" id="Resource_7yq7o"]
-resource_name = "clip_children"
-script = ExtResource("15_hvqsx")
-node_path = NodePath("../Sprite2D")
-property_path = "clip_children"
-_detected_type = 3
-float_rate = 1.0
-vec2_rate = Vector2(1, 0)
-vec3_rate = Vector3(1, 0, 0)
-color_rate = Color(0.1, 0, 0, 0)
-vec4_rate = Vector4(1, 0, 0, 0)
-quat_rate = Vector3(0, 0, 0)
-rect2_rate = Rect2(0, 0, 0, 0)
-aabb_rate = AABB(0, 0, 0, 0, 0, 0)
-plane_rate = Plane(0, 0, 0, 0)
-basis_rate = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-projection_rate = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-metadata/_custom_type_script = "uid://blkt0ha3dnjot"
-
-[sub_resource type="Resource" id="Resource_b0p5q"]
-resource_name = "process_physics_priority"
-script = ExtResource("15_hvqsx")
-node_path = NodePath("../../MethodSignalTest/Sprite2D")
-property_path = "process_physics_priority"
-_detected_type = 3
-float_rate = 1.0
-vec2_rate = Vector2(1, 0)
-vec3_rate = Vector3(1, 0, 0)
-color_rate = Color(0.1, 0, 0, 0)
-vec4_rate = Vector4(1, 0, 0, 0)
-quat_rate = Vector3(0, 0, 0)
-rect2_rate = Rect2(0, 0, 0, 0)
-aabb_rate = AABB(0, 0, 0, 0, 0, 0)
-plane_rate = Plane(0, 0, 0, 0)
-basis_rate = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-projection_rate = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-metadata/_custom_type_script = "uid://blkt0ha3dnjot"
-
-[sub_resource type="Resource" id="Resource_i1uwv"]
+[sub_resource type="Resource" id="Resource_6ksaf"]
 script = ExtResource("15_uhtl6")
 auto_start = false
 hold_on_stop = true
-property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_7yq7o"), SubResource("Resource_b0p5q")])
+property_targets = Array[ExtResource("10_hw176")]([])
 bound_enabled = false
 trigger_behaviour = 1
 start_delay = 0.0
@@ -307,79 +152,11 @@ hold_at_peak = 0.0
 chain_to = Array[ExtResource("9_8ai6r")]([])
 interrupt_siblings = false
 debug_enabled = false
-metadata/_custom_type_script = "uid://b5y8ky876cg0d"
-
-[sub_resource type="Resource" id="Resource_gdhm0"]
-script = ExtResource("16_b0p5q")
-node_path = NodePath("../Sprite2D")
-property_path = "visible"
-_detected_type = 1
-amplitude_float = 5.0
-amplitude_vec2 = Vector2(5, 5)
-amplitude_vec3 = Vector3(5, 5, 5)
-amplitude_color = 0.1
-amplitude_vec4 = Vector4(5, 5, 5, 5)
-amplitude_quat = Vector3(5, 5, 5)
-amplitude_rect2 = Rect2(5, 5, 5, 5)
-amplitude_aabb = AABB(5, 5, 5, 5, 5, 5)
-a_reference = 0
-value_a_bool = false
-b_reference = 0
-value_b_bool = true
-flip_threshold = 0.0
-value_a_string = ""
-value_a_stringname = &""
-value_a_nodepath = NodePath("")
-value_a_plane = Plane(0, 0, 0, 0)
-value_a_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-value_a_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-value_b_string = ""
-value_b_stringname = &""
-value_b_nodepath = NodePath("")
-value_b_plane = Plane(0, 0, 0, 0)
-value_b_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
-value_b_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-_editor_cache_a = null
-_editor_cache_b = null
-metadata/_custom_type_script = "uid://c7hj0ho5fcywo"
-
-[sub_resource type="Resource" id="Resource_ilhjh"]
-script = ExtResource("17_pmn3f")
-shake_frequency = 20.0
-randomness = 0.5
-property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_gdhm0")])
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://dcukxt4bkdw4g"
-
-[sub_resource type="Resource" id="Resource_pmn3f"]
-script = ExtResource("19_b0p5q")
-trigger_behaviour = 1
-start_delay = 0.0
-loop_count = 1
-entries = [null]
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://t5034epraygu"
 
 [sub_resource type="Resource" id="Resource_8ai6r"]
 resource_local_to_scene = true
 script = ExtResource("12_hvqsx")
-effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_trt1j"), SubResource("Resource_t2c5f"), SubResource("Resource_kgkn2"), SubResource("Resource_i1uwv"), SubResource("Resource_ilhjh"), SubResource("Resource_pmn3f")])
+effects = Array[ExtResource("9_8ai6r")]([null, SubResource("Resource_hw176"), SubResource("Resource_hvqsx"), SubResource("Resource_6ksaf")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_trt1j"]
@@ -399,29 +176,6 @@ metadata/_custom_type_script = "uid://bia20fnpxa4d5"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pmn3f"]
 size = Vector2(128, 129)
-
-[sub_resource type="Resource" id="Resource_agm7c"]
-script = ExtResource("11_qm7d2")
-time_mode = 1
-use_external_coordinator = false
-target_scale = 0.2
-smooth_transition = true
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-
-[sub_resource type="Resource" id="Resource_hw176"]
-resource_local_to_scene = true
-script = ExtResource("12_hvqsx")
-effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_agm7c")])
 
 [node name="UtilitiesTest2dControl" type="Node2D" unique_id=1307771118]
 script = ExtResource("1_otmkk")
@@ -545,6 +299,10 @@ position = Vector2(800, 400)
 modulate = Color(0.8, 0.8, 0.2, 1)
 texture = ExtResource("2_e4141")
 
+[node name="Juice2D" type="Node" parent="TimeEffectTest/Sprite2D" unique_id=2101131853]
+script = ExtResource("3_7yy7b")
+metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
+
 [node name="Interaction2D" type="Area2D" parent="TimeEffectTest" unique_id=107767263]
 script = ExtResource("6_6bkf5")
 mode = 1
@@ -560,4 +318,3 @@ shape = SubResource("RectangleShape2D_pmn3f")
 [node name="Juice2D" type="Node2D" parent="TimeEffectTest" unique_id=2109465282]
 script = ExtResource("3_7yy7b")
 trigger_on = 7
-recipe = SubResource("Resource_hw176")

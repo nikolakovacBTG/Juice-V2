@@ -48,6 +48,14 @@ var _base_captured: bool = false
 # LIFECYCLE
 # =============================================================================
 
+func _init() -> void:
+	# Auto-create a fresh Juice2DRecipe on new nodes so the inspector never
+	# shows an empty <empty> recipe field. Existing scenes supply their own
+	# recipe via deserialization, which overwrites this default.
+	if recipe == null:
+		recipe = Juice2DRecipe.new()
+
+
 func _ready() -> void:
 	super._ready()
 
