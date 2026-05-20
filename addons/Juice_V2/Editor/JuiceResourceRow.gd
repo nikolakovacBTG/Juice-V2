@@ -36,8 +36,9 @@ signal delete_requested(row_index: int)
 ## Actions: &"save", &"save_as", &"load", &"quick_load", &"copy", &"paste", &"clear"
 signal menu_action_requested(row_index: int, action: StringName)
 
-## Emitted when the user starts dragging this row for reorder.
-signal drag_started(row_index: int)
+## Emitted when a row is dropped onto this row for reorder.
+## from_index = the dragged row, to_index = this row (drop target).
+signal drag_reorder_requested(from_index: int, to_index: int)
 
 
 # =============================================================================
@@ -157,6 +158,7 @@ func _build_ui() -> void:
 
 	# --- Grab handle ---
 	# Three-line icon for drag-to-reorder. Matches native Godot array convention.
+	# The grab handle is the drag source; the entire row is the drop target.
 	_grab_handle = TextureRect.new()
 	_grab_handle.custom_minimum_size = Vector2(16, 16)
 	_grab_handle.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
@@ -314,6 +316,41 @@ func _get_resource_icon() -> Texture2D:
 		return base.get_theme_icon(native_class, "EditorIcons")
 	# Final fallback: generic Resource icon.
 	return base.get_theme_icon("Resource", "EditorIcons")
+
+
+# =============================================================================
+# DRAG-AND-DROP REORDER
+# =============================================================================
+
+# Provide drag data when the user drags the grab handle.
+# The entire row is the drag source; data carries the row_index.
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	# Only allow dragging from the grab handle area (left 36px: strip + handle).
+	if _at_position.x > 40:
+		return null
+	# Create a visual preview of the dragged row.
+	var preview := Label.new()
+	preview.text = _get_display_name()
+	preview.add_theme_color_override("font_color", type_color)
+	set_drag_preview(preview)
+	return {"type": &"juice_row_reorder", "from_index": row_index}
+
+
+# Accept drops from other JuiceResourceRows.
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	if not data is Dictionary:
+		return false
+	return data.get("type", &"") == &"juice_row_reorder"
+
+
+# Handle the drop — emit signal with from/to indices so the parent can reorder.
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	if not data is Dictionary:
+		return
+	var from_index: int = data.get("from_index", -1)
+	if from_index < 0 or from_index == row_index:
+		return
+	drag_reorder_requested.emit(from_index, row_index)
 
 
 # =============================================================================
