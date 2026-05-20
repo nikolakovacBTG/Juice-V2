@@ -59,7 +59,10 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"target_node_path": target_node_path = value; return true
-		&"method_name":      method_name      = value; return true
+		&"method_name":
+			method_name = value
+			resource_name = value if not value.is_empty() else ""
+			return true
 		&"arguments":        arguments        = value; return true
 		&"call_on":          call_on          = value; return true
 	return false
