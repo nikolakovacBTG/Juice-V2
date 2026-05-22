@@ -39,6 +39,9 @@ var _is_single_type: bool = true
 ## Color for the type-indicator strip on row left edges.
 var _type_color: Color = Color(0.4, 0.4, 0.4)
 
+## Label for the add button (e.g. "+ Add Juice", "+ Add Method").
+var _add_label: String = "+ Add Element"
+
 
 # =============================================================================
 # INTERNAL STATE
@@ -93,24 +96,27 @@ func _init() -> void:
 ## Configure the editor for a specific array property.
 ## Called by the inspector plugin after creating this editor.
 ## [param element_hint]: The hint_string from _parse_property (class name or
-##   "24/17:Class1,Class2,..." format).
+##   comma-separated "Class1,Class2,..." format after normalization).
 ## [param hint_type]: The PropertyHint enum value.
 ## [param color]: Type-color for the row strips.
-func configure(element_hint: String, hint_type: int, color: Color) -> void:
+## [param add_label]: Label for the add button (e.g. "+ Add Juice").
+func configure(element_hint: String, hint_type: int, color: Color, add_label: String = "+ Add Element") -> void:
 	_type_color = color
+	_add_label = add_label
+	if _add_button:
+		_add_button.text = add_label
 
 	# Parse the hint_string to determine element type(s).
-	# Format A (PROPERTY_HINT_ARRAY_TYPE): "ClassName" — single class name.
-	# Format B (PROPERTY_HINT_TYPE_STRING): "24/17:Class1,Class2,..." — typed with subclasses.
-	if hint_type == PROPERTY_HINT_TYPE_STRING and ":" in element_hint:
-		# Multi-type format: extract class list after the colon.
-		var after_colon: String = element_hint.get_slice(":", 1)
-		_concrete_classes = after_colon.split(",", false)
+	# After normalization in the plugin, element_hint is always a plain class
+	# name or comma-separated list (the "24/17:" prefix has been stripped).
+	if "," in element_hint:
+		# Multi-type: "Class1,Class2,..."
+		_concrete_classes = element_hint.split(",", false)
 		_is_single_type = _concrete_classes.size() <= 1
 		if _concrete_classes.size() > 0:
 			_element_class_name = _concrete_classes[0]
 	else:
-		# Single class name (PROPERTY_HINT_ARRAY_TYPE or plain).
+		# Single class name.
 		_element_class_name = element_hint.strip_edges()
 		_concrete_classes = PackedStringArray([_element_class_name])
 		_is_single_type = true
@@ -180,7 +186,7 @@ func _build_ui() -> void:
 
 	# Add button.
 	_add_button = Button.new()
-	_add_button.text = "+ Add Element"
+	_add_button.text = _add_label
 	_add_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_add_button.pressed.connect(_on_add_pressed)
 	_header_hbox.add_child(_add_button)
@@ -227,7 +233,7 @@ func _rebuild_rows(array: Array) -> void:
 		# Connect row signals.
 		row.expand_toggled.connect(_on_row_expand_toggled)
 		row.delete_requested.connect(_on_row_delete)
-		row.menu_action_requested.connect(_on_row_menu_action)
+		row.resource_replaced.connect(_on_row_resource_replaced)
 		row.drag_reorder_requested.connect(_on_row_reorder)
 
 		# If expanded, create the sub-inspector below this row.
@@ -419,20 +425,43 @@ func _show_type_picker_for_index(index: int) -> void:
 
 
 # Show the type picker popup positioned below the given control.
+# In append mode (_type_picker_target_index == -1): multi-select with checkboxes.
+#   The popup stays open so the user can check multiple types, then all checked
+#   items are batch-created when the popup is dismissed.
+# In replace mode (_type_picker_target_index >= 0): single-click instant create.
+#   Clicking an item immediately fills that slot and closes the popup.
 func _show_type_picker_at(anchor: Control) -> void:
+	var is_multi_select := (_type_picker_target_index == -1)
+
 	if _type_popup == null:
 		_type_popup = PopupMenu.new()
 		_type_popup.id_pressed.connect(_on_type_selected)
 		add_child(_type_popup)
 
+	# Multi-select: keep popup open on check; commit on dismiss.
+	# Single-select: close on click (default behavior).
+	_type_popup.hide_on_checkable_item_selection = false
+
+	# Disconnect previous popup_hide to avoid stacking.
+	if _type_popup.popup_hide.is_connected(_on_type_picker_closed):
+		_type_popup.popup_hide.disconnect(_on_type_picker_closed)
+	if is_multi_select:
+		_type_popup.popup_hide.connect(_on_type_picker_closed)
+
 	_type_popup.clear()
 	for i in range(_concrete_classes.size()):
 		var cls_name: String = _concrete_classes[i]
 		var icon := _get_class_icon(cls_name)
-		if icon:
-			_type_popup.add_icon_item(icon, cls_name, i)
+		if is_multi_select:
+			if icon:
+				_type_popup.add_icon_check_item(icon, cls_name, i)
+			else:
+				_type_popup.add_check_item(cls_name, i)
 		else:
-			_type_popup.add_item(cls_name, i)
+			if icon:
+				_type_popup.add_icon_item(icon, cls_name, i)
+			else:
+				_type_popup.add_item(cls_name, i)
 
 	# Position the popup below the anchor control.
 	var anchor_rect := anchor.get_global_rect()
@@ -441,10 +470,20 @@ func _show_type_picker_at(anchor: Control) -> void:
 
 
 # Type picker selection callback.
-# Appends to array if _type_picker_target_index is -1, otherwise replaces that index.
+# Replace mode: instant-create the selected class into the target slot.
+# Multi-select append mode: toggle the checkbox; actual creation happens on dismiss.
 func _on_type_selected(id: int) -> void:
 	if id < 0 or id >= _concrete_classes.size():
 		return
+
+	# Multi-select append mode: just toggle the checkbox.
+	if _type_picker_target_index == -1 and _type_popup != null:
+		var item_idx := _type_popup.get_item_index(id)
+		var currently_checked := _type_popup.is_item_checked(item_idx)
+		_type_popup.set_item_checked(item_idx, not currently_checked)
+		return
+
+	# Replace mode: create one instance and fill the slot.
 	var cls_name: String = _concrete_classes[id]
 	var resource := _instantiate_class(cls_name)
 	if resource == null:
@@ -452,13 +491,34 @@ func _on_type_selected(id: int) -> void:
 	var array := _get_current_array().duplicate()
 
 	if _type_picker_target_index >= 0 and _type_picker_target_index < array.size():
-		# Replace mode: fill the specific slot.
 		array[_type_picker_target_index] = resource
 	else:
-		# Append mode: add to end.
 		array.append(resource)
 
 	_commit_array(array)
+
+
+# Multi-select popup dismissed: batch-create all checked types and append.
+# Each checked item creates one new instance. This is a single undo/redo action.
+func _on_type_picker_closed() -> void:
+	if _type_popup == null:
+		return
+
+	var array := _get_current_array().duplicate()
+	var added_any := false
+
+	for i in range(_type_popup.get_item_count()):
+		if _type_popup.is_item_checked(i):
+			var id := _type_popup.get_item_id(i)
+			if id >= 0 and id < _concrete_classes.size():
+				var cls_name: String = _concrete_classes[id]
+				var resource := _instantiate_class(cls_name)
+				if resource != null:
+					array.append(resource)
+					added_any = true
+
+	if added_any:
+		_commit_array(array)
 
 
 # =============================================================================
@@ -537,155 +597,14 @@ func _on_row_reorder(from_index: int, to_index: int) -> void:
 	_commit_array(array)
 
 
-# Row context menu action.
-func _on_row_menu_action(index: int, action: StringName) -> void:
-	var array := _get_current_array()
-	if index < 0 or index >= array.size():
-		return
-	var resource: Resource = array[index] as Resource
-
-	match action:
-		&"copy":
-			_copy_resource(resource)
-		&"paste":
-			_paste_resource(index)
-		&"clear":
-			_clear_resource(index)
-		&"save":
-			_save_resource(resource)
-		&"save_as":
-			_save_resource_as(index)
-		&"load":
-			_load_resource(index)
-		&"quick_load":
-			# Quick Load uses the same file dialog as Load for now.
-			# A search-based quick picker could be added later.
-			_load_resource(index)
-
-
-# =============================================================================
-# MENU ACTION HANDLERS
-# =============================================================================
-
-# Copy a resource to the editor clipboard.
-func _copy_resource(resource: Resource) -> void:
-	if resource == null:
-		return
-	EditorInterface.get_inspector().set_meta("_juice_clipboard", resource.duplicate())
-
-
-# Paste a resource from the editor clipboard into the array at index.
-func _paste_resource(index: int) -> void:
-	var clipboard = EditorInterface.get_inspector().get_meta("_juice_clipboard", null)
-	if clipboard == null or not clipboard is Resource:
-		return
+# Row resource replaced via EditorResourcePicker (New, Load, Paste, etc.).
+# Commits the new resource to the backing array at the given index.
+func _on_row_resource_replaced(index: int, new_resource: Resource) -> void:
 	var array := _get_current_array().duplicate()
 	if index < 0 or index >= array.size():
 		return
-	array[index] = (clipboard as Resource).duplicate()
+	array[index] = new_resource
 	_commit_array(array)
-
-
-# Clear (null out) the resource at the given index.
-func _clear_resource(index: int) -> void:
-	var array := _get_current_array().duplicate()
-	if index < 0 or index >= array.size():
-		return
-	array[index] = null
-	_commit_array(array)
-
-
-# Save a resource to its existing path. If no path, fall through to Save As.
-func _save_resource(resource: Resource) -> void:
-	if resource == null:
-		return
-	if resource.resource_path.is_empty() or resource.resource_path.begins_with("res://.godot"):
-		# No saved path — redirect to Save As.
-		var index := _find_resource_index(resource)
-		if index >= 0:
-			_save_resource_as(index)
-		return
-	var err := ResourceSaver.save(resource, resource.resource_path)
-	if err != OK:
-		push_error("[JuiceArrayEditor] Failed to save resource: %s" % error_string(err))
-
-
-# Save As — open file dialog to pick destination.
-func _save_resource_as(index: int) -> void:
-	_ensure_file_dialog()
-	_file_dialog_action = &"save_as"
-	_file_dialog_index = index
-	_file_dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
-	_file_dialog.title = "Save Resource As..."
-	_file_dialog.filters = PackedStringArray(["*.tres ; Resource Files"])
-	_file_dialog.popup_centered_ratio(0.5)
-
-
-# Load — open file dialog to pick a .tres file.
-func _load_resource(index: int) -> void:
-	_ensure_file_dialog()
-	_file_dialog_action = &"load"
-	_file_dialog_index = index
-	_file_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
-	_file_dialog.title = "Load Resource..."
-	_file_dialog.filters = PackedStringArray(["*.tres ; Resource Files"])
-	_file_dialog.popup_centered_ratio(0.5)
-
-
-# Create the file dialog lazily (only once, reused for all operations).
-func _ensure_file_dialog() -> void:
-	if _file_dialog != null:
-		return
-	_file_dialog = EditorFileDialog.new()
-	_file_dialog.access = EditorFileDialog.ACCESS_RESOURCES
-	_file_dialog.file_selected.connect(_on_file_dialog_selected)
-	# Must be in the editor tree to display as a popup.
-	EditorInterface.get_base_control().add_child(_file_dialog)
-
-
-# File dialog selection callback — routes to save or load based on stored action.
-func _on_file_dialog_selected(path: String) -> void:
-	if _file_dialog_action == &"save_as":
-		_do_save_as(path)
-	elif _file_dialog_action == &"load":
-		_do_load(path)
-	_file_dialog_action = &""
-	_file_dialog_index = -1
-
-
-# Execute Save As: save the resource at _file_dialog_index to the selected path.
-func _do_save_as(path: String) -> void:
-	var array := _get_current_array()
-	if _file_dialog_index < 0 or _file_dialog_index >= array.size():
-		return
-	var resource: Resource = array[_file_dialog_index] as Resource
-	if resource == null:
-		return
-	var err := ResourceSaver.save(resource, path)
-	if err != OK:
-		push_error("[JuiceArrayEditor] Save As failed: %s" % error_string(err))
-
-
-# Execute Load: load the resource from the selected path into the array.
-func _do_load(path: String) -> void:
-	var loaded := load(path)
-	if loaded == null or not loaded is Resource:
-		push_warning("[JuiceArrayEditor] Could not load resource from '%s'." % path)
-		return
-	var array := _get_current_array().duplicate()
-	if _file_dialog_index < 0 or _file_dialog_index >= array.size():
-		return
-	array[_file_dialog_index] = loaded
-	_commit_array(array)
-
-
-# Find the index of a resource in the current array.
-func _find_resource_index(resource: Resource) -> int:
-	var array := _get_current_array()
-	for i in range(array.size()):
-		if array[i] == resource:
-			return i
-	return -1
 
 
 # =============================================================================

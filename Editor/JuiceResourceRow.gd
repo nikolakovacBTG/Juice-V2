@@ -32,9 +32,9 @@ signal expand_toggled(row_index: int)
 ## Emitted when the user clicks the delete button.
 signal delete_requested(row_index: int)
 
-## Emitted when the user selects an action from the ⋮ context menu.
-## Actions: &"save", &"save_as", &"load", &"quick_load", &"copy", &"paste", &"clear"
-signal menu_action_requested(row_index: int, action: StringName)
+## Emitted when the user replaces the resource via the EditorResourcePicker
+## (New, Load, Paste, Clear, etc.). The parent array editor commits this to the array.
+signal resource_replaced(row_index: int, new_resource: Resource)
 
 ## Emitted when a row is dropped onto this row for reorder.
 ## from_index = the dragged row, to_index = this row (drop target).
@@ -54,6 +54,13 @@ var type_color: Color = Color(0.4, 0.4, 0.4)
 ## Whether this row is currently expanded (showing sub-inspector below).
 var is_expanded: bool = false
 
+## Nesting depth for theme background coloring. Received from parent
+## JuiceArrayEditor which auto-detects it from the tree hierarchy.
+var _depth: int = 0
+
+## Cached background StyleBox from EditorStyles for this depth level.
+var _row_bg_style: StyleBox = null
+
 
 # =============================================================================
 # INTERNAL STATE
@@ -63,13 +70,15 @@ var is_expanded: bool = false
 var _color_strip: ColorRect
 var _grab_handle: TextureRect
 var _index_label: Label
-var _menu_button: MenuButton
-var _icon_rect: TextureRect
-var _name_button: Button
+var _resource_picker: EditorResourcePicker
+var _picker_panel: PanelContainer
 var _delete_button: Button
 
 # Cached resource reference for display updates.
 var _resource: Resource = null
+
+# Comma-separated class names for the EditorResourcePicker's base_type.
+var _base_type_string: String = ""
 
 # Theme icon cache — populated on first _build_ui() call.
 var _icon_triple_bar: Texture2D
@@ -89,6 +98,7 @@ func _ready() -> void:
 	# Fetch editor theme icons once the node is in the scene tree.
 	_cache_theme_icons()
 	_apply_theme_icons()
+	_apply_picker_panel_style()
 
 
 # =============================================================================
@@ -97,10 +107,15 @@ func _ready() -> void:
 
 ## Configure the row for a specific resource at a given array index.
 ## Call this after adding the row to the tree, or when the array reorders.
-func setup(index: int, resource: Resource, color: Color) -> void:
+## [param depth]: Nesting depth (0 = top-level array, 1 = nested, etc.).
+##   Controls which sub_inspector_property_bg{N} StyleBox is used.
+## [param base_type]: Comma-separated class names for the picker's allowed types.
+func setup(index: int, resource: Resource, color: Color, depth: int = 0, base_type: String = "") -> void:
 	row_index = index
 	_resource = resource
 	type_color = color
+	_depth = depth
+	_base_type_string = base_type
 
 	# Disconnect previous changed signal if any.
 	if _resource != null and _resource.changed.is_connected(_on_resource_changed):
@@ -109,6 +124,9 @@ func setup(index: int, resource: Resource, color: Color) -> void:
 	# Connect to resource changes for live label updates.
 	if _resource != null:
 		_resource.changed.connect(_on_resource_changed)
+
+	# Cache the depth-based row background StyleBox from the editor theme.
+	_cache_row_bg_style()
 
 	refresh()
 
@@ -122,18 +140,9 @@ func refresh() -> void:
 	if _color_strip:
 		_color_strip.color = type_color
 
-	if _name_button:
-		var display_name := _get_display_name()
-		_name_button.text = display_name
-		_name_button.tooltip_text = display_name if display_name.length() > 30 else ""
-
-	if _icon_rect and _resource != null:
-		var icon := _get_resource_icon()
-		if icon:
-			_icon_rect.texture = icon
-			_icon_rect.visible = true
-		else:
-			_icon_rect.visible = false
+	if _resource_picker:
+		_resource_picker.base_type = _base_type_string
+		_resource_picker.edited_resource = _resource
 
 
 # =============================================================================
@@ -141,7 +150,7 @@ func refresh() -> void:
 # =============================================================================
 
 # Builds the row layout:
-# [▌color strip] [≡ grab] [#idx] [⋮ menu] [icon + name ————————] [🗑 delete]
+# [▌color strip] [≡ grab] [#idx] [EditorResourcePicker ————————] [🗑 delete]
 func _build_ui() -> void:
 	# Row container settings
 	alignment = BoxContainer.ALIGNMENT_BEGIN
@@ -177,38 +186,29 @@ func _build_ui() -> void:
 	_index_label.add_theme_font_size_override("font_size", 11)
 	add_child(_index_label)
 
-	# --- Context menu (⋮) ---
-	# MenuButton for resource operations: Save, Save As, Load, Quick Load,
-	# Copy, Paste, Clear. Placed left of the name, away from the delete button.
-	# Icons match Godot's native resource context menu (see Image 4 in user feedback).
-	_menu_button = MenuButton.new()
-	_menu_button.flat = true
-	_menu_button.tooltip_text = "Resource actions"
-	_menu_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# Items are populated in _ready() after theme icons are available.
-	add_child(_menu_button)
-
-	# --- Resource icon ---
-	# Shows the class-specific icon next to the name.
-	_icon_rect = TextureRect.new()
-	_icon_rect.custom_minimum_size = Vector2(16, 16)
-	_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
-	_icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_icon_rect.visible = false
-	add_child(_icon_rect)
-
-	# --- Resource name button ---
-	# Displays resource_name or class_name fallback. Click toggles expand.
-	# Stretches to fill all remaining horizontal space (no wasted width).
-	_name_button = Button.new()
-	_name_button.flat = true
-	_name_button.text = ""
-	_name_button.clip_text = true
-	_name_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_name_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_name_button.pressed.connect(_on_name_pressed)
-	add_child(_name_button)
+	# --- Resource picker (wrapped in dark panel) ---
+	# Native Godot EditorResourcePicker provides: class icon, resource name,
+	# and dropdown arrow with New/Load/Save/Copy/Paste/Clear.
+	# Clicking the main field toggles expand/collapse (toggle_mode = true).
+	# Wrapped in a PanelContainer that provides a dark gray (base_color)
+	# background — the picker's flat buttons are transparent and show this
+	# dark panel through, matching the native Recipe field's appearance.
+	_resource_picker = EditorResourcePicker.new()
+	_resource_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_resource_picker.toggle_mode = true
+	_resource_picker.resource_changed.connect(_on_picker_resource_changed)
+	_resource_picker.resource_selected.connect(_on_picker_resource_selected)
+	_picker_panel = PanelContainer.new()
+	_picker_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_picker_panel.add_child(_resource_picker)
+	# Wrap in a margin container so the dark panel is 2px shorter than the row,
+	# revealing thin horizontal lines of the row's depth color above/below.
+	var picker_margin := MarginContainer.new()
+	picker_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	picker_margin.add_theme_constant_override("margin_top", 2)
+	picker_margin.add_theme_constant_override("margin_bottom", 2)
+	picker_margin.add_child(_picker_panel)
+	add_child(picker_margin)
 
 	# --- Delete button ---
 	# Trash icon on the far right. Visually separated from the ⋮ menu.
@@ -240,18 +240,6 @@ func _apply_theme_icons() -> void:
 	if _icon_remove and _delete_button:
 		_delete_button.icon = _icon_remove
 
-	# ⋮ menu icon — use ContextMenu icon for the three-dot appearance.
-	var base := _get_theme_source()
-	if base and _menu_button:
-		var ctx_icon := base.get_theme_icon("GuiTabMenuHl", "EditorIcons")
-		if ctx_icon:
-			_menu_button.icon = ctx_icon
-		else:
-			_menu_button.text = "⋮"
-
-		# Populate menu items with icons matching Godot's native resource menu.
-		_populate_context_menu(base)
-
 
 # Find a valid theme source control for fetching editor icons.
 func _get_theme_source() -> Control:
@@ -264,6 +252,44 @@ func _get_theme_source() -> Control:
 				return ctrl
 		node = node.get_parent()
 	return null
+
+
+# Cache the depth-based row background StyleBox.
+# Uses sub_inspector_property_bg{depth} from EditorStyles which provides the
+# slightly tinted property-row background that distinguishes rows from their
+# containing panel (sub_inspector_bg{depth}).
+func _cache_row_bg_style() -> void:
+	var editor_theme := EditorInterface.get_editor_theme()
+	if editor_theme == null:
+		return
+	var key := "sub_inspector_property_bg%d" % clampi(_depth, 0, 16)
+	_row_bg_style = editor_theme.get_stylebox(key, "EditorStyles")
+
+
+# Style the PanelContainer wrapper around the EditorResourcePicker.
+# Uses Editor.base_color (#292929) — the standard Godot inspector gray —
+# so the picker field stands out from the colored row background (depth-tinted
+# blue/purple). The picker's internal buttons are flat (transparent), so this
+# panel's dark gray shows through them, matching the native Recipe field look.
+func _apply_picker_panel_style() -> void:
+	if _picker_panel == null:
+		return
+	var editor_theme := EditorInterface.get_editor_theme()
+	if editor_theme == null:
+		return
+	var style := StyleBoxFlat.new()
+	style.bg_color = editor_theme.get_color("dark_color_1", "Editor")
+	style.set_corner_radius_all(3)
+	_picker_panel.add_theme_stylebox_override("panel", style)
+
+
+
+# Paint the row background using the cached depth-based StyleBox.
+# This runs every frame the row is visible, but StyleBox.draw() is a single
+# GPU draw call — negligible cost.
+func _draw() -> void:
+	if _row_bg_style:
+		_row_bg_style.draw(get_canvas_item(), Rect2(Vector2.ZERO, size))
 
 
 # =============================================================================
@@ -332,23 +358,7 @@ func _get_global_class_icon(class_name_str: String) -> Texture2D:
 	return null
 
 
-# Populate the ⋮ context menu with icons matching Godot's native resource menu.
-# Called from _apply_theme_icons() after the theme source is available.
-func _populate_context_menu(base: Control) -> void:
-	var popup := _menu_button.get_popup()
-	popup.clear()
-	# Match Godot's native order and icons (see user reference Image 4).
-	popup.add_icon_item(base.get_theme_icon("Save", "EditorIcons"), "Save", 0)
-	popup.add_icon_item(base.get_theme_icon("Save", "EditorIcons"), "Save As...", 1)
-	popup.add_separator()
-	popup.add_icon_item(base.get_theme_icon("Load", "EditorIcons"), "Load...", 2)
-	popup.add_icon_item(base.get_theme_icon("Search", "EditorIcons"), "Quick Load...", 3)
-	popup.add_separator()
-	popup.add_icon_item(base.get_theme_icon("ActionCopy", "EditorIcons"), "Copy", 4)
-	popup.add_icon_item(base.get_theme_icon("ActionPaste", "EditorIcons"), "Paste", 5)
-	popup.add_separator()
-	popup.add_icon_item(base.get_theme_icon("Clear", "EditorIcons"), "Clear", 6)
-	popup.id_pressed.connect(_on_menu_id_pressed)
+
 
 
 # =============================================================================
@@ -390,8 +400,17 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 # SIGNAL HANDLERS
 # =============================================================================
 
-# Resource name click — toggle expand/collapse.
-func _on_name_pressed() -> void:
+# EditorResourcePicker — user selected a new resource (New, Load, Paste, etc.).
+# The picker already holds the new resource internally. We emit a signal
+# so the parent JuiceArrayEditor commits it to the backing array.
+func _on_picker_resource_changed(new_resource: Resource) -> void:
+	_resource = new_resource
+	resource_replaced.emit(row_index, new_resource)
+
+
+# EditorResourcePicker — user clicked the resource field to edit/inspect.
+# With toggle_mode=true, this acts as expand/collapse for the sub-inspector.
+func _on_picker_resource_selected(_resource_arg: Resource, _inspect: bool) -> void:
 	is_expanded = not is_expanded
 	expand_toggled.emit(row_index)
 
@@ -401,22 +420,6 @@ func _on_delete_pressed() -> void:
 	delete_requested.emit(row_index)
 
 
-# Context menu item selected.
-func _on_menu_id_pressed(id: int) -> void:
-	var action_map: Dictionary = {
-		0: &"save",
-		1: &"save_as",
-		2: &"load",
-		3: &"quick_load",
-		4: &"copy",
-		5: &"paste",
-		6: &"clear",
-	}
-	var action: StringName = action_map.get(id, &"")
-	if not action.is_empty():
-		menu_action_requested.emit(row_index, action)
-
-
-# Resource changed — update the display label in real time.
+# Resource changed — update the picker display in real time.
 func _on_resource_changed() -> void:
 	refresh()
