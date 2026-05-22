@@ -349,6 +349,10 @@ func _create_sub_inspector(index: int, resource: Resource) -> void:
 
 	# Defer edit() so the inspector has time to be added to the tree first.
 	sub_inspector.call_deferred("edit", resource)
+	# Fold all section groups after the inspector builds its UI.
+	# edit() is deferred, so the sections won't exist until ≥1 frame later.
+	# We chain a second deferred call so it runs after edit() populates the tree.
+	_fold_all_sections.call_deferred(sub_inspector)
 	_sub_inspectors[index] = margin
 
 
@@ -373,6 +377,43 @@ func _get_row_at(index: int) -> JuiceResourceRow:
 		if child is JuiceResourceRow and child.row_index == index:
 			return child
 	return null
+
+
+# =============================================================================
+# SUB-INSPECTOR FOLDING
+# =============================================================================
+
+# Recursively walk the sub-inspector's UI tree and fold() every
+# EditorInspectorSection found. Called via call_deferred after edit()
+# so sections have been created by the time this runs.
+# Produces compact sub-inspectors where the user explicitly unfolds
+# the groups they need — matching native Godot sub-resource behavior.
+func _fold_all_sections(inspector: EditorInspector) -> void:
+	if not is_instance_valid(inspector):
+		return
+	# EditorInspector may need one more frame after edit() to populate.
+	# If no sections found on first try, wait a frame and retry once.
+	var found := _fold_sections_recursive(inspector)
+	if not found and inspector.is_inside_tree():
+		await inspector.get_tree().process_frame
+		_fold_sections_recursive(inspector)
+
+
+# Walk a node tree and fold() every EditorInspectorSection. Returns true
+# if at least one section was found (regardless of fold result).
+# EditorInspectorSection is not exposed to GDScript's type system, so we
+# use string-based class checking via get_class() and call fold() dynamically.
+func _fold_sections_recursive(node: Node) -> bool:
+	var found := false
+	for child in node.get_children():
+		if child.get_class() == "EditorInspectorSection":
+			found = true
+			child.call("fold")
+		# Recurse into containers that may hold sections (VBoxContainer, etc.)
+		if child.get_child_count() > 0:
+			if _fold_sections_recursive(child):
+				found = true
+	return found
 
 
 # =============================================================================
