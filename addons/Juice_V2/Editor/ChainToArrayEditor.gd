@@ -29,6 +29,8 @@ extends EditorProperty
 # SIGNALS (none — all mutations go through emit_changed)
 # =============================================================================
 
+# Debug toggle — set true to print sibling discovery and picker decisions.
+const DEBUG := false
 
 # =============================================================================
 # CONFIGURATION
@@ -248,13 +250,19 @@ func _find_parent_recipe() -> JuiceRecipe:
 	# Fast path: JuiceEditorContext lookup.
 	var host: Node = JuiceEditorContext.get_host_node(effect)
 	if host != null and host is JuiceBase:
+		if DEBUG: print("[ChainToArrayEditor] Recipe found via JuiceEditorContext for %s." % host.name)
 		return (host as JuiceBase).recipe
 
 	# Fallback: walk the scene tree and search all JuiceBase recipes.
 	var root := EditorInterface.get_edited_scene_root()
 	if root == null:
+		if DEBUG: print("[ChainToArrayEditor] No scene root — cannot discover recipe.")
 		return null
-	return _search_tree_for_recipe(root, effect)
+	var result := _search_tree_for_recipe(root, effect)
+	if DEBUG:
+		if result: print("[ChainToArrayEditor] Recipe found via scene tree fallback.")
+		else: print("[ChainToArrayEditor] Recipe NOT found for effect.")
+	return result
 
 
 # Recursively search the scene tree for a JuiceBase whose recipe contains
@@ -279,6 +287,7 @@ func _search_tree_for_recipe(node: Node, effect: JuiceEffectBase) -> JuiceRecipe
 func _get_sibling_effects() -> Array[Dictionary]:
 	var recipe := _find_parent_recipe()
 	if recipe == null:
+		if DEBUG: print("[ChainToArrayEditor] No recipe — returning empty siblings.")
 		return []
 
 	var self_effect := get_edited_object() as JuiceEffectBase
@@ -297,6 +306,7 @@ func _get_sibling_effects() -> Array[Dictionary]:
 			"label": _get_effect_display_name(effect, i),
 		})
 
+	if DEBUG: print("[ChainToArrayEditor] Found %d siblings (recipe has %d effects)." % [siblings.size(), recipe.effects.size()])
 	return siblings
 
 

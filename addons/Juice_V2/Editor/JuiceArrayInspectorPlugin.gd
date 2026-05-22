@@ -36,6 +36,9 @@ const JUICE_BASE_CLASSES: Array[String] = [
 # Preloaded script for the chain_to sibling picker editor.
 const ChainToArrayEditorScript := preload("res://addons/Juice_V2/Editor/ChainToArrayEditor.gd")
 
+# Debug toggle — set true to print interception decisions.
+const DEBUG := false
+
 
 # =============================================================================
 # ENTRY POINT
@@ -108,6 +111,7 @@ func _parse_property(object: Object, type: Variant.Type, name: String,
 	var add_label := _get_add_button_label(normalized_hint, name)
 	editor.configure(normalized_hint, hint_type, _get_type_color(normalized_hint), add_label)
 	add_property_editor(name, editor)
+	if DEBUG: print("[JuiceArrayPlugin] Intercepted '%s' on %s → classes=[%s]" % [name, object.get_class(), normalized_hint])
 	return true
 
 
@@ -141,7 +145,6 @@ func _is_juice_resource_class(class_name_str: String) -> bool:
 
 
 # Assign a type-color based on the resource class family.
-# Phase 5 will finalize the palette; these are reasonable defaults.
 func _get_type_color(hint_string: String) -> Color:
 	var class_name_str: String
 	if ":" in hint_string:
