@@ -166,6 +166,21 @@ var chained_preroll: float = 0.0:
 ## Enable debug print statements to console during animation.
 var debug_enabled: bool = false
 
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+# Set resource_name from the script's class_name so effects show readable
+# labels in recipe array rows (e.g. "PropertyInterpolate2DJuiceEffect").
+func _init() -> void:
+	var s := get_script() as GDScript
+	if s != null:
+		var global_name := s.get_global_name()
+		if not global_name.is_empty():
+			resource_name = global_name
+
+
 # =============================================================================
 # CONDITIONAL EXPORT SYSTEM
 # =============================================================================
