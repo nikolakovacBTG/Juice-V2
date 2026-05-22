@@ -36,6 +36,10 @@ signal delete_requested(row_index: int)
 ## (New, Load, Paste, Clear, etc.). The parent array editor commits this to the array.
 signal resource_replaced(row_index: int, new_resource: Resource)
 
+## Emitted when the user clicks an empty (null resource) slot.
+## The parent array editor should show the type picker to fill this slot.
+signal empty_slot_clicked(row_index: int)
+
 ## Emitted when a row is dropped onto this row for reorder.
 ## from_index = the dragged row, to_index = this row (drop target).
 signal drag_reorder_requested(from_index: int, to_index: int)
@@ -410,7 +414,12 @@ func _on_picker_resource_changed(new_resource: Resource) -> void:
 
 # EditorResourcePicker — user clicked the resource field to edit/inspect.
 # With toggle_mode=true, this acts as expand/collapse for the sub-inspector.
+# For empty slots (null resource), emit empty_slot_clicked so the parent
+# can show a type picker instead of the native Quick Load/Load menu.
 func _on_picker_resource_selected(_resource_arg: Resource, _inspect: bool) -> void:
+	if _resource == null:
+		empty_slot_clicked.emit(row_index)
+		return
 	is_expanded = not is_expanded
 	expand_toggled.emit(row_index)
 
@@ -418,6 +427,7 @@ func _on_picker_resource_selected(_resource_arg: Resource, _inspect: bool) -> vo
 # Delete button click.
 func _on_delete_pressed() -> void:
 	delete_requested.emit(row_index)
+
 
 
 # Resource changed — update the picker display in real time.

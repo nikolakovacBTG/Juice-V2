@@ -54,11 +54,10 @@ var _add_button: Button
 # chain_to is always inside an effect sub-inspector, so minimum depth is 1.
 var _depth: int = 0
 
-# Per-row expand state tracking.
-var _expanded: Dictionary = {}
-
-# Maps array index → sub-inspector MarginContainer.
-var _sub_inspectors: Dictionary = {}
+# NOTE: chain_to rows are NOT expandable. They are references to sibling
+# effects, not owned sub-resources. Expanding them would create recursive
+# sub-inspectors (effect A → chain_to → effect B → chain_to → effect A)
+# which crashes Godot with infinite recursion.
 
 # The sibling picker popup (created lazily).
 var _picker_popup: PopupMenu = null
@@ -76,8 +75,9 @@ func _init() -> void:
 	_build_ui()
 
 
-func _enter_tree() -> void:
-	_depth = _compute_depth()
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_POST_ENTER_TREE:
+		_depth = _count_editor_depth()
 
 
 # =============================================================================
@@ -95,9 +95,6 @@ func _update_property() -> void:
 
 	# Update size display.
 	_size_label.text = "Size: %d" % array.size()
-
-	# Preserve expand state, clean up stale sub-inspectors.
-	_cleanup_stale_inspectors(array.size())
 
 	# Rebuild rows.
 	_rebuild_rows(array)
@@ -153,16 +150,17 @@ func _build_ui() -> void:
 	set_bottom_editor(_main_vbox)
 
 
-# Auto-detect nesting depth by counting ancestor JuiceArrayEditors and
-# ChainToArrayEditors in the tree.
-func _compute_depth() -> int:
-	var depth := 0
+# Count EditorInspector ancestors to determine nesting depth.
+# Same algorithm as JuiceArrayEditor._count_editor_depth().
+func _count_editor_depth() -> int:
+	var count := 0
 	var node: Node = get_parent()
 	while node != null:
-		if node is JuiceArrayEditor or node is ChainToArrayEditor:
-			depth += 1
+		if node is EditorInspector:
+			count += 1
 		node = node.get_parent()
-	return depth
+	# Subtract 1: the outermost EditorInspector is the main dock inspector.
+	return maxi(count - 1, 0)
 
 
 # =============================================================================
@@ -176,8 +174,7 @@ func _rebuild_rows(array: Array) -> void:
 		_rows_container.remove_child(child)
 		child.queue_free()
 
-	# Clear sub-inspector references (they were just freed above).
-	_sub_inspectors.clear()
+
 
 	# Create a row for each element.
 	for i in range(array.size()):
@@ -188,92 +185,23 @@ func _rebuild_rows(array: Array) -> void:
 		_rows_container.add_child(row)
 		# Pass empty base_type to prevent the EditorResourcePicker from offering
 		# "New" popup — chain_to entries are sibling references, not new instances.
-		row.setup(i, effect, CHAIN_COLOR, _depth + 1, "")
+		row.setup(i, effect, CHAIN_COLOR, _depth, "")
 
-		# Restore expand state if previously expanded.
-		row.is_expanded = _expanded.get(i, false)
+		# chain_to rows are NOT expandable and NOT editable — they are shared
+		# references to sibling effects, not owned sub-resources. Disabling
+		# toggle_mode prevents infinite recursion (effect → chain_to → effect).
+		# Disabling editable hides the non-unique chain icon and "Make Unique"
+		# popup, which would be counterproductive for intentionally shared refs.
+		row._resource_picker.toggle_mode = false
+		row._resource_picker.editable = false
 
-		# Connect row signals.
-		row.expand_toggled.connect(_on_row_expand_toggled)
+		# Connect row signals — only delete and reorder, NOT expand_toggled.
 		row.delete_requested.connect(_on_row_delete)
 		row.drag_reorder_requested.connect(_on_row_reorder)
-		# We intentionally do NOT connect resource_replaced — the picker's
-		# New/Load menu is not useful here. Rows are populated via the
-		# sibling picker popup only.
-
-		# If expanded, create the sub-inspector below this row.
-		if row.is_expanded and effect != null:
-			_create_sub_inspector(i, effect)
 
 
-# =============================================================================
-# SUB-INSPECTOR (same pattern as JuiceArrayEditor)
-# =============================================================================
-
-# Create an embedded EditorInspector below the row at the given index.
-# Identical to JuiceArrayEditor._create_sub_inspector — factored for reuse.
-func _create_sub_inspector(index: int, resource: Resource) -> void:
-	var sub_inspector := EditorInspector.new()
-	sub_inspector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sub_inspector.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sub_inspector.set_vertical_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
-	sub_inspector.set_horizontal_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
-	sub_inspector.add_theme_stylebox_override("background", StyleBoxEmpty.new())
-
-	var editor_theme := EditorInterface.get_editor_theme()
-
-	# Gray foundation layer.
-	var foundation := PanelContainer.new()
-	foundation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	foundation.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if editor_theme:
-		var base_style := StyleBoxFlat.new()
-		base_style.bg_color = editor_theme.get_color("base_color", "Editor")
-		foundation.add_theme_stylebox_override("panel", base_style)
-
-	# Depth-colored overlay.
-	var depth_panel := PanelContainer.new()
-	depth_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	depth_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if editor_theme:
-		var depth_key := "sub_inspector_bg%d" % clampi(_depth + 1, 0, 16)
-		var depth_style := editor_theme.get_stylebox(depth_key, "EditorStyles")
-		if depth_style:
-			depth_panel.add_theme_stylebox_override("panel", depth_style)
-
-	# Stack: foundation > depth overlay > sub-inspector
-	depth_panel.add_child(sub_inspector)
-	foundation.add_child(depth_panel)
-
-	var margin := MarginContainer.new()
-	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(foundation)
-
-	# Insert after the row in the VBox.
-	var row_node := _get_row_at(index)
-	if row_node:
-		var row_idx := row_node.get_index()
-		_rows_container.add_child(margin)
-		_rows_container.move_child(margin, row_idx + 1)
-
-	sub_inspector.call_deferred("edit", resource)
-	_sub_inspectors[index] = margin
-
-
-# Remove sub-inspectors for indices that no longer exist.
-func _cleanup_stale_inspectors(new_size: int) -> void:
-	var to_remove: Array[int] = []
-	for idx: int in _expanded.keys():
-		if idx >= new_size:
-			to_remove.append(idx)
-	for idx in to_remove:
-		_expanded.erase(idx)
-		if _sub_inspectors.has(idx):
-			var container = _sub_inspectors[idx]
-			if is_instance_valid(container):
-				container.queue_free()
-			_sub_inspectors.erase(idx)
+# NOTE: No sub-inspector section. chain_to rows are reference-only and
+# must NOT be expanded to avoid infinite recursion crashes.
 
 
 # Find the JuiceResourceRow node at the given array index.
@@ -310,16 +238,40 @@ func _commit_array(new_array: Array) -> void:
 
 # Find the parent recipe that contains the effect we are editing.
 # Uses JuiceEditorContext to find the host JuiceBase node, then reads its recipe.
+# Falls back to walking the scene tree if the context doesn't have this effect
+# registered (e.g. after plugin reload creates fresh effect instances).
 func _find_parent_recipe() -> JuiceRecipe:
 	var effect := get_edited_object() as JuiceEffectBase
 	if effect == null:
 		return null
 
+	# Fast path: JuiceEditorContext lookup.
 	var host: Node = JuiceEditorContext.get_host_node(effect)
-	if host == null or not host is JuiceBase:
-		return null
+	if host != null and host is JuiceBase:
+		return (host as JuiceBase).recipe
 
-	return (host as JuiceBase).recipe
+	# Fallback: walk the scene tree and search all JuiceBase recipes.
+	var root := EditorInterface.get_edited_scene_root()
+	if root == null:
+		return null
+	return _search_tree_for_recipe(root, effect)
+
+
+# Recursively search the scene tree for a JuiceBase whose recipe contains
+# the given effect. Also re-registers the recipe in JuiceEditorContext so
+# subsequent lookups use the fast path.
+func _search_tree_for_recipe(node: Node, effect: JuiceEffectBase) -> JuiceRecipe:
+	if node is JuiceBase:
+		var juice := node as JuiceBase
+		if juice.recipe != null and effect in juice.recipe.effects:
+			# Re-register so future lookups don't need the fallback.
+			JuiceEditorContext.register_recipe(juice.recipe, juice)
+			return juice.recipe
+	for child in node.get_children():
+		var result := _search_tree_for_recipe(child, effect)
+		if result != null:
+			return result
+	return null
 
 
 # Get the list of sibling effects from the parent recipe, excluding self.
@@ -498,29 +450,7 @@ func _get_global_class_icon(class_name_str: String) -> Texture2D:
 # SIGNAL HANDLERS — Row
 # =============================================================================
 
-# Row expand/collapse toggled.
-func _on_row_expand_toggled(index: int) -> void:
-	var array := _get_current_array()
-	if index < 0 or index >= array.size():
-		return
-
-	# chain_to entries should never be null (they're references), but guard anyway.
-	if array[index] == null:
-		return
-
-	var was_expanded: bool = _expanded.get(index, false)
-	_expanded[index] = not was_expanded
-
-	if _expanded[index]:
-		if array[index] is Resource:
-			_create_sub_inspector(index, array[index] as Resource)
-	else:
-		if _sub_inspectors.has(index):
-			var container = _sub_inspectors[index]
-			if is_instance_valid(container):
-				_rows_container.remove_child(container)
-				container.queue_free()
-			_sub_inspectors.erase(index)
+# NOTE: No _on_row_expand_toggled handler. chain_to rows cannot be expanded.
 
 
 # Row delete requested — remove from chain_to.
@@ -528,16 +458,6 @@ func _on_row_delete(index: int) -> void:
 	var array := _get_current_array().duplicate()
 	if index < 0 or index >= array.size():
 		return
-
-	# Clean up expand state for this and shifted indices.
-	_expanded.erase(index)
-	var new_expanded: Dictionary = {}
-	for key: int in _expanded.keys():
-		if key > index:
-			new_expanded[key - 1] = _expanded[key]
-		else:
-			new_expanded[key] = _expanded[key]
-	_expanded = new_expanded
 
 	array.remove_at(index)
 	_commit_array(array)
@@ -553,5 +473,4 @@ func _on_row_reorder(from_index: int, to_index: int) -> void:
 	var element = array[from_index]
 	array.remove_at(from_index)
 	array.insert(to_index, element)
-	_expanded.clear()
 	_commit_array(array)
