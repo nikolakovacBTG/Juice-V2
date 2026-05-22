@@ -14,7 +14,7 @@
 #       and provides a ⋮ context menu for resource operations — all in a
 #       uniform layout that matches Godot conventions.
 # SYSTEM: Juice System (addons/Juice_V2/Editor/) — EDITOR ONLY.
-# DOES NOT: Handle chain_to sibling-reference arrays (Phase 3). Does not
+# DOES NOT: Handle chain_to sibling-reference arrays (see ChainToArrayEditor). Does not
 #           modify the resource data model — only reads/writes the array.
 # =============================================================================
 
@@ -22,6 +22,9 @@
 class_name JuiceArrayEditor
 extends EditorProperty
 
+
+# Debug toggle — set true to print interception and instantiation decisions.
+const DEBUG := false
 
 # =============================================================================
 # CONFIGURATION
@@ -404,6 +407,7 @@ func _instantiate_class(class_name_str: String) -> Resource:
 	if ClassDB.class_exists(class_name_str) and ClassDB.can_instantiate(class_name_str):
 		var instance = ClassDB.instantiate(class_name_str)
 		if instance is Resource:
+			if DEBUG: print("[JuiceArrayEditor] Instantiated '%s' via ClassDB." % class_name_str)
 			return instance
 
 	# Strategy 2: GDScript global classes — search ProjectSettings registry.
@@ -416,6 +420,7 @@ func _instantiate_class(class_name_str: String) -> Resource:
 			if script is GDScript:
 				var instance = script.new()
 				if instance is Resource:
+					if DEBUG: print("[JuiceArrayEditor] Instantiated '%s' via GDScript (%s)." % [class_name_str, script_path])
 					return instance
 			break
 

@@ -44,6 +44,8 @@ signal empty_slot_clicked(row_index: int)
 ## from_index = the dragged row, to_index = this row (drop target).
 signal drag_reorder_requested(from_index: int, to_index: int)
 
+# Debug toggle — set true to print row setup and depth detection.
+const DEBUG := false
 
 # =============================================================================
 # CONFIGURATION
