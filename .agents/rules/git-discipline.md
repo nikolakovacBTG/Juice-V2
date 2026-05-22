@@ -1,17 +1,85 @@
 ## RULE: Git Discipline
 
-**Purpose:** Define Juice V1 Git workflow and safety standards.
+**Purpose:** Define Git workflow and safety standards. **PREVENT data loss.**
 
 **Mission:** Ensure safe, trackable development with proper rollback capabilities.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 Git workflow and safety standards
+# WHAT: Git workflow and safety standards
 # EXPECTS: All development follows Git safety protocols
 # PROVIDES: Safe development environment with rollback capabilities
 # ARCHITECTURE: Rules layer that enforces development safety
 # ============================================================================
+
+## ⛔ MANDATORY SAFETY GATE — DESTRUCTIVE COMMANDS
+
+**The following git commands can PERMANENTLY DESTROY uncommitted work.
+NEVER run them without FIRST running `git status` and confirming the
+working tree is clean OR stashing/committing all changes.**
+
+### 🔴 CRITICAL — Always ask user permission FIRST
+
+| Command | Risk | What it destroys |
+|---------|------|-----------------|
+| `git checkout <branch>` | **CRITICAL** | Wipes ALL uncommitted changes silently |
+| `git checkout -- <file>` | **CRITICAL** | Discards file changes permanently |
+| `git switch <branch>` | **CRITICAL** | Same as checkout for branch switching |
+| `git restore` | **CRITICAL** | Discards working tree changes |
+| `git reset --hard` | **CRITICAL** | Loses commits AND uncommitted changes |
+| `git clean -f` | **CRITICAL** | Permanently deletes untracked files |
+
+### 🟡 HIGH RISK — Check with user before running
+
+| Command | Risk | What it destroys |
+|---------|------|-----------------|
+| `git reset` (any form) | **High** | Can lose staged changes or commits |
+| `git stash drop` | **High** | Loses specific stashed work |
+| `git stash clear` | **High** | Loses ALL stashed work |
+| `git rebase` | **High** | Rewrites commit history |
+| `git push --force` | **High** | Overwrites remote history |
+| `git branch -D` | **Medium** | Deletes branch with unmerged work |
+| `git merge` | **Medium** | Can create conflicts, modify tree |
+| `git revert` | **Medium** | Creates revert commits |
+
+### ✅ SAFE — Can run freely (read-only or reversible)
+
+`git status`, `git log`, `git diff`, `git show`, `git grep`,
+`git add`, `git commit`, `git stash` (save), `git remote` (list),
+`git branch` (list), `git tag` (list), `git subtree push/pull`
+
+### Pre-Destructive-Command Checklist (MANDATORY)
+
+Before running ANY 🔴 or 🟡 command:
+
+1. Run `git status` — check for uncommitted/untracked changes
+2. If dirty: `git stash` or `git add -A; git commit -m "WIP: safety save"`
+3. TELL the user what you found and what you plan to do
+4. WAIT for user approval before proceeding
+5. **NEVER assume "it's fine" — uncommitted work = potential hours lost**
+
+## 📖 Read Code From Other Commits — NEVER Checkout
+
+**To read code from a different commit or branch, use `git show` — NEVER `git checkout`.**
+
+```powershell
+# Read a specific file at any commit — SAFE, read-only, no working tree change
+git show abc123:path/to/file.gd
+git show HEAD~3:addons/Juice_V2/Editor/JuiceArrayEditor.gd
+git show main:path/to/file.gd
+
+# Compare current file with committed version
+git diff HEAD -- path/to/file.gd
+
+# See what changed in a specific commit
+git show abc123 --stat
+git show abc123 -- path/to/file.gd
+```
+
+**This MUST be the default research pattern.** There is NEVER a reason to
+`git checkout` a branch just to read its code. `git show` does the same
+thing without touching the working tree or risking data loss.
 
 ## Git Safety Protocol
 

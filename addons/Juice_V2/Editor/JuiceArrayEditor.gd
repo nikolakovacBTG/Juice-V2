@@ -42,6 +42,10 @@ var _type_color: Color = Color(0.4, 0.4, 0.4)
 ## Label for the add button (e.g. "+ Add Juice", "+ Add Method").
 var _add_label: String = "+ Add Element"
 
+## Nesting depth for sub-inspector depth coloring.
+## 0 = top-level array, 1 = nested inside a sub-inspector, etc.
+var _depth: int = 0
+
 
 # =============================================================================
 # INTERNAL STATE
@@ -89,6 +93,32 @@ func _init() -> void:
 	_build_ui()
 
 
+# Auto-detect nesting depth when added to the scene tree.
+# Walks the parent chain and counts EditorInspector ancestors — each one
+# represents a sub-inspector we are nested inside. Top-level arrays have
+# depth 0, arrays inside an expanded sub-inspector have depth 1, etc.
+# This makes depth coloring work automatically without the plugin needing
+# to pass depth explicitly.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_POST_ENTER_TREE:
+		_depth = _count_editor_depth()
+
+
+# Count EditorInspector ancestors to determine nesting depth.
+# The main inspector (dock-level) doesn't count — only embedded
+# sub-inspectors created by _create_sub_inspector do.
+func _count_editor_depth() -> int:
+	var count := 0
+	var node: Node = get_parent()
+	while node != null:
+		if node is EditorInspector:
+			count += 1
+		node = node.get_parent()
+	# Subtract 1: the outermost EditorInspector is the main dock inspector,
+	# not a sub-inspector. Arrays inside it are at depth 0.
+	return maxi(count - 1, 0)
+
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -100,9 +130,11 @@ func _init() -> void:
 ## [param hint_type]: The PropertyHint enum value.
 ## [param color]: Type-color for the row strips.
 ## [param add_label]: Label for the add button (e.g. "+ Add Juice").
-func configure(element_hint: String, hint_type: int, color: Color, add_label: String = "+ Add Element") -> void:
+## [param depth]: Nesting depth for sub-inspector depth coloring (0 = top-level).
+func configure(element_hint: String, hint_type: int, color: Color, add_label: String = "+ Add Element", depth: int = 0) -> void:
 	_type_color = color
 	_add_label = add_label
+	_depth = depth
 	if _add_button:
 		_add_button.text = add_label
 
@@ -225,7 +257,7 @@ func _rebuild_rows(array: Array) -> void:
 		# Build the row.
 		var row := JuiceResourceRow.new()
 		_rows_container.add_child(row)
-		row.setup(i, resource, _type_color)
+		row.setup(i, resource, _type_color, _depth, ",".join(_concrete_classes))
 
 		# Restore expand state if previously expanded.
 		row.is_expanded = _expanded.get(i, false)
@@ -235,6 +267,7 @@ func _rebuild_rows(array: Array) -> void:
 		row.delete_requested.connect(_on_row_delete)
 		row.resource_replaced.connect(_on_row_resource_replaced)
 		row.drag_reorder_requested.connect(_on_row_reorder)
+		row.empty_slot_clicked.connect(_on_row_empty_slot_clicked)
 
 		# If expanded, create the sub-inspector below this row.
 		if row.is_expanded and resource != null:
@@ -242,11 +275,11 @@ func _rebuild_rows(array: Array) -> void:
 
 
 # Create an embedded EditorInspector below the row at the given index.
-# This shows the resource's properties inline, matching Godot's native
-# sub-resource expansion behavior.
 # - Scrolling is DISABLED so the inspector expands to full content height.
-# - Background uses Godot's theme-native sub_inspector_bg StyleBox for
-#   proper depth coloring that works with all editor themes.
+# - A theme-driven gray foundation (Editor.base_color) is placed underneath
+#   so the semi-transparent depth StyleBoxes composite correctly.
+# - Background uses Godot's theme-native sub_inspector_bg{depth} StyleBox
+#   for proper depth coloring that works with all editor themes.
 func _create_sub_inspector(index: int, resource: Resource) -> void:
 	var sub_inspector := EditorInspector.new()
 	sub_inspector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -256,26 +289,53 @@ func _create_sub_inspector(index: int, resource: Resource) -> void:
 	# native array inspector embeds sub-resource editors inline.
 	sub_inspector.set_vertical_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
 	sub_inspector.set_horizontal_scroll_mode(ScrollContainer.SCROLL_MODE_DISABLED)
+	# EditorInspector inherits ScrollContainer which has an opaque background
+	# style. Override it to transparent so the depth-colored panel behind it
+	# shows through for proper depth tinting.
+	sub_inspector.add_theme_stylebox_override("background", StyleBoxEmpty.new())
 
-	# Wrap in a PanelContainer with the native sub-inspector depth background.
-	# Godot provides sub_inspector_bg0..4 in EditorStyles for nested depth coloring.
-	var panel := PanelContainer.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var editor_theme := EditorInterface.get_editor_theme()
-	if editor_theme:
-		# Use depth 1 by default (the first nesting level).
-		var depth_style := editor_theme.get_stylebox("sub_inspector_bg1", "EditorStyles")
-		if depth_style:
-			panel.add_theme_stylebox_override("panel", depth_style)
-	panel.add_child(sub_inspector)
 
-	# Indent the panel to visually nest it under the row.
+	# --- Gray foundation layer ---
+	# Native Godot inspector sits on Editor.base_color (#292929 in default theme).
+	# The depth StyleBoxes use semi-transparent colors that composite on top of
+	# this gray. Without it, they blend against the too-dark dock panel (#1b1b1b)
+	# and appear washed-out. This foundation ensures correct color compositing
+	# regardless of which dock the inspector is placed in.
+	var foundation := PanelContainer.new()
+	foundation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foundation.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if editor_theme:
+		var base_style := StyleBoxFlat.new()
+		base_style.bg_color = editor_theme.get_color("base_color", "Editor")
+		foundation.add_theme_stylebox_override("panel", base_style)
+
+	# --- Depth-colored overlay ---
+	# Uses sub_inspector_bg{depth} from Godot's EditorStyles — each depth level
+	# has a progressively different tint (blue → purple → pink) so users can
+	# visually distinguish nesting levels.
+	var depth_panel := PanelContainer.new()
+	depth_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	depth_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if editor_theme:
+		# Sub-inspector matches the depth of its parent array's rows.
+		# maxi(1) avoids sub_inspector_bg0 which has a transparent background.
+		var depth_key := "sub_inspector_bg%d" % clampi(maxi(_depth, 1), 0, 16)
+		var depth_style := editor_theme.get_stylebox(depth_key, "EditorStyles")
+		if depth_style:
+			depth_panel.add_theme_stylebox_override("panel", depth_style)
+
+	# Stack: foundation > depth overlay > sub-inspector
+	depth_panel.add_child(sub_inspector)
+	foundation.add_child(depth_panel)
+
+	# Wrap in a MarginContainer for layout control in the VBox.
+	# No extra left margin — the depth-colored StyleBox's own content_margin
+	# provides sufficient visual nesting indent.
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 16)
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(panel)
+	margin.add_child(foundation)
 
 	# Insert the margin container right after the row in the VBox.
 	var row_node := _get_row_at(index)
@@ -606,6 +666,22 @@ func _on_row_resource_replaced(index: int, new_resource: Resource) -> void:
 	array[index] = new_resource
 	_commit_array(array)
 
+
+# Row empty slot clicked — user clicked on a null resource slot.
+# For multi-type arrays, show the type picker to fill the slot.
+# For single-type arrays, auto-create the resource immediately.
+func _on_row_empty_slot_clicked(index: int) -> void:
+	if _is_single_type:
+		# Auto-create and fill the slot.
+		var resource := _instantiate_class(_element_class_name)
+		if resource != null:
+			var array := _get_current_array().duplicate()
+			if index >= 0 and index < array.size():
+				array[index] = resource
+				_commit_array(array)
+	else:
+		# Multi-type: show the type picker positioned at this row.
+		_show_type_picker_for_index(index)
 
 # =============================================================================
 # HELPERS
