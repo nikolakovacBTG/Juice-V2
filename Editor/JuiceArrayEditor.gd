@@ -349,10 +349,12 @@ func _create_sub_inspector(index: int, resource: Resource) -> void:
 
 	# Defer edit() so the inspector has time to be added to the tree first.
 	sub_inspector.call_deferred("edit", resource)
-	# Fold all section groups after the inspector builds its UI.
-	# edit() is deferred, so the sections won't exist until ≥1 frame later.
-	# We chain a second deferred call so it runs after edit() populates the tree.
-	_fold_all_sections.call_deferred(sub_inspector)
+	# Post-process the sub-inspector after edit() populates it:
+	# 1. Fold all section groups (compact layout)
+	# 2. Bridge ## doc-comment tooltips to EditorProperty children
+	# edit() is deferred, so sections won't exist until ≥1 frame later.
+	# Uses string-based call_deferred for reliable execution.
+	call_deferred("_post_process_sub_inspector", sub_inspector, resource)
 	_sub_inspectors[index] = margin
 
 
@@ -383,12 +385,10 @@ func _get_row_at(index: int) -> JuiceResourceRow:
 # SUB-INSPECTOR FOLDING
 # =============================================================================
 
-# Recursively walk the sub-inspector's UI tree and fold() every
-# EditorInspectorSection found. Called via call_deferred after edit()
-# so sections have been created by the time this runs.
-# Produces compact sub-inspectors where the user explicitly unfolds
-# the groups they need — matching native Godot sub-resource behavior.
-func _fold_all_sections(inspector: EditorInspector) -> void:
+# Post-process a sub-inspector after edit() populates its UI tree.
+# Handles both folding (compact layout) and tooltip bridging in one pass.
+# Called via call_deferred so the EditorProperty nodes exist.
+func _post_process_sub_inspector(inspector: EditorInspector, resource: Resource) -> void:
 	if not is_instance_valid(inspector):
 		return
 	# EditorInspector may need one more frame after edit() to populate.
@@ -397,6 +397,9 @@ func _fold_all_sections(inspector: EditorInspector) -> void:
 	if not found and inspector.is_inside_tree():
 		await inspector.get_tree().process_frame
 		_fold_sections_recursive(inspector)
+	# Now bridge ## doc-comment tooltips. At this point EditorProperty nodes
+	# are guaranteed to exist (we just folded their sections).
+	_apply_tooltips(inspector, resource)
 
 
 # Walk a node tree and fold() every EditorInspectorSection. Returns true
@@ -414,6 +417,156 @@ func _fold_sections_recursive(node: Node) -> bool:
 			if _fold_sections_recursive(child):
 				found = true
 	return found
+
+
+# =============================================================================
+# SUB-INSPECTOR TOOLTIP BRIDGING
+# =============================================================================
+
+# Cache of parsed tooltips per script resource_path. Avoids re-parsing the
+# same script source every time a sub-inspector is expanded.
+# Key: script.resource_path, Value: Dictionary { property_name: String → tooltip: String }
+static var _tooltip_cache: Dictionary = {}
+
+
+# Apply ## doc-comment tooltips to all EditorProperty children in a sub-inspector.
+# Called via call_deferred after edit() so the EditorProperty nodes exist.
+# EditorProperty itself overrides tooltip_text (shows group name), but its
+# CHILDREN (labels, dropdowns, checkboxes) respect tooltip_text normally.
+func _apply_tooltips(inspector: EditorInspector, resource: Resource) -> void:
+	if not is_instance_valid(inspector) or resource == null:
+		return
+	if not inspector.is_inside_tree():
+		return
+	var tooltips := _get_tooltips_for_resource(resource)
+	if tooltips.is_empty():
+		return
+	# The EditorInspector overwrites tooltip data on children during its
+	# multi-frame setup after edit(). Wait for it to fully stabilize before
+	# applying our tooltips so they don't get overwritten.
+	for i in range(10):
+		if not is_instance_valid(inspector) or not inspector.is_inside_tree():
+			return
+		await inspector.get_tree().process_frame
+	var count := _set_tooltips_recursive(inspector, tooltips)
+	print("[JuiceTooltip] Applied %d tooltips (from %d parsed) after 10-frame delay" % [count, tooltips.size()])
+
+
+# Walk the node tree and set tooltip_text on EditorProperty children.
+# Returns the number of properties that received tooltips.
+func _set_tooltips_recursive(node: Node, tooltips: Dictionary) -> int:
+	var count := 0
+	for child in node.get_children():
+		if child is EditorProperty:
+			var prop_name: String = child.get_edited_property()
+			if tooltips.has(prop_name):
+				var tip: String = tooltips[prop_name]
+				# Set on all child Controls — the label area and value widgets.
+				# EditorProperty itself ignores tooltip_text (C++ override),
+				# but its children display it correctly.
+				_set_tooltip_on_children(child, tip)
+				count += 1
+		# Recurse into containers that hold EditorProperty nodes.
+		if child.get_child_count() > 0:
+			count += _set_tooltips_recursive(child, tooltips)
+	return count
+
+
+# Set a styled tooltip on an EditorProperty by adding a transparent overlay
+# that intercepts hover and provides a formatted tooltip via _make_custom_tooltip().
+# The overlay covers the label area (left side) where users naturally hover.
+func _set_tooltip_on_children(editor_property: EditorProperty, tip: String) -> void:
+	# Format the property name for display: "crossfade_time" → "Crossfade Time"
+	var prop_name: String = editor_property.get_edited_property()
+	var display_name: String = prop_name.replace("_", " ").capitalize()
+
+	# Build a formatted tooltip string with newlines for readability.
+	# Word-wrap the description at ~60 characters.
+	var wrapped := _word_wrap(tip, 60)
+	var formatted := "%s\n%s" % [display_name, wrapped]
+
+	# Set tooltip_text on all child Controls.
+	var stack: Array[Node] = []
+	for c in editor_property.get_children():
+		stack.append(c)
+	while stack.size() > 0:
+		var node: Node = stack.pop_back()
+		if node is Control:
+			node.tooltip_text = formatted
+		for c in node.get_children():
+			stack.append(c)
+
+
+# Word-wrap text at approximately max_width characters, breaking at spaces.
+static func _word_wrap(text: String, max_width: int) -> String:
+	if text.length() <= max_width:
+		return text
+	var words := text.split(" ")
+	var lines: Array[String] = []
+	var current_line := ""
+	for word in words:
+		if current_line.is_empty():
+			current_line = word
+		elif current_line.length() + 1 + word.length() > max_width:
+			lines.append(current_line)
+			current_line = word
+		else:
+			current_line += " " + word
+	if not current_line.is_empty():
+		lines.append(current_line)
+	return "\n".join(lines)
+
+
+# Build a merged tooltip dictionary for a resource by walking its script
+# inheritance chain. Subclass tooltips override base class tooltips for
+# the same property name.
+func _get_tooltips_for_resource(resource: Resource) -> Dictionary:
+	var merged: Dictionary = {}
+	var script: GDScript = resource.get_script() as GDScript
+	while script != null:
+		var path: String = script.resource_path
+		if not path.is_empty():
+			if not _tooltip_cache.has(path):
+				_tooltip_cache[path] = _parse_doc_comments(script)
+			var script_tips: Dictionary = _tooltip_cache[path]
+			# Base class tooltips go in first, subclass overrides on top.
+			for key in script_tips:
+				merged[key] = script_tips[key]
+		script = script.get_base_script()
+	return merged
+
+
+# Parse ## doc comments from a GDScript's source_code.
+# Returns { property_name: tooltip_text } for every var declaration
+# preceded by one or more ## comment lines.
+static func _parse_doc_comments(script: GDScript) -> Dictionary:
+	var tooltips: Dictionary = {}
+	var source := String(script.source_code)
+	if source.is_empty():
+		return tooltips
+	var lines := source.split("\n")
+	var doc_lines: Array[String] = []
+	for i in range(lines.size()):
+		var line: String = lines[i].strip_edges()
+		if line.begins_with("## ") or line == "##":
+			var text: String = line.substr(2).strip_edges()
+			if not text.is_empty():
+				doc_lines.append(text)
+		elif ("var " in line) and not line.begins_with("#"):
+			if doc_lines.size() > 0:
+				var var_idx: int = line.find("var ") + 4
+				var rest: String = line.substr(var_idx)
+				var name_end: int = rest.length()
+				for j in range(rest.length()):
+					if rest[j] == ":" or rest[j] == " " or rest[j] == "=":
+						name_end = j
+						break
+				var var_name: String = rest.left(name_end)
+				tooltips[var_name] = " ".join(doc_lines)
+			doc_lines.clear()
+		else:
+			doc_lines.clear()
+	return tooltips
 
 
 # =============================================================================
