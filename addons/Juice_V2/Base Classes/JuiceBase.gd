@@ -226,7 +226,7 @@ enum TriggerSource {
 ## Delay between recipe iterations.
 @export var loop_delay: float = 0.0
 
-@export_group("Recipe")
+@export_group("")
 
 ## The recipe containing effects to play.
 @export var recipe: JuiceRecipe:

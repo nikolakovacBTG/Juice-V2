@@ -114,6 +114,15 @@ func _get(property: StringName) -> Variant:
 	return null
 
 
+# Hide the auto-generated 'entries' property. _get_property_list() provides
+# the properly-hinted version with PROPERTY_HINT_ARRAY_TYPE; the raw var
+# would appear as an untyped array and bypass our custom array editor.
+func _validate_property(property: Dictionary) -> void:
+	super._validate_property(property)
+	if property.name == &"entries" and property.hint == PROPERTY_HINT_NONE:
+		property.usage = PROPERTY_USAGE_NONE
+
+
 # =============================================================================
 # INTERNAL STATE
 # =============================================================================

@@ -67,10 +67,15 @@ func test_position_noise_applies() -> void:
 	var natural_pos := target.position
 
 	juice.animate_in()
-	await wait_seconds(0.15)
+	await wait_seconds(0.05)
 
-	assert_not_approx_vec2(target.position, natural_pos,
-		"Position should differ during noise animation", 0.5)
+	# Poll max displacement over 10 frames to avoid phase-dependent zero-crossing failures.
+	var max_dist := 0.0
+	for i in range(5):
+		await wait_frames(10)
+		max_dist = maxf(max_dist, target.position.distance_to(natural_pos))
+
+	assert_true(max_dist >= 0.5, "Position should displace during noise (max=%.3f)" % max_dist)
 
 	await cleanup(target)
 
@@ -83,10 +88,15 @@ func test_rotation_noise_applies() -> void:
 	var natural_rot := target.rotation
 
 	juice.animate_in()
-	await wait_seconds(0.15)
+	await wait_seconds(0.05)
 
-	assert_not_approx_float(target.rotation, natural_rot,
-		"Rotation should differ during noise animation", 0.01)
+	# Poll max displacement over 10 frames to avoid phase-dependent zero-crossing failures.
+	var max_rot_dist := 0.0
+	for i in range(5):
+		await wait_frames(10)
+		max_rot_dist = maxf(max_rot_dist, absf(target.rotation - natural_rot))
+
+	assert_true(max_rot_dist >= 0.01, "Rotation should displace during noise (max=%.4f)" % max_rot_dist)
 
 	await cleanup(target)
 
@@ -99,10 +109,15 @@ func test_scale_noise_applies() -> void:
 	var natural_scale := target.scale
 
 	juice.animate_in()
-	await wait_seconds(0.15)
+	await wait_seconds(0.05)
 
-	assert_not_approx_vec2(target.scale, natural_scale,
-		"Scale should differ during noise animation", 0.01)
+	# Poll max displacement over 10 frames to avoid phase-dependent zero-crossing failures.
+	var max_scale_dist := 0.0
+	for i in range(5):
+		await wait_frames(10)
+		max_scale_dist = maxf(max_scale_dist, target.scale.distance_to(natural_scale))
+
+	assert_true(max_scale_dist >= 0.01, "Scale should displace during noise (max=%.4f)" % max_scale_dist)
 
 	await cleanup(target)
 

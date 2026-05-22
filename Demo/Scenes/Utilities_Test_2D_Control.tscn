@@ -13,10 +13,16 @@
 [ext_resource type="Script" uid="uid://c602ntjyr3es4" path="res://addons/Juice_V2/Utilities/TimeCoordinatorJuiceUtility.gd" id="12_lcm6r"]
 [ext_resource type="Script" uid="uid://b5y8ky876cg0d" path="res://addons/Juice_V2/Meta/PropertyProgress2DJuiceEffect.gd" id="15_uhtl6"]
 [ext_resource type="Script" uid="uid://dcukxt4bkdw4g" path="res://addons/Juice_V2/Meta/PropertyShake2DJuiceEffect.gd" id="17_pmn3f"]
+[ext_resource type="Script" uid="uid://gqt42kasqx3j" path="res://addons/Juice_V2/Camera/Camera3DJuiceEffect.gd" id="18_uhtl6"]
+[ext_resource type="Script" uid="uid://bso8kvx4rdnkp" path="res://addons/Juice_V2/2D/ProgressTransform2DJuiceEffect.gd" id="19_b0p5q"]
+[ext_resource type="Script" uid="uid://c7hj0ho5fcywo" path="res://addons/Juice_V2/Meta/ShakePropertyTarget.gd" id="19_uhtl6"]
 [ext_resource type="Script" uid="uid://b432gm11skduw" path="res://addons/sparkle_lite/players/feedback_player_lite.gd" id="20_uhtl6"]
 [ext_resource type="Script" uid="uid://c2mscmakyx0aa" path="res://addons/sparkle_lite/feedbacks/feedback_base_lite.gd" id="21_b0p5q"]
+[ext_resource type="Script" uid="uid://cpjntnfyohrul" path="res://addons/Juice_V2/Screen/ScreenJuiceEffect.gd" id="21_tf6rc"]
 [ext_resource type="Script" uid="uid://g77pfphvu4vi" path="res://addons/sparkle_lite/feedbacks/feedback_scale_punch_lite.gd" id="22_pmn3f"]
 [ext_resource type="Script" uid="uid://bia20fnpxa4d5" path="res://addons/sparkle_lite/feedbacks/feedback_call_lite.gd" id="23_pnrhh"]
+[ext_resource type="Script" uid="uid://ciokvqqkv3o0k" path="res://addons/Juice_V2/2D/Shake2DJuiceEffect.gd" id="23_t2c5f"]
+[ext_resource type="Script" uid="uid://bwkruqi6chuyl" path="res://addons/Juice_V2/2D/SquashStretch2DJuiceEffect.gd" id="23_uhtl6"]
 
 [sub_resource type="Curve" id="Curve_qph6c"]
 _data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
@@ -174,8 +180,225 @@ script = ExtResource("23_pnrhh")
 target = NodePath(".")
 metadata/_custom_type_script = "uid://bia20fnpxa4d5"
 
+[sub_resource type="Resource" id="Resource_pnrhh"]
+script = ExtResource("18_uhtl6")
+channel = 0
+animation_mode = 0
+position_offset = Vector3(0, 0, 0.5)
+use_local_space = true
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_t2c5f"]
+script = ExtResource("19_b0p5q")
+transform_target = 1
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+auto_start = false
+hold_on_stop = true
+rotation_rate = 90.0
+pivot_mode = 0
+bound_enabled = false
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_kgkn2"]
+script = ExtResource("19_uhtl6")
+node_path = NodePath("")
+property_path = ""
+_detected_type = 0
+amplitude_float = 5.0
+amplitude_vec2 = Vector2(5, 5)
+amplitude_vec3 = Vector3(5, 5, 5)
+amplitude_color = 0.1
+amplitude_vec4 = Vector4(5, 5, 5, 5)
+amplitude_quat = Vector3(5, 5, 5)
+amplitude_rect2 = Rect2(5, 5, 5, 5)
+amplitude_aabb = AABB(5, 5, 5, 5, 5, 5)
+flip_threshold = 0.0
+value_a_bool = false
+value_a_string = ""
+value_a_stringname = &""
+value_a_nodepath = NodePath("")
+value_a_plane = Plane(0, 0, 0, 0)
+value_a_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
+value_a_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+value_b_bool = true
+value_b_string = ""
+value_b_stringname = &""
+value_b_nodepath = NodePath("")
+value_b_plane = Plane(0, 0, 0, 0)
+value_b_basis = Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
+value_b_projection = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+a_reference = 0
+a_capture_at = 0
+a_target_node = NodePath("")
+b_reference = 0
+b_capture_at = 0
+b_target_node = NodePath("")
+_editor_cache_a = null
+_editor_cache_b = null
+
+[sub_resource type="Resource" id="Resource_nai7r"]
+script = ExtResource("17_pmn3f")
+shake_frequency = 20.0
+randomness = 0.5
+property_targets = Array[ExtResource("10_hw176")]([SubResource("Resource_kgkn2")])
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_6dqc2"]
+script = ExtResource("17_pmn3f")
+shake_frequency = 20.0
+randomness = 0.5
+property_targets = Array[ExtResource("10_hw176")]([])
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_kgngp"]
+resource_local_to_scene = true
+script = ExtResource("12_hvqsx")
+effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_pnrhh"), SubResource("Resource_t2c5f"), SubResource("Resource_nai7r"), SubResource("Resource_6dqc2")])
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pmn3f"]
 size = Vector2(128, 129)
+
+[sub_resource type="Resource" id="Resource_b0p5q"]
+script = ExtResource("18_uhtl6")
+channel = 0
+animation_mode = 0
+position_offset = Vector3(0, 0, 0.5)
+use_local_space = true
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_pmn3f"]
+script = ExtResource("15_uhtl6")
+auto_start = false
+hold_on_stop = true
+property_targets = Array[ExtResource("10_hw176")]([])
+bound_enabled = false
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_i1uwv"]
+script = ExtResource("21_tf6rc")
+channel = 0
+animation_mode = 0
+screen_offset = Vector2(0.02, 0)
+offset_unit = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_gdhm0"]
+script = ExtResource("23_t2c5f")
+transform_target = 0
+shake_frequency = 20.0
+position_unit = 0
+position_strength = Vector2(5, 5)
+position_randomness = 0.5
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_ilhjh"]
+script = ExtResource("23_uhtl6")
+squash_amount = 0.3
+squash_axis = 0
+preserve_volume = true
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+to_position_in = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([])
+interrupt_siblings = false
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_ujn26"]
+resource_local_to_scene = true
+script = ExtResource("12_hvqsx")
+effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_b0p5q"), SubResource("Resource_pmn3f"), SubResource("Resource_i1uwv"), SubResource("Resource_gdhm0"), SubResource("Resource_ilhjh")])
 
 [node name="UtilitiesTest2dControl" type="Node2D" unique_id=1307771118]
 script = ExtResource("1_otmkk")
@@ -301,6 +524,7 @@ texture = ExtResource("2_e4141")
 
 [node name="Juice2D" type="Node" parent="TimeEffectTest/Sprite2D" unique_id=2101131853]
 script = ExtResource("3_7yy7b")
+recipe = SubResource("Resource_kgngp")
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="Interaction2D" type="Area2D" parent="TimeEffectTest" unique_id=107767263]
@@ -315,6 +539,7 @@ debug_enabled = false
 position = Vector2(-1, 0.5)
 shape = SubResource("RectangleShape2D_pmn3f")
 
-[node name="Juice2D" type="Node2D" parent="TimeEffectTest" unique_id=2109465282]
+[node name="Juice2D" type="Node" parent="TimeEffectTest/Interaction2D/Juice_CollisionShape2D" unique_id=370379669]
 script = ExtResource("3_7yy7b")
-trigger_on = 7
+recipe = SubResource("Resource_ujn26")
+metadata/_custom_type_script = "uid://b3ddpavrr7xwp"

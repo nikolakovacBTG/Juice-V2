@@ -14,8 +14,7 @@
 #       reorder, and inline sub-inspectors — all from a single component.
 # SYSTEM: Juice System (addons/Juice_V2/Editor/) — EDITOR ONLY.
 # DOES NOT: Handle non-array properties (those use the default inspector or
-#           other plugins like PropertyPickerPlugin). Does not handle chain_to
-#           arrays — those need a custom sibling-picker (Phase 3).
+#           other plugins like PropertyPickerPlugin).
 # =============================================================================
 
 @tool
@@ -34,10 +33,8 @@ const JUICE_BASE_CLASSES: Array[String] = [
 	"JuiceRecipe",
 ]
 
-# Property names to SKIP — they need specialized editors (Phase 3+).
-const SKIP_PROPERTIES: Array[String] = [
-	"chain_to",
-]
+# Preloaded script for the chain_to sibling picker editor.
+const ChainToArrayEditorScript := preload("res://addons/Juice_V2/Editor/ChainToArrayEditor.gd")
 
 
 # =============================================================================
@@ -71,34 +68,45 @@ func _parse_property(object: Object, type: Variant.Type, name: String,
 	if type != TYPE_ARRAY:
 		return false
 
-	# Skip properties that need specialized editors.
-	if name in SKIP_PROPERTIES:
-		return false
+	# chain_to uses a specialized sibling-picker editor instead of the
+	# generic JuiceArrayEditor. It shows only sibling effects from the
+	# same recipe in a multi-select popup.
+	if name == "chain_to" and object is JuiceEffectBase:
+		var chain_editor := ChainToArrayEditorScript.new()
+		add_property_editor(name, chain_editor)
+		return true
 
 	# Only intercept arrays with a typed resource hint.
-	# Two formats:
-	#   PROPERTY_HINT_ARRAY_TYPE (31): hint_string = "ClassName"
-	#   PROPERTY_HINT_TYPE_STRING (23): hint_string = "24/17:Class1,Class2,..."
+	# Two formats arrive via _get_property_list():
+	#   PROPERTY_HINT_ARRAY_TYPE: hint_string = "ClassName"
+	#     OR the composite format: "24/17:ClassName" (TYPE_OBJECT/RESOURCE_TYPE:class)
+	#   PROPERTY_HINT_TYPE_STRING: hint_string = "24/17:Class1,Class2,..."
+	# Both formats can contain the "24/17:" prefix. We normalize first.
 	var is_resource_array := false
+	var normalized_hint := hint_string
 
-	if hint_type == PROPERTY_HINT_ARRAY_TYPE and not hint_string.is_empty():
-		# Check if the class name references a Resource-derived class.
-		is_resource_array = _is_juice_resource_class(hint_string)
-	elif hint_type == PROPERTY_HINT_TYPE_STRING and ":" in hint_string:
-		# Parse "24/17:ClassName,..." format.
-		# The "24" is TYPE_OBJECT and "17" is PROPERTY_HINT_RESOURCE_TYPE.
+	# Strip the "TYPE_OBJECT/HINT:ClassName" prefix if present.
+	# This handles both PROPERTY_HINT_ARRAY_TYPE and PROPERTY_HINT_TYPE_STRING
+	# when _get_property_list() uses the composite format.
+	if ":" in hint_string:
 		var prefix: String = hint_string.get_slice(":", 0)
 		if prefix.begins_with(str(TYPE_OBJECT)):
-			var class_list: String = hint_string.get_slice(":", 1)
-			if not class_list.is_empty():
-				is_resource_array = true
+			normalized_hint = hint_string.get_slice(":", 1)
+
+	if (hint_type == PROPERTY_HINT_ARRAY_TYPE or hint_type == PROPERTY_HINT_TYPE_STRING) \
+			and not normalized_hint.is_empty():
+		# Check if the first class in the hint is a Juice Resource-derived class.
+		var first_class := normalized_hint.get_slice(",", 0)
+		is_resource_array = _is_juice_resource_class(first_class)
 
 	if not is_resource_array:
 		return false
 
 	# --- Intercepted: create our custom array editor ---
+	# Pass normalized_hint (prefix stripped) so JuiceArrayEditor can parse class names.
 	var editor := JuiceArrayEditor.new()
-	editor.configure(hint_string, hint_type, _get_type_color(hint_string))
+	var add_label := _get_add_button_label(normalized_hint, name)
+	editor.configure(normalized_hint, hint_type, _get_type_color(normalized_hint), add_label)
 	add_property_editor(name, editor)
 	return true
 
@@ -153,3 +161,36 @@ func _get_type_color(hint_string: String) -> Color:
 
 	# Default neutral strip for unrecognized types.
 	return Color(0.4, 0.4, 0.4)
+
+
+# Derive a context-appropriate label for the array's Add button.
+# Uses the property name first (most specific), then falls back to the
+# class family in the hint_string. This gives designers clear, action-oriented
+# buttons: "+ Add Juice", "+ Add Target", "+ Add Method", "+ Add Signal".
+func _get_add_button_label(hint_string: String, property_name: String) -> String:
+	# Property name is the most reliable discriminator.
+	match property_name:
+		"effects":
+			return "+ Add Juice"
+		"property_targets":
+			return "+ Add Target"
+		"methods":
+			return "+ Add Method"
+
+	# Fallback: check the class family in the hint_string.
+	var class_name_str: String
+	if ":" in hint_string:
+		class_name_str = hint_string.get_slice(":", 1).get_slice(",", 0)
+	else:
+		class_name_str = hint_string
+
+	if "PropertyTarget" in class_name_str:
+		return "+ Add Target"
+	if "JuiceEffect" in class_name_str:
+		return "+ Add Juice"
+	if "CallMethodEntry" in class_name_str:
+		return "+ Add Method"
+	if "SignalEmitEntry" in class_name_str:
+		return "+ Add Signal"
+
+	return "+ Add Element"
