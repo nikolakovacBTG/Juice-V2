@@ -38,12 +38,14 @@ extends JuiceControlTransformEffect
 # CONFIGURATION — typed vars (Vector2 types, only these live in concrete)
 # =============================================================================
 
-# --- POSITION ---
+## Custom starting position offset, applied relative to the node's natural position.
 var from_position: Vector2 = Vector2.ZERO
+## Custom ending position offset, applied relative to the node's natural position.
 var to_position: Vector2 = Vector2.ZERO
 
-# --- SCALE ---
+## Custom starting scale. When From Reference is Custom, the node scales from this value.
 var from_scale: Vector2 = Vector2.ZERO
+## Custom ending scale. When To Reference is Custom, the node scales toward this value.
 var to_scale: Vector2 = Vector2.ONE
 
 # --- PIVOT ---
