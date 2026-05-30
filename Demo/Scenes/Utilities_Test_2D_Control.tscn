@@ -296,24 +296,6 @@ effects = Array[ExtResource("9_8ai6r")]([SubResource("Resource_pnrhh"), SubResou
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pmn3f"]
 size = Vector2(128, 129)
 
-[sub_resource type="Resource" id="Resource_b0p5q"]
-script = ExtResource("18_uhtl6")
-channel = 0
-animation_mode = 0
-position_offset = Vector3(0, 0, 0.5)
-use_local_space = true
-trigger_behaviour = 1
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-duration_in = 0.3
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-chain_to = Array[ExtResource("9_8ai6r")]([])
-interrupt_siblings = false
-debug_enabled = false
-
 [sub_resource type="Resource" id="Resource_gdhm0"]
 script = ExtResource("23_t2c5f")
 transform_target = 0
@@ -348,6 +330,25 @@ transition_in = 4
 ease_in = 1
 hold_at_peak = 0.0
 chain_to = Array[ExtResource("9_8ai6r")]([SubResource("Resource_gdhm0")])
+interrupt_siblings = false
+chained_preroll = 0.0
+debug_enabled = false
+
+[sub_resource type="Resource" id="Resource_b0p5q"]
+script = ExtResource("18_uhtl6")
+channel = 0
+animation_mode = 0
+position_offset = Vector3(0, 0, 0.5)
+use_local_space = true
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+duration_in = 0.3
+transition_in = 4
+ease_in = 1
+hold_at_peak = 0.0
+chain_to = Array[ExtResource("9_8ai6r")]([SubResource("Resource_i1uwv"), SubResource("Resource_gdhm0")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
