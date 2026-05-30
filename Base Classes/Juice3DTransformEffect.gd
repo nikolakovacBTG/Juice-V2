@@ -97,13 +97,13 @@ enum PositionIn3D {
 # since Juice3DTransformEffect is 3D-only. No cross-domain vector ambiguity.
 # =============================================================================
 
+## Which transform channel to animate: Position, Rotation, or Scale.
 var transform_target: int = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
 		notify_property_list_changed()
 
-# Shared pivot mode for effects using simple pivot selection (Noise/Shake/Progress).
-# Transform3D effects use scale_pivot_mode + rotation_pivot_offset instead.
+## Pivot strategy for rotation and scale: Auto Center infers the visual center from AABB, Inherit uses the node origin, Custom uses a specified offset.
 var pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
@@ -116,19 +116,24 @@ func _init() -> void:
 ## Prevents double "Effect" GROUP duplication from Godot auto-combining the chain.
 var _leaf_owns_layout: bool = false
 
+## Where the starting value comes from: a Custom value, a Self snapshot, or a Target Node's live transform.
 var from_reference: int = TransformReference.SELF:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
 
+## Where the ending value comes from: a Custom value, a Self snapshot, or a Target Node's live transform.
 var to_reference: int = TransformReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
 
+## Node whose transform is used as the animation start value when From Reference is Target Node.
 var from_target_node: NodePath
+## Node whose transform is used as the animation end value when To Reference is Target Node.
 var to_target_node: NodePath
 
+## When to snapshot this node's From value: at animation Trigger, at scene Ready, or baked In Editor.
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		from_capture_at = value
@@ -138,6 +143,7 @@ var from_capture_at: int = CaptureAt.TRIGGER:
 			_do_update_editor_cache(null)
 		notify_property_list_changed()
 
+## When to snapshot this node's To value: at animation Trigger, at scene Ready, or baked In Editor.
 var to_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		to_capture_at = value
@@ -147,26 +153,27 @@ var to_capture_at: int = CaptureAt.TRIGGER:
 			_do_update_editor_cache(null)
 		notify_property_list_changed()
 
-# Position unit selector (int)
+## Unit for the custom From position: absolute World Units, or relative to Own Size or Parent Size.
 var from_position_in: int = PositionIn3D.WORLD_UNITS
+## Unit for the custom To position: absolute World Units, or relative to Own Size or Parent Size.
 var to_position_in: int = PositionIn3D.WORLD_UNITS
 
-# Rotation unit selector (3D only)
+## Whether custom rotation values are interpreted as Degrees or Radians.
 var rotation_unit: int = RotationUnit.DEGREES:
 	set(value):
 		rotation_unit = value
 		notify_property_list_changed()
 
-# Scale pivot mode — uses PivotMode enum (same AUTO_CENTER/INHERIT/CUSTOM values)
+## Pivot strategy for scale: Auto Center infers from AABB, Inherit uses the node origin, Custom uses scale_custom_pivot.
 var scale_pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		scale_pivot_mode = value
 		notify_property_list_changed()
 
-# Rotation pivot: offset from node origin in local space (Vector3, always 3D)
+## Local-space offset from the node origin used as the rotation pivot point.
 var rotation_pivot_offset: Vector3 = Vector3.ZERO
 
-# Scale custom pivot in local space (Vector3, always 3D)
+## Local-space custom pivot for scale, used when Scale Pivot Mode is Custom.
 var scale_custom_pivot: Vector3 = Vector3.ZERO
 
 

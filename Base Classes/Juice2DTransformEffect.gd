@@ -91,6 +91,7 @@ enum PositionIn {
 # CONFIGURATION — non-typed, shared by all 2D transform effects
 # =============================================================================
 
+## Which transform channel to animate: Position, Rotation, or Scale.
 var transform_target: int = TransformTarget.POSITION:
 	set(value):
 		transform_target = value
@@ -105,19 +106,24 @@ func _init() -> void:
 ## _get_property_list() overrides in the inheritance chain.
 var _leaf_owns_layout: bool = false
 
+## Where the starting value comes from: a Custom value, a Self snapshot, or a Target Node's live transform.
 var from_reference: int = TransformReference.SELF:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
 
+## Where the ending value comes from: a Custom value, a Self snapshot, or a Target Node's live transform.
 var to_reference: int = TransformReference.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
 
+## Node whose transform is used as the animation start value when From Reference is Target Node.
 var from_target_node: NodePath
+## Node whose transform is used as the animation end value when To Reference is Target Node.
 var to_target_node: NodePath
 
+## When to snapshot this node's From value: at animation Trigger, at scene Ready, or baked In Editor.
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		from_capture_at = value
@@ -127,6 +133,7 @@ var from_capture_at: int = CaptureAt.TRIGGER:
 			_do_update_editor_cache(null)
 		notify_property_list_changed()
 
+## When to snapshot this node's To value: at animation Trigger, at scene Ready, or baked In Editor.
 var to_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		to_capture_at = value
@@ -136,15 +143,17 @@ var to_capture_at: int = CaptureAt.TRIGGER:
 			_do_update_editor_cache(null)
 		notify_property_list_changed()
 
-# Rotation — float, same in 2D and Control
+## Custom starting rotation offset in degrees, added to the node's natural rotation.
 var from_rotation_degrees: float = 0.0
+## Custom ending rotation offset in degrees, added to the node's natural rotation.
 var to_rotation_degrees: float = 15.0
 
-# Position unit selector (int, same in 2D and Control)
+## Unit for the custom From position: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var from_position_in: int = PositionIn.OWN_SIZE
+## Unit for the custom To position: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var to_position_in: int = PositionIn.OWN_SIZE
 
-# Pivot mode (int)
+## Pivot strategy for rotation and scale: Auto Center infers the visual center, Inherit uses the node origin, Custom uses a specified offset.
 var pivot_mode: int = PivotMode.AUTO_CENTER:
 	set(value):
 		pivot_mode = value
