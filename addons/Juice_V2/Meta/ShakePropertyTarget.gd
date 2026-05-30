@@ -60,11 +60,13 @@ var amplitude_aabb: AABB = AABB(Vector3(5.0, 5.0, 5.0), Vector3(5.0, 5.0, 5.0))
 var flip_threshold: float = 0.0
 
 # --- Reference model for discrete types (State A / State B) ---
+## How to determine State A: Custom (typed field), Self (capture from node), or Target Node (live read).
 var a_reference: int = ReferenceSource.CUSTOM:
 	set(value):
 		a_reference = value
 		notify_property_list_changed()
 
+## When Self reference is used for State A: capture at Trigger, Ready, or In Editor.
 var a_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		a_capture_at = value
@@ -72,13 +74,16 @@ var a_capture_at: int = CaptureAt.TRIGGER:
 			_editor_cache_a = null
 		notify_property_list_changed()
 
+## Path to the node whose property value is read live as State A (Target Node mode).
 var a_target_node: NodePath = NodePath()
 
+## How to determine State B: Custom (typed field), Self (capture from node), or Target Node (live read).
 var b_reference: int = ReferenceSource.CUSTOM:
 	set(value):
 		b_reference = value
 		notify_property_list_changed()
 
+## When Self reference is used for State B: capture at Trigger, Ready, or In Editor.
 var b_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		b_capture_at = value
@@ -86,6 +91,7 @@ var b_capture_at: int = CaptureAt.TRIGGER:
 			_editor_cache_b = null
 		notify_property_list_changed()
 
+## Path to the node whose property value is read live as State B (Target Node mode).
 var b_target_node: NodePath = NodePath()
 
 # --- Discrete typed backing vars (State A / State B) ---
