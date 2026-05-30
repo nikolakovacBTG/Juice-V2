@@ -143,7 +143,9 @@ var pivot_offset: Vector2 = Vector2.ZERO
 ## vignette_scale: stretches the ellipse. (1,1) = circle, (2,1) = wide.
 ## vignette_softness: falloff steepness. Higher = sharper edge. Typical: 0.5–3.0.
 var use_vignette:      bool    = false
+## Stretches the vignette ellipse per axis. (1,1) = circle, (2,1) = wide.
 var vignette_scale:    Vector2 = Vector2.ONE
+## Falloff steepness of the vignette mask. Higher = sharper edge. Typical: 0.5–3.0.
 var vignette_softness: float   = 1.0
 
 # --- Shake-mode parameters (shown only when animation_mode == SHAKE) ---

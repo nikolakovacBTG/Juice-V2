@@ -83,6 +83,7 @@ var hold_on_stop: bool = true
 # --- Rate vars (shown per target via _get_property_list) ---
 ## Units per second of position drift.
 var position_rate: Vector2 = Vector2(50.0, 0.0)
+## Unit for position rate: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value
