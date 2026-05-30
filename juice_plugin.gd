@@ -16,7 +16,7 @@
 @tool
 extends EditorPlugin
 
-const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
+const DockScene := preload("res://addons/Juice_V2/Editor/JuiceTransportDock.tscn")
 const InspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceEditorInspectorPlugin.gd")
 const PropertyPickerPluginScript := preload("res://addons/Juice_V2/Editor/PropertyPickerPlugin.gd")
 const ArrayInspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceArrayInspectorPlugin.gd")
