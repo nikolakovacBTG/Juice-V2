@@ -13,8 +13,8 @@
 #       overlay fills that gap with a visually matching implementation built
 #       entirely from editor theme tokens.
 # SYSTEM: Juice Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Handle click events — mouse_filter = PASS lets all interaction
-#           reach the EditorProperty's value widgets underneath.
+# DOES NOT: Handle click events — covers only the label area (left side)
+#           so value widgets (dropdowns, checkboxes) remain fully clickable.
 # =============================================================================
 
 @tool
@@ -56,19 +56,23 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
-		# EditorProperty's layout positions children in the value area (right
-		# side). Override to cover the full property row so the tooltip appears
-		# when hovering anywhere — including the label area on the left.
+		# EditorProperty positions children in the value area (right side).
+		# Override to cover only the LABEL area (left side) so tooltips appear
+		# on hover without blocking value widgets (dropdowns, checkboxes, etc.).
 		call_deferred("_override_layout")
 
 
-# Reposition to cover the full parent EditorProperty area.
-# Deferred to run after the parent's layout pass completes.
+# Reposition to cover only the label area of the parent EditorProperty.
+# The label area occupies roughly the left 40% (EditorInspector default split).
+# Value widgets (right side) remain fully clickable.
 func _override_layout() -> void:
 	var parent_ctrl := get_parent() as Control
 	if parent_ctrl and is_instance_valid(parent_ctrl):
 		position = Vector2.ZERO
-		size = parent_ctrl.size
+		# Cover only the label area — approximately 40% of the row width.
+		# This matches EditorInspector's default name_split_ratio.
+		var label_width := parent_ctrl.size.x * 0.4
+		size = Vector2(label_width, parent_ctrl.size.y)
 
 # =============================================================================
 # TOOLTIP RENDERING
