@@ -1,26 +1,27 @@
 [gd_scene format=3 uid="uid://lfr1duh1e655"]
 
 [ext_resource type="Theme" uid="uid://dhrnlrjwew8km" path="res://Demo/UI Themes/Juice_theme.tres" id="1_theme"]
-[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="2_juicectl"]
-[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="3_juice2d"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="4_effectbase"]
-[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="5_ctlrecipe"]
-[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="6_2drecipe"]
-[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="7_transformctl"]
-[ext_resource type="Script" uid="uid://7hfqcu4nr8co" path="res://addons/Juice_V1/Control/ShakeControlJuiceEffect.gd" id="8_shakectl"]
-[ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="9_squashctl"]
-[ext_resource type="Script" uid="uid://rht7dgq1jthh" path="res://addons/Juice_V1/Control/AppearanceControlJuiceEffect.gd" id="10_appearctl"]
-[ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V1/2D/Transform2DJuiceEffect.gd" id="11_transform2d"]
-[ext_resource type="Script" uid="uid://ciokvqqkv3o0k" path="res://addons/Juice_V1/2D/Shake2DJuiceEffect.gd" id="12_shake2d"]
-[ext_resource type="Script" uid="uid://bwkruqi6chuyl" path="res://addons/Juice_V1/2D/SquashStretch2DJuiceEffect.gd" id="13_squash2d"]
-[ext_resource type="Script" uid="uid://05v3wpe3fa01" path="res://addons/Juice_V1/2D/Appearance2DJuiceEffect.gd" id="14_appear2d"]
-[ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V1/Utilities/Interaction2DJuiceUtility.gd" id="15_interaction2d"]
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V2/Base Classes/JuiceControl.gd" id="2_juicectl"]
+[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V2/Base Classes/Juice2D.gd" id="3_juice2d"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="4_effectbase"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V2/Base Classes/JuiceControlRecipe.gd" id="5_ctlrecipe"]
+[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V2/Base Classes/Juice2DRecipe.gd" id="6_2drecipe"]
+[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="7_transformctl"]
+[ext_resource type="Script" uid="uid://7hfqcu4nr8co" path="res://addons/Juice_V2/Control/ShakeControlJuiceEffect.gd" id="8_shakectl"]
+[ext_resource type="Script" uid="uid://bi7gtxf42kbmh" path="res://addons/Juice_V2/Control/SquashStretchControlJuiceEffect.gd" id="9_squashctl"]
+[ext_resource type="Script" uid="uid://rht7dgq1jthh" path="res://addons/Juice_V2/Control/AppearanceControlJuiceEffect.gd" id="10_appearctl"]
+[ext_resource type="Script" uid="uid://davl33rdi1jg7" path="res://addons/Juice_V2/2D/Transform2DJuiceEffect.gd" id="11_transform2d"]
+[ext_resource type="Script" uid="uid://ciokvqqkv3o0k" path="res://addons/Juice_V2/2D/Shake2DJuiceEffect.gd" id="12_shake2d"]
+[ext_resource type="Script" uid="uid://bwkruqi6chuyl" path="res://addons/Juice_V2/2D/SquashStretch2DJuiceEffect.gd" id="13_squash2d"]
+[ext_resource type="Script" uid="uid://05v3wpe3fa01" path="res://addons/Juice_V2/2D/Appearance2DJuiceEffect.gd" id="14_appear2d"]
+[ext_resource type="Script" uid="uid://dnsdipnvhj3u0" path="res://addons/Juice_V2/Utilities/Interaction2DJuiceUtility.gd" id="15_interaction2d"]
 [ext_resource type="Texture2D" uid="uid://ddm1tuqpus5bt" path="res://Textures/Logo/Juice Logo Separated.png" id="16_logo"]
 
-[sub_resource type="Resource" id="c1_shake"]
+[sub_resource type="Resource" id="Resource_ydsvv"]
 script = ExtResource("8_shakectl")
 transform_target = 0
 shake_frequency = 20.0
+position_unit = 0
 position_strength = Vector2(8, 8)
 position_randomness = 0.5
 trigger_behaviour = 1
@@ -36,7 +37,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://7hfqcu4nr8co"
 
-[sub_resource type="Resource" id="c1_squash"]
+[sub_resource type="Resource" id="Resource_b5pkn"]
 script = ExtResource("9_squashctl")
 squash_amount = 0.3
 squash_axis = 1
@@ -46,6 +47,15 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 pivot_mode = 0
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+to_position_in = 1
 duration_in = 0.2
 transition_in = 4
 ease_in = 1
@@ -55,7 +65,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bi7gtxf42kbmh"
 
-[sub_resource type="Resource" id="c1_flash"]
+[sub_resource type="Resource" id="Resource_panqw"]
 script = ExtResource("10_appearctl")
 effect_type = 1
 trigger_behaviour = 1
@@ -76,7 +86,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://rht7dgq1jthh"
 
-[sub_resource type="Resource" id="c1_punch"]
+[sub_resource type="Resource" id="Resource_hd7v1"]
 script = ExtResource("7_transformctl")
 transform_target = 0
 trigger_behaviour = 1
@@ -84,29 +94,27 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 2
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 0.2)
-_editor_cached_position = Vector2(0, 37)
-_editor_cached_rotation = 0.0
-_editor_cached_scale = Vector2(1, 1)
 duration_in = 2.0
 transition_in = 3
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_effectbase")]([SubResource("c1_shake"), SubResource("c1_squash"), SubResource("c1_flash")])
+chain_to = Array[ExtResource("4_effectbase")]([SubResource("Resource_ydsvv"), SubResource("Resource_b5pkn"), SubResource("Resource_panqw")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="c1_recipe"]
+[sub_resource type="Resource" id="Resource_8m24t"]
+resource_local_to_scene = true
 script = ExtResource("5_ctlrecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("c1_punch"), SubResource("c1_shake"), SubResource("c1_squash"), SubResource("c1_flash")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_hd7v1"), SubResource("Resource_ydsvv"), SubResource("Resource_b5pkn"), SubResource("Resource_panqw")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="Resource_ydsvv"]
+[sub_resource type="Resource" id="Resource_o3gbr"]
 script = ExtResource("7_transformctl")
 transform_target = 0
 trigger_behaviour = 1
@@ -114,13 +122,10 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 2
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0.1, 0)
-_editor_cached_position = Vector2(0, 145)
-_editor_cached_rotation = 0.0
-_editor_cached_scale = Vector2(1, 1)
 duration_in = 0.3
 transition_in = 4
 ease_in = 1
@@ -130,12 +135,13 @@ interrupt_siblings = false
 debug_enabled = true
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="c2_recipe"]
+[sub_resource type="Resource" id="Resource_id18v"]
+resource_local_to_scene = true
 script = ExtResource("5_ctlrecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_ydsvv")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_o3gbr")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="c3_eff1"]
+[sub_resource type="Resource" id="Resource_yg0rb"]
 script = ExtResource("7_transformctl")
 transform_target = 0
 trigger_behaviour = 1
@@ -143,13 +149,10 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 2
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0.1, 0)
-_editor_cached_position = Vector2(0, 253)
-_editor_cached_rotation = 0.0
-_editor_cached_scale = Vector2(1, 1)
 duration_in = 0.25
 transition_in = 3
 ease_in = 1
@@ -159,7 +162,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="c3_eff2"]
+[sub_resource type="Resource" id="Resource_mnvrd"]
 script = ExtResource("7_transformctl")
 transform_target = 0
 trigger_behaviour = 1
@@ -167,13 +170,10 @@ start_delay = 2.52
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 2
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 0.3)
-_editor_cached_position = Vector2(0, 253)
-_editor_cached_rotation = 0.0
-_editor_cached_scale = Vector2(1, 1)
 duration_in = 0.25
 transition_in = 3
 ease_in = 1
@@ -183,12 +183,13 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="c3_recipe"]
+[sub_resource type="Resource" id="Resource_h11fs"]
+resource_local_to_scene = true
 script = ExtResource("5_ctlrecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("c3_eff1"), SubResource("c3_eff2")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_yg0rb"), SubResource("Resource_mnvrd")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
-[sub_resource type="Resource" id="c4_tint1"]
+[sub_resource type="Resource" id="Resource_4so27"]
 script = ExtResource("10_appearctl")
 effect_type = 0
 trigger_behaviour = 1
@@ -210,7 +211,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://rht7dgq1jthh"
 
-[sub_resource type="Resource" id="c4_tint2"]
+[sub_resource type="Resource" id="Resource_effcr"]
 script = ExtResource("10_appearctl")
 effect_type = 0
 trigger_behaviour = 1
@@ -232,7 +233,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://rht7dgq1jthh"
 
-[sub_resource type="Resource" id="c4_primary"]
+[sub_resource type="Resource" id="Resource_e820s"]
 script = ExtResource("7_transformctl")
 transform_target = 0
 trigger_behaviour = 1
@@ -240,7 +241,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0.3, 0)
@@ -248,24 +249,26 @@ duration_in = 0.2
 transition_in = 3
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_effectbase")]([SubResource("c4_tint1"), SubResource("c4_tint2")])
+chain_to = Array[ExtResource("4_effectbase")]([SubResource("Resource_4so27"), SubResource("Resource_effcr")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="c4_recipe"]
+[sub_resource type="Resource" id="Resource_usxfg"]
+resource_local_to_scene = true
 script = ExtResource("5_ctlrecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("c4_primary"), SubResource("c4_tint1"), SubResource("c4_tint2")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_e820s"), SubResource("Resource_4so27"), SubResource("Resource_effcr")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ydsvv"]
 size = Vector2(2041.6669, 650.0002)
 
-[sub_resource type="Resource" id="d1_shake"]
+[sub_resource type="Resource" id="Resource_ugalv"]
 script = ExtResource("12_shake2d")
 transform_target = 0
 shake_frequency = 20.0
+position_unit = 0
 position_strength = Vector2(8, 8)
 position_randomness = 0.5
 trigger_behaviour = 1
@@ -281,7 +284,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://ciokvqqkv3o0k"
 
-[sub_resource type="Resource" id="d1_squash"]
+[sub_resource type="Resource" id="Resource_durga"]
 script = ExtResource("13_squash2d")
 squash_amount = 0.3
 squash_axis = 1
@@ -290,6 +293,15 @@ trigger_behaviour = 1
 start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
+transform_target = 0
+trigger_behaviour = 1
+start_delay = 0.0
+crossfade_time = 0.0
+loop_count = 1
+from_reference = 1
+from_capture_at = 0
+to_reference = 0
+to_position_in = 1
 duration_in = 0.2
 transition_in = 4
 ease_in = 1
@@ -299,7 +311,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bwkruqi6chuyl"
 
-[sub_resource type="Resource" id="d1_flash"]
+[sub_resource type="Resource" id="Resource_rt04v"]
 script = ExtResource("14_appear2d")
 effect_type = 1
 trigger_behaviour = 1
@@ -320,7 +332,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
 
-[sub_resource type="Resource" id="d1_punch"]
+[sub_resource type="Resource" id="Resource_cbttl"]
 script = ExtResource("11_transform2d")
 transform_target = 0
 trigger_behaviour = 1
@@ -328,7 +340,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(1, 0)
@@ -336,21 +348,22 @@ duration_in = 2.0
 transition_in = 3
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_effectbase")]([SubResource("d1_shake"), SubResource("d1_squash"), SubResource("d1_flash")])
+chain_to = Array[ExtResource("4_effectbase")]([SubResource("Resource_ugalv"), SubResource("Resource_durga"), SubResource("Resource_rt04v")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d1_recipe"]
+[sub_resource type="Resource" id="Resource_pl0ro"]
+resource_local_to_scene = true
 script = ExtResource("6_2drecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("d1_punch"), SubResource("d1_shake"), SubResource("d1_squash"), SubResource("d1_flash")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_cbttl"), SubResource("Resource_ugalv"), SubResource("Resource_durga"), SubResource("Resource_rt04v")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b5pkn"]
 size = Vector2(2091.6675, 641.6669)
 
-[sub_resource type="Resource" id="d2_fade"]
+[sub_resource type="Resource" id="Resource_go4g5"]
 script = ExtResource("14_appear2d")
 effect_type = 1
 trigger_behaviour = 1
@@ -371,7 +384,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
 
-[sub_resource type="Resource" id="d2_scale"]
+[sub_resource type="Resource" id="Resource_w5uhm"]
 script = ExtResource("11_transform2d")
 transform_target = 2
 trigger_behaviour = 1
@@ -379,7 +392,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_scale = Vector2(1.5, 1.5)
 pivot_mode = 0
@@ -392,7 +405,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d2_slide"]
+[sub_resource type="Resource" id="Resource_fuc60"]
 script = ExtResource("11_transform2d")
 transform_target = 0
 trigger_behaviour = 1
@@ -400,7 +413,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(-120, 0)
@@ -408,21 +421,22 @@ duration_in = 0.5
 transition_in = 3
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_effectbase")]([SubResource("d2_fade"), SubResource("d2_scale")])
+chain_to = Array[ExtResource("4_effectbase")]([SubResource("Resource_go4g5"), SubResource("Resource_w5uhm")])
 interrupt_siblings = false
 chained_preroll = 0.1
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d2_recipe"]
+[sub_resource type="Resource" id="Resource_cm41f"]
+resource_local_to_scene = true
 script = ExtResource("6_2drecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("d2_slide"), SubResource("d2_fade"), SubResource("d2_scale")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_fuc60"), SubResource("Resource_go4g5"), SubResource("Resource_w5uhm")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_panqw"]
 size = Vector2(2033.3334, 633.3334)
 
-[sub_resource type="Resource" id="d3_eff1"]
+[sub_resource type="Resource" id="Resource_e8tji"]
 script = ExtResource("11_transform2d")
 transform_target = 0
 trigger_behaviour = 1
@@ -430,7 +444,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(60, 0)
@@ -443,7 +457,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d3_eff2"]
+[sub_resource type="Resource" id="Resource_ho146"]
 script = ExtResource("11_transform2d")
 transform_target = 0
 trigger_behaviour = 1
@@ -451,7 +465,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(0, 60)
@@ -464,15 +478,16 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d3_recipe"]
+[sub_resource type="Resource" id="Resource_288lu"]
+resource_local_to_scene = true
 script = ExtResource("6_2drecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("d3_eff1"), SubResource("d3_eff2")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_e8tji"), SubResource("Resource_ho146")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_hd7v1"]
 size = Vector2(1500, 600)
 
-[sub_resource type="Resource" id="d4_tint1"]
+[sub_resource type="Resource" id="Resource_nspws"]
 script = ExtResource("14_appear2d")
 effect_type = 0
 trigger_behaviour = 1
@@ -494,7 +509,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
 
-[sub_resource type="Resource" id="d4_tint2"]
+[sub_resource type="Resource" id="Resource_msmsa"]
 script = ExtResource("14_appear2d")
 effect_type = 0
 trigger_behaviour = 1
@@ -516,7 +531,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://05v3wpe3fa01"
 
-[sub_resource type="Resource" id="d4_primary"]
+[sub_resource type="Resource" id="Resource_hlc31"]
 script = ExtResource("11_transform2d")
 transform_target = 0
 trigger_behaviour = 1
@@ -524,7 +539,7 @@ start_delay = 0.0
 crossfade_time = 0.0
 loop_count = 1
 from_reference = 1
-capture_at = 0
+from_capture_at = 0
 to_reference = 0
 to_position_in = 1
 to_position = Vector2(30, 0)
@@ -532,15 +547,16 @@ duration_in = 0.2
 transition_in = 3
 ease_in = 1
 hold_at_peak = 0.0
-chain_to = Array[ExtResource("4_effectbase")]([SubResource("d4_tint1"), SubResource("d4_tint2")])
+chain_to = Array[ExtResource("4_effectbase")]([SubResource("Resource_nspws"), SubResource("Resource_msmsa")])
 interrupt_siblings = false
 chained_preroll = 0.0
 debug_enabled = false
 metadata/_custom_type_script = "uid://davl33rdi1jg7"
 
-[sub_resource type="Resource" id="d4_recipe"]
+[sub_resource type="Resource" id="Resource_l5e0w"]
+resource_local_to_scene = true
 script = ExtResource("6_2drecipe")
-effects = Array[ExtResource("4_effectbase")]([SubResource("d4_primary"), SubResource("d4_tint1"), SubResource("d4_tint2")])
+effects = Array[ExtResource("4_effectbase")]([SubResource("Resource_hlc31"), SubResource("Resource_nspws"), SubResource("Resource_msmsa")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [node name="MultipleChaining_Review" type="Node2D" unique_id=2062285973]
@@ -590,7 +606,7 @@ text = "PUNCH (click me)"
 script = ExtResource("2_juicectl")
 trigger_on = 0
 trigger_behaviour = 0
-recipe = SubResource("c1_recipe")
+recipe = SubResource("Resource_8m24t")
 debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
@@ -609,7 +625,7 @@ script = ExtResource("2_juicectl")
 mode = 1
 trigger_on = 0
 trigger_behaviour = 0
-recipe = SubResource("c2_recipe")
+recipe = SubResource("Resource_id18v")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Case3Label" type="Label" parent="UILayer/Root/MarginContainer/ScrollContainer/VBoxOuter" unique_id=2119269212]
@@ -626,7 +642,7 @@ text = "DUAL MOVE (click me)"
 script = ExtResource("2_juicectl")
 trigger_on = 0
 trigger_behaviour = 0
-recipe = SubResource("c3_recipe")
+recipe = SubResource("Resource_h11fs")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="Case4Label" type="Label" parent="UILayer/Root/MarginContainer/ScrollContainer/VBoxOuter" unique_id=1016521643]
@@ -657,7 +673,7 @@ script = ExtResource("2_juicectl")
 mode = 1
 seq_stagger_delay = 0.88
 trigger_behaviour = 0
-recipe = SubResource("c4_recipe")
+recipe = SubResource("Resource_usxfg")
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
 
 [node name="RightHalfLabel" type="Label" parent="UILayer" unique_id=173797081]
@@ -729,7 +745,7 @@ trigger_source = 1
 trigger_source_path = NodePath("../Interaction2DJuiceUtility")
 trigger_on = 0
 trigger_behaviour = 0
-recipe = SubResource("d1_recipe")
+recipe = SubResource("Resource_pl0ro")
 debug_enabled = true
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
@@ -755,7 +771,7 @@ shape = SubResource("RectangleShape2D_b5pkn")
 script = ExtResource("3_juice2d")
 trigger_on = 10
 trigger_behaviour = 0
-recipe = SubResource("d2_recipe")
+recipe = SubResource("Resource_cm41f")
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="Sprite_C3" type="Sprite2D" parent="." unique_id=1628580074]
@@ -780,7 +796,7 @@ shape = SubResource("RectangleShape2D_panqw")
 script = ExtResource("3_juice2d")
 trigger_on = 10
 trigger_behaviour = 0
-recipe = SubResource("d3_recipe")
+recipe = SubResource("Resource_288lu")
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="SeqGroup" type="Node2D" parent="." unique_id=558940309]
@@ -808,7 +824,7 @@ target_scope = 1
 sequence_type = 3
 trigger_on = 10
 trigger_behaviour = 0
-recipe = SubResource("d4_recipe")
+recipe = SubResource("Resource_l5e0w")
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="SeqSprite2" type="Sprite2D" parent="SeqGroup" unique_id=1734192596]

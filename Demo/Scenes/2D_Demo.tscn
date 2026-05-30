@@ -1,14 +1,13 @@
 [gd_scene format=4 uid="uid://0jn7axm6pb17"]
 
 [ext_resource type="Texture2D" uid="uid://0txcrr6plqav" path="res://Textures/Logo/slice4.png" id="1_va5jn"]
-[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V1/Base Classes/Juice2D.gd" id="2_w2ktn"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="3_rrb6h"]
-[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V1/Base Classes/Juice2DRecipe.gd" id="5_n8ykl"]
+[ext_resource type="Script" uid="uid://b3ddpavrr7xwp" path="res://addons/Juice_V2/Base Classes/Juice2D.gd" id="2_w2ktn"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="3_rrb6h"]
+[ext_resource type="Script" uid="uid://b1npjagjbb8nb" path="res://addons/Juice_V2/Base Classes/Juice2DRecipe.gd" id="5_n8ykl"]
 [ext_resource type="Texture2D" uid="uid://c2h0wt5po6fse" path="res://Textures/Kenney/spritesheet-tiles-default.png" id="6_n8ykl"]
 [ext_resource type="Script" uid="uid://s2n3dgutlx06" path="res://addons/Juice_V2/2D/Noise2DJuiceEffect.gd" id="6_wwan6"]
-[ext_resource type="Script" uid="uid://05v3wpe3fa01" path="res://addons/Juice_V1/2D/Appearance2DJuiceEffect.gd" id="7_cq53s"]
 [ext_resource type="Texture2D" uid="uid://cqy0csvxav4m2" path="res://Textures/Kenney/spritesheet-characters-default.png" id="7_naj6s"]
-[ext_resource type="Script" uid="uid://bso8kvx4rdnkp" path="res://addons/Juice_V1/2D/ProgressTransform2DJuiceEffect.gd" id="8_6yyf2"]
+[ext_resource type="Script" uid="uid://bso8kvx4rdnkp" path="res://addons/Juice_V2/2D/ProgressTransform2DJuiceEffect.gd" id="8_6yyf2"]
 [ext_resource type="Script" uid="uid://dol8h7bmy2sca" path="res://Demo/Scripts/CharacterController2D.gd" id="9_4nq8g"]
 [ext_resource type="Texture2D" uid="uid://bgv1hww8ounvj" path="res://Textures/Logo/slice5.png" id="9_cq53s"]
 [ext_resource type="PackedScene" uid="uid://hw8yytg8gv7h" path="res://Demo/Prefabs/mouse_cursor.tscn" id="11_yssye"]
@@ -47,41 +46,6 @@ metadata/_custom_type_script = "uid://s2n3dgutlx06"
 resource_local_to_scene = true
 script = ExtResource("5_n8ykl")
 effects = Array[ExtResource("3_rrb6h")]([SubResource("Resource_yssye")])
-metadata/_custom_type_script = "uid://b1npjagjbb8nb"
-
-[sub_resource type="Resource" id="Resource_cq53s"]
-script = ExtResource("7_cq53s")
-effect_type = 3
-trigger_behaviour = 3
-start_delay = 0.0
-crossfade_time = 0.0
-loop_count = 1
-flicker_mode = 1
-flicker_min = 0.0
-flicker_max = 1.895
-hard_flicker = true
-flicker_rate = 2.9
-outline_flicker_target = 0
-from_width = 0.0
-to_reference = 0
-outline_color = Color(0.99999994, 0.17650872, 0.74258727, 1)
-outline_width = 5.2
-duration_in = 1.0
-transition_in = 4
-ease_in = 1
-hold_at_peak = 0.0
-duration_out = 0.3
-transition_out = 4
-ease_out = 0
-chain_to = Array[ExtResource("3_rrb6h")]([])
-interrupt_siblings = false
-debug_enabled = false
-metadata/_custom_type_script = "uid://05v3wpe3fa01"
-
-[sub_resource type="Resource" id="Resource_i4foe"]
-resource_local_to_scene = true
-script = ExtResource("5_n8ykl")
-effects = Array[ExtResource("3_rrb6h")]([SubResource("Resource_cq53s")])
 metadata/_custom_type_script = "uid://b1npjagjbb8nb"
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_naj6s"]
@@ -941,13 +905,6 @@ texture = ExtResource("1_va5jn")
 [node name="Juice2D2" type="Node" parent="Sprite2D" unique_id=706600055]
 script = ExtResource("2_w2ktn")
 recipe = SubResource("Resource_6yyf2")
-metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
-
-[node name="Juice2D" type="Node" parent="Sprite2D" unique_id=1881313583]
-script = ExtResource("2_w2ktn")
-trigger_behaviour = 3
-recipe = SubResource("Resource_i4foe")
-debug_enabled = true
 metadata/_custom_type_script = "uid://b3ddpavrr7xwp"
 
 [node name="Tile Map Layers" type="Node2D" parent="." unique_id=974471884]

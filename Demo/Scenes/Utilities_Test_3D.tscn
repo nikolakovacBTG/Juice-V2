@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://cdjlivq4ti142"]
 
 [ext_resource type="Script" uid="uid://bvd3y7wgqsun2" path="res://Demo/Scripts/UtilityTester.gd" id="1_48pno"]
-[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V1/Base Classes/Juice3D.gd" id="2_60rrg"]
+[ext_resource type="Script" uid="uid://b27b1xgkm8qyo" path="res://addons/Juice_V2/Base Classes/Juice3D.gd" id="2_60rrg"]
 [ext_resource type="Resource" uid="uid://cmhjh1jrag6an" path="res://Demo/Scenes/TestRecipe3D.tres" id="3_n7frd"]
-[ext_resource type="Script" uid="uid://dvkjxxop4l1yt" path="res://addons/Juice_V1/Utilities/SoftTrigger3DJuiceUtility.gd" id="4_3i5f5"]
-[ext_resource type="Script" uid="uid://c27wfpddhgwpp" path="res://addons/Juice_V1/Utilities/Interaction3DJuiceUtility.gd" id="4_jjlsl"]
+[ext_resource type="Script" uid="uid://dvkjxxop4l1yt" path="res://addons/Juice_V2/Utilities/SoftTrigger3DJuiceUtility.gd" id="4_3i5f5"]
+[ext_resource type="Script" uid="uid://c27wfpddhgwpp" path="res://addons/Juice_V2/Utilities/Interaction3DJuiceUtility.gd" id="4_jjlsl"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_48pno"]
 

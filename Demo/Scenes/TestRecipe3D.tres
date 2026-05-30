@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="Juice3DRecipe" format=3 uid="uid://cmhjh1jrag6an"]
 
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="1_8mp3t"]
-[ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V1/3D/Transform3DJuiceEffect.gd" id="2_qwlea"]
-[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V1/Base Classes/Juice3DRecipe.gd" id="3_jar3f"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="1_8mp3t"]
+[ext_resource type="Script" uid="uid://88wafaejhpwm" path="res://addons/Juice_V2/3D/Transform3DJuiceEffect.gd" id="2_qwlea"]
+[ext_resource type="Script" uid="uid://cnyhp6eiv4xb1" path="res://addons/Juice_V2/Base Classes/Juice3DRecipe.gd" id="3_jar3f"]
 
 [sub_resource type="Resource" id="Resource_xrw5q"]
 script = ExtResource("2_qwlea")

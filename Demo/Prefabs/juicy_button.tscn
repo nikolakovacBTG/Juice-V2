@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://cdlx8fqc3ne7y"]
 
-[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V1/Base Classes/JuiceControl.gd" id="1_mvuuv"]
-[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V1/Base Classes/JuiceEffectBase.gd" id="2_qh8qc"]
-[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="3_0nnn1"]
-[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V1/Base Classes/JuiceControlRecipe.gd" id="4_mguof"]
+[ext_resource type="Script" uid="uid://c7dye3orhby4j" path="res://addons/Juice_V2/Base Classes/JuiceControl.gd" id="1_mvuuv"]
+[ext_resource type="Script" uid="uid://dvpg4v72tw5cp" path="res://addons/Juice_V2/Base Classes/JuiceEffectBase.gd" id="2_qh8qc"]
+[ext_resource type="Script" uid="uid://bf43e3idc17tt" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="3_0nnn1"]
+[ext_resource type="Script" uid="uid://cdo7q0o7gfhi" path="res://addons/Juice_V2/Base Classes/JuiceControlRecipe.gd" id="4_mguof"]
 
-[sub_resource type="Resource" id="Resource_xqxsm"]
+[sub_resource type="Resource" id="Resource_mvuuv"]
 script = ExtResource("3_0nnn1")
 transform_target = 2
 trigger_behaviour = 3
@@ -35,7 +35,7 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_mvuuv"]
+[sub_resource type="Resource" id="Resource_qh8qc"]
 script = ExtResource("3_0nnn1")
 transform_target = 1
 trigger_behaviour = 3
@@ -65,9 +65,10 @@ interrupt_siblings = false
 debug_enabled = false
 metadata/_custom_type_script = "uid://bf43e3idc17tt"
 
-[sub_resource type="Resource" id="Resource_243rl"]
+[sub_resource type="Resource" id="Resource_0nnn1"]
+resource_local_to_scene = true
 script = ExtResource("4_mguof")
-effects = Array[ExtResource("2_qh8qc")]([SubResource("Resource_xqxsm"), SubResource("Resource_mvuuv")])
+effects = Array[ExtResource("2_qh8qc")]([SubResource("Resource_mvuuv"), SubResource("Resource_qh8qc")])
 metadata/_custom_type_script = "uid://cdo7q0o7gfhi"
 
 [node name="Button" type="Button" unique_id=60404527]
@@ -78,6 +79,6 @@ text = "text"
 script = ExtResource("1_mvuuv")
 trigger_on = 2
 trigger_behaviour = 3
-recipe = SubResource("Resource_243rl")
+recipe = SubResource("Resource_0nnn1")
 debug_enabled = true
 metadata/_custom_type_script = "uid://c7dye3orhby4j"
