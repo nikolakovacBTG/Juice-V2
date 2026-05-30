@@ -60,12 +60,17 @@ func _init() -> void:
 
 # transform_target inherited from Juice3DTransformEffect (default set to ROTATION in _init)
 
+## Start accumulating at full speed immediately when the scene starts,
+## without an explicit animate_in() call.
 var auto_start: bool = false
+## When true (default), stopping the effect holds the accumulated visual state.
+## When false, stop() snaps back to the original natural state.
 var hold_on_stop: bool = true
 
 # --- Rate vars ---
 ## Position drift in local units per second.
 var position_rate: Vector3 = Vector3(0.0, 0.0, 1.0)
+## Unit for position rate: absolute World Units, or relative to Own Size or Parent Size.
 var position_unit: int = PositionIn3D.WORLD_UNITS:
 	set(value):
 		position_unit = value
@@ -88,12 +93,16 @@ var bound_enabled: bool = false:
 	set(value):
 		bound_enabled = value
 		notify_property_list_changed()
+## What happens when the bound is reached.
 var bound_behaviour: int = BoundBehaviour.REVERSE
+## How the bound distance is measured.
 var bound_mode: int = BoundMode.MAGNITUDE:
 	set(value):
 		bound_mode = value
 		notify_property_list_changed()
+## Bound distance as a single magnitude (degrees for ROTATION, units for others).
 var bound_value: float = 360.0
+## Bound per-axis (used when bound_mode = PER_AXIS).
 var bound_value_vec3: Vector3 = Vector3(360.0, 360.0, 360.0)
 
 
