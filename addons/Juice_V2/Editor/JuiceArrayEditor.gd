@@ -423,6 +423,9 @@ func _fold_sections_recursive(node: Node) -> bool:
 # SUB-INSPECTOR TOOLTIP BRIDGING
 # =============================================================================
 
+# Overlay script providing rich _make_custom_tooltip() for sub-inspector properties.
+const _TooltipOverlay = preload("JuiceTooltipOverlay.gd")
+
 # Cache of parsed tooltips per script resource_path. Avoids re-parsing the
 # same script source every time a sub-inspector is expanded.
 # Key: script.resource_path, Value: Dictionary { property_name: String → tooltip: String }
@@ -431,8 +434,8 @@ static var _tooltip_cache: Dictionary = {}
 
 # Apply ## doc-comment tooltips to all EditorProperty children in a sub-inspector.
 # Called via call_deferred after edit() so the EditorProperty nodes exist.
-# EditorProperty itself overrides tooltip_text (shows group name), but its
-# CHILDREN (labels, dropdowns, checkboxes) respect tooltip_text normally.
+# Creates JuiceTooltipOverlay instances that intercept hover and render
+# rich tooltips matching Godot's native inspector format.
 func _apply_tooltips(inspector: EditorInspector, resource: Resource) -> void:
 	if not is_instance_valid(inspector) or resource == null:
 		return
@@ -443,78 +446,107 @@ func _apply_tooltips(inspector: EditorInspector, resource: Resource) -> void:
 		return
 	# The EditorInspector overwrites tooltip data on children during its
 	# multi-frame setup after edit(). Wait for it to fully stabilize before
-	# applying our tooltips so they don't get overwritten.
+	# adding our overlays so they don't get clobbered.
 	for i in range(10):
 		if not is_instance_valid(inspector) or not inspector.is_inside_tree():
 			return
 		await inspector.get_tree().process_frame
-	var count := _set_tooltips_recursive(inspector, tooltips)
-	print("[JuiceTooltip] Applied %d tooltips (from %d parsed) after 10-frame delay" % [count, tooltips.size()])
+	_set_tooltips_recursive(inspector, tooltips, resource)
 
 
-# Walk the node tree and set tooltip_text on EditorProperty children.
+# Walk the node tree and add tooltip overlays to EditorProperty children.
 # Returns the number of properties that received tooltips.
-func _set_tooltips_recursive(node: Node, tooltips: Dictionary) -> int:
+func _set_tooltips_recursive(node: Node, tooltips: Dictionary, resource: Resource) -> int:
 	var count := 0
 	for child in node.get_children():
 		if child is EditorProperty:
 			var prop_name: String = child.get_edited_property()
 			if tooltips.has(prop_name):
 				var tip: String = tooltips[prop_name]
-				# Set on all child Controls — the label area and value widgets.
-				# EditorProperty itself ignores tooltip_text (C++ override),
-				# but its children display it correctly.
-				_set_tooltip_on_children(child, tip)
+				_set_tooltip_on_children(child, tip, resource)
 				count += 1
 		# Recurse into containers that hold EditorProperty nodes.
 		if child.get_child_count() > 0:
-			count += _set_tooltips_recursive(child, tooltips)
+			count += _set_tooltips_recursive(child, tooltips, resource)
 	return count
 
 
-# Set a styled tooltip on an EditorProperty by adding a transparent overlay
-# that intercepts hover and provides a formatted tooltip via _make_custom_tooltip().
-# The overlay covers the label area (left side) where users naturally hover.
-func _set_tooltip_on_children(editor_property: EditorProperty, tip: String) -> void:
-	# Format the property name for display: "crossfade_time" → "Crossfade Time"
+# Add a rich tooltip overlay to an EditorProperty.
+# The overlay intercepts hover and renders a styled tooltip matching Godot's
+# native format via _make_custom_tooltip(). Clicks pass through to the value
+# widgets underneath (mouse_filter = PASS).
+func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, resource: Resource) -> void:
 	var prop_name: String = editor_property.get_edited_property()
-	var display_name: String = prop_name.replace("_", " ").capitalize()
 
-	# Build a formatted tooltip string with newlines for readability.
-	# Word-wrap the description at ~60 characters.
-	var wrapped := _word_wrap(tip, 60)
-	var formatted := "%s\n%s" % [display_name, wrapped]
+	# Remove any previously added tooltip overlay (e.g., from a refresh).
+	for child in editor_property.get_children():
+		if child.name == "_juice_tooltip":
+			child.queue_free()
 
-	# Set tooltip_text on all child Controls.
-	var stack: Array[Node] = []
-	for c in editor_property.get_children():
-		stack.append(c)
-	while stack.size() > 0:
-		var node: Node = stack.pop_back()
-		if node is Control:
-			node.tooltip_text = formatted
-		for c in node.get_children():
-			stack.append(c)
+	# Look up type and value from the resource's property list.
+	var type_name := ""
+	var value_str := ""
+	for prop_info in resource.get_property_list():
+		if prop_info.name == prop_name:
+			type_name = _get_type_display_name(prop_info)
+			value_str = _get_value_display(prop_info, resource)
+			break
+
+	# Create the transparent overlay with rich tooltip rendering.
+	var overlay: Control = _TooltipOverlay.new()
+	overlay.setup(prop_name, type_name, value_str, tip)
+	overlay.name = "_juice_tooltip"
+	editor_property.add_child(overlay)
 
 
-# Word-wrap text at approximately max_width characters, breaking at spaces.
-static func _word_wrap(text: String, max_width: int) -> String:
-	if text.length() <= max_width:
-		return text
-	var words := text.split(" ")
-	var lines: Array[String] = []
-	var current_line := ""
-	for word in words:
-		if current_line.is_empty():
-			current_line = word
-		elif current_line.length() + 1 + word.length() > max_width:
-			lines.append(current_line)
-			current_line = word
-		else:
-			current_line += " " + word
-	if not current_line.is_empty():
-		lines.append(current_line)
-	return "\n".join(lines)
+# Convert a PropertyInfo dictionary to a human-readable type name.
+# Handles enums, class names, and built-in types.
+static func _get_type_display_name(prop_info: Dictionary) -> String:
+	var type_int: int = prop_info.get("type", TYPE_NIL)
+	var cn: String = prop_info.get("class_name", "")
+	var hint: int = prop_info.get("hint", 0)
+
+	# Class name takes priority (e.g., "JuiceRecipe", "Curve").
+	if not cn.is_empty():
+		return cn
+
+	match type_int:
+		TYPE_BOOL: return "bool"
+		TYPE_INT:
+			if hint == PROPERTY_HINT_ENUM:
+				return "enum"
+			return "int"
+		TYPE_FLOAT: return "float"
+		TYPE_STRING: return "String"
+		TYPE_VECTOR2: return "Vector2"
+		TYPE_VECTOR2I: return "Vector2i"
+		TYPE_VECTOR3: return "Vector3"
+		TYPE_VECTOR3I: return "Vector3i"
+		TYPE_COLOR: return "Color"
+		TYPE_NODE_PATH: return "NodePath"
+		TYPE_OBJECT: return "Object"
+		TYPE_ARRAY: return "Array"
+		TYPE_DICTIONARY: return "Dictionary"
+		_: return ""
+
+
+# Format the current property value for display in the tooltip header.
+# For enums, resolves the int value to its name (e.g., "Position (1)").
+static func _get_value_display(prop_info: Dictionary, resource: Resource) -> String:
+	var prop_name: String = prop_info.get("name", "")
+	var value = resource.get(prop_name)
+	var hint: int = prop_info.get("hint", 0)
+	var hint_string: String = prop_info.get("hint_string", "")
+
+	# For enum properties, resolve the int to its human-readable name.
+	if hint == PROPERTY_HINT_ENUM and value is int and not hint_string.is_empty():
+		var entries := hint_string.split(",")
+		for entry in entries:
+			var parts := entry.split(":")
+			if parts.size() == 2 and int(parts[1]) == value:
+				return "%s (%d)" % [parts[0].strip_edges(), value]
+
+	return str(value)
 
 
 # Build a merged tooltip dictionary for a resource by walking its script
