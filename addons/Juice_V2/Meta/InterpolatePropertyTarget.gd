@@ -29,11 +29,13 @@ extends PropertyTarget
 # =============================================================================
 
 # --- From reference model ---
+## How to determine the From value: Custom (typed field), Self (capture from node), or Target Node (live read).
 var from_reference: int = ReferenceSource.CUSTOM:
 	set(value):
 		from_reference = value
 		notify_property_list_changed()
 
+## When Self reference is used: capture at Trigger (each animation start), Ready (once at _ready), or In Editor (snapshot).
 var from_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		from_capture_at = value
@@ -41,14 +43,17 @@ var from_capture_at: int = CaptureAt.TRIGGER:
 			_from_editor_cached = null
 		notify_property_list_changed()
 
+## Path to the node whose property value is read live as the From value (Target Node mode).
 var from_target_node: NodePath = NodePath()
 
 # --- To reference model ---
+## How to determine the To value: Custom (typed field), Self (capture from node), or Target Node (live read).
 var to_reference: int = ReferenceSource.CUSTOM:
 	set(value):
 		to_reference = value
 		notify_property_list_changed()
 
+## When Self reference is used: capture at Trigger (each animation start), Ready (once at _ready), or In Editor (snapshot).
 var to_capture_at: int = CaptureAt.TRIGGER:
 	set(value):
 		to_capture_at = value
@@ -56,8 +61,10 @@ var to_capture_at: int = CaptureAt.TRIGGER:
 			_to_editor_cached = null
 		notify_property_list_changed()
 
+## Path to the node whose property value is read live as the To value (Target Node mode).
 var to_target_node: NodePath = NodePath()
 
+## Progress threshold at which discrete types (bool, String, etc.) flip from From to To value.
 # Flip threshold for discrete types (bool, String, NodePath, etc.).
 # Progress must cross this value before the property switches from FROM to TO.
 var flip_threshold: float = 0.5
