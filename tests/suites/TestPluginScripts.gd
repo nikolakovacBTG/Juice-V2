@@ -20,11 +20,11 @@ func get_suite_name() -> String:
 
 func get_test_methods() -> Array[String]:
 	return [
-		"test_v1_plugin_script_loads",
+		"test_v2_plugin_script_loads",
 		"test_preview_director_script_loads",
 		"test_editor_context_script_loads",
 		"test_juice_transport_dock_scene_loads",
-		"test_all_v1_addon_scripts_load",
+		"test_all_v2_addon_scripts_load",
 	]
 
 
@@ -32,20 +32,20 @@ func get_test_methods() -> Array[String]:
 # TESTS
 # =============================================================================
 
-func test_v1_plugin_script_loads() -> void:
-	var script = load("res://addons/Juice_V1/juice_plugin.gd")
+func test_v2_plugin_script_loads() -> void:
+	var script = load("res://addons/Juice_V2/juice_plugin.gd")
 	assert_true(script != null,
-		"Plugin script: res://addons/Juice_V1/juice_plugin.gd must load without parse errors")
+		"Plugin script: res://addons/Juice_V2/juice_plugin.gd must load without parse errors")
 
 
 func test_preview_director_script_loads() -> void:
-	var script = load("res://addons/Juice_V1/Editor/JuicePreviewDirector.gd")
+	var script = load("res://addons/Juice_V2/Editor/JuicePreviewDirector.gd")
 	assert_true(script != null,
 		"Director script: JuicePreviewDirector.gd must load without parse errors")
 
 
 func test_editor_context_script_loads() -> void:
-	var script = load("res://addons/Juice_V1/Editor/JuiceEditorContext.gd")
+	var script = load("res://addons/Juice_V2/Editor/JuiceEditorContext.gd")
 	assert_true(script != null,
 		"Context script: JuiceEditorContext.gd must load without parse errors")
 
@@ -53,33 +53,33 @@ func test_editor_context_script_loads() -> void:
 func test_juice_transport_dock_scene_loads() -> void:
 	# The .tscn is a PackedScene — load() returns null if the file or any
 	# referenced script fails to parse.
-	var scene = load("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
+	var scene = load("res://addons/Juice_V2/Editor/JuiceTransportDock.tscn")
 	assert_true(scene != null,
 		"Transport dock scene: JuiceTransportDock.tscn must load without errors")
 
 
-func test_all_v1_addon_scripts_load() -> void:
-	# Enumerate every .gd file under addons/Juice_V1/ and verify each loads.
+func test_all_v2_addon_scripts_load() -> void:
+	# Enumerate every .gd file under addons/Juice_V2/ and verify each loads.
 	# This catches parse errors in ANY addon script, not just the hand-listed ones.
-	var dir := DirAccess.open("res://addons/Juice_V1/")
+	var dir := DirAccess.open("res://addons/Juice_V2/")
 	if dir == null:
-		_fail("Cannot open res://addons/Juice_V1/ directory")
+		_fail("Cannot open res://addons/Juice_V2/ directory")
 		return
 
 	# Use Arrays as accumulators — GDScript ints are value types and would
 	# not survive recursive calls. Arrays are reference types and work correctly.
 	var failed: Array[String] = []
 	var passed: Array[String] = []
-	_scan_scripts(dir, "res://addons/Juice_V1/", failed, passed)
+	_scan_scripts(dir, "res://addons/Juice_V2/", failed, passed)
 
 	assert_true(passed.size() > 0,
-		"Script scan: must find at least 1 .gd file under addons/Juice_V1/ (found %d)" % passed.size())
+		"Script scan: must find at least 1 .gd file under addons/Juice_V2/ (found %d)" % passed.size())
 
 	if failed.size() > 0:
 		for path in failed:
 			_fail("Script load FAILED (parse error): %s" % path)
 	else:
-		_pass("All %d V1 addon scripts loaded without parse errors" % passed.size())
+		_pass("All %d V2 addon scripts loaded without parse errors" % passed.size())
 
 
 # Recursive helper: scan a directory for .gd files and try to load each.

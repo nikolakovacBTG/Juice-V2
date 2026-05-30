@@ -1,9 +1,9 @@
 [gd_resource type="JuiceControlRecipe" script_class="JuiceControlRecipe" format=3 uid="uid://bvx8y7n2k4q1r"]
 
-[ext_resource type="Script" path="res://addons/Juice_V1/Control/TransformControlJuiceEffect.gd" id="1_transform"]
-[ext_resource type="Script" path="res://addons/Juice_V1/Control/ShakeControlJuiceEffect.gd" id="2_shake"]
-[ext_resource type="Script" path="res://addons/Juice_V1/Control/SquashStretchControlJuiceEffect.gd" id="3_squash"]
-[ext_resource type="Script" path="res://addons/Juice_V1/Control/AppearanceControlJuiceEffect.gd" id="4_appearance"]
+[ext_resource type="Script" path="res://addons/Juice_V2/Control/TransformControlJuiceEffect.gd" id="1_transform"]
+[ext_resource type="Script" path="res://addons/Juice_V2/Control/ShakeControlJuiceEffect.gd" id="2_shake"]
+[ext_resource type="Script" path="res://addons/Juice_V2/Control/SquashStretchControlJuiceEffect.gd" id="3_squash"]
+[ext_resource type="Script" path="res://addons/Juice_V2/Control/AppearanceControlJuiceEffect.gd" id="4_appearance"]
 
 [sub_resource type="TransformControlJuiceEffect" id="PunchEffect"]
 script = ExtResource("1_transform")
