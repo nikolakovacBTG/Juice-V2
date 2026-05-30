@@ -36,23 +36,33 @@ extends Juice3DTransformEffect
 
 # transform_target inherited from Juice3DTransformEffect (default: POSITION)
 
+## Oscillation frequency in cycles per second. Higher values produce faster shaking.
 var shake_frequency: float = 20.0
 
+## Maximum position displacement per axis in the selected unit.
 var position_strength: Vector3 = Vector3(0.2, 0.2, 0.2)
+## Unit for position strength: absolute World Units, or relative to Own Size or Parent Size.
 var position_unit: int = PositionIn3D.WORLD_UNITS:
 	set(value):
 		position_unit = value
 		notify_property_list_changed()
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for position shake.
 var position_randomness: float = 0.5
 
+## Maximum rotation displacement per axis in degrees.
 var rotation_amplitude: Vector3 = Vector3(10.0, 10.0, 0.0)
+## When enabled, the oscillation direction randomly flips at each zero-crossing for organic motion.
 var rotation_randomize_direction: bool = true
 
+## Maximum scale displacement per axis, added to the node's natural scale.
 var scale_amplitude: Vector3 = Vector3(0.15, 0.15, 0.15)
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for scale shake.
 var scale_randomness: float = 0.5
+## When enabled, all axes use the same oscillation value for uniform scaling.
 var scale_uniform: bool = true
 
 # pivot_mode inherited from Juice3DTransformEffect (default: AUTO_CENTER)
+## Local-space custom pivot offset, used when Pivot Mode is Custom.
 var custom_pivot: Vector3 = Vector3.ZERO
 
 func _init() -> void:

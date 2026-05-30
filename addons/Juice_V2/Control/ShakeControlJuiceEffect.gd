@@ -39,27 +39,37 @@ extends JuiceControlTransformEffect
 # transform_target inherited from JuiceControlTransformEffect (default: POSITION)
 
 # --- Shared ---
+## Oscillation frequency in cycles per second. Higher values produce faster shaking.
 var shake_frequency: float = 20.0
 
 # --- Position ---
+## Maximum position displacement per axis in the selected unit.
 var position_strength: Vector2 = Vector2(5.0, 5.0)
+## Unit for position strength: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value
 		notify_property_list_changed()
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for position shake.
 var position_randomness: float = 0.5
 
 # --- Rotation ---
+## Maximum rotation displacement in degrees.
 var rotation_amplitude: float = 10.0
+## When enabled, the oscillation direction randomly flips at each zero-crossing for organic motion.
 var rotation_randomize_direction: bool = true
 
 # --- Scale ---
+## Maximum scale displacement per axis, added to the node's natural scale.
 var scale_amplitude: Vector2 = Vector2(0.15, 0.15)
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for scale shake.
 var scale_randomness: float = 0.5
+## When enabled, X and Y scale use the same oscillation value for uniform scaling.
 var scale_uniform: bool = true
 
 # --- Pivot ---
 # pivot_mode inherited from JuiceControlTransformEffect (default: AUTO_CENTER)
+## Custom pivot as fraction of the Control's size (x: 0=left, 1=right; y: 0=top, 1=bottom).
 var custom_pivot: Vector2 = Vector2(0.5, 0.5)
 
 func _init() -> void:
