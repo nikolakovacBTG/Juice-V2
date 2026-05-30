@@ -33,13 +33,20 @@ func get_test_methods() -> Array[String]:
 # HELPERS
 # ---------------------------------------------------------------------------
 
-# Builds a PropertyProgress2DJuiceEffect for a float property.
-# Sets _current_delta manually so accumulation is deterministic in headless tests.
+# Builds a ProgressPropertyTarget for a float property with the given rate.
+func _make_progress_target(prop: String, rate: float) -> ProgressPropertyTarget:
+	var target := ProgressPropertyTarget.new()
+	target.property_path = prop
+	target._detected_type = TYPE_FLOAT
+	target.float_rate = rate
+	return target
+
+
+# Builds a PropertyProgress2DJuiceEffect with one float ProgressPropertyTarget.
 func _make_float_effect(prop: String, rate: float) -> PropertyProgress2DJuiceEffect:
 	var effect := PropertyProgress2DJuiceEffect.new()
-	effect.property_path = prop
-	effect.property_type = PropertyProgressJuiceEffectBase.PropertyType.FLOAT
-	effect.float_rate = rate
+	var pt := _make_progress_target(prop, rate)
+	effect.property_targets = [pt]
 	effect.hold_on_stop = true
 	return effect
 
