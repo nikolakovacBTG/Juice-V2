@@ -3,7 +3,7 @@
 # Debug Logging Standards
 
 ## Overview
-Standards for adding and maintaining debug logging across the Juice V1 addon (`addons/Juice_V1/`). All logging must serve two audiences: AI agents fixing Juice bugs, and non-programmer users diagnosing misconfigurations.
+Standards for adding and maintaining debug logging across the Juice addon (`addons/Juice_V2/`). All logging must serve two audiences: AI agents fixing Juice bugs, and non-programmer users diagnosing misconfigurations.
 
 ## Log Format Standard
 

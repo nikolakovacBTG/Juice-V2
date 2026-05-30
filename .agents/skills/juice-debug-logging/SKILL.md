@@ -1,6 +1,6 @@
 ---
 name: juice-debug-logging
-description: Debug logging patterns and checklists for Juice V1. Auto-invoke when adding logging to addons/Juice_V1/ files.
+description: Debug logging patterns and checklists for Juice. Auto-invoke when adding logging to addons/Juice_V2/ files.
 ---
 
 # Juice Debug Logging

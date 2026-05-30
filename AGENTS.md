@@ -2,14 +2,14 @@
 
 ## Project Purpose
 
-This is the **Juice Demo Project** — a standalone Godot 4.x project that showcases every component of the Juice V1 (`addons/Juice_V1/`) and Juice V2 (`addons/Juice_V2/`) addons. It serves as:
+This is the **Juice Demo Project** — a standalone Godot 4.x project that showcases every component of the Juice (`addons/Juice_V2/`) addon. It serves as:
 
 1. **Marketable demo** — polished visual demos for marketplace listing
 2. **Beta testing** — real usage exposes real bugs
 3. **Preset library** — ready-to-copy recipe scenes
 4. **Documentation source** — footage capture, tutorials, GIFs
 
-**Sync method:** Git Subtree via standalone Juice repo.
+**Sync method:** Git Subtree via standalone Juice V2 repo.
 **Fix flow:** Fix directly in Demo → subtree push to standalone repo → pull into other projects as needed.
 
 ---
@@ -71,7 +71,7 @@ Every script must have:
 2. **Inspector-exposed configuration** for gameplay values.
 3. **Debug toggle** (`@export var debug_enabled: bool = false`).
 4. **Method Documentation**: Use `##` for public methods AND virtual override points (`_apply_effect`, `_on_animate_start`, `_needs_sustain`, `_restore_to_natural`, `_on_animate_in_complete`, `_on_animate_out_complete`). Use `#` for internal helpers (private methods that are not meant to be overridden). This ensures F1 Help documents the subclass API while hiding plumbing.
-5. **The Translation Rule (No Historical Baggage):** Transform legacy/versioning comments ('V0', 'V1', 'ported', 'refactor') into structural rationale. Explain *why* the architecture demands a specific approach, without referencing past versions.
+5. **The Translation Rule (No Historical Baggage):** Transform legacy/versioning comments ('V0', 'ported', 'refactor') into structural rationale. Explain *why* the architecture demands a specific approach, without referencing past versions.
 
 ## Script Section Ordering
 
@@ -120,16 +120,6 @@ The `# WHY:` block must define the class's architectural purpose and the constra
 
 ## Subtree Sync Commands
 
-### Juice V1 (`addons/Juice_V1/` ↔ `https://github.com/nikolakovacBTG/Juice.git`, branch `v1`)
-
-```powershell
-# Pull latest V1 from standalone repo into Demo
-git subtree pull --prefix=addons/Juice_V1 juice-standalone v1 --squash
-
-# Push Demo V1 fixes upstream to standalone repo
-git subtree push --prefix=addons/Juice_V1 juice-standalone v1
-```
-
 ### Juice V2 (`addons/Juice_V2/` ↔ `https://github.com/nikolakovacBTG/Juice-V2.git`, branch `main`)
 
 ```powershell
@@ -145,74 +135,11 @@ git subtree push --prefix=addons/Juice_V2 juice-v2-standalone main
 | Remote | URL | Used For |
 |--------|-----|----------|
 | `origin` | https://github.com/nikolakovacBTG/Juice-Demo.git | This demo repo |
-| `juice-standalone` | https://github.com/nikolakovacBTG/Juice.git | Juice V1 addon (`addons/Juice_V1/`) |
 | `juice-v2-standalone` | https://github.com/nikolakovacBTG/Juice-V2.git | Juice V2 addon (`addons/Juice_V2/`) |
 
 ## Godot Version
 
 This project uses **Godot 4.x**. Use GDScript typed syntax and modern patterns.
-
----
-
-## V1 Naming Conventions (`addons/Juice_V1/`)
-
-| Category | Convention | Example |
-|----------|------------|---------|
-| **Domain Nodes** | `Juice[Domain]` | `JuiceControl`, `Juice2D`, `Juice3D` |
-| **Domain EffectBase** | `Juice[Domain]EffectBase` | `JuiceControlEffectBase`, `Juice2DEffectBase` |
-| **Domain Recipe** | `Juice[Domain]Recipe` | `JuiceControlRecipe`, `Juice2DRecipe` |
-| **Concrete Effects** | `[EffectName][Domain]JuiceEffect` | `TransformControlJuiceEffect`, `Shake2DJuiceEffect` |
-| **Shared Base Classes** | Unchanged | `JuiceBase`, `JuiceEffectBase`, `JuiceRecipe` |
-| **File = class_name** | Always match | `JuiceControl.gd` → `class_name JuiceControl` |
-
-**Rule:** `Juice` always comes before the domain token. This avoids invalid identifiers (`2DJuice` starts with digit). Effects put domain in the middle because they have a leading effect name (`Transform2DJuiceEffect`).
-
----
-
-## V1 Architectural Rules (Sprint-Specific)
-
-**Design doc:** `Documentation/JuiceStack_Design.md` is the authoritative reference. Every decision must trace back to it.
-
-### Effects Are Pure Delta Calculators
-
-1. Effects compute a **delta** (offset from natural state) at a given progress — nothing more
-2. Effects **NEVER write** to the target node — the domain node writes once per frame
-3. Effects **NEVER track** `_my_*_contribution`, `_last_written_*`, or `_base_*` — that's node work
-4. Effects **NEVER detect** external moves — the domain node does that once per frame, pre-tick
-5. Effects **NEVER implement** `_temporarily_undo_visual()` / `_temporarily_reapply_visual()` — the domain node does
-6. Effects **capture their own From/To references** at animation start (when the node has temporarily undone all visuals)
-7. For `TARGET` references (From/To pointing to another node): the **node resolves** the NodePath and provides the resolved Node to the effect. The effect reads it but never resolves paths.
-
-### Domain Nodes Own Write Coordination
-
-Each domain node (`JuiceControl`, `Juice2D`, `Juice3D`) implements:
-
-1. **Base value capture** — natural position/rotation/scale before any effects
-2. **External-move detection** — once per frame, pre-tick: did something else change the target?
-3. **Delta aggregation** — sum all active effects' deltas per channel (position, rotation, scale)
-4. **Write-once-per-frame** — `target.property = base + sum(deltas)`, applied after all effects tick
-5. **`_temporarily_undo/reapply_visual()`** — subtract/add total contribution for editor save pipeline
-6. **Container hold pattern** (Control only) — re-apply every frame to beat deferred `_sort_children()`
-7. **JIT `_pre_tick()` in `_start_effects()`** — called before `_temporarily_undo_visual()` to catch layout shifts while idle. All 5 L2 virtual methods (`_capture_base_values`, `_pre_tick`, `_post_tick_write`, `_temporarily_undo_visual`, `_temporarily_reapply_visual`) MUST have stubs in `JuiceBase` — without them, domain overrides are silently dead. See `CONTRACTS/l2-domain.md § Protected Invariants`.
-
-### All Three Domains — Always
-
-- When implementing ANY node-level feature, implement it in **all 3 domain nodes** before moving on
-- If a feature exists in one domain, its absence in another domain is a **bug**
-- The only domain-specific differences are: property types (Vector2 vs Vector3), Container hold (Control only), pivot compensation math
-
-### Build Order
-
-1. `JuiceBase` infrastructure (hooks, virtual methods)
-2. All 3 domain nodes (JuiceControl, Juice2D, Juice3D) — simultaneously
-3. Strip effects to pure delta calculators — all 3 domains simultaneously
-4. Verify stacking + Container behavior
-
-### Anti-Drift
-
-- Before implementing, **re-read the relevant section** of `JuiceStack_Design.md`
-- If implementation differs from design doc, **STOP and ask** — don't rationalize the deviation
-- If a design gap is discovered, **document it and ask** — don't fill it silently
 
 ---
 
@@ -230,14 +157,14 @@ The following skills and workflows form a composable system for quality control:
 
 | Tool | Type | Trigger | Purpose |
 |------|------|---------|---------|
-| `@doc-sweep` | Skill | Auto: documentation work on `addons/Juice_V1/` | Quality standard card + per-file checklist + examples |
-| `@juice-architecture` | Skill | Auto: touching `addons/Juice_V1/` | Architecture rules + code templates |
+| `@doc-sweep` | Skill | Auto: documentation work on `addons/Juice_V2/` | Quality standard card + per-file checklist + examples |
+| `@juice-architecture` | Skill | Auto: touching `addons/Juice_V2/` | Architecture rules + code templates |
 | `@verify-claims` | Skill | Auto: about to say "done/fixed/working" | Demands test evidence |
-| `@juice-debug-logging` | Skill | Auto: adding logging to `addons/Juice_V1/` | Log points, templates, checklist |
+| `@juice-debug-logging` | Skill | Auto: adding logging to `addons/Juice_V2/` | Log points, templates, checklist |
 | `/doc-sweep` | Workflow | Manual | Per-batch documentation sweep with context reset |
 | `/test` | Workflow | Manual | Run test suite, categorize failures |
 | `/bugfix` | Workflow | Manual | Structured fix cycle after test failures |
-| `/port` | Workflow | Manual | Port V0 effect to V1 (batches all 3 domains) |
+| `/port` | Workflow | Manual | Port V2 effect across domains (batches all 3 domains) |
 | `/review` | Workflow | Manual | Code review against project standards |
 | `/refactor` | Workflow | Manual | Systematic refactoring with validation |
 | `/add-logging` | Workflow | Manual | Batch-oriented debug logging instrumentation |
@@ -246,7 +173,7 @@ The following skills and workflows form a composable system for quality control:
 **Documentation chain:** `/doc-sweep` → `@doc-sweep` (quality standard re-read per batch)
 **Logging chain:** `/add-logging` → `@juice-debug-logging` + `@verify-claims` → `/test`
 
-**When discussing V1 code changes and no skill/workflow has been invoked, remind the user which are available.**
+**When discussing Juice code changes and no skill/workflow has been invoked, remind the user which are available.**
 
 ---
 

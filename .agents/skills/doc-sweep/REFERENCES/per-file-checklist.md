@@ -12,7 +12,7 @@ These items are mechanical and fast. They ensure the file has the right scaffold
 
 - [ ] First line is a concise, action-oriented sentence (shows in Create New Node menu)
 - [ ] Additional `##` paragraphs provide architectural context (shows in script docs only)
-- [ ] No historical references (V0, V1, migration, ported)
+- [ ] No historical references (V0, migration, ported)
 
 ### A2. Header WHY Block (`# ============` block)
 
@@ -30,7 +30,7 @@ These items are mechanical and fast. They ensure the file has the right scaffold
 
 ### A4. History Sanitization
 
-- [ ] Zero occurrences of: V0, V1, migration, ported, refactor (in comments)
+- [ ] Zero occurrences of: V0, migration, ported, refactor (in comments)
 - [ ] Zero occurrences of dev-phase prefixes: `Phase A/B/C:`, `Sprint N:`, `TODO(phase-N):`, `SEQUENCER Phase N`
 - [ ] Historical comments with useful info translated to pure rationale
 - [ ] Historical comments with no useful info deleted

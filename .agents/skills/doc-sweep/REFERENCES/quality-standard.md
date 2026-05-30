@@ -25,7 +25,7 @@ If you cannot answer these for a method, you are not ready to document it. Read 
 
 ## The 6 Rules
 
-1. **No history.** Never reference V0, V1, migration, porting, refactoring, or previous versions. The code presents as if this version has always existed.
+1. **No history.** Never reference V0, migration, porting, refactoring, or previous versions. The code presents as if this version has always existed.
 
 2. **No filler prefixes.** Never write `RATIONALE:`, `PURPOSE:`, `NOTE:`, or any prefix that creates "explanation: explanation" redundancy. Just write the explanation naturally.
 
@@ -95,7 +95,7 @@ After writing a comment, ask: *"Does this tell the reader something they could N
 
 ## Translation Rule (Historical Comments)
 
-When you encounter a comment referencing V0, V1, migration, porting, refactoring, **or development phases/sprints**:
+When you encounter a comment referencing V0, migration, porting, refactoring, **or development phases/sprints**:
 1. Read it carefully — it may contain useful architectural insight
 2. Extract the TECHNICAL RATIONALE (the "why" behind the decision)
 3. Rewrite it as pure structural reasoning without any historical or phase reference

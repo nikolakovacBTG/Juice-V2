@@ -229,7 +229,7 @@ Get-Content "[LOG_SUMMARY]"
 cd "[PROJECT_ROOT]"; git add -A; git commit -m "Fix: [describe root cause groups fixed]"
 ```
 
-1. Update TODO.md and `Documentation/V0_V1_Feature_Parity_Matrix.md` if any matrix items changed status
+1. Update TODO.md and `Documentation/V0_Feature_Parity_Matrix.md` if any matrix items changed status
 2. If "Discovered Issues" were logged in Step 1, present them to the user for the next cycle
 3. Report final results:
 

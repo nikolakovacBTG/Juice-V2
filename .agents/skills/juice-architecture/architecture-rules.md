@@ -1,4 +1,4 @@
-# Juice V1 Architecture Rules (Condensed)
+# Juice Architecture Rules (Condensed)
 
 > Source of truth: `Documentation/JuiceStack_Design.md`
 > This file is a quick-reference. When in doubt, re-read the full design doc.
@@ -55,8 +55,8 @@ Full ledger API: see `l2-domain.md` or read `JuiceLedger.gd` directly.
 
 ## Rule 7: No Feature Cuts
 
-- Every V0 comp becomes a V1 effect. No skipping. No deferring.
-- Every V0 property must exist in V1. If unsure where it belongs, ASK.
+- Every V0 comp becomes an effect. No skipping. No deferring.
+- Every V0 property must exist in the effect. If unsure where it belongs, ASK.
 - Never rename properties/enums/signals without explicit user approval.
 - Never invent new names for existing concepts.
 
@@ -89,7 +89,7 @@ Full ledger API: see `l2-domain.md` or read `JuiceLedger.gd` directly.
 Before implementing, verify:
 - [ ] Does this match `JuiceStack_Design.md`?
 - [ ] Does V0 have this feature? Where?
-- [ ] Is V1 improving on V0, or just copying? (Document the improvement)
+- [ ] Is the new version improving on V0, or just copying? (Document the improvement)
 - [ ] Are all 3 domains covered?
 - [ ] Is there a test for this?
 
@@ -119,7 +119,7 @@ Meta effects (Time, SignalEmit, CallMethod, etc.) are **domain-agnostic** — th
 - Extend `JuiceEffectBase` directly (no domain-specific base needed)
 - Named `[Name]JuiceEffectBase` — the domain suffix goes on thin wrapper subclasses
 - Domain wrappers (`[Name]{Control|2D|3D}JuiceEffect`) are 3–5 line subclasses whose only role is satisfying the recipe whitelist type system
-- Live in `addons/Juice_V1/Meta/`
+- Live in `addons/Juice_V2/Meta/`
 - `_apply_effect()` is a no-op or performs the meta action (time scale, signal emit, method call)
 - For effects that trigger at specific lifecycle points (start/complete), override `_on_animate_start()` and `_on_animate_out_complete()`
 - For smooth transitions (e.g. time scale lerp), override `tick()` and correct engine-scaled delta before calling `super.tick()`

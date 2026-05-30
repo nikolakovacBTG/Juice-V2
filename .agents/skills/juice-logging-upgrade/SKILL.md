@@ -1,6 +1,6 @@
 ---
 name: juice-logging-upgrade
-description: Upgrade existing Juice V1 debug logging to full chain coverage. Enforces the pre-implementation design protocol from QUALITY_GATE.md. Auto-invoke for /upgrade-logging workflow.
+description: Upgrade existing Juice debug logging to full chain coverage. Enforces the pre-implementation design protocol from QUALITY_GATE.md. Auto-invoke for /upgrade-logging workflow.
 ---
 
 # Juice Logging Upgrade

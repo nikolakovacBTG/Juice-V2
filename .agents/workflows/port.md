@@ -19,7 +19,7 @@ Effects are Resources with `@tool` (for dynamic `_get_property_list()`). The orc
 | To Prevent: | You MUST: |
 |---|---|
 | **Context Overflow** | Do strict sequential porting (2D → Control → 3D). You MUST finish and test 2D before even looking at Control. |
-| **Copying V0 bugs into V1** | Explicitly identify architectural improvements (e.g., "delta-first instead of direct write") in Step 1 before coding. |
+| **Copying V0 bugs** | Explicitly identify architectural improvements (e.g., "delta-first instead of direct write") in Step 1 before coding. |
 | **Wrong structure** | Use the `@juice-inspector-layout` skill to ensure the correct top-to-bottom section order in scripts. |
 | **No tests** | Write full unit tests covering: basic apply, return to natural, ALL effect-specific math/behaviors, and stacking before moving to the next domain. |
 | **Self-evaluation** | Auto-run the test suite via shell/bat script. You cannot claim an effect works without executing the test suite. |
@@ -56,13 +56,13 @@ Read: addons/juice/2D/[Effect]2DJuiceComp.gd
 ```markdown
 # Port Plan — [EffectName]
 
-## V1 Improvements
+## Improvements
 - [List improvements]
 
 ## Proposed Changes
-- [NEW] addons/Juice_V1/2D/[Effect]2DJuiceEffect.gd
-- [NEW] addons/Juice_V1/Control/[Effect]ControlJuiceEffect.gd
-- [NEW] addons/Juice_V1/3D/[Effect]3DJuiceEffect.gd
+- [NEW] addons/Juice_V2/2D/[Effect]2DJuiceEffect.gd
+- [NEW] addons/Juice_V2/Control/[Effect]ControlJuiceEffect.gd
+- [NEW] addons/Juice_V2/3D/[Effect]3DJuiceEffect.gd
 ```
 
 **Set `request_feedback = true`** in the Artifact metadata and wait for explicitly "Yes" or "/" in chat.
@@ -71,7 +71,7 @@ Read: addons/juice/2D/[Effect]2DJuiceComp.gd
 
 ## Step 2: Port 2D Domain
 
-2a. **Create File**: Use `mcp_create_script` for `addons/Juice_V1/2D/[Effect]2DJuiceEffect.gd`.
+2a. **Create File**: Use `mcp_create_script` for `addons/Juice_V2/2D/[Effect]2DJuiceEffect.gd`.
 
 **Rules:**
 - Use `@juice-inspector-layout` for structure.
@@ -89,7 +89,7 @@ Read: addons/juice/2D/[Effect]2DJuiceComp.gd
 - WRONG: Multiple `##` lines before the separator (causes broken tooltips)
 
 2c. **Register in recipe whitelist** (MANDATORY):
-- Add to `_CONCRETE_EFFECTS` in `addons/Juice_V1/Base Classes/Juice2DRecipe.gd`
+- Add to `_CONCRETE_EFFECTS` in `addons/Juice_V2/Base Classes/Juice2DRecipe.gd`
 
 2d. **Write Tests**: Create `tests/suites/Test[Effect]2D.gd` and register in `JuiceTestRunner.gd`.
 **Minimum test coverage:**
@@ -111,7 +111,7 @@ Wait for tests to pass. If failures occur, fix them before moving to Step 3.
 3a. **Read V0 Source**: `addons/juice/Control/[Effect]ControlJuiceComp.gd`
 - Identify Domain-specific differences (e.g., Control-only behavior, UI quirks like containers re-sorting).
 
-3b. **Create**: `addons/Juice_V1/Control/[Effect]ControlJuiceEffect.gd`
+3b. **Create**: `addons/Juice_V2/Control/[Effect]ControlJuiceEffect.gd`
 - Adapt 2D logic for Control.
 - Follow all coding rules from Step 2a/2b.
 
@@ -132,7 +132,7 @@ Wait for tests to pass.
 4a. **Read V0 Source**: `addons/juice/3D/[Effect]3DJuiceComp.gd`
 - Identify Domain-specific differences (e.g., Vector3 instead of Vector2).
 
-4b. **Create**: `addons/Juice_V1/3D/[Effect]3DJuiceEffect.gd`
+4b. **Create**: `addons/Juice_V2/3D/[Effect]3DJuiceEffect.gd`
 - Adapt logic for 3D.
 - Follow all coding rules from Step 2a/2b.
 
@@ -163,7 +163,7 @@ Do this **before committing** — the commit should include polished docs, not a
 For each file created in Steps 2–4:
 ```
 Apply: @doc-sweep
-Targets: all new addons/Juice_V1/ scripts for this port
+Targets: all new addons/Juice_V2/ scripts for this port
 ```
 
 The sweep must verify:
@@ -184,7 +184,7 @@ Do this **before committing** — logging must ship with the effect, not be retr
 For each new effect script:
 ```
 Apply: @juice-debug-logging
-Targets: all new addons/Juice_V1/ effect scripts for this port
+Targets: all new addons/Juice_V2/ effect scripts for this port
 ```
 
 Mandatory pre-implementation protocol (from QUALITY_GATE.md):
@@ -199,7 +199,7 @@ Then instrument. Skipping the protocol produces mechanical logging — that is a
 ## Step 8: Commit + Update Tracker
 
 ```powershell
-cd "[PROJECT_ROOT]"; git add -A; git commit -m "Port [EffectName] effect to V1 — all domains + tests + docs + logging"
+cd "[PROJECT_ROOT]"; git add -A; git commit -m "Port [EffectName] effect — all domains + tests + docs + logging"
 ```
 
 Update `Documentation/Port_Master_Tracker.md`:
@@ -215,9 +215,9 @@ Report completion to user using this exact format:
 ![[EffectName] in action]([Path to screenshot captured via mcp_get_running_scene_screenshot])
 
 **Files created:**
-- addons/Juice_V1/Control/[Effect]ControlJuiceEffect.gd
-- addons/Juice_V1/2D/[Effect]2DJuiceEffect.gd
-- addons/Juice_V1/3D/[Effect]3DJuiceEffect.gd
+- addons/Juice_V2/Control/[Effect]ControlJuiceEffect.gd
+- addons/Juice_V2/2D/[Effect]2DJuiceEffect.gd
+- addons/Juice_V2/3D/[Effect]3DJuiceEffect.gd
 - tests/suites/Test[Effect]Control.gd
 - tests/suites/Test[Effect]2D.gd
 - tests/suites/Test[Effect]3D.gd

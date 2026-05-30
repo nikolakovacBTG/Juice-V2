@@ -1,7 +1,7 @@
 # ✅ DONE — Transform Components UX Overhaul (Position, Rotation, Scale)
 
 > **Completed:** 2026-03-09
-> **Implemented in:** `Transform2DJuiceEffect.gd`, `Transform3DJuiceEffect.gd` (V1 architecture)
+> **Implemented in:** `Transform2DJuiceEffect.gd`, `Transform3DJuiceEffect.gd` (Juice architecture)
 > **Documentation Status:** Updated to match actual implementation
 
 ## Implementation vs Design

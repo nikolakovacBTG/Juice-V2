@@ -1,10 +1,10 @@
 ---
-description: Re-audit existing Juice V1 debug logging and upgrade to full chain coverage. Enforces the Contract/Chain/Coverage protocol per effect family. Use this workflow when logging already exists but quality is insufficient.
+description: Re-audit existing Juice debug logging and upgrade to full chain coverage. Enforces the Contract/Chain/Coverage protocol per effect family. Use this workflow when logging already exists but quality is insufficient.
 ---
 
 You are in UPGRADE-LOGGING MODE.
 
-This workflow re-audits and upgrades *existing* logging in instrumented Juice V1 files.
+This workflow re-audits and upgrades *existing* logging in instrumented Juice files.
 It enforces the positivist standard: log the effect's computation chain faithfully so that
 any bug is visible as a deviation in the log — no bug-guessing required.
 

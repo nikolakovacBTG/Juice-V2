@@ -4,7 +4,7 @@
 
 ## Mission
 
-Replace individual effect Nodes with Resource-based effects inside host Nodes. Every feature in the current system (`addons/juice/`) has a counterpart in the new system (`addons/Juice_V1/`). **No feature cuts. No deferrals. No simplifications.**
+Replace individual effect Nodes with Resource-based effects inside host Nodes. Every feature in the current system (`addons/juice/`) has a counterpart in the new system (`addons/Juice_V2/`). **No feature cuts. No deferrals. No simplifications.**
 
 ---
 
@@ -26,7 +26,7 @@ Replace individual effect Nodes with Resource-based effects inside host Nodes. E
 - **Meta effects:** `[Name]JuiceEffectBase` (domain-agnostic base) + `[Name]{Control|2D|3D}JuiceEffect` domain wrappers
   - Examples: `TimeJuiceEffectBase`, `SignalEmitJuiceEffectBase`, `CallMethodJuiceEffectBase`
   - Domain wrappers are thin subclasses (3–5 lines) that satisfy the recipe whitelist type system
-  - Meta effects live in `addons/Juice_V1/Meta/`
+  - Meta effects live in `addons/Juice_V2/Meta/`
 - **Recipe:** `JuiceRecipe`
 - **Base:** `JuiceEffectBase`, `JuiceBase`
 
@@ -307,7 +307,7 @@ CallMethodJuiceUtility → `CallMethodEffect`
 
 ## Implementation Phases
 
-**Phase 0:** `.gdignore` + copy to `Juice_V1/` + git commit
+**Phase 0:** `.gdignore` + copy to `Juice_V2/` + git commit
 
 **Phase 1:** Create JuiceEffectBase, JuiceRecipe, JuiceBase, JuiceControl/Juice2D/Juice3D. Test: empty node on Button, inspector works.
 

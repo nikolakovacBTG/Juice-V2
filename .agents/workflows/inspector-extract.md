@@ -26,7 +26,7 @@ This is a **one-time migration workflow** for Juice V2 Phase 3. It moves all pro
 - [ ] Verify no `_validate_property()` remains in domain nodes
 
 ### 4. Verify
-- [ ] MCP Tier 2: open each Juice node type in inspector, verify property visibility matches V1 behavior
+- [ ] MCP Tier 2: open each Juice node type in inspector, verify property visibility matches previous behavior
 - [ ] Run full test suite
 
 **Gate**: Zero `_validate_property()` in domain nodes. Inspector property visibility unchanged.

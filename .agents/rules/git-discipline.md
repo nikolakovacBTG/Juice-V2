@@ -107,25 +107,25 @@ git commit -m "message"
 ### Pull Latest Juice
 ```powershell
 # Pull from standalone repo into Demo
-git subtree pull --prefix=addons/juice juice-standalone main --squash
+git subtree pull --prefix=addons/Juice_V2 juice-v2-standalone main --squash
 ```
 
 ### Push Demo Fixes
 ```powershell
 # Push Demo fixes upstream to standalone
-git subtree push --prefix=addons/juice juice-standalone main
+git subtree push --prefix=addons/Juice_V2 juice-v2-standalone main
 ```
 
 ### Subtree Commands Reference
 ```powershell
 # Add subtree (initial setup)
-git subtree add --prefix=addons/juice juice-standalone main
+git subtree add --prefix=addons/Juice_V2 juice-v2-standalone main
 
 # Pull updates
-git subtree pull --prefix=addons/juice juice-standalone main --squash
+git subtree pull --prefix=addons/Juice_V2 juice-v2-standalone main --squash
 
 # Push changes
-git subtree push --prefix=addons/juice juice-standalone main
+git subtree push --prefix=addons/Juice_V2 juice-v2-standalone main
 ```
 
 ## Commit Standards
@@ -149,7 +149,7 @@ Detailed explanation if needed:
 ### Branch Strategy
 ```powershell
 # Create feature branch
-git checkout -b feature/juice-v1-refactor
+git checkout -b feature/juice-refactor
 
 # Work on feature branch
 # ... make changes ...
@@ -159,7 +159,7 @@ git add -A; git commit -m "Create L1 documentation structure"
 
 # Merge to master when ready
 git checkout master
-git merge feature/juice-v1-refactor
+git merge feature/juice-refactor
 ```
 
 ## Refactor Safety

@@ -1,13 +1,13 @@
 ## RULE: Coding Standards
 
-**Purpose:** Define Juice V1 coding standards and conventions.
+**Purpose:** Define Juice coding standards and conventions.
 
 **Mission:** Ensure consistent, maintainable code across all Juice components.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 coding standards and conventions
+# WHAT: Juice coding standards and conventions
 # EXPECTS: All Juice scripts follow these standards consistently
 # PROVIDES: Quality baseline for code reviews and development
 # ARCHITECTURE: Rules layer that enforces quality across all L1-3 components
@@ -102,10 +102,10 @@ func _find_component_on_node(parent: Node) -> MyComponent:
 ### Subtree Sync
 ```powershell
 # Pull latest Juice
-git subtree pull --prefix=addons/juice juice-standalone main --squash
+git subtree pull --prefix=addons/Juice_V2 juice-v2-standalone main --squash
 
 # Push Demo fixes upstream  
-git subtree push --prefix=addons/juice juice-standalone main
+git subtree push --prefix=addons/Juice_V2 juice-v2-standalone main
 ```
 
 ## Quality Requirements
@@ -136,4 +136,4 @@ git subtree push --prefix=addons/juice juice-standalone main
 - See L2 docs for domain coordination
 - See L3 docs for effect implementation
 
-This coding standards rule ensures quality and consistency across all Juice V1 components.
+This coding standards rule ensures quality and consistency across all Juice components.

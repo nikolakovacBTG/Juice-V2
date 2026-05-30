@@ -1,5 +1,5 @@
 ---
-description: "Documentation sweep workflow for Juice V1 scripts. Invoke per batch of files to ensure marketplace-grade inline documentation with AI context preservation."
+description: "Documentation sweep workflow for Juice scripts. Invoke per batch of files to ensure marketplace-grade inline documentation with AI context preservation."
 ---
 
 You are in DOCUMENTATION SWEEP MODE.
@@ -66,7 +66,7 @@ Write the comments for methods marked DOCUMENT.
 ### 2e. Check Structural Items (Phase A — if not already STRUCTURAL)
 - Class tooltip: first line must be `## Action-oriented sentence.`
 - Export tooltips: every `@export var` must have `##`
-- History: sanitize V0/V1/migration/phase references
+- History: sanitize V0/migration/phase references
 - TODO triage: check for stale/valid TODOs
 
 ### 2f. Edit Using Editor Tools ONLY

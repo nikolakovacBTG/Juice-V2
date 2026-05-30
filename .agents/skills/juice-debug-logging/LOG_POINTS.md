@@ -1,6 +1,6 @@
 # Log Points Reference
 
-Where to insert logging calls for each class layer in the Juice V1 stack.
+Where to insert logging calls for each class layer in the Juice stack.
 
 ## Base Classes
 

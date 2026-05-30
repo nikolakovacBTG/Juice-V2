@@ -21,7 +21,7 @@ if (-not ($firstLine -match '^##')) { Write-Warning "Missing class tooltip!" }
 ### Phase A Verification
 1. **Class tooltip** — first line is `## Action-oriented sentence`?
 2. **Export tooltips** — every `@export var` has `##` above it?
-3. **History** — zero V0/V1/migration/phase references?
+3. **History** — zero V0/migration/phase references?
 
 ### Phase B Verification (critical — this is where sweeps previously failed)
 4. **Comprehension** — Can you explain what base class calls each virtual hook implementation in this file?

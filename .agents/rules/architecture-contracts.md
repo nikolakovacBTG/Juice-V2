@@ -1,13 +1,13 @@
 ## RULE: Architecture Contracts
 
-**Purpose:** Define Juice V1 architectural contracts and boundaries.
+**Purpose:** Define Juice architectural contracts and boundaries.
 
 **Mission:** Ensure architectural integrity across all Juice components.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 architectural contracts and boundaries
+# WHAT: Juice architectural contracts and boundaries
 # EXPECTS: All Juice components respect L1-3 layer boundaries
 # PROVIDES: Architectural integrity and system stability
 # ARCHITECTURE: Rules layer that enforces L1-3 separation and contracts

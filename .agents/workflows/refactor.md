@@ -204,7 +204,7 @@ For **every file modified or created** during the refactor:
 - [ ] `JuiceLogger.warn()` on all guard/fallback paths
 - [ ] No silent fallback paths (`else` that changes behaviour must log)
 - [ ] Script section ordering: Signals → Enums → Config → Internal State → Lifecycle → Public API → Core Logic → Helpers
-- [ ] No translation violations (no 'V0/V1/ported/refactored' history in comments — explain WHY instead)
+- [ ] No translation violations (no 'V0/ported/refactored' history in comments — explain WHY instead)
 
 ---
 

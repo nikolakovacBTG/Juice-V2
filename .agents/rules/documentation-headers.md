@@ -1,13 +1,13 @@
 ## RULE: Documentation Headers
 
-**Purpose:** Define Juice V1 script header formatting standards.
+**Purpose:** Define Juice script header formatting standards.
 
 **Mission:** Ensure consistent, informative documentation across all scripts.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 script header formatting standards
+# WHAT: Juice script header formatting standards
 # EXPECTS: All Juice scripts follow header format consistently
 # PROVIDES: Consistent documentation and architectural context
 # ARCHITECTURE: Rules layer that enforces documentation quality
@@ -54,12 +54,12 @@
 
 ### L1 Core Example
 ```gdscript
-## Core timing system for Juice V1 animations.
+## Core timing system for Juice animations.
 ##
 ## Provides unified timing infrastructure across all domains. Handles progress
 ## calculation, easing functions, and animation lifecycle management.
 ##
-## @tutorial(Juice V1 Architecture): https://example.com/juice-v1
+## @tutorial(Juice Architecture): https://example.com/juice
 
 # ============================================================================
 # WHAT: Unified timing and progress calculation for all Juice animations
@@ -147,4 +147,4 @@
 - See L2 docs for domain node headers
 - See L3 docs for effect headers
 
-This documentation header rule ensures consistent, informative documentation across all Juice V1 scripts.
+This documentation header rule ensures consistent, informative documentation across all Juice scripts.

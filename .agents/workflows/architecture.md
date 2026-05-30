@@ -1,10 +1,10 @@
 ---
-description: Architecture workflow - base for port, review, refactor workflows with Juice V1 architecture context
+description: Architecture workflow - base for port, review, refactor workflows with Juice architecture context
 ---
 
 You are in ARCHITECTURE MODE.
 
-This is the base workflow for Juice V1 architecture-related tasks. It provides context and smart loading for specialized sub-workflows.
+This is the base workflow for Juice architecture-related tasks. It provides context and smart loading for specialized sub-workflows.
 
 **Skills auto-invoked:** `@juice-architecture`, `@juice-architecture-contracts`
 
@@ -12,7 +12,7 @@ This is the base workflow for Juice V1 architecture-related tasks. It provides c
 
 ## Architecture Context
 
-### Juice V1 L1-3 Architecture
+### Juice L1-3 Architecture
 - **L1 Core:** Delta-first model, timing system, base interfaces
 - **L2 Domain:** Write coordination, sibling stacking, domain separation, external move detection
 - **L3 Effects:** Transform deltas, appearance, procedural animation, shader integration, meta effects, utility patterns
@@ -29,18 +29,18 @@ This is the base workflow for Juice V1 architecture-related tasks. It provides c
 
 Based on your task, invoke the appropriate sub-workflow:
 
-### /port - Port V0 Effects to V1
+### /port - Port V0 Effects
 ```
 /port [effect_name]
 ```
-Ports a V0 Juice effect component to V1 resource-based architecture.
+Ports a V0 Juice effect component to the resource-based architecture.
 Batches all 3 domains together with auto-testing and verification.
 
 ### /review - Architecture Compliance Review
 ```
 /review [files_or_scope]
 ```
-Reviews code against Juice V1 architecture patterns and project standards.
+Reviews code against Juice architecture patterns and project standards.
 Analyzes layer contracts, anti-patterns, and quality criteria.
 
 ### /refactor - Safe Architecture Refactoring
@@ -210,4 +210,4 @@ These skills provide:
 
 ---
 
-This architecture workflow provides the foundation for all Juice V1 architecture-related work while ensuring compliance with established patterns and quality standards.
+This architecture workflow provides the foundation for all Juice architecture-related work while ensuring compliance with established patterns and quality standards.

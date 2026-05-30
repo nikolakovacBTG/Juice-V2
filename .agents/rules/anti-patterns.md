@@ -1,13 +1,13 @@
 ## RULE: Anti-Patterns
 
-**Purpose:** Define prohibited patterns and common mistakes in Juice V1.
+**Purpose:** Define prohibited patterns and common mistakes in Juice.
 
 **Mission:** Prevent architectural violations and maintain code quality.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 prohibited patterns and common mistakes
+# WHAT: Juice prohibited patterns and common mistakes
 # EXPECTS: All Juice code avoids these anti-patterns
 # PROVIDES: Code quality and architectural integrity
 # ARCHITECTURE: Rules layer that prevents common mistakes

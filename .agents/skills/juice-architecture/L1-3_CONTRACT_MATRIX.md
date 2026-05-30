@@ -244,4 +244,4 @@ class TransformControlJuiceEffect extends JuiceControlEffectBase:
 
 ---
 
-**Remember:** These contracts are the foundation of Juice V1. Violating them breaks the delta-first model.
+**Remember:** These contracts are the foundation of Juice. Violating them breaks the delta-first model.

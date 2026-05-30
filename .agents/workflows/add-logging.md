@@ -1,10 +1,10 @@
 ---
-description: Batch-oriented workflow for adding debug logging to Juice V1 scripts. Invokes @juice-debug-logging skill.
+description: Batch-oriented workflow for adding debug logging to Juice scripts. Invokes @juice-debug-logging skill.
 ---
 
 You are in ADD-LOGGING MODE.
 
-This workflow adds structured debug logging to Juice V1 scripts in controlled batches.
+This workflow adds structured debug logging to Juice scripts in controlled batches.
 It enforces batch discipline, skill-guided patterns, and test verification.
 
 **Skills auto-invoked:** `@juice-debug-logging`

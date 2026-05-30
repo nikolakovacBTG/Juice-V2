@@ -1,4 +1,4 @@
-# Juice V1 Architecture - Big Picture Overview
+# Juice Architecture - Big Picture Overview
 
 **Purpose:** Immutable reference document that maintains complete system overview during refactoring. Never modify this document - it's the architectural north star.
 
@@ -14,7 +14,7 @@
 - No reusable animation patterns
 - Poor performance from duplicated work
 
-### Juice V1 Solution
+### Juice Solution
 **Unified Architecture:**
 - Single node per target (JuiceControl/Juice2D/Juice3D)
 - Recipe-based effect composition
@@ -228,4 +228,4 @@ func _post_tick_write():
 - **Decision Guide:** Architectural decisions trace back to core principles
 - **Maintenance Guard:** Changes must honor these invariants to remain valid
 
-**Remember:** This document represents the architectural truth of Juice V1. All other documents should align with these principles, not contradict them.
+**Remember:** This document represents the architectural truth of Juice. All other documents should align with these principles, not contradict them.

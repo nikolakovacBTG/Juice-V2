@@ -2,7 +2,7 @@
 ## ============================================================================
 ## WHAT: [One-line description of what this effect does].
 ## WHY: [Why this effect exists / what user need it serves].
-## SYSTEM: Juice System (addons/Juice_V1/)
+## SYSTEM: Juice System (addons/Juice_V2/)
 ## DOES NOT: Handle Node2D or Node3D targets — use [EffectName]2D/3DJuiceEffect.
 ## ============================================================================
 ##
@@ -13,7 +13,7 @@
 ## ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name REPLACE_EffectNameControlJuiceEffect
 extends JuiceControlTransformEffect
 

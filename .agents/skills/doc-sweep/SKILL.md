@@ -1,11 +1,11 @@
 ---
 name: doc-sweep
-description: "Skill: In-script documentation quality sweep for Juice V1. Ensures method comments, class tooltips, export tooltips, and history sanitization meet marketplace standards."
+description: "Skill: In-script documentation quality sweep for Juice. Ensures method comments, class tooltips, export tooltips, and history sanitization meet marketplace standards."
 ---
 
 # Documentation Sweep Skill
 
-Ensures every script in `addons/Juice_V1/` meets marketplace-grade documentation standards.
+Ensures every script in `addons/Juice_V2/` meets marketplace-grade documentation standards.
 Invoked automatically by the `/doc-sweep` workflow, or manually when touching documentation.
 
 ## The Non-Negotiable Principle

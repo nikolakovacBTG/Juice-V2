@@ -1,13 +1,13 @@
 ## RULE: Verification
 
-**Purpose:** Define Juice V1 testing and verification standards.
+**Purpose:** Define Juice testing and verification standards.
 
 **Mission:** Ensure all features work correctly with proper test coverage.
 
 ---
 
 # ============================================================================
-# WHAT: Juice V1 testing and verification standards
+# WHAT: Juice testing and verification standards
 # EXPECTS: All features have corresponding tests and verification
 # PROVIDES: Quality assurance and regression prevention
 # ARCHITECTURE: Rules layer that enforces testing standards
