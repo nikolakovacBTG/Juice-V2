@@ -125,6 +125,8 @@ func _register_suites() -> void:
 	_suites.append(load("res://tests/suites/TestPropertyStacking.gd").new())
 	# Phase 7: Editor cache regression (IN_EDITOR CaptureAt stability)
 	_suites.append(load("res://tests/suites/TestEditorCache.gd").new())
+	# Phase 8: Signal router + SignalEmit utilities
+	_suites.append(load("res://tests/suites/TestRealisticSignalRouter.gd").new())
 
 
 	# Apply suite filter
