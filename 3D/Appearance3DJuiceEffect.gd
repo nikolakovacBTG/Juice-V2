@@ -70,6 +70,14 @@ var effect_type: int = AppearanceEffect.TINT:
 		effect_type = value
 		notify_property_list_changed()
 
+## Which material surface to target on multi-material meshes.
+## The dropdown shows material names when available (e.g. "Body", "Emissive").
+## Defaults to surface 0 for single-material meshes.
+var material_surface_index: int = 0:
+	set(value):
+		material_surface_index = value
+		notify_property_list_changed()
+
 # From/To reference infrastructure
 ## Where From values come from: Custom (explicit) or Self (captured from target).
 var from_reference: int = AppearanceReference.SELF:
@@ -162,6 +170,10 @@ func _get_property_list() -> Array[Dictionary]:
 	props.append({"name": "effect_type", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM,
 		"hint_string": "Tint,Fade,Overbright,Outline",
+		"usage": PROPERTY_USAGE_DEFAULT})
+	props.append({"name": "material_surface_index", "type": TYPE_INT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": _build_material_enum_hint(),
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append_array(_get_effect_base_properties())
 
@@ -272,6 +284,7 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"effect_type": effect_type = value; return true
+		&"material_surface_index": material_surface_index = value; return true
 		&"from_reference": from_reference = value; return true
 		&"to_reference": to_reference = value; return true
 		&"from_capture_at": from_capture_at = value; return true
@@ -302,6 +315,7 @@ func _set(property: StringName, value: Variant) -> bool:
 func _get(property: StringName) -> Variant:
 	match property:
 		&"effect_type": return effect_type
+		&"material_surface_index": return material_surface_index
 		&"from_reference": return from_reference
 		&"to_reference": return to_reference
 		&"from_capture_at": return from_capture_at
@@ -578,8 +592,8 @@ func _perform_from_capture(target: Node) -> void:
 			target.get_class() if target else "null"], debug_enabled)
 		_has_from_self_snapshot = true
 		return
-	if mesh_inst.get_active_material(0) != null:
-		var mat := mesh_inst.get_active_material(0) as StandardMaterial3D
+	if mesh_inst.get_active_material(material_surface_index) != null:
+		var mat := mesh_inst.get_active_material(material_surface_index) as StandardMaterial3D
 		if mat != null:
 			_captured_from_tint_color = mat.albedo_color
 			_captured_from_tint_blend = 0.0
@@ -594,8 +608,8 @@ func _perform_to_capture(target: Node) -> void:
 	if _has_to_self_snapshot:
 		return
 	var mesh_inst := target as MeshInstance3D
-	if mesh_inst != null and mesh_inst.get_active_material(0) != null:
-		var mat := mesh_inst.get_active_material(0) as StandardMaterial3D
+	if mesh_inst != null and mesh_inst.get_active_material(material_surface_index) != null:
+		var mat := mesh_inst.get_active_material(material_surface_index) as StandardMaterial3D
 		if mat != null:
 			# Capture TINT references
 			_captured_to_tint_color = mat.albedo_color
@@ -655,4 +669,61 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Flicker mode is Custom but no flicker_curve is assigned. Flicker will not apply.")
 	if flicker_min > flicker_max:
 		warnings.append("flicker_min is greater than flicker_max.")
+	# Warn if material_surface_index exceeds the target mesh's surface count.
+	var mesh := _resolve_editor_mesh()
+	if mesh != null and mesh.mesh != null:
+		var surface_count := mesh.mesh.get_surface_count()
+		if material_surface_index >= surface_count:
+			warnings.append(
+				"material_surface_index (%d) exceeds mesh surface count (%d)." % [
+				material_surface_index, surface_count])
 	return warnings
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+
+# Build a dynamic PROPERTY_HINT_ENUM string from the target mesh's surface
+# materials. Shows material names when available (e.g. "Body:0,Emissive:1"),
+# with fallback "Surface N" for unnamed materials.
+# Returns "Surface 0:0" if the mesh cannot be resolved at editor time.
+func _build_material_enum_hint() -> String:
+	var mesh := _resolve_editor_mesh()
+	if mesh == null or mesh.mesh == null:
+		return "Surface 0:0"
+	var hint := ""
+	var surface_count := mesh.mesh.get_surface_count()
+	for i in range(surface_count):
+		var mat := mesh.get_active_material(i)
+		var mat_name := ""
+		if mat != null and not mat.resource_name.is_empty():
+			mat_name = mat.resource_name
+		else:
+			mat_name = "Surface %d" % i
+		if not hint.is_empty():
+			hint += ","
+		hint += "%s:%d" % [mat_name, i]
+	if hint.is_empty():
+		hint = "Surface 0:0"
+	return hint
+
+
+# Resolve the target MeshInstance3D at editor time for dynamic inspector fields.
+# Uses JuiceEditorContext to find the host Juice3D node, then its parent (the
+# target in STACK mode). Returns null if not resolvable.
+func _resolve_editor_mesh() -> MeshInstance3D:
+	if not Engine.is_editor_hint():
+		return null
+	var host: Node = JuiceEditorContext.get_host_node(self)
+	if host == null:
+		return null
+	# Juice3D targets its parent in STACK mode.
+	var target := host.get_parent()
+	if target is MeshInstance3D:
+		return target as MeshInstance3D
+	# Search children if parent isn't a mesh (e.g. target is a Node3D with mesh child).
+	for child in target.get_children() if target != null else []:
+		if child is MeshInstance3D:
+			return child as MeshInstance3D
+	return null
