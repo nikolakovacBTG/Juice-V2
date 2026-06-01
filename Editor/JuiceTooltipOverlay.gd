@@ -1,10 +1,10 @@
 ## Transparent overlay providing rich, Godot-native-styled tooltips for
 ## sub-inspector EditorProperty nodes.
 ##
-## Placed as a child of EditorProperty to intercept hover. Overrides
-## _make_custom_tooltip() to render a styled tooltip matching Godot's native
-## inspector format: blue "Property" header with code-formatted type info,
-## plus rich description body with bold keyword support.
+## Added as a SIBLING of the target EditorProperty (child of the same parent
+## VBoxContainer) with top_level=true to position freely over the label area.
+## EditorProperty forces ALL its children into the value area, so the overlay
+## CANNOT be a child of EditorProperty — it must be a sibling.
 
 # =============================================================================
 # WHAT: Transparent Control overlay that renders rich tooltips via _make_custom_tooltip().
@@ -13,8 +13,8 @@
 #       overlay fills that gap with a visually matching implementation built
 #       entirely from editor theme tokens.
 # SYSTEM: Juice Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Handle click events — covers only the label area (left side)
-#           so value widgets (dropdowns, checkboxes) remain fully clickable.
+# DOES NOT: Handle click events — positioned over the label area only.
+#           Value widgets (right side) remain fully clickable.
 # =============================================================================
 
 @tool
@@ -36,43 +36,78 @@ var value_str: String
 # Documentation description from ## doc comments.
 var description: String
 
+# The target EditorProperty whose label area this overlay covers.
+var _target_property: EditorProperty
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
 
-## Configure the overlay with tooltip data and activate it.
-func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> void:
+## Configure the overlay with tooltip data and the target EditorProperty.
+func setup(target: EditorProperty, p_name: String, p_type: String, p_value: String, p_desc: String) -> void:
+	_target_property = target
 	property_name = p_name
 	type_name = p_type
 	value_str = p_value
 	description = p_desc
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
-	mouse_filter = Control.MOUSE_FILTER_PASS
+	# STOP: this control owns hover in the label area. It's a sibling of the
+	# EditorProperty (not a child), so EditorProperty's layout doesn't touch it.
+	# top_level=true takes it out of the parent VBox's stacking.
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	top_level = true
 
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED:
-		# EditorProperty positions children in the value area (right side).
-		# Override to cover only the LABEL area (left side) so tooltips appear
-		# on hover without blocking value widgets (dropdowns, checkboxes, etc.).
-		call_deferred("_override_layout")
+	if what == NOTIFICATION_POST_ENTER_TREE:
+		if _target_property and is_instance_valid(_target_property):
+			if not _target_property.resized.is_connected(_override_layout):
+				_target_property.resized.connect(_override_layout)
+			if not _target_property.item_rect_changed.is_connected(_override_layout):
+				_target_property.item_rect_changed.connect(_override_layout)
+			call_deferred("_override_layout")
+	elif what == NOTIFICATION_EXIT_TREE:
+		if _target_property and is_instance_valid(_target_property):
+			if _target_property.resized.is_connected(_override_layout):
+				_target_property.resized.disconnect(_override_layout)
+			if _target_property.item_rect_changed.is_connected(_override_layout):
+				_target_property.item_rect_changed.disconnect(_override_layout)
 
 
-# Reposition to cover only the label area of the parent EditorProperty.
-# The label area occupies roughly the left 40% (EditorInspector default split).
-# Value widgets (right side) remain fully clickable.
+# Position over the label area of the target EditorProperty.
+# Uses top_level=true so coordinates are in viewport space.
+# Only covers the FIRST ROW height — excludes bottom editors (Vector3 sub-row).
 func _override_layout() -> void:
-	var parent_ctrl := get_parent() as Control
-	if parent_ctrl and is_instance_valid(parent_ctrl):
-		position = Vector2.ZERO
-		# Cover only the label area — approximately 40% of the row width.
-		# This matches EditorInspector's default name_split_ratio.
-		var label_width := parent_ctrl.size.x * 0.4
-		size = Vector2(label_width, parent_ctrl.size.y)
+	if not _target_property or not is_instance_valid(_target_property):
+		visible = false
+		return
+	if not _target_property.is_inside_tree():
+		visible = false
+		return
+
+	# name_split_ratio defines where the label ends and value area begins.
+	var split: float = _target_property.name_split_ratio
+
+	# For multi-row properties (Vector3, etc.), only cover the label row height,
+	# not the full EditorProperty height which includes the bottom editor.
+	# The label row height is the minimum size of a single inspector row.
+	var row_height := _target_property.size.y
+	# Check for bottom editor children that extend the property vertically.
+	for child in _target_property.get_children():
+		if child is Control:
+			var c := child as Control
+			if c.position.y > 0 and c.size.y > 0:
+				# This child is below the label row — cap our height before it.
+				row_height = minf(row_height, c.position.y)
+
+	global_position = _target_property.global_position
+	size = Vector2(_target_property.size.x * split, row_height)
+	visible = true
+
 
 # =============================================================================
 # TOOLTIP RENDERING
@@ -226,3 +261,4 @@ static func _add_description_text(rtl: RichTextLabel, text: String, bold_color: 
 				rtl.add_text(line.substr(colon_idx + 1))
 				continue
 		rtl.add_text(line)
+

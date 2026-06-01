@@ -136,8 +136,18 @@ func capture_base(host: Node) -> void:
 		return
 	# Cache locally so restore_natural() works even after ledger teardown.
 	_base_value = _resolved_node.get_indexed(property_path)
-	# Register path in the Ledger. Domain flush() then writes this property each frame.
-	JuiceLedger.ensure(host, [property_path])
+	# Register path in the Ledger on the RESOLVED node (not the host).
+	# This ensures cross-node targeting works: when node_path points to a
+	# sibling, deltas are registered on that sibling's ledger entry.
+	JuiceLedger.ensure(_resolved_node, [property_path])
+
+
+## Returns the resolved target node set by [method capture_base].
+## Returns [code]null[/code] before capture_base() has been called.
+## Used by [PropertyJuiceEffectBase] to pass the correct node to Ledger calls
+## when the target differs from the host (cross-node targeting).
+func get_target_node() -> Node:
+	return _resolved_node
 
 
 ## Write the captured natural base value directly back to the node.

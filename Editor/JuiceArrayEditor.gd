@@ -434,8 +434,11 @@ static var _tooltip_cache: Dictionary = {}
 
 # Apply ## doc-comment tooltips to all EditorProperty children in a sub-inspector.
 # Called via call_deferred after edit() so the EditorProperty nodes exist.
-# Creates JuiceTooltipOverlay instances that intercept hover and render
-# rich tooltips matching Godot's native inspector format.
+# Creates JuiceTooltipOverlay instances that render rich tooltips via
+# _make_custom_tooltip(). The overlay is inserted as the FIRST child of
+# each EditorProperty so value widgets (higher child indices) draw on top
+# and receive input priority. The overlay only gets hover where no widget
+# covers — the label area.
 func _apply_tooltips(inspector: EditorInspector, resource: Resource) -> void:
 	if not is_instance_valid(inspector) or resource == null:
 		return
@@ -471,16 +474,22 @@ func _set_tooltips_recursive(node: Node, tooltips: Dictionary, resource: Resourc
 	return count
 
 
-# Add a rich tooltip overlay to an EditorProperty.
-# The overlay intercepts hover and renders a styled tooltip matching Godot's
-# native format via _make_custom_tooltip(). Clicks pass through to the value
-# widgets underneath (mouse_filter = PASS).
+# Add a rich tooltip overlay as a SIBLING of an EditorProperty.
+# The overlay uses top_level=true to position freely over the target's label
+# area. It CANNOT be a child of EditorProperty because EditorProperty forces
+# ALL children (regular and internal) into the value area, creating the
+# phantom black field and blocking value widget input.
 func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, resource: Resource) -> void:
 	var prop_name: String = editor_property.get_edited_property()
+	var parent_container := editor_property.get_parent()
+	if not parent_container:
+		return
 
 	# Remove any previously added tooltip overlay (e.g., from a refresh).
-	for child in editor_property.get_children():
-		if child.name == "_juice_tooltip":
+	# Overlays are siblings of the EditorProperty, named "_juice_tt_{prop_name}".
+	var overlay_name := "_juice_tt_%s" % prop_name
+	for child in parent_container.get_children():
+		if child.name == overlay_name:
 			child.queue_free()
 
 	# Look up type and value from the resource's property list.
@@ -492,11 +501,11 @@ func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, reso
 			value_str = _get_value_display(prop_info, resource)
 			break
 
-	# Create the transparent overlay with rich tooltip rendering.
+	# Create the overlay as a SIBLING with top_level=true for free positioning.
 	var overlay: Control = _TooltipOverlay.new()
-	overlay.setup(prop_name, type_name, value_str, tip)
-	overlay.name = "_juice_tooltip"
-	editor_property.add_child(overlay)
+	overlay.setup(editor_property, prop_name, type_name, value_str, tip)
+	overlay.name = overlay_name
+	parent_container.add_child(overlay)
 
 
 # Convert a PropertyInfo dictionary to a human-readable type name.

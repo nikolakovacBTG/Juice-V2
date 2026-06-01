@@ -183,11 +183,17 @@ func _get_domain_tag() -> String:
 
 ## Capture target's natural position/rotation/scale/modulate.
 ## All properties are tracked through the Shared Target Ledger.
+## _modulate_factor is a synthetic key for multiplicative Appearance factors,
+## matching Juice3D's _appearance_factor convention.
 func _capture_base_values() -> void:
 	if _target_node == null or not _target_node is Node2D:
 		return
 	var n2d := _target_node as Node2D
 	JuiceLedger.ensure(n2d, ["position", "rotation", "scale", "modulate"])
+	# Seed synthetic multiplicative factor key (mirrors Juice3D._appearance_factor).
+	var ledger := JuiceLedger.ensure(n2d, [])
+	if not ledger["base"].has("_modulate_factor"):
+		ledger["base"]["_modulate_factor"] = Color.WHITE
 	_base_captured = true
 	JuiceLogger.log_capture(self, "2D", "position", n2d.position, debug_enabled)
 	JuiceLogger.log_capture(self, "2D", "rotation", n2d.rotation, debug_enabled)
@@ -276,14 +282,23 @@ func _post_tick_write() -> void:
 		combined_modulate.b *= app_eff._modulate_factor.b
 		combined_modulate.a *= app_eff._modulate_factor.a
 
-	# Register modulate factor into the Ledger — sibling stacking is handled
-	# automatically via per-source delta tracking (one entry per Juice2D node).
-	JuiceLedger.register_delta(n2d, self, "modulate", combined_modulate)
+	# Register modulate factor under a synthetic key so flush() skips it
+	# (flush is additive, Appearance factors are multiplicative).
+	# Matches JuiceControl's _modulate_factor and Juice3D's _appearance_factor.
+	JuiceLedger.register_delta(n2d, self, "_modulate_factor", combined_modulate)
 
-	# Flush all registered properties — transform (additive), modulate (multiplicative),
-	# and any property effects registered dynamically via PropertyJuiceEffectBase.
+	# Flush all registered properties — transform (additive) and any property
+	# effects registered dynamically via PropertyJuiceEffectBase.
+	# modulate is NOT flushed here — it's written manually below.
 	JuiceLedger.flush(n2d)
-	var written_modulate: Color = n2d.modulate
+
+	# Apply multiplicative modulate: base × combined_factor from all sibling sources.
+	var base_mod: Color = JuiceLedger.get_base(n2d, "modulate", Color.WHITE)
+	var total_factor: Color = JuiceLedger.get_total(n2d, "_modulate_factor", Color.WHITE)
+	var written_modulate := Color(
+		base_mod.r * total_factor.r, base_mod.g * total_factor.g,
+		base_mod.b * total_factor.b, base_mod.a * total_factor.a)
+	n2d.modulate = written_modulate
 	JuiceLogger.log_info(self, "2D",
 			"post_tick: modulate this_node_factor=%s total_written=%s" % [
 			combined_modulate, written_modulate],
