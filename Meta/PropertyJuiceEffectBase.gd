@@ -99,8 +99,15 @@ func _on_animate_start(target: Node) -> void:
 # permanent=false: keeps the ledger entry and other sources' contributions intact;
 # only THIS effect's deltas are removed. The domain's next flush() writes the
 # correct stacked visual automatically.
-func _restore_to_natural(target: Node) -> void:
-	JuiceLedger.cleanup_source(target, self, false)
+# Iterates each PropertyTarget to clean up from the correct resolved node,
+# supporting cross-node targeting where different targets have separate ledgers.
+func _restore_to_natural(_target: Node) -> void:
+	for pt in property_targets:
+		if pt == null:
+			continue
+		var resolved := pt.get_target_node()
+		if resolved != null and is_instance_valid(resolved):
+			JuiceLedger.cleanup_source(resolved, self, false)
 
 
 # Called before the scene file is saved to prevent Juice offsets being baked in.
@@ -167,12 +174,20 @@ func _get_seq_contribution() -> Dictionary:
 #   • Hold/flip types  → register_hold (absolute value, newest wins)
 #   • Rect2 / AABB     → register_delta (decomposed position+size offsets)
 #   • All other types (float, Vector*, Quaternion, Color) → register_delta (desired - base additive delta)
+# Each PropertyTarget may resolve to a different node (cross-node targeting),
+# so Ledger calls use pt.get_target_node() instead of the generic target.
 func _apply_effect(progress: float, target: Node) -> void:
 	for pt in property_targets:
 		if pt == null or pt.property_path.is_empty():
 			continue
 
-		var base_val: Variant = JuiceLedger.get_base(target, pt.property_path, null)
+		# Use the resolved node for Ledger lookups. Falls back to the host
+		# target when node_path is empty (same-node targeting, the common case).
+		var ledger_node: Node = pt.get_target_node()
+		if ledger_node == null or not is_instance_valid(ledger_node):
+			ledger_node = target
+
+		var base_val: Variant = JuiceLedger.get_base(ledger_node, pt.property_path, null)
 		if base_val == null:
 			# Ledger not primed — capture_base() should have run in _on_animate_start.
 			# Guard gracefully against edge cases (e.g. target changed mid-animation).
@@ -186,27 +201,27 @@ func _apply_effect(progress: float, target: Node) -> void:
 			TYPE_NODE_PATH, TYPE_OBJECT, \
 			TYPE_PLANE, TYPE_BASIS, TYPE_PROJECTION:
 				# Hold/flip: newest active source's absolute value wins.
-				JuiceLedger.register_hold(target, self, pt.property_path, desired)
+				JuiceLedger.register_hold(ledger_node, self, pt.property_path, desired)
 
 			TYPE_RECT2:
 				var f := desired as Rect2;  var b := base_val as Rect2
-				JuiceLedger.register_delta(target, self, pt.property_path,
+				JuiceLedger.register_delta(ledger_node, self, pt.property_path,
 						Rect2(f.position - b.position, f.size - b.size))
 
 			TYPE_RECT2I:
 				var f := desired as Rect2i; var b := base_val as Rect2i
-				JuiceLedger.register_delta(target, self, pt.property_path,
+				JuiceLedger.register_delta(ledger_node, self, pt.property_path,
 						Rect2i(f.position - b.position, f.size - b.size))
 
 			TYPE_AABB:
 				var f := desired as AABB;   var b := base_val as AABB
-				JuiceLedger.register_delta(target, self, pt.property_path,
+				JuiceLedger.register_delta(ledger_node, self, pt.property_path,
 						AABB(f.position - b.position, f.size - b.size))
 
 			_:
 				# Generic additive: desired - base gives the offset to stack.
 				# Covers float, int, Vector2/2i/3/3i/4/4i, Quaternion, Color.
-				JuiceLedger.register_delta(target, self, pt.property_path, desired - base_val)
+				JuiceLedger.register_delta(ledger_node, self, pt.property_path, desired - base_val)
 
 
 # =============================================================================
