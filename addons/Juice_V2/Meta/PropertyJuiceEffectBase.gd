@@ -127,12 +127,10 @@ func _temporarily_reapply_visual(target: Node) -> void:
 ## at [param progress]. Return what you want the property to equal — the base
 ## class converts this into whatever the Ledger needs (delta, factor, or hold).
 ##
-## [b]Additive types[/b] (float, int, Vector*, Quaternion): return the
+## [b]Additive types[/b] (float, int, Vector*, Quaternion, Color): return the
 ## target value. The base class subtracts [param base_val] and registers the
 ## delta so the Ledger sums concurrent sources correctly.
-##
-## [b]Color[/b]: return the target Color. The base class computes a
-## multiplicative factor ([code]desired / base[/code]) per channel.
+## Color deltas are clamped to valid range in [method JuiceLedger.flush].
 ##
 ## [b]Decomposed types[/b] (Rect2, Rect2i, AABB): return the target value.
 ## The base class decomposes into position/size deltas for the Ledger.
@@ -167,9 +165,8 @@ func _get_seq_contribution() -> Dictionary:
 # _compute_property_value() returns the ABSOLUTE desired value; this method
 # converts it into the Ledger's required form per type:
 #   • Hold/flip types  → register_hold (absolute value, newest wins)
-#   • Color            → register_delta (multiplicative factor: desired / base)
 #   • Rect2 / AABB     → register_delta (decomposed position+size offsets)
-#   • All other types  → register_delta (desired - base additive delta)
+#   • All other types (float, Vector*, Quaternion, Color) → register_delta (desired - base additive delta)
 func _apply_effect(progress: float, target: Node) -> void:
 	for pt in property_targets:
 		if pt == null or pt.property_path.is_empty():
@@ -191,17 +188,6 @@ func _apply_effect(progress: float, target: Node) -> void:
 				# Hold/flip: newest active source's absolute value wins.
 				JuiceLedger.register_hold(target, self, pt.property_path, desired)
 
-			TYPE_COLOR:
-				# Multiplicative: flush() writes base * Π(factors), so register
-				# the ratio (desired / base) as the factor for this source.
-				# EPS prevents division by zero on zero-channel bases.
-				const EPS := 0.0001
-				var b := base_val as Color
-				var d := desired as Color
-				JuiceLedger.register_delta(target, self, pt.property_path,
-						Color(d.r / max(b.r, EPS), d.g / max(b.g, EPS),
-							  d.b / max(b.b, EPS), d.a / max(b.a, EPS)))
-
 			TYPE_RECT2:
 				var f := desired as Rect2;  var b := base_val as Rect2
 				JuiceLedger.register_delta(target, self, pt.property_path,
@@ -219,6 +205,7 @@ func _apply_effect(progress: float, target: Node) -> void:
 
 			_:
 				# Generic additive: desired - base gives the offset to stack.
+				# Covers float, int, Vector2/2i/3/3i/4/4i, Quaternion, Color.
 				JuiceLedger.register_delta(target, self, pt.property_path, desired - base_val)
 
 
