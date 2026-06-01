@@ -1819,17 +1819,14 @@ func _seq_post_tick_write_target(target: Node, effects: Array) -> void:
 		var total_delta: Variant = JuiceLedger.get_total(target, prop, JuiceLedger.zero_for(base_val))
 
 		if typeof(total_delta) == TYPE_COLOR:
-			# Match flush() convention: WHITE base = multiplicative (Appearance),
-			# other base = additive (PropertyTarget Color). Additive results are
-			# clamped to prevent negative channels.
+			# Additive Color: base + Σdeltas, clamped to valid range.
+			# Appearance effects bypass this path entirely (empty _get_seq_contribution),
+			# so only PropertyTarget additive deltas reach here.
 			var base_col := base_val as Color
 			var tot_col := total_delta as Color
-			if base_col.is_equal_approx(Color.WHITE):
-				target.set(prop, Color(base_col.r * tot_col.r, base_col.g * tot_col.g, base_col.b * tot_col.b, base_col.a * tot_col.a))
-			else:
-				var result := Color(base_col.r + tot_col.r, base_col.g + tot_col.g, base_col.b + tot_col.b, base_col.a + tot_col.a)
-				result = Color(maxf(result.r, 0.0), maxf(result.g, 0.0), maxf(result.b, 0.0), clampf(result.a, 0.0, 1.0))
-				target.set(prop, result)
+			var result := Color(base_col.r + tot_col.r, base_col.g + tot_col.g, base_col.b + tot_col.b, base_col.a + tot_col.a)
+			result = Color(maxf(result.r, 0.0), maxf(result.g, 0.0), maxf(result.b, 0.0), clampf(result.a, 0.0, 1.0))
+			target.set(prop, result)
 		else:
 			target.set(prop, base_val + total_delta)
 

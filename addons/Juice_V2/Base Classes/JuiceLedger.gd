@@ -301,40 +301,23 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 		var delta_sources: Dictionary = ledger["deltas"].get(prop, {})
 		var total_delta: Variant = zero_for(base_val)
 
-		# --- Color branching ---
-		# Color properties need different accumulation depending on their semantic:
-		# • Appearance system (modulate/self_modulate) registers multiplicative
-		#   factors with Color.WHITE as base (multiplicative identity). These must
-		#   be multiplied: base × Πfactors.
-		# • PropertyTarget registers additive deltas with arbitrary base colors.
-		#   These must be summed: base + Σdeltas, then clamped.
-		# The base value disambiguates: WHITE base = multiplicative convention.
-		if typeof(base_val) == TYPE_COLOR:
-			var base_col := base_val as Color
-			if base_col.is_equal_approx(Color.WHITE):
-				# Multiplicative path: Appearance system factors.
-				var product := Color.WHITE
-				for source_id in delta_sources:
-					var c_del := delta_sources[source_id] as Color
-					product = Color(product.r * c_del.r, product.g * c_del.g, product.b * c_del.b, product.a * c_del.a)
-				target.set_indexed(prop, Color(base_col.r * product.r, base_col.g * product.g, base_col.b * product.b, base_col.a * product.a))
-			else:
-				# Additive path: PropertyTarget Color deltas.
-				var sum := Color(0, 0, 0, 0)
-				for source_id in delta_sources:
-					sum += delta_sources[source_id] as Color
-				var result := Color(base_col.r + sum.r, base_col.g + sum.g, base_col.b + sum.b, base_col.a + sum.a)
-				result = Color(maxf(result.r, 0.0), maxf(result.g, 0.0), maxf(result.b, 0.0), clampf(result.a, 0.0, 1.0))
-				target.set_indexed(prop, result)
-			continue
-
-		# --- Additive path: float, int, Vector2/2i/3/3i/4/4i, Quaternion ---
+		# --- Additive path: float, int, Vector2/2i/3/3i/4/4i, Quaternion, Color ---
 		# zero_for() returns a non-null accumulator for these types.
+		# Color is always additive here because flush() skips synthetic keys
+		# (e.g. "_appearance_factor") — the Appearance system's multiplicative
+		# pipeline never goes through flush(). Only PropertyTarget Color deltas
+		# reach this path, and those are always additive (desired - base).
 		if total_delta != null:
 			# Key-iteration avoids the per-call Array allocation of .values().
 			for source_id in delta_sources:
 				total_delta += delta_sources[source_id]
-			target.set_indexed(prop, base_val + total_delta)
+			var result: Variant = base_val + total_delta
+			# Clamp Color to valid range — prevents negative channels from
+			# additive stacking, and keeps alpha in [0,1] for correct blending.
+			if typeof(result) == TYPE_COLOR:
+				var c := result as Color
+				result = Color(maxf(c.r, 0.0), maxf(c.g, 0.0), maxf(c.b, 0.0), clampf(c.a, 0.0, 1.0))
+			target.set_indexed(prop, result)
 			continue
 
 		# --- Non-additive types: zero_for() returned null ---
