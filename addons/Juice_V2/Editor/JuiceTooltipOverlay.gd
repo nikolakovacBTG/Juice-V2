@@ -59,8 +59,18 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 # =============================================================================
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_POST_ENTER_TREE:
-		call_deferred("_override_layout")
+	if what == NOTIFICATION_POST_ENTER_TREE:
+		var parent := get_parent() as Control
+		if parent:
+			# Connect to PARENT's resized — our own never fires because
+			# internal children aren't managed by Container layout.
+			if not parent.resized.is_connected(_override_layout):
+				parent.resized.connect(_override_layout)
+			_override_layout()
+	elif what == NOTIFICATION_EXIT_TREE:
+		var parent := get_parent() as Control
+		if parent and parent.resized.is_connected(_override_layout):
+			parent.resized.disconnect(_override_layout)
 
 
 # Cover the label area of the parent EditorProperty.
