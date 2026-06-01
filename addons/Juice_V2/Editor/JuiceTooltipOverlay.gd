@@ -49,10 +49,11 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# Hidden until _override_layout positions us correctly. This prevents
-	# the black flash when EditorProperty initially places us in the value area
-	# before our deferred override moves us to the label area.
-	visible = false
+	# Transparent until _override_layout positions us correctly. Using alpha
+	# instead of visible=false so the control still participates in layout
+	# (NOTIFICATION_RESIZED fires). visible=false would deadlock: no layout →
+	# no resize notification → _override_layout never called → stays hidden.
+	modulate.a = 0.0
 
 # =============================================================================
 # LIFECYCLE
@@ -94,7 +95,7 @@ func _override_layout() -> void:
 
 	position = Vector2.ZERO
 	size = Vector2(value_start_x, parent_ctrl.size.y)
-	visible = true
+	modulate.a = 1.0
 
 
 # =============================================================================
