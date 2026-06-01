@@ -1,6 +1,6 @@
-# Juice V1.1 Feature Tracker
+# Juice V2.1 Feature Tracker
 
-This document tracks planned features, architectural upgrades, and UX improvements slated for the V1.1 release (after the initial V1.0 marketplace launch).
+This document tracks planned features, architectural upgrades, and UX improvements slated for the V2.1 release (after the initial V2.0 marketplace launch).
 
 ---
 
@@ -22,7 +22,7 @@ This document tracks planned features, architectural upgrades, and UX improvemen
 ## 2. 3D Outline Performance Scalability (Instance Uniforms)
 
 **Problem (Material Duplication):**
-Currently in V1.0, 3D appearance effects that apply an outline use "Material Duplication" (Approach 1). The `Juice3D` domain node duplicates the target's base material and instantiates a completely unique `ShaderMaterial` for the outline's `next_pass`, using standard `set_shader_parameter()` calls. While safe and perfectly isolated, this breaks rendering batching. If 50 enemies are outlined simultaneously, it results in 50 separate draw calls, which is unscalable for bullet-hell games or high-density scenes.
+Currently in V2.0, 3D appearance effects that apply an outline use "Material Duplication" (Approach 1). The `Juice3D` domain node duplicates the target's base material and instantiates a completely unique `ShaderMaterial` for the outline's `next_pass`, using standard `set_shader_parameter()` calls. While safe and perfectly isolated, this breaks rendering batching. If 50 enemies are outlined simultaneously, it results in 50 separate draw calls, which is unscalable for bullet-hell games or high-density scenes.
 
 **Improvement Solution (Instance Uniforms):**
 Transition the 3D outline system to use **Instance Uniforms** (Approach 2).
@@ -49,15 +49,15 @@ With the release of Godot 4.7 (specifically changes detailed in 4.7 dev snapshot
 
 ## 4. Property Effect Family — Ledger Refactor (Conflict Safety)
 
-**Status:** Deferred from V1.0. Shipped as an approved Direct-Write Exception.  
-**Branch:** `feature/v1.1-property-family` (all code preserved there, deleted from master)  
+**Status:** Deferred from V2.0. Shipped as an approved Direct-Write Exception.  
+**Branch:** `feature/v2.1-property-family` (all code preserved there, deleted from master)  
 **Full plan:** `Documentation/Future/PropertyFamily_Ledger_Refactor.md`
 
 **Why deferred:**
-The Property family (`InterpolateProperty*`, `NoiseProperty*`, `ShakeProperty*`, `ProgressProperty*`) bypasses the JuiceLedger and writes directly to the target node via `set_indexed()`. This was a deliberate V1.0 scope decision — the Ledger aggregates typed channels (position/rotation/scale/modulate) and extending it to arbitrary user-picked properties requires a new generic channel API and L2 domain changes across all three domains.
+The Property family (`InterpolateProperty*`, `NoiseProperty*`, `ShakeProperty*`, `ProgressProperty*`) bypasses the JuiceLedger and writes directly to the target node via `set_indexed()`. This was a deliberate V2.0 scope decision — the Ledger aggregates typed channels (position/rotation/scale/modulate) and extending it to arbitrary user-picked properties requires a new generic channel API and L2 domain changes across all three domains.
 
-**The V1.1 conflict being solved:**
-Two Property Effects in the same Recipe targeting the same property path simultaneously produce a last-writer-wins conflict. V1's Ledger delta aggregation solves this — but the Property family must first register deltas instead of writing directly.
+**The V2.1 conflict being solved:**
+Two Property Effects in the same Recipe targeting the same property path simultaneously produce a last-writer-wins conflict. V2's Ledger delta aggregation solves this — but the Property family must first register deltas instead of writing directly.
 
 **Key work required:**
 - `JuiceLedger.gd`: generic property channel (`register_property_delta`, `flush_properties`)
@@ -126,9 +126,9 @@ questions before implementation.
 
 ## 6. Appearance3D Multi-Surface Material Architecture
 
-**Status:** Partial fix shipped in V1.0. Full architecture deferred to V1.1.
+**Status:** Partial fix shipped in V2.0. Full architecture deferred to V2.1.
 
-### What V1.0 Ships
+### What V2.0 Ships
 
 `Juice3D.gd` uses a per-surface `Dictionary[int, Material]` for working/natural materials, so `Appearance3DJuiceEffect.material_surface_index` is respected at the `set_surface_override_material()` level. A single effect targeting surface 2 works correctly.
 
@@ -136,7 +136,7 @@ questions before implementation.
 
 The albedo accumulation pipeline (`_post_tick_write()`) reads `material_surface_index` from the **first contributing** appearance effect and applies all combined factors to that single surface. If two sibling Appearance3D effects in the same recipe target **different** surfaces (e.g., surface 0 = body tint, surface 1 = emissive pulse), only the first effect's surface gets the combined result. The second surface is ignored.
 
-### Full V1.1 Architecture
+### Full V2.1 Architecture
 
 To properly support multi-surface Appearance3D:
 

@@ -14,10 +14,10 @@
 
 ---
 
-## PropertyTarget cross-node targeting via node_path fails silently
+## ~~PropertyTarget cross-node targeting via node_path fails silently~~ RESOLVED
 
 **Severity:** Moderate / UX Gap  
-**Status:** Open  
+**Status:** ✅ Fixed (2026-06-01)  
 **Component:** `PropertyTarget.gd` / `JuiceLedger.gd`
 
 ### Description
@@ -31,10 +31,10 @@ While `PropertyTarget` exposes a `node_path` property and correctly captures the
 
 ---
 
-## Appearance3DJuiceEffect material selection missing
+## ~~Appearance3DJuiceEffect material selection missing~~ RESOLVED
 
 **Severity:** Moderate / Feature Gap  
-**Status:** Open  
+**Status:** ✅ Fixed (2026-06-01)  
 **Component:** `Appearance3DJuiceEffect`
 
 ### Description
@@ -47,10 +47,10 @@ There is no way to target a specific material index or name when animating appea
 
 ---
 
-## Color Interpolation math bug (Green to Purple)
+## ~~Color Interpolation math bug (Green to Purple)~~ RESOLVED
 
 **Severity:** High  
-**Status:** Open  
+**Status:** ✅ Fixed (2026-06-01)  
 **Component:** `PropertyInterpolateJuiceEffectBase.gd`
 
 ### Description
@@ -59,10 +59,10 @@ When interpolating a Color property, setting the "to" color to Green results in 
 
 ---
 
-## Signal / Method Event Architecture Gap
+## ~~Signal / Method Event Architecture Gap~~ RESOLVED
 
 **Severity:** High / Architectural Flaw  
-**Status:** Open  
+**Status:** ✅ Fixed (2026-06-01)  
 **Component:** `SignalEmitJuiceUtility` / `CallMethodJuiceUtility` / `JuiceBase`
 
 ### Description
@@ -76,3 +76,34 @@ The base class (`JuiceBase`) needs to take responsibility for firing signals and
 
 **Bubbling to Sub-Scene Root:**
 To truly fulfill the "no-code" philosophy and treat prefabs as black boxes, the Event Router should not just bubble the signal from the Resource to the `JuiceBase` node. It should include an option (e.g., `emit_to_root = true` (default true)) to traverse up and emit the signal directly from the **Sub-Scene Root** (`owner`). This way, the Main Scene can listen to the prefab root directly without needing to dig into its internal node hierarchy.
+
+---
+
+## Appearance3D Material Dropdown Hardcodes Surface 0
+
+**Severity:** Moderate
+**Status:** 🐞 Open
+**Component:** `Appearance3DJuiceEffect`
+
+### Description
+
+The newly added material dropdown in `Appearance3DJuiceEffect` is functionally ignored at runtime. The script hardcodes `set_surface_override_material(0, ...)` instead of respecting the material index the user selected in the inspector.
+
+---
+
+## SignalEmitJuiceUtility Registers Signals Too Late for Code & Inspector Wiring
+
+**Severity:** High / Architectural Flaw
+**Status:** 🐞 Open
+**Component:** `SignalEmitJuiceUtilityBase` / `JuiceSignalRouter` / `JuiceTriggerRouter`
+
+### Description
+
+`SignalEmitJuiceUtilityBase` dynamically registers its user-defined signals (like `"Used"`) using `JuiceSignalRouter.register_signal_with_owner`. However, it only performs this registration in `_on_animate_start()` (the moment the animation actually plays).
+
+This fundamentally breaks signal wiring because Godot requires signals to exist when they are connected:
+1. **Manual Triggers:** `JuiceTriggerRouter` attempts to wire manual triggers during `_ready()`. Because the signal hasn't been dynamically created yet, the router sees it missing and silently aborts the connection to prevent a crash.
+2. **Inspector Connections:** Godot's native Inspector connections attempt to resolve when the scene is instanced. They also fail because the signal does not exist on the root node until the animation runs.
+
+### Proposed Fix
+Signal registration must happen much earlier. `SignalEmitJuiceUtilityBase` needs to override `_on_host_ready()` and register its signals (via `JuiceSignalRouter`) there, so the signals physically exist on the node(s) *before* `JuiceBase` or the Godot Engine attempts to connect them in `_ready()`.

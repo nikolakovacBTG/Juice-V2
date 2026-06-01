@@ -1,7 +1,7 @@
-# Property Effect Family — V1.1 Ledger Refactor Plan
+# Property Effect Family — V2.1 Ledger Refactor Plan
 
-**Status:** Deferred to V1.1 (shipped as Direct-Write Exception in V1.0)  
-**Author:** Juice V1 Architecture  
+**Status:** Deferred to V2.1 (shipped as Direct-Write Exception in V2.0)  
+**Author:** Juice V2 Architecture  
 **Ref:** `Documentation/Future/Juice_V1.1_Features.md` Item 4
 
 ---
@@ -10,18 +10,18 @@
 
 The Property Effect family (`InterpolateProperty*`, `NoiseProperty*`, `ShakeProperty*`,
 `ProgressProperty*`) currently operates as an **approved Direct-Write Exception** to the
-Juice V1 architecture. Each effect calls `target_node.set_indexed(property_path, value)`
+Juice V2 architecture. Each effect calls `target_node.set_indexed(property_path, value)`
 directly in `_apply_effect()`, bypassing the JuiceLedger entirely.
 
-This was a deliberate V1.0 pragmatic decision because:
+This was a deliberate V2.0 pragmatic decision because:
 1. The Ledger aggregates typed channels (position, rotation, scale, modulate) —
    arbitrary user-picked properties have no pre-defined delta type.
 2. Implementing generic Ledger channels would have required significant L2 domain changes
-   beyond the V1.0 scope.
+   beyond the V2.0 scope.
 
 **The consequence:** If two Property Effects in the same Recipe target the same
 `property_path` simultaneously, the last writer wins. No additive blending occurs.
-This is the V0 conflict problem that V1's Ledger was designed to solve — and the
+This is the V0 conflict problem that V2's Ledger was designed to solve — and the
 Property family currently doesn't benefit from it.
 
 ---
@@ -164,7 +164,7 @@ users aren't confused. This is NOT a conflict — it's expected additive behavio
 
 ## Implementation Order
 
-Follow the V1 Build Order contract:
+Follow the V2 Build Order contract:
 
 1. `JuiceLedger.gd` — add generic property channel API
 2. `PropertyJuiceEffectBase.gd` — remove direct write, register delta

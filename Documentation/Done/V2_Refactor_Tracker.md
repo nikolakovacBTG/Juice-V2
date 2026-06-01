@@ -35,10 +35,10 @@
 | **7.1** | **Audit editor guards (5-file sweep)** | **✅ Complete** | — | Verified keeps: SoftTrigger/Interaction. Removed dead Appearance2D warning guard |
 | **7.2** | **IN_EDITOR regression tests (TestEditorCache)** | **✅ Complete** | — | 11/11 pass: baked-cache fallback, ledger-override, cache-clear, pre-save routing |
 | **7.3** | **`NOTIFICATION_EDITOR_PRE_SAVE` guard confirmed** | **✅ Complete** | — | Routing verified; `_do_update_editor_cache` guarded by `Engine.is_editor_hint()` — headless-safe |
-| 8 | Polish, Documentation & Merge | ❌ Not started | — | Requires Phase 7 complete |
-| 9 | Custom Inspector GUI | ❌ Not started | — | Post-merge |
+| 8 | Polish, Documentation & Merge | ✅ Complete | 5d55e21 | Merged into main, 652/652 tests pass |
+| 9 | Custom Inspector GUI | ✅ Complete | f5f71e9 | Fully integrated rich array editor, picker, and tooltips |
 
-**Current test count: 626/626 (0 failures)** — +11 from Phase 7 `editor_cache` suite
+**Current test count: 652/652 (0 failures)**
 
 ---
 

@@ -1,6 +1,6 @@
-# Juice V1 — User Manual
+# Juice V2 — User Manual
 
-> **Version:** V1 (Godot 4.x)
+> **Version:** V2 (Godot 4.x)
 > **Status:** Draft — skeleton with intro paragraphs being authored per-effect.
 
 ---
@@ -9,7 +9,7 @@
 
 At the core of the Juice system is the **JuiceBase** node (`JuiceControl`, `Juice2D`, `Juice3D`), which hosts a **JuiceRecipe** resource. A recipe contains an array of **JuiceEffect** resources. 
 
-**Effects are Resources, not Nodes:** Effects describe *what* should happen (e.g., "shake position by 10 pixels") and calculate mathematical deltas, but they do not modify the scene themselves. The `JuiceBase` node aggregates these deltas and applies them to the target node safely, ensuring that multiple effects can stack without fighting over the same properties.
+**Effects are Resources, not Nodes:** Effects describe *what* should happen (e.g., "shake position by 10 pixels") and calculate mathematical deltas, but they do not modify the scene themselves. A dynamically spawned orchestrator drives the animation, and a static `JuiceLedger` aggregates these deltas and applies them to the target node safely, ensuring that multiple effects can stack without fighting over the same properties.
 
 ### Playback Modes: Stack vs Sequencer
 
@@ -427,7 +427,7 @@ An autoload singleton that mediates requests between multiple `TimeJuiceEffect` 
 # Debug Logging
 
 
-Juice V1 includes a structured debug logging system that makes animation bugs diagnosable from a log file alone, without needing to stop and re-run the scene repeatedly.
+Juice V2 includes a structured debug logging system that makes animation bugs diagnosable from a log file alone, without needing to stop and re-run the scene repeatedly.
 
 ## Enabling Logging
 
@@ -513,7 +513,7 @@ The domain tag (`Control`, `2D`, `3D`, `Screen`, etc.) is always present, making
 
 # Not Yet Ported
 
-The following V0 components have not yet been ported to V1:
+The following V0 components have not yet been ported to V2:
 
 | V0 Component | Target V1 | Notes |
 |-------------|-----------|-------|

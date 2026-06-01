@@ -33,8 +33,8 @@ Property effects targeting these types MUST fall back to direct-write (Phase 6.1
 
 ## Validation Plan
 - [x] All references updated (only JuiceLedger.gd — no callers affected)
-- [ ] Headless test suite run: 626/626, 0 failures
-- [ ] No new Godot errors
+- [x] Headless test suite run: 675/675, 0 failures
+- [x] No new Godot errors
 
 ## Rollback
 git reset --hard 816d561
