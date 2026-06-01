@@ -49,18 +49,17 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# Opt out of EditorProperty's child layout so it doesn't reposition
-	# us into the value area on relayout (which caused the black field on refocus).
-	top_level = true
+	# Hidden until _override_layout positions us correctly. This prevents
+	# the black flash when EditorProperty initially places us in the value area
+	# before our deferred override moves us to the label area.
+	visible = false
 
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and visible:
-		call_deferred("_override_layout")
-	elif what == NOTIFICATION_RESIZED:
+	if what == NOTIFICATION_RESIZED:
 		call_deferred("_override_layout")
 
 
@@ -71,7 +70,6 @@ func _notification(what: int) -> void:
 func _override_layout() -> void:
 	var parent_ctrl := get_parent() as Control
 	if not parent_ctrl or not is_instance_valid(parent_ctrl):
-		visible = false
 		return
 
 	# Find where value widgets start by checking sibling positions.
@@ -92,12 +90,11 @@ func _override_layout() -> void:
 		value_start_x = minf(value_start_x, c.position.x)
 
 	if value_start_x <= 0.0:
-		visible = false
 		return
 
-	# Position in global coordinates (top_level = true).
-	global_position = parent_ctrl.global_position
+	position = Vector2.ZERO
 	size = Vector2(value_start_x, parent_ctrl.size.y)
+	visible = true
 
 
 # =============================================================================
