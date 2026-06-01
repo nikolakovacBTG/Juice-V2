@@ -46,7 +46,6 @@ const CHAIN_COLOR := Color(0.45, 0.55, 0.95)
 # =============================================================================
 
 # UI containers.
-var _main_vbox: VBoxContainer
 var _header_hbox: HBoxContainer
 var _rows_container: VBoxContainer
 var _size_label: Label
@@ -109,14 +108,10 @@ func _update_property() -> void:
 # =============================================================================
 
 # Build the editor layout:
-#   [Header: "chain_to" label + size + Add button]
-#   [Rows container: JuiceResourceRow per chain_to entry]
+#   Label row: [Chain To] [Size: 0   |  + Pick Siblings]  ← inline widget
+#   Below:     [Rows container: JuiceResourceRow per chain_to entry]
 func _build_ui() -> void:
-	_main_vbox = VBoxContainer.new()
-	_main_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_main_vbox.add_theme_constant_override("separation", 0)
-
-	# --- Header ---
+	# --- Header (inline on the label row, fills the value widget area) ---
 	_header_hbox = HBoxContainer.new()
 	_header_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_hbox.add_theme_constant_override("separation", 4)
@@ -139,17 +134,16 @@ func _build_ui() -> void:
 	_add_button.pressed.connect(_on_add_pressed)
 	_header_hbox.add_child(_add_button)
 
-	_main_vbox.add_child(_header_hbox)
+	# Place header inline on the label row (fills the value widget area,
+	# eliminating the dead black rectangle that blocked adjacent controls).
+	add_child(_header_hbox)
 
-	# --- Rows container ---
+	# --- Rows container (below the label row) ---
 	_rows_container = VBoxContainer.new()
 	_rows_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows_container.add_theme_constant_override("separation", 1)
-	_main_vbox.add_child(_rows_container)
-
-	# Place the whole layout below the property label line.
-	add_child(_main_vbox)
-	set_bottom_editor(_main_vbox)
+	add_child(_rows_container)
+	set_bottom_editor(_rows_container)
 
 
 # Count EditorInspector ancestors to determine nesting depth.
