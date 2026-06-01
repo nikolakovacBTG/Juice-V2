@@ -181,7 +181,10 @@ enum TriggerSource {
 @export var auto_connect_parent: bool = true
 
 ## Path to the node that provides trigger signals.
-@export var trigger_source_path: NodePath
+@export var trigger_source_path: NodePath:
+	set(value):
+		trigger_source_path = value
+		notify_property_list_changed()
 
 ## What event triggers the animation. Options are filtered per domain.
 @export var trigger_on: TriggerEvent = TriggerEvent.ON_READY:

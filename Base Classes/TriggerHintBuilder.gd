@@ -66,12 +66,6 @@ const _ALWAYS := "On Ready:8,Manual:9"
 # Juice utility hint: driven via set_external_progress, trigger system bypassed.
 # Show only the bare minimum so users aren't confused.
 const _SOFT_TRIGGER_HINT := "On Ready:8,Manual:9"
-const _INTERACTION_ANY_HINT := (
-	"On Mouse Entered (toggleable):2,On Mouse Exited:3,"
-	+ "On Body Entered (toggleable):13,On Body Exited:14,"
-	+ "On Area Entered (toggleable):15,On Area Exited:16,"
-	+ "On Ready:8,Manual:9"
-)
 
 
 # =============================================================================
@@ -92,10 +86,6 @@ static func build_hint(source_node: Node, domain: StringName) -> String:
 	# The Trigger On dropdown is vestigial when using them — show minimal set.
 	if source_node is SoftTrigger2DJuiceUtility or source_node is SoftTrigger3DJuiceUtility or source_node is SoftTriggerControlJuiceUtility:
 		return _SOFT_TRIGGER_HINT
-
-	# Interaction utilities can detect bodies/areas/mouse depending on their mode.
-	if source_node is Interaction2DJuiceUtility or source_node is Interaction3DJuiceUtility:
-		return _INTERACTION_ANY_HINT
 
 	# AnimationPlayer: hardcoded callback on animation_finished. Manual is the
 	# only useful user-facing trigger.
