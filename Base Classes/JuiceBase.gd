@@ -1060,7 +1060,7 @@ func _on_effect_completed(idx: int) -> void:
 				var chained := _runtime_effects[chain_idx]
 				if chained != null:
 					var play_in := effect._animation_progress >= 0.5
-					chained.start(_target_node, play_in, false)
+					chained.start(_target_node, play_in, false, self)
 					_active_effect_indices.append(chain_idx)
 		var chain_names := PackedStringArray()
 		for ce in effect.chain_to:
