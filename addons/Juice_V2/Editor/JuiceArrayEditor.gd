@@ -483,7 +483,8 @@ func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, reso
 	var prop_name: String = editor_property.get_edited_property()
 
 	# Remove any previously added tooltip overlay (e.g., from a refresh).
-	for child in editor_property.get_children():
+	# Internal children require get_children(true) to be found.
+	for child in editor_property.get_children(true):
 		if child.name == "_juice_tooltip":
 			child.queue_free()
 
@@ -500,11 +501,11 @@ func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, reso
 	var overlay: Control = _TooltipOverlay.new()
 	overlay.setup(prop_name, type_name, value_str, tip)
 	overlay.name = "_juice_tooltip"
-	editor_property.add_child(overlay)
-	# Move to index 0 so all value widgets (added by Godot at higher indices)
-	# draw on top and receive input priority. The overlay only gets hover
-	# where no value widget covers — the label text area.
-	editor_property.move_child(overlay, 0)
+	# INTERNAL_MODE_FRONT makes this an internal child — EditorProperty's
+	# Container layout ignores internal children entirely. No position
+	# fighting, no black field. Value widgets (regular children) are
+	# completely unaffected.
+	editor_property.add_child(overlay, false, Node.INTERNAL_MODE_FRONT)
 
 
 # Convert a PropertyInfo dictionary to a human-readable type name.

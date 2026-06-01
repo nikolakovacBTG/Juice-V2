@@ -48,10 +48,10 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	description = p_desc
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
-	# STOP so this control handles hover for tooltips. Input priority is
-	# managed by child ordering: this overlay is at index 0 (behind), so
-	# value widgets at higher indices receive events first. The overlay
-	# only gets hover where no value widget covers — the label area.
+	# STOP so this control handles hover for tooltips. This overlay is added
+	# as an INTERNAL child (INTERNAL_MODE_FRONT) so EditorProperty's layout
+	# system ignores it entirely — no fighting over position, no black field.
+	# Value widgets are regular children in a separate layer, unaffected.
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 # =============================================================================
@@ -59,19 +59,22 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 # =============================================================================
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_POST_ENTER_TREE:
 		call_deferred("_override_layout")
 
 
-# Cover the full parent EditorProperty row.
-# Child ordering (index 0 = behind all value widgets) ensures value widgets
-# get input priority. The overlay only receives hover in uncovered areas.
+# Cover the label area of the parent EditorProperty.
+# Uses name_split_ratio (the actual label/value split) instead of hardcoded %.
+# Since this overlay is an internal child (INTERNAL_MODE_FRONT), EditorProperty's
+# Container layout does NOT manage its position — we control it entirely.
 func _override_layout() -> void:
-	var parent_ctrl := get_parent() as Control
-	if not parent_ctrl or not is_instance_valid(parent_ctrl):
+	var parent_prop := get_parent() as EditorProperty
+	if not parent_prop or not is_instance_valid(parent_prop):
 		return
+	# name_split_ratio defines where the label ends and value area begins.
+	var split: float = parent_prop.name_split_ratio
 	position = Vector2.ZERO
-	size = Vector2(parent_ctrl.size.x, parent_ctrl.size.y)
+	size = Vector2(parent_prop.size.x * split, parent_prop.size.y)
 
 
 # =============================================================================
