@@ -47,14 +47,16 @@ func _validate_property(property: Dictionary) -> void:
 # Appearance uses Ledger-based factor tracking with domain-owned working material.
 var _base_captured: bool = false
 
-# 3D Appearance — domain node owns the single working material to prevent multiple
-# Juice3DAppearanceEffect instances fighting over the surface_override_material slot.
+# 3D Appearance — domain node owns per-surface working materials to prevent multiple
+# Appearance3DJuiceEffect instances fighting over surface_override_material slots.
+# Keyed by surface index so effects targeting different surfaces get independent clones.
 # Lazily initialised on first appearance effect use; cleared when no effects active.
 var _appearance_mesh: MeshInstance3D = null
-var _appearance_working_mat: StandardMaterial3D = null
-var _appearance_natural_mat: Material = null
+var _appearance_working_mats: Dictionary = {}   # { int surface_idx: StandardMaterial3D }
+var _appearance_natural_mats: Dictionary = {}   # { int surface_idx: Material }
 var _appearance_natural_albedo: Color = Color.WHITE
 var _appearance_natural_alpha: float = 1.0
+var _appearance_surface_idx: int = 0  # Active surface index from current effect
 var _appearance_setup: bool = false
 
 # Captured reference values for From/To animation
@@ -357,9 +359,20 @@ func _post_tick_write() -> void:
 	var base_albedo := Color(base_app.r, base_app.g, base_app.b, 1.0)
 	var base_alpha := base_app.a
 
+	# Determine which surface to target from the first contributing appearance effect.
+	_appearance_surface_idx = 0
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var app_eff := effect as Appearance3DJuiceEffect
+		if app_eff != null and app_eff._contributes_appearance:
+			_appearance_surface_idx = app_eff.material_surface_index
+			break
+
 	# Write to working material: base × Πfactors (total from all sources)
-	if _ensure_appearance_working_mat():
-		_appearance_working_mat.albedo_color = Color(
+	var working_mat := _ensure_appearance_working_mat(_appearance_surface_idx)
+	if working_mat != null:
+		working_mat.albedo_color = Color(
 			base_albedo.r * total_factor.r,
 			base_albedo.g * total_factor.g,
 			base_albedo.b * total_factor.b,
@@ -368,9 +381,9 @@ func _post_tick_write() -> void:
 		if has_outline and _ensure_outline_material():
 			_outline_material.set_shader_parameter("amount", outline_amount)
 			_outline_material.set_shader_parameter("outline_color", outline_color)
-			_appearance_working_mat.next_pass = _outline_material
+			working_mat.next_pass = _outline_material
 		else:
-			_appearance_working_mat.next_pass = null
+			working_mat.next_pass = null
 
 	# If all sources are at identity, clean up working material
 	if total_factor == Color.WHITE and not has_outline:
@@ -409,9 +422,10 @@ func _temporarily_undo_visual() -> void:
 	# and any property effects registered dynamically via PropertyJuiceEffectBase.
 	JuiceLedger.flush(n3d)
 
-	# Restore natural material so editor save doesn't serialise working material
+	# Restore natural materials so editor save doesn't serialise working materials
 	if _appearance_setup and _appearance_mesh != null:
-		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
+		for surf_idx: int in _appearance_natural_mats:
+			_appearance_mesh.set_surface_override_material(surf_idx, _appearance_natural_mats[surf_idx])
 
 
 ## Re-add contributions after temporary undo.
@@ -422,8 +436,9 @@ func _temporarily_reapply_visual() -> void:
 	# Re-apply transform deltas by flushing a fresh post-tick write.
 	# This restores our deltas to the ledger and recalculates absolute values.
 	# Re-install working material and recompute albedo.
-	if _appearance_setup and _appearance_mesh != null and _appearance_working_mat != null:
-		_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
+	if _appearance_setup and _appearance_mesh != null:
+		for surf_idx: int in _appearance_working_mats:
+			_appearance_mesh.set_surface_override_material(surf_idx, _appearance_working_mats[surf_idx])
 	_post_tick_write()
 	JuiceLogger.log_info(self, "3D",
 			"reapply_visual '%s': restored pos=%s rot=%s scale=%s" % [
@@ -445,22 +460,27 @@ func _find_mesh_on(target: Node) -> MeshInstance3D:
 	return null
 
 
-# Lazily set up the shared working material for albedo accumulation.
-# Returns true if a valid StandardMaterial3D working copy was established.
-func _ensure_appearance_working_mat() -> bool:
-	if _appearance_working_mat != null:
-		return true
+# Lazily set up a per-surface working material for albedo accumulation.
+# Returns the StandardMaterial3D clone for the given surface, or null on failure.
+# Multiple surfaces can each have their own independent working material.
+func _ensure_appearance_working_mat(surface_idx: int = 0) -> StandardMaterial3D:
+	# Already set up for this surface?
+	if _appearance_working_mats.has(surface_idx):
+		return _appearance_working_mats[surface_idx]
 	if _target_node == null:
-		return false
-	_appearance_mesh = _find_mesh_on(_target_node)
+		return null
 	if _appearance_mesh == null:
-		return false
-	_appearance_natural_mat = _appearance_mesh.get_active_material(0)
-	var std_mat := _appearance_natural_mat as StandardMaterial3D
+		_appearance_mesh = _find_mesh_on(_target_node)
+	if _appearance_mesh == null:
+		return null
+	var natural_mat: Material = _appearance_mesh.get_active_material(surface_idx)
+	var std_mat := natural_mat as StandardMaterial3D
 	if std_mat == null:
-		return false
-	_appearance_working_mat = std_mat.duplicate() as StandardMaterial3D
-	_appearance_mesh.set_surface_override_material(0, _appearance_working_mat)
+		return null
+	var working_mat := std_mat.duplicate() as StandardMaterial3D
+	_appearance_natural_mats[surface_idx] = natural_mat
+	_appearance_working_mats[surface_idx] = working_mat
+	_appearance_mesh.set_surface_override_material(surface_idx, working_mat)
 	_appearance_natural_albedo = std_mat.albedo_color
 	_appearance_natural_alpha = std_mat.albedo_color.a
 	_appearance_setup = true
@@ -469,14 +489,16 @@ func _ensure_appearance_working_mat() -> bool:
 		JuiceLedger.force_base(_target_node, "_appearance_factor", Color(
 			_appearance_natural_albedo.r, _appearance_natural_albedo.g,
 			_appearance_natural_albedo.b, _appearance_natural_alpha))
-	return true
+	return working_mat
 
 
-# Restore natural material and clear working material reference.
+# Restore all natural materials and clear working material references.
 func _clear_appearance_working_mat() -> void:
 	if _appearance_mesh != null:
-		_appearance_mesh.set_surface_override_material(0, _appearance_natural_mat)
-	_appearance_working_mat = null
+		for surf_idx: int in _appearance_natural_mats:
+			_appearance_mesh.set_surface_override_material(surf_idx, _appearance_natural_mats[surf_idx])
+	_appearance_working_mats.clear()
+	_appearance_natural_mats.clear()
 	_appearance_setup = false
 	# Clear outline material
 	if _outline_material != null:

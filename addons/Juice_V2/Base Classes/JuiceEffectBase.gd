@@ -1103,6 +1103,13 @@ func _temporarily_undo_visual(_target: Node) -> void:
 func _temporarily_reapply_visual(_target: Node) -> void:
 	pass
 
+## Called by host node during _ready(), BEFORE trigger wiring.
+## Effects that register dynamic signals (e.g. SignalEmit) override this
+## to ensure signals exist before JuiceTriggerRouter attempts to connect.
+## Runs after effects are cloned but before JuiceTriggerRouter.wire_manual().
+func _register_early_signals(_host: Node) -> void:
+	pass
+
 ## Called by host node during _ready(). Effects that need READY-time capture use this.
 func _on_host_ready(_target: Node, _host: Node) -> void:
 	pass

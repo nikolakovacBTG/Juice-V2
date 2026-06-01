@@ -79,16 +79,18 @@ func test_signal_registered_on_host_node() -> void:
 	var juice: JuiceControl = rig[0]
 	var target: Button = rig[1]
 
-	# Before animation: signal should NOT be on the JuiceControl node yet.
-	assert_false(juice.has_user_signal("on_hit"),
-		"Pre-animate: JuiceControl should not have 'on_hit' before animate_in")
+	# After _ready() + deferred frame: signal must ALREADY be registered thanks
+	# to _register_early_signals() called during JuiceBase._ready(), BEFORE
+	# JuiceTriggerRouter.wire_manual(). This is the Phase B fix verification.
+	assert_true(juice.has_user_signal("on_hit"),
+		"Pre-animate: JuiceControl must have 'on_hit' registered during _ready() (early registration)")
 
 	juice.animate_in()
 	await wait_frames(3)
 
-	# After animation starts: signal must be registered on the host (JuiceControl).
+	# After animation starts: signal still registered (idempotent safety net).
 	assert_true(juice.has_user_signal("on_hit"),
-		"Post-animate: JuiceControl must have 'on_hit' user signal registered")
+		"Post-animate: JuiceControl must still have 'on_hit' user signal registered")
 
 	await cleanup(target)
 
