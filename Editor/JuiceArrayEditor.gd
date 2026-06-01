@@ -434,8 +434,11 @@ static var _tooltip_cache: Dictionary = {}
 
 # Apply ## doc-comment tooltips to all EditorProperty children in a sub-inspector.
 # Called via call_deferred after edit() so the EditorProperty nodes exist.
-# Creates JuiceTooltipOverlay instances that intercept hover and render
-# rich tooltips matching Godot's native inspector format.
+# Creates JuiceTooltipOverlay instances that render rich tooltips via
+# _make_custom_tooltip(). The overlay is inserted as the FIRST child of
+# each EditorProperty so value widgets (higher child indices) draw on top
+# and receive input priority. The overlay only gets hover where no widget
+# covers — the label area.
 func _apply_tooltips(inspector: EditorInspector, resource: Resource) -> void:
 	if not is_instance_valid(inspector) or resource == null:
 		return
@@ -472,9 +475,10 @@ func _set_tooltips_recursive(node: Node, tooltips: Dictionary, resource: Resourc
 
 
 # Add a rich tooltip overlay to an EditorProperty.
-# The overlay intercepts hover and renders a styled tooltip matching Godot's
-# native format via _make_custom_tooltip(). Clicks pass through to the value
-# widgets underneath (mouse_filter = PASS).
+# The overlay is inserted at child index 0 (behind all value widgets).
+# Godot gives input priority to later children (higher index), so value
+# widgets receive clicks/hover first. The overlay only gets hover events
+# in areas not covered by any value widget — i.e. the label area.
 func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, resource: Resource) -> void:
 	var prop_name: String = editor_property.get_edited_property()
 
@@ -497,6 +501,10 @@ func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, reso
 	overlay.setup(prop_name, type_name, value_str, tip)
 	overlay.name = "_juice_tooltip"
 	editor_property.add_child(overlay)
+	# Move to index 0 so all value widgets (added by Godot at higher indices)
+	# draw on top and receive input priority. The overlay only gets hover
+	# where no value widget covers — the label text area.
+	editor_property.move_child(overlay, 0)
 
 
 # Convert a PropertyInfo dictionary to a human-readable type name.

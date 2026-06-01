@@ -48,7 +48,11 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	description = p_desc
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
-	mouse_filter = Control.MOUSE_FILTER_PASS
+	# STOP so this control handles hover for tooltips. Input priority is
+	# managed by child ordering: this overlay is at index 0 (behind), so
+	# value widgets at higher indices receive events first. The overlay
+	# only gets hover where no value widget covers — the label area.
+	mouse_filter = Control.MOUSE_FILTER_STOP
 
 # =============================================================================
 # LIFECYCLE
@@ -59,34 +63,15 @@ func _notification(what: int) -> void:
 		call_deferred("_override_layout")
 
 
-# Reposition to cover only the label area of the parent EditorProperty.
-# Dynamically finds where value widgets start by scanning sibling positions
-# instead of assuming a hardcoded 40% split.
+# Cover the full parent EditorProperty row.
+# Child ordering (index 0 = behind all value widgets) ensures value widgets
+# get input priority. The overlay only receives hover in uncovered areas.
 func _override_layout() -> void:
 	var parent_ctrl := get_parent() as Control
 	if not parent_ctrl or not is_instance_valid(parent_ctrl):
 		return
-
-	# Find where value widgets start by checking sibling positions.
-	var value_start_x := parent_ctrl.size.x
-	for child in parent_ctrl.get_children():
-		if child == self:
-			continue
-		if not child is Control:
-			continue
-		var c := child as Control
-		if not c.visible or c.size.x <= 0:
-			continue
-		if c.position.y >= parent_ctrl.size.y * 0.5:
-			continue
-		value_start_x = minf(value_start_x, c.position.x)
-
-	# Fallback: if no siblings found, use 40% like before.
-	if value_start_x >= parent_ctrl.size.x or value_start_x <= 0.0:
-		value_start_x = parent_ctrl.size.x * 0.4
-
 	position = Vector2.ZERO
-	size = Vector2(value_start_x, parent_ctrl.size.y)
+	size = Vector2(parent_ctrl.size.x, parent_ctrl.size.y)
 
 
 # =============================================================================
