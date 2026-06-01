@@ -68,4 +68,86 @@ Two Property Effects in the same Recipe targeting the same property path simulta
 
 See `PropertyFamily_Ledger_Refactor.md` for full implementation order and test requirements.
 
+---
 
+## 5. Custom Signal Picker for Trigger Source (Consideration)
+
+**Status:** Unresolved consideration — needs design thinking before becoming a feature request.
+
+### Observation
+
+When `Trigger Source = NODE`, the user can slot any node. The `Trigger On` dropdown
+shows only triggers mapped to the hardcoded `TriggerEvent` enum (values 0–16), filtered
+by which known signal names (`mouse_entered`, `body_entered`, etc.) the slotted node has.
+
+But any scripted node can have arbitrary custom signals (`signal combo_ready`,
+`signal attack_finished`, etc.), and `has_signal()` can see them at editor time. These
+are currently invisible to the `Trigger On` dropdown. The only way to fire Juice from a
+custom signal is `Manual` mode with manual `animate_in()` calls from the game script —
+which defeats the inspector-driven trigger system's purpose.
+
+### What a Custom Signal Picker Would Look Like
+
+A free-form signal name field (e.g. `@export var trigger_signal_name: StringName`) that
+enumerates the slotted node's signals at editor time and lets the user pick one from a
+dropdown. The auto-connect system would then do:
+
+```gdscript
+source_node.connect(trigger_signal_name, _on_trigger_momentary)
+```
+
+This would make `Manual` nearly obsolete for any node that emits signals.
+
+### Implications That Need Thinking
+
+- **Auto-connect architecture**: The current system has per-enum `match trigger_on:`
+  blocks in each domain node (`_connect_collision_object_3d_signals`, etc.) that map
+  each `TriggerEvent` value to specific signal wiring with polarity handling, button
+  filtering, etc. A generic signal picker would bypass all of that — but some triggers
+  need special wiring (e.g. `ON_PRESS` wires both `button_down` and `button_up` for
+  toggle polarity). How would custom signals express polarity?
+
+- **Coexistence with TriggerEvent**: Would this replace the enum entirely, or sit
+  alongside it? Replacing is cleaner but breaks existing scenes. Alongside means two
+  paths to maintain.
+
+- **Signal arguments**: Custom signals may have arguments (`signal hit(damage: float)`).
+  The current `_on_trigger_momentary` callback takes no arguments. How would argument
+  signals be handled?
+
+- **Editor UX**: Enumerating signals at editor time requires the source node's script
+  to be loaded. What happens with `@tool`-less scripts? What about signals added via
+  `add_user_signal()` at runtime (e.g. Interaction utility's dynamic click signals)?
+
+This is not a clean feature request yet — it needs a design pass to resolve these
+questions before implementation.
+
+---
+
+## 6. Appearance3D Multi-Surface Material Architecture
+
+**Status:** Partial fix shipped in V1.0. Full architecture deferred to V1.1.
+
+### What V1.0 Ships
+
+`Juice3D.gd` uses a per-surface `Dictionary[int, Material]` for working/natural materials, so `Appearance3DJuiceEffect.material_surface_index` is respected at the `set_surface_override_material()` level. A single effect targeting surface 2 works correctly.
+
+### The Limitation
+
+The albedo accumulation pipeline (`_post_tick_write()`) reads `material_surface_index` from the **first contributing** appearance effect and applies all combined factors to that single surface. If two sibling Appearance3D effects in the same recipe target **different** surfaces (e.g., surface 0 = body tint, surface 1 = emissive pulse), only the first effect's surface gets the combined result. The second surface is ignored.
+
+### Full V1.1 Architecture
+
+To properly support multi-surface Appearance3D:
+
+1. **Per-surface Ledger channels:** Replace the single `_appearance_factor` synthetic key with per-surface keys (e.g., `_appearance_factor_0`, `_appearance_factor_1`). Each Appearance3D effect registers its delta on the key matching its `material_surface_index`.
+
+2. **Per-surface accumulation loop:** `_post_tick_write()` iterates all active surfaces (from the dictionary keys), reads the per-surface Ledger total, and writes to each surface's working material independently.
+
+3. **Per-surface base capture:** `_ensure_appearance_working_mat(surface_idx)` already captures per-surface natural albedo/alpha, but these values need to be stored per-surface too (currently `_appearance_natural_albedo` / `_appearance_natural_alpha` are single values overwritten by the last `_ensure` call).
+
+**Key work required:**
+- `Juice3D.gd`: per-surface natural albedo/alpha dictionaries, per-surface Ledger key registration, per-surface accumulation in `_post_tick_write()`
+- `JuiceLedger.gd`: no changes needed — already supports arbitrary string keys
+- `Appearance3DJuiceEffect.gd`: no changes needed — already exposes `material_surface_index`
+- Test suite: multi-surface stacking test (requires a mesh with 2+ materials)
