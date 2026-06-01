@@ -10,13 +10,13 @@
 #       domain-specific node properties (Node2D.global_position, global_rotation).
 #       A unified class with runtime `is` dispatch caused type-access crashes that
 #       are impossible here: the target is guaranteed to be Node2D at this level.
-# SYSTEM: Juice System (addons/Juice_V1/2D/)
+# SYSTEM: Juice System (addons/Juice_V2/2D/)
 # DOES NOT: Handle Control or 3D target types.
 # DOES NOT: Compute transform deltas — side-effect exception (see base class).
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseVFX.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseVFX.svg")
 class_name VFX2DJuiceEffect
 extends VFXJuiceEffectBase
 

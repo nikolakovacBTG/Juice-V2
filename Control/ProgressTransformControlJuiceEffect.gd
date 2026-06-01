@@ -6,7 +6,7 @@
 # =============================================================================
 # WHAT: Control-domain continuous-accumulation (Progress) effect.
 # WHY:  Defines a resource-based progress driver for Control targets.
-# SYSTEM: Juice System (addons/Juice_V1/Control/)
+# SYSTEM: Juice System (addons/Juice_V2/Control/)
 # DOES NOT: Handle Node2D or Node3D targets.
 # DOES NOT: Handle arbitrary property accumulation -- use ProgressPropertyJuiceEffectBase.
 #
@@ -16,7 +16,7 @@
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name ProgressTransformControlJuiceEffect
 extends JuiceControlTransformEffect
 
@@ -58,16 +58,24 @@ func _init() -> void:
 
 # transform_target inherited from JuiceControlTransformEffect (default set to ROTATION in _init)
 
+## Start accumulating at full speed immediately when the scene starts,
+## without an explicit animate_in() call.
 var auto_start: bool = false
+## When true (default), stopping the effect holds the accumulated visual state.
+## When false, stop() snaps back to the original natural state.
 var hold_on_stop: bool = true
 
 # --- Rate vars ---
+## Units per second of position drift.
 var position_rate: Vector2 = Vector2(50.0, 0.0)
+## Unit for position rate: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value
 		notify_property_list_changed()
+## Degrees per second of rotation. Positive = clockwise.
 var rotation_rate: float = 90.0
+## Scale units per second of growth/shrink per axis.
 var scale_rate: Vector2 = Vector2(0.1, 0.1)
 
 # --- Pivot ---
@@ -83,12 +91,16 @@ var bound_enabled: bool = false:
 	set(value):
 		bound_enabled = value
 		notify_property_list_changed()
+## What happens when the bound is reached.
 var bound_behaviour: int = BoundBehaviour.REVERSE
+## How the bound distance is measured (POSITION and SCALE only).
 var bound_mode: int = BoundMode.MAGNITUDE:
 	set(value):
 		bound_mode = value
 		notify_property_list_changed()
+## Bound distance as a single magnitude (degrees for ROTATION, pixels/units for others).
 var bound_value: float = 360.0
+## Bound per-axis (used when bound_mode = PER_AXIS for POSITION/SCALE).
 var bound_value_vec2: Vector2 = Vector2(360.0, 360.0)
 
 

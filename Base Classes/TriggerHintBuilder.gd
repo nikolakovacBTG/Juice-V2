@@ -13,7 +13,7 @@
 ##       the hint string shown in the inspector dropdown. Serialized scenes are
 ##       100% stable; programmers can still set any TriggerEvent value in code.
 ##
-## SYSTEM: Juice System (addons/Juice_V1/) — Editor tooling only
+## SYSTEM: Juice System (addons/Juice_V2/) — Editor tooling only
 ##
 ## USAGE:
 ##   In _validate_property on a JuiceBase domain node:

@@ -6,7 +6,7 @@
 # ============================================================================
 # WHAT: Animate position, rotation, or scale of a Node3D with tween-based easing.
 # WHY: Replaces 3 separate scripts with one unified component.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use TransformControl/2DJuiceEffect.
 # DOES NOT: Handle procedural effects like shake or noise — use Shake/Noise effects.
 #
@@ -38,7 +38,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Transform3DJuiceEffect
 extends Juice3DTransformEffect
 
@@ -50,16 +50,19 @@ extends Juice3DTransformEffect
 # Note: rotation_pivot_offset and scale_custom_pivot are in the domain base
 # as Vector3 — Juice3DTransformEffect is 3D-only so that's safe.
 
-# --- POSITION ---
+## Custom starting position offset, applied relative to the node's natural position.
 var from_position: Vector3 = Vector3.ZERO
+## Custom ending position offset, applied relative to the node's natural position.
 var to_position: Vector3 = Vector3.ZERO
 
-# --- ROTATION (From/To: Vector3 Euler angles) ---
+## Custom starting rotation as Euler angles (XYZ), interpreted in Degrees or Radians per the Rotation Unit setting.
 var from_rotation: Vector3 = Vector3.ZERO
+## Custom ending rotation as Euler angles (XYZ), interpreted in Degrees or Radians per the Rotation Unit setting.
 var to_rotation: Vector3 = Vector3(0, 90, 0)
 
-# --- SCALE ---
+## Custom starting scale. When From Reference is Custom, the node scales from this value.
 var from_scale: Vector3 = Vector3.ZERO
+## Custom ending scale. When To Reference is Custom, the node scales toward this value.
 var to_scale: Vector3 = Vector3.ONE
 
 # --- EDITOR CACHE (serialized only when capture_at == IN_EDITOR) ---

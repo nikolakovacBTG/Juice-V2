@@ -8,7 +8,7 @@
 # WHAT: A shareable, savable collection of JuiceEffectBase resources.
 # WHY: Recipes are the "preset" unit — drop a .tres onto a Juice node and get
 #      a complete visual behavior. Marketplace-ready, copy-pasteable, reusable.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Execute effects — the host node (JuiceControl etc.) does that.
 # DOES NOT: Own animation state — effects hold their own state per-instance.
 # ============================================================================

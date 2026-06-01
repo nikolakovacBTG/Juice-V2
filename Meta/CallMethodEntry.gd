@@ -8,12 +8,12 @@
 #       Stores target node path, method name, arguments, and timing.
 # WHY:  Enables one CallMethod utility to trigger multiple distinct method calls
 #       at different lifecycle points — mirrors the recipe-item paradigm.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Execute the call — the parent utility does that in lifecycle hooks.
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityMethods.svg")
 class_name CallMethodEntry
 extends Resource
 
@@ -59,7 +59,10 @@ func _get_property_list() -> Array[Dictionary]:
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
 		&"target_node_path": target_node_path = value; return true
-		&"method_name":      method_name      = value; return true
+		&"method_name":
+			method_name = value
+			resource_name = value if not value.is_empty() else ""
+			return true
 		&"arguments":        arguments        = value; return true
 		&"call_on":          call_on          = value; return true
 	return false

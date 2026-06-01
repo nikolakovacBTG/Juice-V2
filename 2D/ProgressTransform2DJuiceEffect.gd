@@ -9,7 +9,7 @@
 #       Uses Juice2DTransformEffect delta system for stackable, host-written output.
 #       progress = speed multiplier (not lerp factor):
 #       value += rate * delta * progress * direction
-# SYSTEM: Juice System (addons/Juice_V1/2D/)
+# SYSTEM: Juice System (addons/Juice_V2/2D/)
 # DOES NOT: Handle Control or Node3D transforms.
 # DOES NOT: Handle arbitrary property accumulation -- use ProgressPropertyJuiceEffectBase.
 #
@@ -30,7 +30,7 @@
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name ProgressTransform2DJuiceEffect
 extends Juice2DTransformEffect
 
@@ -83,6 +83,7 @@ var hold_on_stop: bool = true
 # --- Rate vars (shown per target via _get_property_list) ---
 ## Units per second of position drift.
 var position_rate: Vector2 = Vector2(50.0, 0.0)
+## Unit for position rate: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value

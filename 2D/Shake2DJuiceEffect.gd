@@ -4,7 +4,7 @@
 #       Uses sin(time * frequency) blended with per-frame randomness.
 #       Progress envelope controls intensity (fade-in, sustain, fade-out).
 # WHY: Unified shake component — one effect handles all transform targets.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node3D targets — use ShakeControl/Shake3DJuiceEffect.
 # ============================================================================
 #
@@ -16,7 +16,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name Shake2DJuiceEffect
 extends Juice2DTransformEffect
 
@@ -36,23 +36,33 @@ extends Juice2DTransformEffect
 
 # transform_target inherited from Juice2DTransformEffect (default: POSITION)
 
+## Oscillation frequency in cycles per second. Higher values produce faster shaking.
 var shake_frequency: float = 20.0
 
+## Maximum position displacement per axis in the selected unit.
 var position_strength: Vector2 = Vector2(5.0, 5.0)
+## Unit for position strength: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value
 		notify_property_list_changed()
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for position shake.
 var position_randomness: float = 0.5
 
+## Maximum rotation displacement in degrees.
 var rotation_amplitude: float = 10.0
+## When enabled, the oscillation direction randomly flips at each zero-crossing for organic motion.
 var rotation_randomize_direction: bool = true
 
+## Maximum scale displacement per axis, added to the node's natural scale.
 var scale_amplitude: Vector2 = Vector2(0.15, 0.15)
+## Blend factor between sine oscillation (0.0) and random noise (1.0) for scale shake.
 var scale_randomness: float = 0.5
+## When enabled, X and Y scale use the same oscillation value for uniform scaling.
 var scale_uniform: bool = true
 
 # pivot_mode inherited from Juice2DTransformEffect (default: AUTO_CENTER)
+## Local-space custom pivot offset in pixels, used when Pivot Mode is Custom.
 var custom_pivot: Vector2 = Vector2.ZERO
 
 func _init() -> void:

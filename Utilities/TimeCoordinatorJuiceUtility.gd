@@ -9,7 +9,7 @@
 # ============================================================================
 # WHAT: Coordinates Engine.time_scale requests from multiple TimeJuiceComp instances.
 # WHY:  Prevents time scale conflicts when multiple effects run simultaneously.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Replace individual TimeJuiceComp instances — it coordinates them.
 # ============================================================================
 #
@@ -40,7 +40,7 @@
 # ======================================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityTimeCoord.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityTimeCoord.svg")
 class_name TimeCoordinatorJuiceUtility
 extends Node
 

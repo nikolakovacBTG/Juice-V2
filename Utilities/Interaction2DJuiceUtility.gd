@@ -4,7 +4,7 @@
 ## as dynamically named signals.
 
 # ============================================================================
-# SYSTEM: Juice Utility (addons/Juice_V1/Utilities/)
+# SYSTEM: Juice Utility (addons/Juice_V2/Utilities/)
 #
 # DOES NOT:
 # - Wrap or replace native Area2D signals — they flow through unchanged
@@ -29,7 +29,7 @@
 # ================================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityArea2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityArea2D.svg")
 class_name Interaction2DJuiceUtility
 extends Area2D
 
@@ -60,6 +60,7 @@ enum InputPriority {
 # CONFIGURATION
 # =============================================================================
 
+## Operating mode: Trigger Zone detects bodies/areas entering a region; Interactable responds to clicks and input actions.
 var mode: int = Mode.INTERACTABLE:
 	set(value):
 		mode = value
@@ -68,6 +69,7 @@ var mode: int = Mode.INTERACTABLE:
 			update_configuration_warnings()
 			_ensure_shapes()
 
+## Number of input action entries. Each entry maps a click preset or custom InputMap action to a dynamic signal.
 var action_count: int = 0:
 	set(value):
 		var old_count := action_count
@@ -86,8 +88,10 @@ var action_count: int = 0:
 
 var _action_presets: Array[int] = []
 var _action_names: Array[StringName] = []
+## Whether custom InputMap actions use World priority (GUI blocks input) or Always (fires behind UI).
 var input_priority: int = InputPriority.WORLD
 
+## When enabled, clicks and input actions only fire while a body/area is inside the child trigger zone.
 var check_presence_in_trigger_zone: bool = false:
 	set(value):
 		check_presence_in_trigger_zone = value
@@ -96,12 +100,19 @@ var check_presence_in_trigger_zone: bool = false:
 			update_configuration_warnings()
 			_ensure_shapes()
 
+## Detect PhysicsBody2D nodes entering and exiting the trigger zone.
 var detect_bodies: bool = true
+## Detect other Area2D nodes entering and exiting the trigger zone.
 var detect_areas: bool = true
+## Only detect nodes belonging to this group. Leave empty to detect all.
 var filter_group: String = ""
+## Emit signals when a body/area enters the trigger zone.
 var trigger_on_enter: bool = true
+## Emit signals when the last body/area exits the trigger zone.
 var trigger_on_exit: bool = true
+## When enabled, the interaction fires only once until manually reset via reset().
 var one_shot: bool = false
+## Enable debug logging for interaction events, zone gating, and signal relay.
 var debug_enabled: bool = false
 
 
@@ -351,7 +362,7 @@ func _ready() -> void:
 func _ensure_shapes() -> void:
 	if not Engine.is_editor_hint() or not is_inside_tree():
 		return
-	var scene_root := get_tree().edited_scene_root
+	var scene_root := get_tree().edited_scene_root if is_inside_tree() else null
 	if scene_root == null:
 		return
 

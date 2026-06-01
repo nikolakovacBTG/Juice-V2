@@ -10,7 +10,7 @@
 #       one-shot side-effects triggered by the animation event. This effect
 #       occupies a chain slot and fires particles without modifying any
 #       target property through the ledger.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Compute or write any transform delta (position, rotation, scale).
 #           Does not manage trail effects — use TrailJuiceEffect for that.
 #
@@ -21,7 +21,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseVFX.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseVFX.svg")
 class_name VFXJuiceEffect
 extends JuiceEffectBase
 

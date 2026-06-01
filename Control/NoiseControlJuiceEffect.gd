@@ -5,7 +5,7 @@
 #       domain warp options. Progress envelope controls intensity.
 # WHY: Unified noise component — one effect handles all transform targets
 #      with conditional inspector properties.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Node2D or Node3D targets — use Noise2D/3DJuiceEffect.
 # DOES NOT: Handle arbitrary property noise — use NoisePropertyJuiceEffect.
 # ============================================================================
@@ -22,7 +22,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name NoiseControlJuiceEffect
 extends JuiceControlTransformEffect
 
@@ -50,17 +50,24 @@ enum NoiseDirection {
 # transform_target inherited from JuiceControlTransformEffect (default: POSITION)
 
 # --- Amplitude ---
+## Maximum position displacement per axis in the selected unit.
 var position_amplitude: Vector2 = Vector2(5.0, 5.0)
+## Unit for position amplitude: absolute Pixels, or relative to Own Size, Parent Size, or Viewport Size.
 var position_unit: int = PositionIn.PIXELS:
 	set(value):
 		position_unit = value
 		notify_property_list_changed()
+## Maximum rotation displacement in degrees.
 var rotation_amplitude: float = 5.0
+## Maximum scale displacement per axis, added to the node's natural scale.
 var scale_amplitude: Vector2 = Vector2(0.1, 0.1)
 
 # --- Core ---
+## Multiplier for noise time progression. Higher values produce faster oscillation.
 var noise_speed: float = 1.0
+## Constrain noise output to positive values, negative values, or allow both.
 var noise_direction: int = NoiseDirection.BOTH
+## When enabled, X and Y scale use the same noise sample for uniform scaling.
 var scale_uniform: bool = true:
 	set(value):
 		scale_uniform = value
@@ -68,32 +75,47 @@ var scale_uniform: bool = true:
 
 # --- Pivot ---
 # pivot_mode inherited from JuiceControlTransformEffect (default: AUTO_CENTER)
+## Custom pivot as fraction of the Control's size (x: 0=left, 1=right; y: 0=top, 1=bottom).
 var custom_pivot: Vector2 = Vector2(0.5, 0.5)
 
 # --- Noise Pattern ---
+## FastNoiseLite algorithm: Simplex, Simplex Smooth, Cellular, Perlin, Value, or Value Cubic.
 var noise_type: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+## Base frequency of the noise pattern. Lower values produce smoother, larger-scale variations.
 var noise_frequency: float = 1.0
+## Random seed for the noise generator. Set to 0 for a random seed each play.
 var noise_seed: int = 0
+## Fractal layering mode: None, FBM, Ridged, or Ping Pong. Adds detail by stacking octaves.
 var fractal_type: int = FastNoiseLite.FRACTAL_NONE:
 	set(value):
 		fractal_type = value
 		notify_property_list_changed()
+## Number of fractal octaves. More octaves add finer detail but cost performance.
 var fractal_octaves: int = 1
+## Frequency multiplier between fractal octaves. Higher values make each octave finer.
 var lacunarity: float = 2.0
+## Amplitude multiplier between fractal octaves. Lower values reduce the contribution of higher octaves.
 var fractal_gain: float = 0.5
 
 # --- Domain Warp ---
+## Enable domain warping to distort the noise coordinates for more organic patterns.
 var domain_warp_enabled: bool = false:
 	set(value):
 		domain_warp_enabled = value
 		notify_property_list_changed()
+## Strength of the domain warp distortion.
 var domain_warp_amplitude: float = 30.0
+## Frequency of the domain warp noise layer.
 var domain_warp_frequency: float = 0.5
 
 # --- Advanced ---
+## Per-axis speed multiplier for position noise. Allows different oscillation rates on X and Y.
 var position_axis_speed: Vector2 = Vector2(1.0, 1.0)
+## Per-axis speed multiplier for scale noise when Scale Uniform is off.
 var scale_axis_speed: Vector2 = Vector2(1.0, 1.0)
+## Minimum raw noise value after clamping. Default -1.0 allows full negative range.
 var clamp_min: float = -1.0
+## Maximum raw noise value after clamping. Default 1.0 allows full positive range.
 var clamp_max: float = 1.0
 
 func _init() -> void:

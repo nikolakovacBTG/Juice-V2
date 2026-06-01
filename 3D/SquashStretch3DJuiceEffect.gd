@@ -6,7 +6,7 @@
 # ============================================================================
 # WHAT: Classic 3D squash and stretch with optional volume preservation.
 # WHY: Provides organic deformation feedback for 3D objects.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node2D targets — use SquashStretchControl/2DJuiceEffect.
 #
 # ARCHITECTURE:
@@ -26,7 +26,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name SquashStretch3DJuiceEffect
 extends Juice3DTransformEffect
 

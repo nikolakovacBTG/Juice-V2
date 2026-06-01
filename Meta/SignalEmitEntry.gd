@@ -8,12 +8,12 @@
 #       Stores description (label), payload (data), and timing.
 # WHY:  Enables one SignalEmit utility to fire multiple distinct signals
 #       at different lifecycle points — mirrors the recipe-item paradigm.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Fire the signal — the parent utility does that in lifecycle hooks.
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilitySignals.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilitySignals.svg")
 class_name SignalEmitEntry
 extends Resource
 
@@ -53,7 +53,10 @@ func _get_property_list() -> Array[Dictionary]:
 
 func _set(property: StringName, value: Variant) -> bool:
 	match property:
-		&"signal_description": signal_description = value; return true
+		&"signal_description":
+			signal_description = value
+			resource_name = value if not value.is_empty() else ""
+			return true
 		&"payload":            payload            = value; return true
 		&"emit_on":            emit_on            = value; return true
 	return false

@@ -9,7 +9,7 @@
 #       fight the camera's own follow/movement logic. This utility layers offsets
 #       additively on top of whatever the camera script is doing, then removes
 #       them next frame before the camera script runs again.
-# SYSTEM: Juice System (addons/Juice_V1/Camera/)
+# SYSTEM: Juice System (addons/Juice_V2/Camera/)
 # DOES NOT: Run any camera follow/movement logic — that is the user's script.
 # DOES NOT: Discover which camera to use — it IS the camera (via get_parent()).
 # DOES NOT: Limit which juice effects can write to it — effects self-register.
@@ -19,7 +19,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseCamera.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseCamera.svg")
 class_name CameraJuiceUtility
 extends Node
 

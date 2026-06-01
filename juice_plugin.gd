@@ -8,7 +8,7 @@
 # WHY:  Single entry point for all Juice editor features. Provides:
 #       1. Transport controls (play/pause/stop/scrub) for editor preview
 #       2. Bug report export via Project → Tools menu
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement effects (JuiceEffectBase subclasses), manage animation
 #           state (JuicePreviewDirector), or handle undo/redo.
 # ============================================================================
@@ -16,8 +16,10 @@
 @tool
 extends EditorPlugin
 
-const DockScene := preload("res://addons/Juice_V1/Editor/JuiceTransportDock.tscn")
+const DockScene := preload("res://addons/Juice_V2/Editor/JuiceTransportDock.tscn")
 const InspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceEditorInspectorPlugin.gd")
+const PropertyPickerPluginScript := preload("res://addons/Juice_V2/Editor/PropertyPickerPlugin.gd")
+const ArrayInspectorPluginScript := preload("res://addons/Juice_V2/Editor/JuiceArrayInspectorPlugin.gd")
 
 # =============================================================================
 # INTERNAL STATE
@@ -36,6 +38,10 @@ var _director: JuicePreviewDirector
 
 # Inspector plugin instance — controls JuiceBase property visibility in editor.
 var _inspector_plugin: EditorInspectorPlugin
+# Property picker plugin — adds "Pick Property" button to PropertyTarget panels.
+var _property_picker_plugin: EditorInspectorPlugin
+# Array inspector plugin — replaces native array editors on Juice resources.
+var _array_inspector_plugin: EditorInspectorPlugin
 
 # --- Buttons ---
 var _play_button: Button
@@ -72,6 +78,18 @@ func _enter_tree() -> void:
 	# Must be registered before the editor opens any scene containing JuiceBase nodes.
 	_inspector_plugin = InspectorPluginScript.new()
 	add_inspector_plugin(_inspector_plugin)
+
+	# Register property picker so PropertyTarget sub-inspectors show a Pick… editor property.
+	# The picker uses a singleton dialog (created once in _init, reused per-open).
+	# add_dialog_to_editor() parents the dialog to the editor base control so popups are modal.
+	_property_picker_plugin = PropertyPickerPluginScript.new()
+	add_inspector_plugin(_property_picker_plugin)
+	_property_picker_plugin.add_dialog_to_editor(EditorInterface.get_base_control())
+
+	# Register array inspector plugin — replaces native array editors on Juice objects
+	# with JuiceArrayEditor for consistent row UX (type-coded strips, ⋮ menu, drag reorder).
+	_array_inspector_plugin = ArrayInspectorPluginScript.new()
+	add_inspector_plugin(_array_inspector_plugin)
 
 	# Build transport UI and director
 	_build_ui()
@@ -116,6 +134,14 @@ func _exit_tree() -> void:
 	if _inspector_plugin:
 		remove_inspector_plugin(_inspector_plugin)
 		_inspector_plugin = null
+	if _property_picker_plugin:
+		# cleanup() removes the singleton dialog from the editor tree before deregistration.
+		_property_picker_plugin.cleanup()
+		remove_inspector_plugin(_property_picker_plugin)
+		_property_picker_plugin = null
+	if _array_inspector_plugin:
+		remove_inspector_plugin(_array_inspector_plugin)
+		_array_inspector_plugin = null
 
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)

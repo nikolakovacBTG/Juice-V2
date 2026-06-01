@@ -7,12 +7,12 @@
 # ============================================================================
 # WHAT: Juice node for Node3D targets (MeshInstance3D, CharacterBody3D, etc.).
 # WHY: Validates parent is Node3D, connects Area3D/CollisionObject3D signals.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase3D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase3D.svg")
 class_name Juice3D
 extends JuiceBase
 
@@ -75,6 +75,11 @@ var _outline_material: ShaderMaterial = null
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
+
+func _init() -> void:
+	if recipe == null:
+		recipe = Juice3DRecipe.new()
+
 
 func _ready() -> void:
 	super._ready()
@@ -482,7 +487,7 @@ func _ensure_outline_material() -> bool:
 	if _appearance_mesh == null:
 		return false
 	# Create outline shader material
-	var shader := load("res://addons/Juice_V1/Shaders/overlay_3d.gdshader") as Shader
+	var shader := load("res://addons/Juice_V2/Shaders/overlay_3d.gdshader") as Shader
 	if shader == null:
 		return false
 	_outline_material = ShaderMaterial.new()

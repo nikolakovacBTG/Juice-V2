@@ -10,7 +10,7 @@
 # WHY:  Allows designers to build complete game flow purely in the inspector.
 #       As a Resource in the recipe stack, it participates in chaining,
 #       start_delay, and sequencing without custom scripting.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Produce any visual effect — control/flow only.
 # DOES NOT: Hold scene tree references persistently — NodePaths resolved at trigger.
 # DOES NOT: Survive scene destruction — the orchestrator does that.
@@ -23,12 +23,12 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityMethods.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityMethods.svg")
 class_name SceneActionJuiceUtilityBase
 extends JuiceEffectBase
 
 # Preload the orchestrator script (no class_name — internal only)
-const _Orchestrator := preload("res://addons/Juice_V1/Meta/_JuiceSceneActionOrchestrator.gd")
+const _Orchestrator := preload("res://addons/Juice_V2/Meta/_JuiceSceneActionOrchestrator.gd")
 
 
 # =============================================================================
@@ -71,56 +71,77 @@ enum OldScenePostSwitchAction {
 # =============================================================================
 
 # --- Scene Action ---
+## Which scene management action to perform: Switch Scene, Overlay Scene, Reload Scene, or Quit Game.
 var action: int = SceneAction.SWITCH_SCENE:
 	set(value):
 		action = value
 		notify_property_list_changed()
 
+## Where to switch from: This Scene (full replace), Scene In Tree (swap specific node), or First Scene In Container.
 var from: int = SwitchFrom.THIS_SCENE:
 	set(value):
 		from = value
 		notify_property_list_changed()
 
+## Path to the specific node to replace when Switch From is Scene In Tree.
 var switch_from_path: NodePath = NodePath()
+## Path to the container node whose first child will be replaced when Switch From is First Scene In Container.
 var container_path: NodePath = NodePath()
+## The target PackedScene to load for Switch Scene or Overlay Scene actions.
 var to: PackedScene = null
+## What happens to the old scene after switching: Free (destroy), Hide (keep invisible), or Remove From Tree (detach).
 var old_scene_post_switch_action: int = OldScenePostSwitchAction.FREE
 
 # --- Overlay Behavior (OVERLAY_SCENE only) ---
+## CanvasLayer order for the overlay scene. Higher values render on top.
 var overlay_canvas_layer: int = 100
 
+## Enable a time manipulation effect (freeze, slow-mo, or bullet time) during the overlay.
 var use_time_effect: bool = false:
 	set(value):
 		use_time_effect = value
 		notify_property_list_changed()
 
+## Time manipulation mode: Freeze (0 time scale), Slow Mo (reduced scale), or Bullet Time (selective slowdown).
 var time_mode: int = 0:
 	set(value):
 		time_mode = value
 		notify_property_list_changed()
 
+## Target Engine.time_scale for Slow Mo and Bullet Time modes. 0.3 = 30% speed.
 var time_target_scale: float = 0.3
+## When enabled, smoothly interpolate to the target time scale instead of snapping.
 var time_smooth_transition: bool = true
+## Number of physics frames to freeze in Freeze mode before resuming.
 var time_freeze_frames: int = 3
+## Nodes exempt from Bullet Time slowdown (they keep running at normal speed).
 var time_exempt_nodes: Array[NodePath] = []
 
 # --- Transition ---
+## Visual transition type: None (instant cut), Solid Color, Image, or custom Scene.
 var overlay_type: int = TransitionOverlay.NONE:
 	set(value):
 		overlay_type = value
 		notify_property_list_changed()
 
+## Solid color used for the transition overlay when overlay type is Solid Color or Image.
 var overlay_color: Color = Color.BLACK
+## Texture displayed during the transition when overlay type is Image.
 var overlay_image: Texture2D = null
+## Blend mode for the transition overlay: Mix, Add, Sub, Mul, or Premult Alpha.
 var overlay_blend_mode: int = 0
+## Custom animated transition scene (PackedScene) when overlay type is Scene.
 var transition_scene: PackedScene = null
 
+## When enabled, use the transition scene's own timing signals instead of fallback durations.
 var use_scene_timing: bool = true:
 	set(value):
 		use_scene_timing = value
 		notify_property_list_changed()
 
+## Duration of the cover (fade-to) transition when not using scene timing.
 var fallback_cover_duration: float = 0.5
+## Duration of the reveal (fade-from) transition when not using scene timing.
 var fallback_reveal_duration: float = 0.5
 
 

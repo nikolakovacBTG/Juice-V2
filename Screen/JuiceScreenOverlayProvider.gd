@@ -8,13 +8,13 @@
 # WHY: Flash/fade effects need a full-screen ColorRect on a high CanvasLayer.
 #      Auto-creation on first use removes the need for manual scene setup.
 #      Multiple effects share the same overlay to prevent z-fighting.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Support multiple simultaneous overlays (last-write wins).
 # DOES NOT: Custom overlay positioning — always full screen.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityScreen.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityScreen.svg")
 class_name JuiceScreenOverlayProvider
 extends RefCounted
 

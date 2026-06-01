@@ -10,7 +10,7 @@
 #       configuration, inspector layout, particle helpers, and spawn orchestration.
 #       Domain subclasses (VFXControl, VFX2D, VFX3D) implement only the position
 #       math that requires type-safe access to domain-specific node properties.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Compute or write any transform delta through the ledger.
 # DOES NOT: Handle trail effects — use TrailJuiceEffect for that.
 #

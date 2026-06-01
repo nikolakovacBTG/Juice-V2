@@ -6,7 +6,7 @@
 # ============================================================================
 # WHAT: Classic squash & stretch scaling for Node2D targets with volume preservation.
 # WHY: Provides organic, lively deformation feedback.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Handle Control or Node3D targets — use SquashStretchControl/3DJuiceEffect.
 #
 # ARCHITECTURE:
@@ -22,7 +22,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBase2D.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBase2D.svg")
 class_name SquashStretch2DJuiceEffect
 extends Juice2DTransformEffect
 

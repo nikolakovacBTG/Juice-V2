@@ -13,7 +13,7 @@ extends RefCounted
 # WHY: Resources (like JuiceEffectBase and PropertyTarget) don't have a 
 #      get_owner_node() equivalent. They need to know their host node to
 #      resolve NodePaths at editor time (e.g. for the PropertyPicker).
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Do anything at runtime. This script is fully static and passive.
 # ============================================================================
 

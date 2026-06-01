@@ -8,7 +8,7 @@
 # WHY: Enables Balatro-style hover effects where juice intensity is proportional
 #      to spatial proximity, not just binary enter/exit. The spatial falloff
 #      IS the easing — no timing system needed.
-# SYSTEM: Juice System (addons/Juice_V1/) - Control Domain
+# SYSTEM: Juice System (addons/Juice_V2/) - Control Domain
 #
 # DOES NOT:
 # - Apply any visual effect itself (it's a sensor/driver, not an effect)
@@ -29,7 +29,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityTriggerControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityTriggerControl.svg")
 class_name SoftTriggerControlJuiceUtility
 extends Control
 

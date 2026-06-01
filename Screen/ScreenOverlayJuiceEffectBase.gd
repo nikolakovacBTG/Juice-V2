@@ -10,7 +10,7 @@
 # WHY: Screen flash and fade are global effects, not node-specific.
 #      Centralising the logic here keeps the three domain wrappers as thin
 #      class_name stubs, avoiding multiple-inheritance workarounds.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Write to the target node — always uses JuiceScreenOverlayProvider.
 # DOES NOT: Support multiple simultaneous overlays (last-write wins).
 # ============================================================================
@@ -24,7 +24,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityScreen.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityScreen.svg")
 class_name ScreenOverlayJuiceEffectBase
 extends JuiceEffectBase
 

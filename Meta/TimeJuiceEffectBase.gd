@@ -7,7 +7,7 @@
 # WHAT: Base class for time manipulation effects in the JuiceStack system.
 # WHY:  Provides time manipulation capabilities (slomo, stop, hitstop) encapsulated as
 #       a JuiceBase recipe — enabling standard triggering and chainability.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # DOES NOT: Animate target node properties — this is a meta effect.
 # DOES NOT: Manage audio pitch — use TimeCoordinatorJuiceUtility for that.
 # DOES NOT: Support per-object time scaling — Godot limitation.
@@ -27,7 +27,7 @@
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityTimeCoord.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityTimeCoord.svg")
 class_name TimeJuiceEffectBase
 extends JuiceEffectBase
 

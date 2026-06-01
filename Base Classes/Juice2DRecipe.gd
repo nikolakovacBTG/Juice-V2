@@ -7,7 +7,7 @@
 # WHAT: Recipe for 2D-domain juice effects.
 # WHY: Narrows the effects array type hint so the inspector dropdown only
 #      shows Juice2DEffectBase subclasses (not Control/3D effects).
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Change any recipe behavior — inherits everything from JuiceRecipe.
 # ============================================================================
 
@@ -22,7 +22,7 @@ extends JuiceRecipe
 
 ## Whitelist of concrete 2D-domain effect class names.
 ## Update this list when adding new 2D effects.
-const _CONCRETE_EFFECTS := "Appearance2DJuiceEffect,CallMethod2DJuiceUtility,Camera2DJuiceEffect,Camera3DJuiceEffect,InterpolateProperty2DJuiceEffect,Noise2DJuiceEffect,Pause2DJuiceEffect,ProgressTransform2DJuiceEffect,SceneAction2DJuiceUtility,ScreenJuiceEffect,ScreenOverlay2DJuiceEffect,Shake2DJuiceEffect,SignalEmit2DJuiceUtility,SquashStretch2DJuiceEffect,Time2DJuiceEffect,TrailJuiceEffect,Transform2DJuiceEffect,VFXJuiceEffect"
+const _CONCRETE_EFFECTS := "Appearance2DJuiceEffect,CallMethod2DJuiceUtility,Camera2DJuiceEffect,Camera3DJuiceEffect,Noise2DJuiceEffect,Pause2DJuiceEffect,ProgressTransform2DJuiceEffect,PropertyInterpolate2DJuiceEffect,PropertyNoise2DJuiceEffect,PropertyProgress2DJuiceEffect,PropertyShake2DJuiceEffect,SceneAction2DJuiceUtility,ScreenJuiceEffect,ScreenOverlay2DJuiceEffect,Shake2DJuiceEffect,SignalEmit2DJuiceUtility,SquashStretch2DJuiceEffect,Time2DJuiceEffect,TrailJuiceEffect,Transform2DJuiceEffect,VFXJuiceEffect"
 
 ## Override the effects array element type to list only concrete classes.
 ## This hides Juice2DEffectBase from the inspector dropdown.

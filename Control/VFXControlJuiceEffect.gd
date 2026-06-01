@@ -12,13 +12,13 @@
 #       Additionally, rotation is accessed via CanvasItem.global_rotation — casting
 #       explicitly to CanvasItem avoids GDScript's static-type access limitation
 #       when the variable is typed as Control.
-# SYSTEM: Juice System (addons/Juice_V1/Control/)
+# SYSTEM: Juice System (addons/Juice_V2/Control/)
 # DOES NOT: Handle Node2D or Node3D target types.
 # DOES NOT: Compute transform deltas — side-effect exception (see base class).
 # =============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseVFX.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseVFX.svg")
 class_name VFXControlJuiceEffect
 extends VFXJuiceEffectBase
 

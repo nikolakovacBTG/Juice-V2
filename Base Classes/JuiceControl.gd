@@ -8,12 +8,12 @@
 # WHAT: Juice node for Control targets (Button, Label, Panel, etc.).
 # WHY: Validates parent is Control, connects Control/Button-specific signals,
 #      handles Container-aware external-move detection.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Implement effects — those are JuiceEffectBase resources in a recipe.
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceBaseControl.svg")
+@icon("res://addons/Juice_V2/icons/JuiceBaseControl.svg")
 class_name JuiceControl
 extends JuiceBase
 
@@ -47,6 +47,11 @@ var _base_captured: bool = false
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
+
+func _init() -> void:
+	if recipe == null:
+		recipe = JuiceControlRecipe.new()
+
 
 func _ready() -> void:
 	super._ready()

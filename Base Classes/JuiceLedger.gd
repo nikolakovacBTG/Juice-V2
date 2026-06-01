@@ -13,7 +13,7 @@
 #       process memory only, never in the Godot serialization pipeline.
 #       Node metadata is part of Godot's serialization path and caused stale
 #       base values to be baked into .tscn files, corrupting animation origins.
-# SYSTEM: Juice System (addons/Juice_V1/)
+# SYSTEM: Juice System (addons/Juice_V2/)
 # DOES NOT: Know about domains, effects, or recipes.
 #           Does not inherit from Node — pure static utility.
 # ============================================================================
@@ -77,7 +77,9 @@ static func ensure(target: Node, props: Array[String]) -> Dictionary:
 	var ledger: Dictionary = _store[id]
 	for prop in props:
 		if not ledger["base"].has(prop):
-			ledger["base"][prop] = target.get(prop)
+			# get_indexed() handles colon sub-paths ("modulate:a", "material:shader_parameter/x")
+			# that Object.get() cannot resolve. Top-level props work identically.
+			ledger["base"][prop] = target.get_indexed(prop)
 	return ledger
 
 
@@ -117,7 +119,8 @@ static func sync_base_if_moved(target: Node, props: Array[String]) -> void:
 		else:
 			expected_val = base_val + total_delta
 
-		var current_val: Variant = target.get(prop)
+		# get_indexed() required for sub-path props ("modulate:a", etc.).
+		var current_val: Variant = target.get_indexed(prop)
 
 		# If the node is a Control in a Container, the layout engine applies absolute positions.
 		var is_container_position := false
@@ -276,7 +279,8 @@ static func cleanup_source(target: Node, source: Object, permanently: bool = tru
 			# Ledger-based tracking but don't correspond to real Node properties.
 			if prop.begins_with("_"):
 				continue
-			target.set(prop, ledger["base"][prop])
+			# set_indexed() required for sub-path props ("modulate:a", etc.).
+			target.set_indexed(prop, ledger["base"][prop])
 		_store.erase(id)
 
 
@@ -316,11 +320,12 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 					total_delta = Color(c_tot.r * c_del.r, c_tot.g * c_del.g, c_tot.b * c_del.b, c_tot.a * c_del.a)
 				var b := base_val as Color
 				var t := total_delta as Color
-				target.set(prop, Color(b.r * t.r, b.g * t.g, b.b * t.b, b.a * t.a))
+				# set_indexed() required for sub-path props ("modulate:a", etc.).
+				target.set_indexed(prop, Color(b.r * t.r, b.g * t.g, b.b * t.b, b.a * t.a))
 			else:
 				for source_id in delta_sources:
 					total_delta += delta_sources[source_id]
-				target.set(prop, base_val + total_delta)
+				target.set_indexed(prop, base_val + total_delta)
 			continue
 
 		# --- Non-additive types: zero_for() returned null ---
@@ -337,7 +342,7 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 					var d := delta_sources[source_id] as Rect2
 					dp += d.position
 					ds += d.size
-				target.set(prop, Rect2(base_r.position + dp, base_r.size + ds))
+				target.set_indexed(prop, Rect2(base_r.position + dp, base_r.size + ds))
 			TYPE_RECT2I:
 				var base_ri := base_val as Rect2i
 				var dpi := Vector2i.ZERO
@@ -346,7 +351,7 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 					var d := delta_sources[source_id] as Rect2i
 					dpi += d.position
 					dsi += d.size
-				target.set(prop, Rect2i(base_ri.position + dpi, base_ri.size + dsi))
+				target.set_indexed(prop, Rect2i(base_ri.position + dpi, base_ri.size + dsi))
 			TYPE_AABB:
 				var base_a := base_val as AABB
 				var dp3 := Vector3.ZERO
@@ -355,7 +360,7 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 					var d := delta_sources[source_id] as AABB
 					dp3 += d.position
 					ds3 += d.size
-				target.set(prop, AABB(base_a.position + dp3, base_a.size + ds3))
+				target.set_indexed(prop, AABB(base_a.position + dp3, base_a.size + ds3))
 			# Hold / flip-discrete: bool, String, StringName, NodePath, Object,
 			# Plane, Basis, Projection. No arithmetic.
 			# GDScript Dictionaries preserve insertion order — the last key iterated
@@ -363,12 +368,12 @@ static func flush(target: Node, props: Array[String] = []) -> void:
 			# via cleanup_source(), the previous source's value automatically becomes last.
 			_:
 				if delta_sources.is_empty():
-					target.set(prop, base_val)
+					target.set_indexed(prop, base_val)
 				else:
 					var last_hold: Variant = base_val
 					for source_id in delta_sources:
 						last_hold = delta_sources[source_id]
-					target.set(prop, last_hold)
+					target.set_indexed(prop, last_hold)
 
 
 ## Returns [code]true[/code] if [param target] has an active ledger.

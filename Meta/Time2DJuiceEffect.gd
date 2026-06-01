@@ -8,10 +8,10 @@
 # WHY:  Registers the effect in Juice2DRecipe._CONCRETE_EFFECTS so it
 #       appears in the inspector dropdown on Juice2D nodes.
 #       All behavior is inherited from TimeJuiceEffectBase.
-# SYSTEM: Juice System (addons/Juice_V1/Meta/)
+# SYSTEM: Juice System (addons/Juice_V2/Meta/)
 # ============================================================================
 
 @tool
-@icon("res://addons/Juice_V1/icons/JuiceUtilityTimeCoord.svg")
+@icon("res://addons/Juice_V2/icons/JuiceUtilityTimeCoord.svg")
 class_name Time2DJuiceEffect
 extends TimeJuiceEffectBase
