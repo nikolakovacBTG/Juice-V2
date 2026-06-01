@@ -47,26 +47,40 @@ With the release of Godot 4.7 (specifically changes detailed in 4.7 dev snapshot
 
 ---
 
-## 4. Property Effect Family — Ledger Refactor (Conflict Safety)
+## 4. Unified Color & Property Ledger Pipeline (Conflict Safety)
 
-**Status:** Deferred from V2.0. Shipped as an approved Direct-Write Exception.  
-**Branch:** `feature/v2.1-property-family` (all code preserved there, deleted from master)  
-**Full plan:** `Documentation/Future/PropertyFamily_Ledger_Refactor.md`
+**Status:** Deferred to V2.1.  
+**Severity:** High — silent conflict potential when stacking Color/Property effects.
 
-**Why deferred:**
-The Property family (`InterpolateProperty*`, `NoiseProperty*`, `ShakeProperty*`, `ProgressProperty*`) bypasses the JuiceLedger and writes directly to the target node via `set_indexed()`. This was a deliberate V2.0 scope decision — the Ledger aggregates typed channels (position/rotation/scale/modulate) and extending it to arbitrary user-picked properties requires a new generic channel API and L2 domain changes across all three domains.
+### Problem Statement: The Fractured Pipeline
+During V2.0, two separate architectural exceptions were made regarding how effects write to node properties:
+1. **The Property Family Exception:** The Property family (`InterpolateProperty*`, `NoiseProperty*`, etc.) was allowed to bypass the `JuiceLedger` entirely, writing directly to the target node via `set_indexed()`. This meant if two Property effects targeted the same path, the last writer won, completely breaking the additive stacking contract.
+2. **The Appearance Family Exception:** The Appearance family (TINT/FADE/OVERBRIGHT) also bypassed the unified Ledger for color. Instead, domain nodes run a manual, parallel multiplication loop for a synthetic `_modulate_factor` and overwrite the target's `modulate` property manually at the end of the frame.
 
-**The V2.1 conflict being solved:**
-Two Property Effects in the same Recipe targeting the same property path simultaneously produce a last-writer-wins conflict. V2's Ledger delta aggregation solves this — but the Property family must first register deltas instead of writing directly.
+**The Breaking Point:** While recent V2.0 patches fixed the internal math for Color accumulation in the Ledger, the *pipelines* remain fractured. If an `Appearance` effect and an `InterpolateProperty` effect both target the `modulate` property simultaneously, they execute via two completely parallel, uncoordinated write paths. The manual Appearance write runs last and clobbers the Property effect's output without warning.
 
-**Key work required:**
-- `JuiceLedger.gd`: generic property channel (`register_property_delta`, `flush_properties`)
-- `PropertyJuiceEffectBase.gd`: remove `set_indexed()`, register delta instead
-- All 3 domain nodes: call `JuiceLedger.flush_properties(target)` in `_post_tick_write()` and handle `_temporarily_undo/reapply_visual()` for property channels
-- `PropertyTarget.gd`: register base value with Ledger at capture time
-- Test suite: stacking, cleanup, and discrete-type priority tests required before shipping
+### The Unified Solution
+To resolve this, both families must be stripped of their exceptions and migrated into fully compliant delta calculators that share a single, robust `JuiceLedger` pipeline.
 
-See `PropertyFamily_Ledger_Refactor.md` for full implementation order and test requirements.
+#### Phase A: Generic Property Ledger Infrastructure
+
+> **Reference:** For exhaustive design logic on Phase A (discrete-type priority order, variant-aware addition logic, and property cleanup constraints), refer to the original comprehensive design document: `Documentation/Future/PropertyFamily_Ledger_Refactor.md`.
+
+- **Generic Property Channels:** Extend `JuiceLedger` to support arbitrary property paths.
+- **Variant-Aware Addition:** Implement `flush_properties(target)` that reads the base value and sums all deltas. (Continuous types blend additively; Discrete types like bool/NodePath use a priority-based "last registration wins" model).
+- **Update Property Effects:** Modify `PropertyJuiceEffectBase` to remove `set_indexed()` direct writes. Instead, compute the delta and call `register_property_delta()`.
+- **Domain Node Hooks:** Add `JuiceLedger.flush_properties(target)` to all 3 domain nodes' `_post_tick_write()`, `_temporarily_undo_visual()`, and `_temporarily_reapply_visual()`.
+
+#### Phase B: Appearance Migration
+- **Abolish `_modulate_factor`:** Remove the synthetic key and the manual multiplication loop entirely from all 3 domain nodes and all Appearance classes.
+- **Merge into Property Pipeline:** Refactor the Appearance effect base classes to extend `PropertyJuiceEffectBase` directly. This effectively reduces the entire Appearance family to standard property effects that just happen to target `modulate` or `self_modulate`, enjoying the unified Variant-aware blending for free.
+- **Rely on Flush:** `JuiceLedger.flush_properties()` will now execute the final property write for everything, safely combining Appearance and Property color deltas in one pass.
+
+#### Test Coverage Requirements
+- `test_two_interpolate_effects_same_property_stack_additively`
+- `test_discrete_property_two_effects_priority_order`
+- `test_appearance_and_property_stacking_on_modulate_blends_correctly`
+These tests MUST PASS. Claims of completion require citing test results.
 
 ---
 
@@ -151,3 +165,5 @@ To properly support multi-surface Appearance3D:
 - `JuiceLedger.gd`: no changes needed — already supports arbitrary string keys
 - `Appearance3DJuiceEffect.gd`: no changes needed — already exposes `material_surface_index`
 - Test suite: multi-surface stacking test (requires a mesh with 2+ materials)
+
+---

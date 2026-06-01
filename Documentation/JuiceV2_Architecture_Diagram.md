@@ -18,6 +18,9 @@ graph LR
     Node_Root("Godot Node"):::GodotClass
     Resource_Root("Godot Resource"):::GodotClass
     RefCounted_Root("Godot RefCounted"):::GodotClass
+    Godot_EditorPlugin("Godot EditorPlugin"):::GodotClass
+    Godot_EditorInspector("Godot EditorInspectorPlugin"):::GodotClass
+    Godot_EditorProperty("Godot EditorProperty"):::GodotClass
 
     %% CORE ORCHESTRATION & STATE ==========================
     Node_Root --> JuiceBase:::CoreNode
@@ -26,6 +29,13 @@ graph LR
     
     RefCounted_Root --> JuiceLedger:::CoreNode
     RefCounted_Root --> JuiceOrchestratorFactory:::CoreNode
+    RefCounted_Root --> JuiceSignalRouter:::CoreNode
+    RefCounted_Root --> JuiceTriggerRouter:::CoreNode
+    RefCounted_Root --> TriggerHintBuilder:::CoreNode
+    
+    Note_Routers("📝 INTERNAL ROUTERS<br>Static utilities handling node-agnostic event routing<br>and inspector hint generation."):::PostIt
+    JuiceSignalRouter -.-> Note_Routers
+    JuiceTriggerRouter -.-> Note_Routers
     
     Note_JuiceBase("📝 DOMAIN CONFIGURATION<br>Holds inspector config and recipe references.<br>Delegates lifecycle to Orchestrator."):::PostIt
     JuiceBase -.-> Note_JuiceBase
@@ -164,6 +174,17 @@ graph LR
     Godot_Area3D("Godot Area3D"):::GodotClass --> SoftTrigger3DJuiceUtility:::UtilityNode
     Godot_Area3D --> Interaction3DJuiceUtility:::UtilityNode
 
+    %% EDITOR TOOLS =========================================
+    Godot_EditorPlugin --> JuicePlugin:::EditorClass
+    Godot_EditorInspector --> JuiceEditorInspectorPlugin:::EditorClass
+    Godot_EditorProperty --> ChainToArrayEditor:::EditorClass
+    
+    JuicePlugin -. "Registers" .-> JuiceEditorInspectorPlugin
+    JuiceEditorInspectorPlugin -. "Instantiates" .-> ChainToArrayEditor
+    
+    Note_Editor("📝 CUSTOM INSPECTOR UX<br>Hides underlying Resource arrays and exposes<br>a unified property list to the user."):::PostIt
+    JuiceEditorInspectorPlugin -.-> Note_Editor
+
     %% META SUB-RESOURCES ===================================
     Resource_Root --> PropertyTarget:::BaseClass
     PropertyTarget --> InterpolatePropertyTarget:::ConcreteClass
@@ -198,5 +219,6 @@ graph LR
     classDef ConcreteClass fill:#6e333b,stroke:#b85663,stroke-width:1px,color:#fff;
     classDef UtilityNode fill:#5c4066,stroke:#9769a8,stroke-width:1px,color:#fff;
     classDef DebugUtil fill:#2e4a4f,stroke:#4a9eaa,stroke-width:2px,color:#fff;
+    classDef EditorClass fill:#2d2d2d,stroke:#7b7b7b,stroke-width:2px,color:#fff;
     classDef PostIt fill:#fff59d,stroke:#fbc02d,stroke-width:1px,color:#000,stroke-dasharray: 0;
 ```
