@@ -474,18 +474,22 @@ func _set_tooltips_recursive(node: Node, tooltips: Dictionary, resource: Resourc
 	return count
 
 
-# Add a rich tooltip overlay to an EditorProperty.
-# The overlay is inserted at child index 0 (behind all value widgets).
-# Godot gives input priority to later children (higher index), so value
-# widgets receive clicks/hover first. The overlay only gets hover events
-# in areas not covered by any value widget — i.e. the label area.
+# Add a rich tooltip overlay as a SIBLING of an EditorProperty.
+# The overlay uses top_level=true to position freely over the target's label
+# area. It CANNOT be a child of EditorProperty because EditorProperty forces
+# ALL children (regular and internal) into the value area, creating the
+# phantom black field and blocking value widget input.
 func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, resource: Resource) -> void:
 	var prop_name: String = editor_property.get_edited_property()
+	var parent_container := editor_property.get_parent()
+	if not parent_container:
+		return
 
 	# Remove any previously added tooltip overlay (e.g., from a refresh).
-	# Internal children require get_children(true) to be found.
-	for child in editor_property.get_children(true):
-		if child.name == "_juice_tooltip":
+	# Overlays are siblings of the EditorProperty, named "_juice_tt_{prop_name}".
+	var overlay_name := "_juice_tt_%s" % prop_name
+	for child in parent_container.get_children():
+		if child.name == overlay_name:
 			child.queue_free()
 
 	# Look up type and value from the resource's property list.
@@ -497,15 +501,11 @@ func _set_tooltip_on_children(editor_property: EditorProperty, tip: String, reso
 			value_str = _get_value_display(prop_info, resource)
 			break
 
-	# Create the transparent overlay with rich tooltip rendering.
+	# Create the overlay as a SIBLING with top_level=true for free positioning.
 	var overlay: Control = _TooltipOverlay.new()
-	overlay.setup(prop_name, type_name, value_str, tip)
-	overlay.name = "_juice_tooltip"
-	# INTERNAL_MODE_FRONT makes this an internal child — EditorProperty's
-	# Container layout ignores internal children entirely. No position
-	# fighting, no black field. Value widgets (regular children) are
-	# completely unaffected.
-	editor_property.add_child(overlay, false, Node.INTERNAL_MODE_FRONT)
+	overlay.setup(editor_property, prop_name, type_name, value_str, tip)
+	overlay.name = overlay_name
+	parent_container.add_child(overlay)
 
 
 # Convert a PropertyInfo dictionary to a human-readable type name.

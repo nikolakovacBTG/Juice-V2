@@ -1,10 +1,10 @@
 ## Transparent overlay providing rich, Godot-native-styled tooltips for
 ## sub-inspector EditorProperty nodes.
 ##
-## Placed as a child of EditorProperty to intercept hover. Overrides
-## _make_custom_tooltip() to render a styled tooltip matching Godot's native
-## inspector format: blue "Property" header with code-formatted type info,
-## plus rich description body with bold keyword support.
+## Added as a SIBLING of the target EditorProperty (child of the same parent
+## VBoxContainer) with top_level=true to position freely over the label area.
+## EditorProperty forces ALL its children into the value area, so the overlay
+## CANNOT be a child of EditorProperty — it must be a sibling.
 
 # =============================================================================
 # WHAT: Transparent Control overlay that renders rich tooltips via _make_custom_tooltip().
@@ -13,8 +13,8 @@
 #       overlay fills that gap with a visually matching implementation built
 #       entirely from editor theme tokens.
 # SYSTEM: Juice Editor (addons/Juice_V2/Editor/)
-# DOES NOT: Handle click events — covers only the label area (left side)
-#           so value widgets (dropdowns, checkboxes) remain fully clickable.
+# DOES NOT: Handle click events — positioned over the label area only.
+#           Value widgets (right side) remain fully clickable.
 # =============================================================================
 
 @tool
@@ -36,23 +36,27 @@ var value_str: String
 # Documentation description from ## doc comments.
 var description: String
 
+# The target EditorProperty whose label area this overlay covers.
+var _target_property: EditorProperty
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
 
-## Configure the overlay with tooltip data and activate it.
-func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> void:
+## Configure the overlay with tooltip data and the target EditorProperty.
+func setup(target: EditorProperty, p_name: String, p_type: String, p_value: String, p_desc: String) -> void:
+	_target_property = target
 	property_name = p_name
 	type_name = p_type
 	value_str = p_value
 	description = p_desc
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
-	# STOP so this control handles hover for tooltips. This overlay is added
-	# as an INTERNAL child (INTERNAL_MODE_FRONT) so EditorProperty's layout
-	# system ignores it entirely — no fighting over position, no black field.
-	# Value widgets are regular children in a separate layer, unaffected.
+	# STOP: this control owns hover in the label area. It's a sibling of the
+	# EditorProperty (not a child), so EditorProperty's layout doesn't touch it.
+	# top_level=true takes it out of the parent VBox's stacking.
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	top_level = true
 
 # =============================================================================
 # LIFECYCLE
@@ -60,182 +64,126 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_POST_ENTER_TREE:
-		var parent := get_parent() as Control
-		if parent:
-			# Connect to PARENT's resized — our own never fires because
-			# internal children aren't managed by Container layout.
-			if not parent.resized.is_connected(_override_layout):
-				parent.resized.connect(_override_layout)
-			_override_layout()
+		if _target_property and is_instance_valid(_target_property):
+			if not _target_property.resized.is_connected(_override_layout):
+				_target_property.resized.connect(_override_layout)
+			if not _target_property.item_rect_changed.is_connected(_override_layout):
+				_target_property.item_rect_changed.connect(_override_layout)
+			call_deferred("_override_layout")
 	elif what == NOTIFICATION_EXIT_TREE:
-		var parent := get_parent() as Control
-		if parent and parent.resized.is_connected(_override_layout):
-			parent.resized.disconnect(_override_layout)
+		if _target_property and is_instance_valid(_target_property):
+			if _target_property.resized.is_connected(_override_layout):
+				_target_property.resized.disconnect(_override_layout)
+			if _target_property.item_rect_changed.is_connected(_override_layout):
+				_target_property.item_rect_changed.disconnect(_override_layout)
 
 
-# Cover the label area of the parent EditorProperty.
-# Uses name_split_ratio (the actual label/value split) instead of hardcoded %.
-# Since this overlay is an internal child (INTERNAL_MODE_FRONT), EditorProperty's
-# Container layout does NOT manage its position — we control it entirely.
+# Position over the label area of the target EditorProperty.
+# Uses top_level=true so coordinates are in viewport space.
+# Only covers the FIRST ROW height — excludes bottom editors (Vector3 sub-row).
 func _override_layout() -> void:
-	var parent_prop := get_parent() as EditorProperty
-	if not parent_prop or not is_instance_valid(parent_prop):
+	if not _target_property or not is_instance_valid(_target_property):
+		visible = false
 		return
+	if not _target_property.is_inside_tree():
+		visible = false
+		return
+
 	# name_split_ratio defines where the label ends and value area begins.
-	var split: float = parent_prop.name_split_ratio
-	position = Vector2.ZERO
-	size = Vector2(parent_prop.size.x * split, parent_prop.size.y)
+	var split: float = _target_property.name_split_ratio
+
+	# For multi-row properties (Vector3, etc.), only cover the label row height,
+	# not the full EditorProperty height which includes the bottom editor.
+	# The label row height is the minimum size of a single inspector row.
+	var row_height := _target_property.size.y
+	# Check for bottom editor children that extend the property vertically.
+	for child in _target_property.get_children():
+		if child is Control:
+			var c := child as Control
+			if c.position.y > 0 and c.size.y > 0:
+				# This child is below the label row — cap our height before it.
+				row_height = minf(row_height, c.position.y)
+
+	global_position = _target_property.global_position
+	size = Vector2(_target_property.size.x * split, row_height)
+	visible = true
 
 
 # =============================================================================
 # TOOLTIP RENDERING
 # =============================================================================
 
-## Build and return a rich tooltip panel matching Godot's native inspector format.
+## Returns a richly formatted tooltip matching Godot's native inspector style.
+## Called by the engine when the mouse hovers over this overlay's label area.
 func _make_custom_tooltip(for_text: String) -> Object:
 	if for_text != "juice_tooltip":
 		return null
-	return _build_tooltip_panel()
 
-
-# Construct the tooltip panel using editor theme tokens.
-# Layout mirrors native Godot inspector tooltips:
-# ┌─────────────────────────────────────────────────────┐
-# │ Property prop_name: TypeName = value                │ ← darker header
-# ├─────────────────────────────────────────────────────┤
-# │ Description text with bold Keyword: formatting...   │ ← description body
-# └─────────────────────────────────────────────────────┘
-func _build_tooltip_panel() -> Control:
-	var theme := EditorInterface.get_editor_theme()
-	if not theme:
+	# Build the tooltip using editor theme tokens for consistent styling.
+	var editor_theme := EditorInterface.get_editor_theme()
+	if editor_theme == null:
 		return null
 
-	# --- Theme tokens (all from EditorInterface.get_editor_theme()) ---
-	var title_color := theme.get_color("title_color", "EditorHelp")
-	var headline_color := theme.get_color("headline_color", "EditorHelp")
-	var type_color := theme.get_color("type_color", "EditorHelp")
-	var text_color := theme.get_color("font_color", "TooltipLabel")
-	# doc_source is the correct monospace font — "doc_code_font" triggers
-	# engine warnings despite has_font() reporting it as found.
-	var code_font: Font = theme.get_font("doc_source", "EditorFonts")
-
-	# --- Tooltip background color ---
-	# Read the bg_color from the native TooltipPanel stylebox so our header
-	# can be darker than the body (matching native Godot ordering).
-	var tooltip_style: StyleBox = theme.get_stylebox("panel", "TooltipPanel")
-	var tooltip_bg_color := Color(0.07, 0.07, 0.07)  # safe fallback
-	if tooltip_style is StyleBoxFlat:
-		tooltip_bg_color = tooltip_style.bg_color
-
-	# --- Single outer panel (no nested PanelContainers = no extra margins) ---
-	var panel := PanelContainer.new()
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = tooltip_bg_color
-	panel_style.corner_radius_top_left = 3
-	panel_style.corner_radius_top_right = 3
-	panel_style.corner_radius_bottom_left = 3
-	panel_style.corner_radius_bottom_right = 3
-	panel.add_theme_stylebox_override("panel", panel_style)
-
+	# --- Tooltip container ---
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 0)
-	panel.add_child(vbox)
+	vbox.add_theme_constant_override("separation", 8)
 
-	# --- Header row (darker than tooltip body) ---
-	var header_margin := MarginContainer.new()
-	header_margin.add_theme_constant_override("margin_left", 8)
-	header_margin.add_theme_constant_override("margin_right", 8)
-	header_margin.add_theme_constant_override("margin_top", 6)
-	header_margin.add_theme_constant_override("margin_bottom", 6)
-	vbox.add_child(header_margin)
-
-	# Draw the darker header background behind the margin container.
-	var header_bg := Panel.new()
-	header_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var header_bg_style := StyleBoxFlat.new()
-	header_bg_style.bg_color = tooltip_bg_color.darkened(0.3)
-	header_bg.add_theme_stylebox_override("panel", header_bg_style)
-	header_margin.add_child(header_bg)
-	# Move bg behind text (z_index won't work, use child order + show_behind_parent).
-	header_bg.show_behind_parent = true
-
+	# --- Header: "Property property_name: TypeName = value" ---
 	var header := RichTextLabel.new()
+	header.bbcode_enabled = true
 	header.fit_content = true
 	header.scroll_active = false
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.autowrap_mode = TextServer.AUTOWRAP_OFF
-	header_margin.add_child(header)
 
-	# "Property" in blue bold
-	header.push_color(title_color)
-	header.push_bold()
-	header.add_text("Property")
-	header.pop()  # bold
-	header.pop()  # color
-	header.add_text(" ")
-	# Property name in bold white
-	header.push_color(headline_color)
-	header.push_bold()
-	header.add_text(property_name)
-	header.pop()  # bold
-	header.pop()  # color
-	# ": TypeName = value" in code font, type color
+	# Use doc-comment color for the "Property" keyword.
+	var doc_comment_color := editor_theme.get_color("doc_comment_color", "EditorHelp")
+	if doc_comment_color == Color.BLACK:
+		doc_comment_color = Color(0.34, 0.67, 1.0)  # Fallback blue.
+
+	var code_font := editor_theme.get_font("doc_source", "EditorFonts")
+	var code_size := editor_theme.get_font_size("doc_source_size", "EditorFonts")
+	if code_size <= 0:
+		code_size = 13
+
+	# Format: "Property property_name: TypeName = value"
+	var header_text := "[color=#%s]Property[/color] " % doc_comment_color.to_html(false)
+	header_text += "[b]%s[/b]" % property_name
 	if not type_name.is_empty():
-		header.add_text(": ")
-		header.push_color(type_color)
-		if code_font:
-			header.push_font(code_font)
-		header.add_text("%s = %s" % [type_name, value_str])
-		if code_font:
-			header.pop()  # font
-		header.pop()  # color
+		header_text += ": [font=%s][font_size=%d]%s = %s[/font_size][/font]" % [
+			_get_font_path(code_font), code_size, type_name, value_str
+		]
+	header.text = header_text
+	vbox.add_child(header)
+
+	# --- Separator ---
+	var sep := HSeparator.new()
+	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(sep)
 
 	# --- Description body ---
 	if not description.is_empty():
-		var body_margin := MarginContainer.new()
-		body_margin.add_theme_constant_override("margin_left", 8)
-		body_margin.add_theme_constant_override("margin_right", 8)
-		body_margin.add_theme_constant_override("margin_top", 6)
-		body_margin.add_theme_constant_override("margin_bottom", 6)
-		vbox.add_child(body_margin)
-
 		var body := RichTextLabel.new()
+		body.bbcode_enabled = true
 		body.fit_content = true
 		body.scroll_active = false
-		body.custom_minimum_size.x = 300.0
-		# Increase line spacing for readability.
-		body.add_theme_constant_override("line_separation", 4)
-		body_margin.add_child(body)
+		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.custom_minimum_size.x = 350
+		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
-		body.push_color(text_color)
-		_add_description_text(body, description, headline_color)
-		body.pop()  # text_color
+		# Bold keywords wrapped in ** **.
+		var formatted := description
+		var regex := RegEx.new()
+		regex.compile("\\*\\*(.+?)\\*\\*")
+		formatted = regex.sub(formatted, "[b]$1[/b]", true)
+		body.text = formatted
+		vbox.add_child(body)
 
-	return panel
+	return vbox
 
 
-# Add description text with bold keyword detection.
-# Lines matching "Keyword:" pattern (single word before colon, <25 chars) get
-# bold formatting on the keyword — matching how native Godot tooltips render
-# enum value descriptions (e.g., "Parent: description").
-# push_bold() is safe: the editor theme provides bold_font for RichTextLabel.
-static func _add_description_text(rtl: RichTextLabel, text: String, bold_color: Color) -> void:
-	var lines := text.split("\n")
-	for i in range(lines.size()):
-		if i > 0:
-			rtl.newline()
-		var line: String = lines[i].strip_edges()
-		if line.is_empty():
-			continue
-		# Detect "Keyword:" at line start — bold the keyword portion.
-		var colon_idx := line.find(":")
-		if colon_idx > 0 and colon_idx < 25:
-			var keyword := line.left(colon_idx)
-			if not " " in keyword and not keyword.is_empty():
-				rtl.push_color(bold_color)
-				rtl.push_bold()
-				rtl.add_text(keyword + ":")
-				rtl.pop()  # bold
-				rtl.pop()  # color
-				rtl.add_text(line.substr(colon_idx + 1))
-				continue
-		rtl.add_text(line)
+# Get the resource path of a font, or empty string if unavailable.
+func _get_font_path(font: Font) -> String:
+	if font and font.resource_path and not font.resource_path.is_empty():
+		return font.resource_path
+	return ""
