@@ -49,11 +49,6 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	# Transparent until _override_layout positions us correctly. Using alpha
-	# instead of visible=false so the control still participates in layout
-	# (NOTIFICATION_RESIZED fires). visible=false would deadlock: no layout →
-	# no resize notification → _override_layout never called → stays hidden.
-	modulate.a = 0.0
 
 # =============================================================================
 # LIFECYCLE
@@ -66,16 +61,13 @@ func _notification(what: int) -> void:
 
 # Reposition to cover only the label area of the parent EditorProperty.
 # Dynamically finds where value widgets start by scanning sibling positions
-# instead of assuming a hardcoded 40% split. This prevents overlap with
-# value input fields (e.g. the X component of a Vector3 SpinBox).
+# instead of assuming a hardcoded 40% split.
 func _override_layout() -> void:
 	var parent_ctrl := get_parent() as Control
 	if not parent_ctrl or not is_instance_valid(parent_ctrl):
 		return
 
 	# Find where value widgets start by checking sibling positions.
-	# EditorProperty places value widgets (SpinBox, CheckBox, etc.) at a
-	# specific x offset. The label area ends where the first widget begins.
 	var value_start_x := parent_ctrl.size.x
 	for child in parent_ctrl.get_children():
 		if child == self:
@@ -85,17 +77,16 @@ func _override_layout() -> void:
 		var c := child as Control
 		if not c.visible or c.size.x <= 0:
 			continue
-		# Skip bottom editors (they span full width below the label row).
 		if c.position.y >= parent_ctrl.size.y * 0.5:
 			continue
 		value_start_x = minf(value_start_x, c.position.x)
 
-	if value_start_x <= 0.0:
-		return
+	# Fallback: if no siblings found, use 40% like before.
+	if value_start_x >= parent_ctrl.size.x or value_start_x <= 0.0:
+		value_start_x = parent_ctrl.size.x * 0.4
 
 	position = Vector2.ZERO
 	size = Vector2(value_start_x, parent_ctrl.size.y)
-	modulate.a = 1.0
 
 
 # =============================================================================
