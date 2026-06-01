@@ -1,9 +1,0 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
-
-# Test results (generated at runtime)
-tests/results/
-
-# Scratch/investigation scripts (not part of the addon)
-tests/scratch/

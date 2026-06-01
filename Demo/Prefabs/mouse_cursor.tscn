@@ -1,8 +1,0 @@
-[gd_scene format=3 uid="uid://hw8yytg8gv7h"]
-
-[ext_resource type="Script" uid="uid://bxlv51uy7bfcy" path="res://Demo/Scripts/MouseCursor.gd" id="1_vhhdj"]
-
-[node name="MouseCursor" type="Node" unique_id=1011531862]
-script = ExtResource("1_vhhdj")
-
-[node name="CursorSprite" type="Sprite2D" parent="." unique_id=492213681]
