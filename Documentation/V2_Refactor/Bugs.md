@@ -1,30 +1,16 @@
 # Known Bugs
 
-## Chain To — Black dead field next to label
+## ~~Chain To — Black dead field next to label~~ RESOLVED
 
-**Severity:** Cosmetic / Low  
-**Status:** Open  
-**Component:** `ChainToArrayEditor.gd` / Godot EditorProperty rendering
+**Status:** ✅ Fixed (2026-06-01)  
+**Fix:** Root cause was tooltip overlay being added as a child of EditorProperty — EditorProperty forces ALL children into the value area, creating a phantom black rectangle. Fixed by making overlay a sibling with `top_level=true`.
 
-### Description
+---
 
-A dead black rectangle appears next to the "Chain To" label in the inspector when the `chain_to` array is empty (`Size: 0`). It disappears after interacting with the "Pick Siblings" popup.
+## ~~Phantom Input Field for Vector3 and similar types~~ RESOLVED
 
-### Root Cause
-
-`ChainToArrayEditor` extends `EditorProperty`, sets `label = ""` in `_init()`, and uses `set_bottom_editor(_main_vbox)` to render the custom UI below the label row. Godot still allocates the default inline value-widget area on the label row, but since no widget is placed there, it renders as a black rectangle. After a popup interaction forces a re-layout, the stale area clears.
-
-### Reproduction
-
-1. Expand an effect in the recipe inspector
-2. Scroll to the "Chaining" group
-3. Observe the black rectangle next to "Chain To" (intermittent — may require fresh scene load)
-
-### Possible Fix Directions
-
-- Investigate whether setting `label` to the property name (instead of `""`) changes Godot's layout allocation
-- Check if adding a transparent placeholder Control as the inline child (before `set_bottom_editor`) prevents the black area
-- May require a Godot engine fix if the stale widget area is an `EditorProperty` base class issue
+**Status:** ✅ Fixed (2026-06-01)  
+**Fix:** Same root cause as Chain To bug. Tooltip overlay as EditorProperty child was positioned in the value area by EditorProperty's Container layout, blocking Vector3 input fields.
 
 ---
 
@@ -73,19 +59,6 @@ When interpolating a Color property, setting the "to" color to Green results in 
 
 ---
 
-
-## Phantom Input Field for Vector3 and similar types
-
-**Severity:** High  
-**Status:** Open  
-**Component:** Editor Inspector
-
-### Description
-
-A phantom input field bug occurs in the inspector. This bug is not purely cosmetic; it actively prevents users from inputting values into fields like Vector3 input fields.
-
----
-
 ## Signal / Method Event Architecture Gap
 
 **Severity:** High / Architectural Flaw  
@@ -102,4 +75,4 @@ The base class (`JuiceBase`) needs to take responsibility for firing signals and
 *Note on Ledger:* While a "Ledger" is specifically for mathematically summing continuous deltas (like position) and isn't mechanically needed for discrete events, the architecture *does* need a centralized **Event Router** at the Node level. 
 
 **Bubbling to Sub-Scene Root:**
-To truly fulfill the "no-code" philosophy and treat prefabs as black boxes, the Event Router should not just bubble the signal from the Resource to the `JuiceBase` node. It should include an option (e.g., `bubble_to_owner = true`) to traverse up and emit the signal directly from the **Sub-Scene Root** (`owner`). This way, the Main Scene can listen to the prefab root directly without needing to dig into its internal node hierarchy.
+To truly fulfill the "no-code" philosophy and treat prefabs as black boxes, the Event Router should not just bubble the signal from the Resource to the `JuiceBase` node. It should include an option (e.g., `emit_to_root = true` (default true)) to traverse up and emit the signal directly from the **Sub-Scene Root** (`owner`). This way, the Main Scene can listen to the prefab root directly without needing to dig into its internal node hierarchy.
