@@ -30,7 +30,10 @@ func _validate_property(property: Dictionary) -> void:
 	super._validate_property(property)
 	if property.name == "trigger_on":
 		var source: Node = _resolve_hint_source_node()
-		property.hint_string = TriggerHintBuilder.build_hint(source, &"3D")
+		if source == null and trigger_source == TriggerSource.NODE:
+			property.hint_string = "On Ready:8,Manual:9"
+		else:
+			property.hint_string = TriggerHintBuilder.build_hint(source, &"3D")
 	if property.name == "recipe":
 		property.hint_string = "Juice3DRecipe"
 

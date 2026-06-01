@@ -181,7 +181,10 @@ enum TriggerSource {
 @export var auto_connect_parent: bool = true
 
 ## Path to the node that provides trigger signals.
-@export var trigger_source_path: NodePath
+@export var trigger_source_path: NodePath:
+	set(value):
+		trigger_source_path = value
+		notify_property_list_changed()
 
 ## What event triggers the animation. Options are filtered per domain.
 @export var trigger_on: TriggerEvent = TriggerEvent.ON_READY:
@@ -276,6 +279,13 @@ enum TriggerSource {
 # not here. This method only mutates hint_string — EditorInspectorPlugin
 # cannot do that from _parse_property (receives hint as a value copy).
 func _validate_property(property: Dictionary) -> void:
+	# Hide the "Sequencer Options" subgroup header in STACK mode.
+	# @export_subgroup entries appear in _validate_property with PROPERTY_USAGE_SUBGROUP,
+	# so we suppress them here the same way as any regular property.
+	if property.name == "Sequencer Options" and mode == Mode.STACK:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
+		return
+
 	if property.name == "trigger_behaviour":
 		var supports_toggle := trigger_on in [
 			TriggerEvent.ON_PRESS,

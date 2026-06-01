@@ -66,12 +66,6 @@ const _ALWAYS := "On Ready:8,Manual:9"
 # Juice utility hint: driven via set_external_progress, trigger system bypassed.
 # Show only the bare minimum so users aren't confused.
 const _SOFT_TRIGGER_HINT := "On Ready:8,Manual:9"
-const _INTERACTION_ANY_HINT := (
-	"On Mouse Entered (toggleable):2,On Mouse Exited:3,"
-	+ "On Body Entered (toggleable):13,On Body Exited:14,"
-	+ "On Area Entered (toggleable):15,On Area Exited:16,"
-	+ "On Ready:8,Manual:9"
-)
 
 
 # =============================================================================
@@ -93,51 +87,52 @@ static func build_hint(source_node: Node, domain: StringName) -> String:
 	if source_node is SoftTrigger2DJuiceUtility or source_node is SoftTrigger3DJuiceUtility or source_node is SoftTriggerControlJuiceUtility:
 		return _SOFT_TRIGGER_HINT
 
-	# Interaction utilities can detect bodies/areas/mouse depending on their mode.
-	if source_node is Interaction2DJuiceUtility or source_node is Interaction3DJuiceUtility:
-		return _INTERACTION_ANY_HINT
-
 	# AnimationPlayer: hardcoded callback on animation_finished. Manual is the
 	# only useful user-facing trigger.
 	if source_node is AnimationPlayer:
 		return _ALWAYS
 
 	# Capability-based filtering for everything else.
+	# Order follows TriggerEvent enum values to match the _FULL_* constants.
 	var parts: PackedStringArray = []
+	var has_mouse := source_node.has_signal("mouse_entered")
 
-	# -- Mouse / click / press options (require mouse_entered signal) --
-	if source_node.has_signal("mouse_entered"):
+	# -- Press / Release / Mouse (0-3) --
+	if has_mouse:
 		parts.append("On Press (toggleable):0")
 		parts.append("On Release:1")
 		parts.append("On Mouse Entered (toggleable):2")
 		parts.append("On Mouse Exited:3")
-		parts.append("On Left Click:10")
-		parts.append("On Right Click:11")
-		parts.append("On Middle Click:12")
 
-	# -- Focus (Control-only) --
+	# -- Focus (4-5, Control-only) --
 	if source_node.has_signal("focus_entered"):
 		parts.append("On Focus (toggleable):4")
 		parts.append("On Unfocus:5")
 
-	# -- Visibility --
+	# -- Visibility (6-7) --
 	if source_node.has_signal("visibility_changed"):
 		parts.append("On Show:6")
 		parts.append("On Hide:7")
 
-	# -- Physics bodies (Area2D / Area3D have body_entered) --
+	# -- Ready / Manual (8-9, always available) --
+	parts.append("On Ready:8")
+	parts.append("Manual:9")
+
+	# -- Clicks (10-12) --
+	if has_mouse:
+		parts.append("On Left Click:10")
+		parts.append("On Right Click:11")
+		parts.append("On Middle Click:12")
+
+	# -- Physics bodies (13-14, Area2D / Area3D) --
 	if source_node.has_signal("body_entered"):
 		parts.append("On Body Entered (toggleable):13")
 		parts.append("On Body Exited:14")
 
-	# -- Other areas (Area2D / Area3D have area_entered) --
+	# -- Other areas (15-16, Area2D / Area3D) --
 	if source_node.has_signal("area_entered"):
 		parts.append("On Area Entered (toggleable):15")
 		parts.append("On Area Exited:16")
-
-	# Always add Ready and Manual.
-	parts.append("On Ready:8")
-	parts.append("Manual:9")
 
 	if parts.is_empty():
 		# Source node has no recognisable signals — show full domain hint.
