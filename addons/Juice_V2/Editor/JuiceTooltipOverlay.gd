@@ -49,30 +49,56 @@ func setup(p_name: String, p_type: String, p_value: String, p_desc: String) -> v
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
 	mouse_filter = Control.MOUSE_FILTER_PASS
+	# Opt out of EditorProperty's child layout so it doesn't reposition
+	# us into the value area on relayout (which caused the black field on refocus).
+	top_level = true
 
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED:
-		# EditorProperty positions children in the value area (right side).
-		# Override to cover only the LABEL area (left side) so tooltips appear
-		# on hover without blocking value widgets (dropdowns, checkboxes, etc.).
+	if what == NOTIFICATION_VISIBILITY_CHANGED and visible:
+		call_deferred("_override_layout")
+	elif what == NOTIFICATION_RESIZED:
 		call_deferred("_override_layout")
 
 
 # Reposition to cover only the label area of the parent EditorProperty.
-# The label area occupies roughly the left 40% (EditorInspector default split).
-# Value widgets (right side) remain fully clickable.
+# Dynamically finds where value widgets start by scanning sibling positions
+# instead of assuming a hardcoded 40% split. This prevents overlap with
+# value input fields (e.g. the X component of a Vector3 SpinBox).
 func _override_layout() -> void:
 	var parent_ctrl := get_parent() as Control
-	if parent_ctrl and is_instance_valid(parent_ctrl):
-		position = Vector2.ZERO
-		# Cover only the label area — approximately 40% of the row width.
-		# This matches EditorInspector's default name_split_ratio.
-		var label_width := parent_ctrl.size.x * 0.4
-		size = Vector2(label_width, parent_ctrl.size.y)
+	if not parent_ctrl or not is_instance_valid(parent_ctrl):
+		visible = false
+		return
+
+	# Find where value widgets start by checking sibling positions.
+	# EditorProperty places value widgets (SpinBox, CheckBox, etc.) at a
+	# specific x offset. The label area ends where the first widget begins.
+	var value_start_x := parent_ctrl.size.x
+	for child in parent_ctrl.get_children():
+		if child == self:
+			continue
+		if not child is Control:
+			continue
+		var c := child as Control
+		if not c.visible or c.size.x <= 0:
+			continue
+		# Skip bottom editors (they span full width below the label row).
+		if c.position.y >= parent_ctrl.size.y * 0.5:
+			continue
+		value_start_x = minf(value_start_x, c.position.x)
+
+	if value_start_x <= 0.0:
+		visible = false
+		return
+
+	# Position in global coordinates (top_level = true).
+	global_position = parent_ctrl.global_position
+	size = Vector2(value_start_x, parent_ctrl.size.y)
+
 
 # =============================================================================
 # TOOLTIP RENDERING
