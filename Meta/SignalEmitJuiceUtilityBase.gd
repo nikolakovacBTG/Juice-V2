@@ -153,25 +153,21 @@ func _validate_property(property: Dictionary) -> void:
 		property.usage = PROPERTY_USAGE_NONE
 
 
-# =============================================================================
-# VIRTUAL METHOD OVERRIDES
-# =============================================================================
+# Called during JuiceBase._ready(), BEFORE trigger wiring.
+# Registers user-defined signals early so JuiceTriggerRouter and Inspector
+# connections can find them. Idempotent — safe to call multiple times.
+func _register_early_signals(host: Node) -> void:
+	_register_all_signals(host)
 
-# Called when the animation slot triggers. Registers user-defined signals on the
-# host Node (and optionally its owner) so they appear in the Inspector's Connect
-# dialog. Then fires all entries configured for ON_START.
+
+# Called when the animation slot triggers. Re-registers signals as a safety net
+# (idempotent — JuiceSignalRouter skips already-registered signals), then fires
+# all entries configured for ON_START.
 func _on_animate_start(_target: Node) -> void:
-	# Register each entry's signal_name on the host via JuiceSignalRouter.
-	# This must happen before emission so connections established at _ready()
-	# or in the editor are already in place when the signal fires.
+	# Safety net: re-register in case _register_early_signals was not called
+	# (e.g. editor preview, runtime-added effects).
 	if _host_node != null and is_instance_valid(_host_node):
-		for entry: SignalEmitEntry in entries:
-			if entry == null or entry.signal_name.is_empty():
-				continue
-			if emit_to_owner:
-				JuiceSignalRouter.register_signal_with_owner(_host_node, entry.signal_name)
-			else:
-				JuiceSignalRouter.register_signal(_host_node, entry.signal_name)
+		_register_all_signals(_host_node)
 	_emit_for_timing(EmitTiming.ON_START, "ON_START")
 
 
@@ -204,6 +200,21 @@ func _get_configuration_warnings() -> PackedStringArray:
 # =============================================================================
 # HELPERS
 # =============================================================================
+
+# Register all entry signal_names on the given host node via JuiceSignalRouter.
+# Idempotent — JuiceSignalRouter.register_signal() skips already-registered signals.
+# Called from both _register_early_signals() (during _ready, before trigger wiring)
+# and _on_animate_start() (safety net for editor preview and runtime-added effects).
+func _register_all_signals(host: Node) -> void:
+	if host == null or not is_instance_valid(host):
+		return
+	for entry: SignalEmitEntry in entries:
+		if entry == null or entry.signal_name.is_empty():
+			continue
+		if emit_to_owner:
+			JuiceSignalRouter.register_signal_with_owner(host, entry.signal_name)
+		else:
+			JuiceSignalRouter.register_signal(host, entry.signal_name)
 
 # Fire all entries whose emit_on matches the given timing.
 # Emits both the Resource-level juice_signal (backwards compat) and the

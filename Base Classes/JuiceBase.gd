@@ -499,6 +499,13 @@ func _ready() -> void:
 	# Clone recipe effects for independent state
 	_invalidate_runtime_effects()
 
+	# Register dynamic signals from effects BEFORE trigger wiring.
+	# SignalEmit effects register their user-defined signals on `self` here,
+	# ensuring they exist when JuiceTriggerRouter.wire_manual() runs below.
+	for effect in _runtime_effects:
+		if effect != null:
+			effect._register_early_signals(self)
+
 	# Auto-connect signals based on trigger source and trigger event
 	if trigger_on == TriggerEvent.MANUAL:
 		# MANUAL: only connect if manual_trigger_signal is specified
