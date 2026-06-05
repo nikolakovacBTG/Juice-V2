@@ -50,11 +50,44 @@ static func register_recipe(recipe: JuiceRecipe, host: Node) -> void:
 
 ## Retrieves the host node for a given resource instance.
 ## Returns null if the resource is not registered or not in editor mode.
+##
+## Self-healing: on cache miss, walks the entire scene tree to find all
+## JuiceBase nodes and re-registers their recipes. This covers stale maps
+## caused by script reloads (tool scripts recreate Resource instances with
+## new IDs), sub-resource array mutations (adding a PropertyTarget in the
+## inspector), or fresh resource creation. The expensive tree walk only
+## happens once per stale event — subsequent lookups hit the refreshed cache.
 static func get_host_node(resource: Resource) -> Node:
 	if not Engine.is_editor_hint() or resource == null:
 		return null
-	
+
+	var result = _resource_to_node.get(resource.get_instance_id(), null)
+	if result != null and is_instance_valid(result):
+		return result
+
+	# Cache miss — re-register all JuiceBase recipes in the scene, then retry.
+	_refresh_all_registrations()
 	return _resource_to_node.get(resource.get_instance_id(), null)
+
+
+# Walks the scene tree to find every JuiceBase node and re-registers its
+# recipe. Called lazily on cache miss so the cost is paid once per stale
+# event rather than on every lookup.
+static func _refresh_all_registrations() -> void:
+	var scene_root := EditorInterface.get_edited_scene_root()
+	if scene_root == null:
+		return
+	_refresh_recursive(scene_root)
+
+
+# Recursive helper: registers any JuiceBase found in the subtree.
+static func _refresh_recursive(node: Node) -> void:
+	if node is JuiceBase:
+		var recipe = node.get("recipe")
+		if recipe is JuiceRecipe:
+			register_recipe(recipe, node)
+	for child in node.get_children():
+		_refresh_recursive(child)
 
 
 # =============================================================================
