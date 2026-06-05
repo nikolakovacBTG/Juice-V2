@@ -236,3 +236,4 @@ func _emit_for_timing(timing: EmitTiming, timing_label: String) -> void:
 					entry.signal_description, entry.signal_name, timing_label,
 					entry.payload, emit_to_owner],
 					debug_enabled)
+
