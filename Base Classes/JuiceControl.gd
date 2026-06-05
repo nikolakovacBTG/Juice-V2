@@ -310,6 +310,7 @@ func _post_tick_write() -> void:
 	# effects registered dynamically via PropertyJuiceEffectBase.
 	# self_modulate is NOT flushed here — it's written manually below.
 	JuiceLedger.flush(ctrl)
+	_flush_cross_node_property_targets()
 
 	# Apply multiplicative modulate: base × combined_factor from all sibling sources.
 	var base_mod: Color = JuiceLedger.get_base(ctrl, "self_modulate", Color.WHITE)
@@ -355,6 +356,7 @@ func _temporarily_undo_visual() -> void:
 	# Flush all remaining contributions — Ledger handles additive (transform),
 	# multiplicative (self_modulate), and property effects registered dynamically.
 	JuiceLedger.flush(ctrl)
+	_flush_cross_node_property_targets()
 
 
 ## Re-add contributions after temporary undo.

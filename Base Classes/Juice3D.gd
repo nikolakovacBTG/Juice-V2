@@ -287,6 +287,7 @@ func _post_tick_write() -> void:
 	# effects registered dynamically via PropertyJuiceEffectBase.
 	# Appearance (modulate/material) uses multiplicative accumulation below, handled separately.
 	JuiceLedger.flush(n3d)
+	_flush_cross_node_property_targets()
 
 	var base_pos: Vector3 = JuiceLedger.get_base(n3d, "position", Vector3.ZERO)
 	var base_rot: Vector3 = JuiceLedger.get_base(n3d, "rotation", Vector3.ZERO)
@@ -421,6 +422,7 @@ func _temporarily_undo_visual() -> void:
 	# Flush all remaining contributions — Ledger handles transform properties
 	# and any property effects registered dynamically via PropertyJuiceEffectBase.
 	JuiceLedger.flush(n3d)
+	_flush_cross_node_property_targets()
 
 	# Restore natural materials so editor save doesn't serialise working materials
 	if _appearance_setup and _appearance_mesh != null:

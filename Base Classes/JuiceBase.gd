@@ -1744,6 +1744,36 @@ func _post_tick_write() -> void:
 	pass
 
 
+# Flush Ledger entries for cross-node PropertyTarget resolved nodes.
+# PropertyJuiceEffectBase._apply_effect() registers deltas on the RESOLVED
+# node (e.g. OmniLight3D via node_path), but each domain's _post_tick_write()
+# only flushes _target_node. This helper iterates Property effects to find
+# any resolved nodes that differ from the main target and flushes them.
+# Call from each domain's _post_tick_write() AFTER the main flush() call.
+func _flush_cross_node_property_targets() -> void:
+	if _target_node == null:
+		return
+	# Collect unique cross-node targets (avoid flushing the same node twice).
+	var flushed: Array[Node] = []
+	for effect in _runtime_effects:
+		if effect == null:
+			continue
+		var prop_eff := effect as PropertyJuiceEffectBase
+		if prop_eff == null:
+			continue
+		for pt in prop_eff.property_targets:
+			if pt == null:
+				continue
+			var resolved: Node = pt.get_target_node()
+			if resolved == null or not is_instance_valid(resolved):
+				continue
+			if resolved == _target_node:
+				continue  # Already flushed by domain's main flush()
+			if resolved in flushed:
+				continue  # Already flushed this frame
+			JuiceLedger.flush(resolved)
+			flushed.append(resolved)
+
 ## Subtract all current contributions from target, restoring natural state.
 ## Used before effects capture From/To references and before editor save.
 func _temporarily_undo_visual() -> void:
