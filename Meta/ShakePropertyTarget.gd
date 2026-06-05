@@ -485,20 +485,36 @@ func capture_base(host: Node, juice_node: Node = null) -> void:
 			_b_target_resolved = anchor.get_node_or_null(b_target_node)
 
 
+## Captures SELF+TRIGGER State A/B values.
+## Uses [member _resolved_node] (set by [method capture_base]) for cross-node
+## targeting — falls back to [param target] when node_path is empty.
 func capture_runtime_values(target: Node) -> void:
-	if target == null or property_path.is_empty():
+	var source: Node = _resolved_node if is_instance_valid(_resolved_node) else target
+	if source == null or property_path.is_empty():
 		return
-	var current: Variant = target.get_indexed(property_path)
+	var current: Variant = source.get_indexed(property_path)
 	if a_reference == ReferenceSource.SELF and a_capture_at == CaptureAt.TRIGGER:
 		_runtime_a = current
 	if b_reference == ReferenceSource.SELF and b_capture_at == CaptureAt.TRIGGER:
 		_runtime_b = current
 
 
-func capture_ready_values(target: Node) -> void:
-	if target == null or property_path.is_empty():
+## Captures SELF+READY State A/B values.
+## [param juice_node] is the JuiceBase node — used as anchor to resolve
+## [member node_path] so cross-node targeting reads from the correct node.
+func capture_ready_values(target: Node, juice_node: Node = null) -> void:
+	if property_path.is_empty():
 		return
-	var current: Variant = target.get_indexed(property_path)
+	var source: Node
+	if node_path == NodePath():
+		source = target
+	elif juice_node != null:
+		source = juice_node.get_node_or_null(node_path)
+	else:
+		source = target
+	if source == null:
+		return
+	var current: Variant = source.get_indexed(property_path)
 	if a_reference == ReferenceSource.SELF and a_capture_at == CaptureAt.READY:
 		_ready_a = current
 	if b_reference == ReferenceSource.SELF and b_capture_at == CaptureAt.READY:

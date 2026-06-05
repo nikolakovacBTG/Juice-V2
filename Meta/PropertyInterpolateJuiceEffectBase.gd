@@ -49,11 +49,14 @@ func _on_animate_start(target: Node) -> void:
 ## Captures SELF+READY snapshots for each target entry.
 ## Called by [JuiceBase._post_ready_init] after Container layout has resolved,
 ## so property values reflect the true editor-placed state.
+## [param _host] is the JuiceBase node — passed through to
+## [method InterpolatePropertyTarget.capture_ready_values] so cross-node
+## targeting resolves [member PropertyTarget.node_path] from the correct anchor.
 func _on_host_ready(target: Node, _host: Node) -> void:
 	for pt in property_targets:
 		var entry := pt as InterpolatePropertyTarget
 		if entry != null and entry.is_configured():
-			entry.capture_ready_values(target)
+			entry.capture_ready_values(target, _host)
 
 # =============================================================================
 # PUBLIC API

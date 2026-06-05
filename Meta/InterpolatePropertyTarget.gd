@@ -422,24 +422,41 @@ func capture_base(host: Node, juice_node: Node = null) -> void:
 			_to_target_resolved = anchor.get_node_or_null(to_target_node)
 
 
-## Captures SELF+TRIGGER From/To values from the current property state on [param target].
+## Captures SELF+TRIGGER From/To values from the current property state.
 ## Call in [method _on_animate_start] after [method capture_base].
+## Uses [member _resolved_node] (set by [method capture_base]) for cross-node
+## targeting — falls back to [param target] when node_path is empty.
 func capture_runtime_values(target: Node) -> void:
-	if target == null or property_path.is_empty():
+	var source: Node = _resolved_node if is_instance_valid(_resolved_node) else target
+	if source == null or property_path.is_empty():
 		return
-	var current: Variant = target.get_indexed(property_path)
+	var current: Variant = source.get_indexed(property_path)
 	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.TRIGGER:
 		_runtime_from = current
 	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.TRIGGER:
 		_runtime_to = current
 
 
-## Captures SELF+READY From/To values from the current property state on [param target].
+## Captures SELF+READY From/To values.
 ## Call once during [code]_ready()[/code] from the owning effect.
-func capture_ready_values(target: Node) -> void:
-	if target == null or property_path.is_empty():
+## [param juice_node] is the JuiceBase node — used as anchor to resolve
+## [member node_path] so cross-node targeting reads from the correct node.
+## At ready time [member _resolved_node] is not yet set, so inline resolution
+## is required.
+func capture_ready_values(target: Node, juice_node: Node = null) -> void:
+	if property_path.is_empty():
 		return
-	var current: Variant = target.get_indexed(property_path)
+	# Resolve the correct source node for cross-node targeting.
+	var source: Node
+	if node_path == NodePath():
+		source = target  # Same-node (common case)
+	elif juice_node != null:
+		source = juice_node.get_node_or_null(node_path)
+	else:
+		source = target  # Fallback for backward compat
+	if source == null:
+		return
+	var current: Variant = source.get_indexed(property_path)
 	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.READY:
 		_ready_from = current
 	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.READY:
