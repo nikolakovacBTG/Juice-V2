@@ -489,13 +489,19 @@ func get_b() -> Variant:
 
 
 ## Resolves TARGET_NODE references and captures base values.
-func capture_base(host: Node) -> void:
-	super.capture_base(host)
-	if host != null:
+## [param juice_node] is the JuiceBase node — passed through to [method PropertyTarget.capture_base]
+## so [member node_path] resolves from the correct anchor.
+func capture_base(host: Node, juice_node: Node = null) -> void:
+	super.capture_base(host, juice_node)
+	# Resolve TARGET_NODE references once so get_a()/get_b() can live-read.
+	# Use _juice_node (set by super.capture_base) as the anchor — these NodePaths
+	# are configured in the inspector relative to the JuiceBase node.
+	var anchor: Node = _juice_node if _juice_node != null else host
+	if anchor != null:
 		if a_reference == ReferenceSource.TARGET_NODE and a_target_node != NodePath():
-			_a_target_resolved = host.get_node_or_null(a_target_node)
+			_a_target_resolved = anchor.get_node_or_null(a_target_node)
 		if b_reference == ReferenceSource.TARGET_NODE and b_target_node != NodePath():
-			_b_target_resolved = host.get_node_or_null(b_target_node)
+			_b_target_resolved = anchor.get_node_or_null(b_target_node)
 
 
 ## Captures SELF+TRIGGER State A/B values.

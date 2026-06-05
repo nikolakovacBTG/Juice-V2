@@ -399,18 +399,27 @@ func is_configured() -> bool:
 ## Captures base value in the Ledger, then auto-detects [member _detected_type]
 ## from the registered Ledger base if not yet known.
 ## [param host] is the juiced node (the node JuiceBase is attached to).
-func capture_base(host: Node) -> void:
-	super.capture_base(host)
-	if _detected_type == TYPE_NIL and not property_path.is_empty() and host != null:
-		var base_val: Variant = JuiceLedger.get_base(host, property_path, null)
-		if base_val != null:
-			_detected_type = typeof(base_val)
+## [param juice_node] is the JuiceBase node — passed through to [method PropertyTarget.capture_base]
+## so [member node_path] resolves from the correct anchor.
+func capture_base(host: Node, juice_node: Node = null) -> void:
+	super.capture_base(host, juice_node)
+	if _detected_type == TYPE_NIL and not property_path.is_empty():
+		# Auto-detect type from the Ledger base on the resolved node (not host),
+		# so cross-node targeting finds the property on the correct node.
+		var lookup_node: Node = _resolved_node if is_instance_valid(_resolved_node) else host
+		if lookup_node != null:
+			var base_val: Variant = JuiceLedger.get_base(lookup_node, property_path, null)
+			if base_val != null:
+				_detected_type = typeof(base_val)
 	# Resolve TARGET_NODE references once so get_from()/get_to() can live-read.
-	if host != null:
+	# Use _juice_node (set by super.capture_base) as the anchor — these NodePaths
+	# are configured in the inspector relative to the JuiceBase node.
+	var anchor: Node = _juice_node if _juice_node != null else host
+	if anchor != null:
 		if from_reference == ReferenceSource.TARGET_NODE and from_target_node != NodePath():
-			_from_target_resolved = host.get_node_or_null(from_target_node)
+			_from_target_resolved = anchor.get_node_or_null(from_target_node)
 		if to_reference == ReferenceSource.TARGET_NODE and to_target_node != NodePath():
-			_to_target_resolved = host.get_node_or_null(to_target_node)
+			_to_target_resolved = anchor.get_node_or_null(to_target_node)
 
 
 ## Captures SELF+TRIGGER From/To values from the current property state on [param target].

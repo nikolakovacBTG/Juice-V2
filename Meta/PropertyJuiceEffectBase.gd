@@ -88,10 +88,12 @@ func _get(property: StringName) -> Variant:
 
 # Called when animation starts. Registers all declared property paths in the
 # Ledger so base values are captured before any deltas land.
+# Passes _host_node (the JuiceBase node) so PropertyTarget resolves node_path
+# from the correct anchor — matching editor-time path resolution.
 func _on_animate_start(target: Node) -> void:
 	for pt in property_targets:
 		if pt != null:
-			pt.capture_base(target)
+			pt.capture_base(target, _host_node)
 
 
 # Removes this effect's Ledger contributions. Called when this specific effect

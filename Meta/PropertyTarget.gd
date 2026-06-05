@@ -117,6 +117,10 @@ func _get(property: StringName) -> Variant:
 # INTERNAL STATE (runtime only — not serialized)
 # =============================================================================
 
+## The JuiceBase node that owns the effect. Set during capture_base() so that
+## _resolve_node() can resolve node_path from the correct anchor — matching
+## editor-time resolution where paths are relative to the JuiceBase node.
+var _juice_node: Node = null
 ## Resolved target node. Set by capture_base(), used by restore_natural().
 var _resolved_node: Node = null
 ## Natural value of the property before any effect ran.
@@ -130,7 +134,12 @@ var _base_value: Variant = null
 ## Resolve the target node and register [member property_path] in the Juice Ledger,
 ## recording its current value as the natural base before any deltas are applied.
 ## Must be called in [method JuiceEffectBase._on_animate_start] for each entry.
-func capture_base(host: Node) -> void:
+## [param host] is the juiced node (_target_node — the node being animated).
+## [param juice_node] is the JuiceBase node that owns the effect. When provided,
+## [member node_path] is resolved relative to it — matching editor-time behavior.
+## When omitted (null), falls back to resolving from [param host] for backward compat.
+func capture_base(host: Node, juice_node: Node = null) -> void:
+	_juice_node = juice_node
 	_resolved_node = _resolve_node(host)
 	if not is_instance_valid(_resolved_node) or property_path.is_empty():
 		return
@@ -255,11 +264,16 @@ func _detect_type() -> void:
 # HELPERS
 # =============================================================================
 
-# Resolve the live target node from the host JuiceBase node.
+# Resolve the live target node.
+# When _juice_node is set (normal runtime path), resolve node_path relative to
+# it — matching the editor where paths are stored relative to the JuiceBase node.
+# When _juice_node is null (backward compat / fallback), resolve from host.
+# Empty node_path always returns host (the juiced node) regardless of anchor.
 func _resolve_node(host: Node) -> Node:
 	if node_path == NodePath():
 		return host
-	return host.get_node_or_null(node_path)
+	var anchor: Node = _juice_node if _juice_node != null else host
+	return anchor.get_node_or_null(node_path)
 
 
 # Editor-time node resolution.
