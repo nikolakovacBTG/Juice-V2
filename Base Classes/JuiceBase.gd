@@ -508,19 +508,25 @@ func _ready() -> void:
 
 	# Auto-connect signals based on trigger source and trigger event
 	if trigger_on == TriggerEvent.MANUAL:
-		# MANUAL: only connect if manual_trigger_signal is specified
+		# MANUAL: defer wiring so all nodes have completed _ready() first.
+		# Dynamic signals (e.g. "Used") are registered in _ready() via
+		# _register_early_signals(). If the emitter sits later in the tree,
+		# its signal won't exist yet during OUR _ready(). Deferring guarantees
+		# all signals are registered before any wiring is attempted.
 		if not manual_trigger_signal.is_empty():
-			var manual_source: Node = get_parent() \
-				if trigger_source == TriggerSource.PARENT \
-				else get_node_or_null(trigger_source_path)
-			if manual_source != null:
-				JuiceTriggerRouter.wire_manual(
-					manual_source, manual_trigger_signal,
-					_on_trigger_momentary, set_external_progress,
-					name if debug_enabled else "")
-			else:
-				JuiceLogger.warn(self, _get_domain_tag(),
-						"Manual trigger source not found", debug_enabled)
+			(func():
+				var manual_source: Node = get_parent() \
+					if trigger_source == TriggerSource.PARENT \
+					else get_node_or_null(trigger_source_path)
+				if manual_source != null:
+					JuiceTriggerRouter.wire_manual(
+						manual_source, manual_trigger_signal,
+						_on_trigger_momentary, set_external_progress,
+						name if debug_enabled else "")
+				else:
+					JuiceLogger.warn(self, _get_domain_tag(),
+							"Manual trigger source not found", debug_enabled)
+			).call_deferred()
 	elif trigger_source == TriggerSource.PARENT and auto_connect_parent:
 		_try_auto_connect()
 	elif trigger_source == TriggerSource.NODE and _trigger_source_node != null:
