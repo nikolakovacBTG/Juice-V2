@@ -299,13 +299,23 @@ static func _add_description_text(rtl: RichTextLabel, text: String, bold_color: 
 		rtl.add_text(line)
 
 
-# Walk up the node tree from 'node' and return the first ScrollContainer ancestor.
-# Returns null if none found. Used to determine the visible clipping area.
+# Walk up the node tree from 'node' and return the ScrollContainer that
+# actually scrolls (has a visible vertical scrollbar). EditorInspector extends
+# ScrollContainer, so the nearest ancestor is typically our sub-inspector
+# (which doesn't scroll — its content fits). The main inspector's
+# ScrollContainer is further up and has the active scrollbar.
+# Falls back to the outermost ScrollContainer if none has a visible scrollbar.
 static func _find_scroll_container(node: Node) -> ScrollContainer:
 	var current := node.get_parent()
+	var fallback: ScrollContainer = null
 	while current:
 		if current is ScrollContainer:
-			return current as ScrollContainer
+			var sc := current as ScrollContainer
+			fallback = sc
+			# Prefer the one with a visible vertical scrollbar — it's the
+			# one actually handling scroll input.
+			if sc.get_v_scroll_bar() and sc.get_v_scroll_bar().visible:
+				return sc
 		current = current.get_parent()
-	return null
+	return fallback
 
