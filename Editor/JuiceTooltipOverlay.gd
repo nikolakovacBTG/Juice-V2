@@ -78,6 +78,31 @@ func _process(_delta: float) -> void:
 	_sync_position()
 
 
+# Forward scroll wheel events to the ScrollContainer.
+# top_level=true breaks the normal visual propagation chain — MOUSE_FILTER_PASS
+# sends events to the scene tree parent (VBoxContainer), but the ScrollContainer
+# that's visually behind the overlay never receives them. This override manually
+# routes scroll events to _clip_container so mouse wheel scrolling works over
+# the label area.
+func _gui_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton:
+		return
+	var mb := event as InputEventMouseButton
+	if not mb.pressed:
+		return
+	if mb.button_index < MOUSE_BUTTON_WHEEL_UP \
+			or mb.button_index > MOUSE_BUTTON_WHEEL_RIGHT:
+		return
+	# Forward to the ScrollContainer that top_level=true bypasses.
+	if _clip_container and is_instance_valid(_clip_container):
+		var step := int(mb.factor * 40.0) if mb.factor != 0.0 else 40
+		match mb.button_index:
+			MOUSE_BUTTON_WHEEL_UP:
+				_clip_container.scroll_vertical -= step
+			MOUSE_BUTTON_WHEEL_DOWN:
+				_clip_container.scroll_vertical += step
+
+
 # Position over the label area of the target EditorProperty.
 # Uses top_level=true so coordinates are in viewport space.
 # Only covers the FIRST ROW height — excludes bottom editors (Vector3 sub-row).
