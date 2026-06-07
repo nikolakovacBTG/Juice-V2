@@ -39,6 +39,11 @@ var description: String
 # The target EditorProperty whose label area this overlay covers.
 var _target_property: EditorProperty
 
+# Cached reference to the nearest ScrollContainer ancestor of the target.
+# Used for visibility clipping — overlays hide when target scrolls out of view.
+var _clip_container: ScrollContainer
+
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -52,36 +57,32 @@ func setup(target: EditorProperty, p_name: String, p_type: String, p_value: Stri
 	description = p_desc
 	# Non-empty tooltip_text is required to trigger _make_custom_tooltip.
 	tooltip_text = "juice_tooltip"
-	# STOP: this control owns hover in the label area. It's a sibling of the
-	# EditorProperty (not a child), so EditorProperty's layout doesn't touch it.
-	# top_level=true takes it out of the parent VBox's stacking.
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# PASS: receive hover for tooltips but let scroll events pass through
+	# to the parent ScrollContainer. STOP would block mouse wheel scrolling
+	# inside sub-inspectors.
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	top_level = true
+	# Cache the scroll container for visibility clipping.
+	_clip_container = _find_scroll_container(target)
+
 
 # =============================================================================
 # LIFECYCLE
 # =============================================================================
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_POST_ENTER_TREE:
-		if _target_property and is_instance_valid(_target_property):
-			if not _target_property.resized.is_connected(_override_layout):
-				_target_property.resized.connect(_override_layout)
-			if not _target_property.item_rect_changed.is_connected(_override_layout):
-				_target_property.item_rect_changed.connect(_override_layout)
-			call_deferred("_override_layout")
-	elif what == NOTIFICATION_EXIT_TREE:
-		if _target_property and is_instance_valid(_target_property):
-			if _target_property.resized.is_connected(_override_layout):
-				_target_property.resized.disconnect(_override_layout)
-			if _target_property.item_rect_changed.is_connected(_override_layout):
-				_target_property.item_rect_changed.disconnect(_override_layout)
+# Continuous repositioning via _process replaces signal-based approach.
+# Signals (resized, item_rect_changed) don't fire during scrolling, which
+# caused overlays to drift to wrong properties after scroll. _process()
+# syncs position every frame — one Vector2 assignment per overlay, negligible.
+func _process(_delta: float) -> void:
+	_sync_position()
 
 
 # Position over the label area of the target EditorProperty.
 # Uses top_level=true so coordinates are in viewport space.
 # Only covers the FIRST ROW height — excludes bottom editors (Vector3 sub-row).
-func _override_layout() -> void:
+# Clips to the visible scroll area to prevent cross-sub-inspector bleed.
+func _sync_position() -> void:
 	if not _target_property or not is_instance_valid(_target_property):
 		visible = false
 		return
@@ -89,19 +90,29 @@ func _override_layout() -> void:
 		visible = false
 		return
 
+	# --- Visibility clipping ---
+	# Hide the overlay when the target property is scrolled outside
+	# the visible area of its ScrollContainer. This prevents overlays
+	# from one sub-inspector appearing over another sub-inspector's
+	# properties (cross-contamination via top_level rendering).
+	if _clip_container and is_instance_valid(_clip_container):
+		var clip_rect := _clip_container.get_global_rect()
+		var target_top: float = _target_property.global_position.y
+		var target_bottom: float = target_top + _target_property.size.y
+		if target_bottom < clip_rect.position.y or target_top > clip_rect.end.y:
+			visible = false
+			return
+
 	# name_split_ratio defines where the label ends and value area begins.
 	var split: float = _target_property.name_split_ratio
 
 	# For multi-row properties (Vector3, etc.), only cover the label row height,
 	# not the full EditorProperty height which includes the bottom editor.
-	# The label row height is the minimum size of a single inspector row.
 	var row_height := _target_property.size.y
-	# Check for bottom editor children that extend the property vertically.
 	for child in _target_property.get_children():
 		if child is Control:
 			var c := child as Control
 			if c.position.y > 0 and c.size.y > 0:
-				# This child is below the label row — cap our height before it.
 				row_height = minf(row_height, c.position.y)
 
 	global_position = _target_property.global_position
@@ -261,4 +272,15 @@ static func _add_description_text(rtl: RichTextLabel, text: String, bold_color: 
 				rtl.add_text(line.substr(colon_idx + 1))
 				continue
 		rtl.add_text(line)
+
+
+# Walk up the node tree from 'node' and return the first ScrollContainer ancestor.
+# Returns null if none found. Used to determine the visible clipping area.
+static func _find_scroll_container(node: Node) -> ScrollContainer:
+	var current := node.get_parent()
+	while current:
+		if current is ScrollContainer:
+			return current as ScrollContainer
+		current = current.get_parent()
+	return null
 
