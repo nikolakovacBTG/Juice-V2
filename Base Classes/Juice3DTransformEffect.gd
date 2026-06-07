@@ -140,7 +140,7 @@ var from_capture_at: int = CaptureAt.TRIGGER:
 		if value != CaptureAt.IN_EDITOR:
 			_clear_from_editor_cache_typed()
 		elif Engine.is_editor_hint():
-			_do_update_editor_cache(null)
+			_do_update_editor_cache(JuiceEditorContext.resolve_editor_target(self))
 		notify_property_list_changed()
 
 ## When to snapshot this node's To value: at animation Trigger, at scene Ready, or baked In Editor.
@@ -150,7 +150,7 @@ var to_capture_at: int = CaptureAt.TRIGGER:
 		if value != CaptureAt.IN_EDITOR:
 			_clear_to_editor_cache_typed()
 		elif Engine.is_editor_hint():
-			_do_update_editor_cache(null)
+			_do_update_editor_cache(JuiceEditorContext.resolve_editor_target(self))
 		notify_property_list_changed()
 
 ## Unit for the custom From position: absolute World Units, or relative to Own Size or Parent Size.

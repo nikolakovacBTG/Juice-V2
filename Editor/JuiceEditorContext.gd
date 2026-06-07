@@ -70,6 +70,20 @@ static func get_host_node(resource: Resource) -> Node:
 	return _resource_to_node.get(resource.get_instance_id(), null)
 
 
+## Resolves the animation target node for an effect Resource at editor time.
+## Effects are Resources without scene tree access. This helper bridges that
+## gap by looking up the effect's JuiceBase host (via [method get_host_node])
+## and returning host.get_parent() — which is the animation target in STACK mode.
+## Returns [code]null[/code] at runtime or if the host node cannot be found.
+static func resolve_editor_target(effect: Resource) -> Node:
+	if not Engine.is_editor_hint():
+		return null
+	var host := get_host_node(effect)
+	if host == null or not is_instance_valid(host):
+		return null
+	return host.get_parent()
+
+
 # Walks the scene tree to find every JuiceBase node and re-registers its
 # recipe. Called lazily on cache miss so the cost is paid once per stale
 # event rather than on every lookup.

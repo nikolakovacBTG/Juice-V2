@@ -58,6 +58,18 @@ func _on_host_ready(target: Node, _host: Node) -> void:
 		if entry != null and entry.is_configured():
 			entry.capture_ready_values(target, _host)
 
+
+## Bakes SELF+IN_EDITOR From/To values into each target entry's editor cache.
+## Called by [JuiceBase._notification] on [code]NOTIFICATION_EDITOR_PRE_SAVE[/code]
+## (Ctrl+S). The cached values are serialized into the scene file so they
+## survive editor restarts and are available at runtime without a live node read.
+func _on_editor_pre_save(target: Node) -> void:
+	for pt in property_targets:
+		var entry := pt as InterpolatePropertyTarget
+		if entry == null or not entry.is_configured():
+			continue
+		entry.capture_editor_values(target, _host_node)
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================

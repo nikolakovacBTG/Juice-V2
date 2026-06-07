@@ -41,6 +41,8 @@ var from_capture_at: int = CaptureAt.TRIGGER:
 		from_capture_at = value
 		if value != CaptureAt.IN_EDITOR:
 			_from_editor_cached = null
+		elif Engine.is_editor_hint():
+			_capture_editor_from_setter()
 		notify_property_list_changed()
 
 ## Path to the node whose property value is read live as the From value (Target Node mode).
@@ -59,6 +61,8 @@ var to_capture_at: int = CaptureAt.TRIGGER:
 		to_capture_at = value
 		if value != CaptureAt.IN_EDITOR:
 			_to_editor_cached = null
+		elif Engine.is_editor_hint():
+			_capture_editor_from_setter()
 		notify_property_list_changed()
 
 ## Path to the node whose property value is read live as the To value (Target Node mode).
@@ -378,9 +382,9 @@ func _get(property: StringName) -> Variant:
 		&"_to_editor_cached":     return _to_editor_cached
 		# Read-only display strings computed on demand.
 		&"_from_cached_display":
-			return str(_from_editor_cached) if _from_editor_cached != null else "(not captured — use Capture button)"
+			return str(_from_editor_cached) if _from_editor_cached != null else "(save scene to capture)"
 		&"_to_cached_display":
-			return str(_to_editor_cached) if _to_editor_cached != null else "(not captured — use Capture button)"
+			return str(_to_editor_cached) if _to_editor_cached != null else "(save scene to capture)"
 		&"_from_pick_hint":        return "← Pick a property path first"
 		&"_to_pick_hint":          return "← Pick a property path first"
 		&"_from_unsupported_hint": return "Type %d not editable via inspector" % _detected_type
@@ -461,6 +465,46 @@ func capture_ready_values(target: Node, juice_node: Node = null) -> void:
 		_ready_from = current
 	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.READY:
 		_ready_to = current
+
+
+## Captures SELF+IN_EDITOR From/To values and stores them for scene serialization.
+## Called by [method PropertyInterpolateJuiceEffectBase._on_editor_pre_save] on
+## [code]NOTIFICATION_EDITOR_PRE_SAVE[/code] (Ctrl+S in the editor).
+## [param juice_node] is the JuiceBase node — used as anchor to resolve
+## [member node_path] so cross-node targeting reads from the correct node.
+## The captured values persist in the scene file and are returned by
+## [method get_from] / [method get_to] at runtime when CaptureAt == IN_EDITOR.
+func capture_editor_values(target: Node, juice_node: Node = null) -> void:
+	if property_path.is_empty():
+		return
+	# Resolve the correct source node for cross-node targeting.
+	var source: Node
+	if node_path == NodePath():
+		source = target  # Same-node (common case)
+	elif juice_node != null:
+		source = juice_node.get_node_or_null(node_path)
+	else:
+		source = target  # Fallback
+	if source == null:
+		return
+	var current: Variant = source.get_indexed(property_path)
+	if from_reference == ReferenceSource.SELF and from_capture_at == CaptureAt.IN_EDITOR:
+		_from_editor_cached = current
+	if to_reference == ReferenceSource.SELF and to_capture_at == CaptureAt.IN_EDITOR:
+		_to_editor_cached = current
+
+
+# Called from the from_capture_at / to_capture_at setters when the user selects
+# IN_EDITOR in the inspector. Resolves the target node via JuiceEditorContext
+# so the cache is populated immediately — no Ctrl+S required.
+func _capture_editor_from_setter() -> void:
+	var target := JuiceEditorContext.resolve_editor_target(self)
+	if target == null:
+		return
+	# JuiceEditorContext maps this resource to its JuiceBase host; we need the
+	# host to resolve cross-node node_path correctly.
+	var host := JuiceEditorContext.get_host_node(self)
+	capture_editor_values(target, host)
 
 
 ## Returns the resolved FROM value based on the reference mode.
