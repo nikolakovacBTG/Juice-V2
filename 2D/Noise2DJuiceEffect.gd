@@ -358,7 +358,7 @@ func _get_interrupt_identity() -> Variant:
 # =============================================================================
 
 func _advance_noise_time(delta: float) -> void:
-	if _target_progress > 0.0:
+	if _is_playing:
 		_noise_time += delta
 
 

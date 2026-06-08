@@ -245,9 +245,10 @@ func _on_animate_start(target: Node) -> void:
 	# super registers all property paths in the Ledger so base values are
 	# captured before any _compute_property_value() call reads them.
 	super._on_animate_start(target)
-	# Reset and rebuild on fresh start only. _target_progress is 0.0 when
-	# starting from idle; > 0.0 means the effect was re-triggered mid-play.
-	if _target_progress <= 0.0 or _noise == null:
+	# Reset and rebuild when starting an animate-in (_target_progress > 0.0).
+	# This matches Transform Noise: each new IN cycle gets a fresh noise field.
+	# Also rebuild if _noise was never created (first play ever).
+	if _target_progress > 0.0 or _noise == null:
 		_noise_time = 0.0
 		_setup_noise()
 	var actual_seed := _noise.seed if _noise != null else -1
@@ -457,10 +458,10 @@ func _setup_noise() -> void:
 
 
 # Drives the 1D noise sample position forward based on frame delta and noise_speed.
-# Only advances while playing (_target_progress > 0.0) — freezes during idle
-# so noise restarts cleanly from _noise_time = 0.0 on next animate-in.
+# Advances while the effect is playing — including during the OUT phase so noise
+# oscillates organically while the progress envelope fades it to zero.
 func _advance_noise_time(delta: float) -> void:
-	if _target_progress > 0.0:
+	if _is_playing:
 		_noise_time += delta
 
 

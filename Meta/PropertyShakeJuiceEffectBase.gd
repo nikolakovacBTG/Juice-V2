@@ -132,15 +132,15 @@ func _needs_sustain() -> bool:
 
 
 ## Resets shake state and registers property paths in the Ledger.
-## Seed is randomised fresh each play so repeated triggers never pattern-match.
+## Unconditionally resets time and seed so each trigger starts a fresh oscillation
+## cycle — matches Transform Shake (Shake2D/3D/Control) behaviour.
 func _on_animate_start(target: Node) -> void:
 	# super registers all property paths in the Ledger — must run before any
 	# _sample_shake() call reads a base value from the Ledger.
 	super._on_animate_start(target)
-	# Always reset on a fresh start; preserve time on mid-play re-trigger only if
-	# already running (non-zero _shake_time) so continuity is not broken.
-	if _shake_time <= 0.0:
-		_shake_seed = randf() * 1000.0
+	# Always reset for a clean start on every trigger.
+	_shake_time = 0.0
+	_shake_seed = randf() * 1000.0
 	JuiceLogger.log_capture(self, _get_domain_tag(), "shake_config",
 			{"seed": _shake_seed, "frequency": shake_frequency,
 			"randomness": randomness, "targets": property_targets.size()},
