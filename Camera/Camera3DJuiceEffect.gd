@@ -123,7 +123,7 @@ func _get_property_list() -> Array[Dictionary]:
 
 	if animation_mode == AnimationMode.SHAKE:
 		props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,30.0,0.5",
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,30.0,0.01,exp",
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
@@ -262,7 +262,18 @@ func _apply_rotation(util: CameraJuiceUtility, progress: float) -> void:
 		deg_to_rad(rotation_offset_degrees.y),
 		deg_to_rad(rotation_offset_degrees.z)
 	)
-	var desired := rad * _sample(progress, 200.0)
+	var desired: Vector3
+	if animation_mode == AnimationMode.SHAKE and _shake_noise != null:
+		# Decorrelated pitch/yaw/roll: each axis sampled from a different noise-field
+		# row to prevent diagonal-locked rotation from a single scalar multiply.
+		# Seed offsets 400/500/600 avoid collision with position's 0/100/200.
+		var t := Time.get_ticks_msec() / 1000.0 * shake_frequency
+		desired = Vector3(
+			rad.x * _shake_noise.get_noise_2d(t, 400.0) * progress,
+			rad.y * _shake_noise.get_noise_2d(t, 500.0) * progress,
+			rad.z * _shake_noise.get_noise_2d(t, 600.0) * progress)
+	else:
+		desired = rad * _sample(progress, 200.0)
 	var delta   := desired - _my_rot
 	util.rotation_offset += delta
 	_my_rot = desired
