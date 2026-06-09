@@ -237,7 +237,7 @@ func _get_property_list() -> Array[Dictionary]:
 		Channel.CHROMATIC:
 			props.append({"name": "chromatic_amount", "type": TYPE_FLOAT,
 				"hint": PROPERTY_HINT_RANGE,
-				"hint_string": "0.0,0.05,0.0005,or_greater",
+				"hint_string": "0.0001,1.0,0.0001,exp,or_greater",
 				"usage": PROPERTY_USAGE_DEFAULT})
 			props.append({"name": "chromatic_mode", "type": TYPE_INT,
 				"hint": PROPERTY_HINT_ENUM,
