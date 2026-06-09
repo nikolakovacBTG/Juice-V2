@@ -143,7 +143,7 @@ func _get_property_list() -> Array[Dictionary]:
 			"usage": PROPERTY_USAGE_DEFAULT})
 
 	props.append({"name": "noise_speed", "type": TYPE_FLOAT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,100.0,0.01,or_greater",
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,100.0,0.01,exp,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "noise_direction", "type": TYPE_INT,
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Both,Positive Only,Negative Only",
@@ -167,7 +167,7 @@ func _get_property_list() -> Array[Dictionary]:
 		"hint_string": "Simplex,Simplex Smooth,Cellular,Perlin,Value,Value Cubic",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "noise_frequency", "type": TYPE_FLOAT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,10.0,0.001,or_greater",
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.001,10.0,0.001,exp,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "noise_seed", "type": TYPE_INT,
 		"usage": PROPERTY_USAGE_DEFAULT})

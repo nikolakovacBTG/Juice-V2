@@ -93,7 +93,7 @@ func _get_property_list() -> Array[Dictionary]:
 		"hint": PROPERTY_HINT_ENUM, "hint_string": "Position,Rotation,Scale",
 		"usage": PROPERTY_USAGE_DEFAULT})
 	props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
-		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.1,100.0,0.1,or_greater",
+		"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,100.0,0.01,exp,or_greater",
 		"usage": PROPERTY_USAGE_DEFAULT})
 
 	if is_pos:

@@ -265,7 +265,7 @@ func _get_property_list() -> Array[Dictionary]:
 	# Shake params — only visible in SHAKE mode
 	if animation_mode == AnimationMode.SHAKE:
 		props.append({"name": "shake_frequency", "type": TYPE_FLOAT,
-			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.5,30.0,0.5",
+			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.01,30.0,0.01,exp",
 			"usage": PROPERTY_USAGE_DEFAULT})
 		props.append({"name": "shake_seed", "type": TYPE_FLOAT,
 			"hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1000.0,1.0",
