@@ -710,12 +710,12 @@ func _build_material_enum_hint() -> String:
 
 
 # Resolve the target MeshInstance3D at editor time for dynamic inspector fields.
-# Uses JuiceEditorContext to find the host Juice3D node, then its parent (the
-# target in STACK mode). Returns null if not resolvable.
+# Uses JuiceEditorBridge (via Callable) to find the host Juice3D node, then its
+# parent (the target in STACK mode). Returns null if not resolvable.
 func _resolve_editor_mesh() -> MeshInstance3D:
 	if not Engine.is_editor_hint():
 		return null
-	var host: Node = JuiceEditorContext.get_host_node(self)
+	var host: Node = _editor_get_host.call(self) if _editor_get_host.is_valid() else null
 	if host == null:
 		return null
 	# Juice3D targets its parent in STACK mode.

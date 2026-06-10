@@ -299,7 +299,7 @@ func _resolve_node(host: Node) -> Node:
 
 
 # Editor-time node resolution.
-# Dispatches to PropertyTargetEditorHelper via static Callable hook.
+# Dispatches to JuiceEditorBridge via static Callable hook.
 # The helper is injected by juice_plugin.gd and lives in Editor/ where
 # EditorInterface and JuiceEditorContext can be safely referenced.
 # Returns null in export builds (Callable never set).

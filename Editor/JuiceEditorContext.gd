@@ -88,10 +88,7 @@ static func resolve_editor_target(effect: Resource) -> Node:
 # recipe. Called lazily on cache miss so the cost is paid once per stale
 # event rather than on every lookup.
 static func _refresh_all_registrations() -> void:
-	var ei = Engine.get_singleton("EditorInterface")
-	if ei == null:
-		return
-	var scene_root: Node = ei.get_edited_scene_root() as Node
+	var scene_root: Node = EditorInterface.get_edited_scene_root()
 	if scene_root == null:
 		return
 	_refresh_recursive(scene_root)

@@ -258,8 +258,9 @@ enum TriggerSource {
 			# so warnings refresh without requiring the user to re-assign the recipe.
 			if recipe != null and not recipe.changed.is_connected(_on_recipe_changed):
 				recipe.changed.connect(_on_recipe_changed)
-			# Register the new recipe with the editor context so sub-resources can resolve their host
-			JuiceEditorContext.register_recipe(recipe, self)
+			# Register the new recipe via editor bridge so sub-resources can resolve their host
+			if _editor_register_recipe.is_valid():
+				_editor_register_recipe.call(recipe, self)
 
 @export_group("Debug")
 
@@ -298,6 +299,18 @@ func _validate_property(property: Dictionary) -> void:
 			property.hint_string = "Play In And Out:0,Play In Only:1,Play Out Only:2,Toggle:3,Set From Source:4"
 		else:
 			property.hint_string = "Play In And Out:0,Play In Only:1,Play Out Only:2,Set From Source:4"
+
+# =============================================================================
+# EDITOR CALLABLE HOOKS
+# =============================================================================
+
+## Editor-time recipe registration. Injected by juice_plugin.gd at _enter_tree().
+## Signature: func(recipe: Resource, host: Node) -> void
+static var _editor_register_recipe: Callable
+
+## Editor-time preview flag setter. Injected by juice_plugin.gd at _enter_tree().
+## Signature: func(node: Node, active: bool) -> void
+static var _editor_set_previewing: Callable
 
 # =============================================================================
 # INTERNAL STATE
@@ -441,8 +454,8 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
-		if recipe != null:
-			JuiceEditorContext.register_recipe(recipe, self)
+		if recipe != null and _editor_register_recipe.is_valid():
+			_editor_register_recipe.call(recipe, self)
 		return
 
 	# Resolve target before creating the orchestrator. The factory now requires
@@ -703,7 +716,8 @@ func _enter_editor_preview() -> void:
 		# clone the runtime effects and set the preview flag so the transport's
 		# play() button correctly triggers the sequencer's own animate path.
 		_invalidate_runtime_effects()
-		JuiceEditorContext.set_previewing(self, true)
+		if _editor_set_previewing.is_valid():
+			_editor_set_previewing.call(self, true)
 		JuiceLogger.log_info(self, _get_domain_tag(),
 				"Entered editor preview (SEQUENCER mode)", debug_enabled)
 		return
@@ -741,7 +755,8 @@ func _deferred_editor_preview_init() -> void:
 			effect._on_host_ready(_target_node, self)
 
 	# Register with JuiceEditorContext for smart selection discovery
-	JuiceEditorContext.set_previewing(self, true)
+	if _editor_set_previewing.is_valid():
+		_editor_set_previewing.call(self, true)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"Entered editor preview | target='%s' | effects=%d" % [
@@ -765,7 +780,8 @@ func _exit_editor_preview() -> void:
 		_editor_preview_active = false
 		_runtime_effects.clear()
 		_active_effect_indices.clear()
-		JuiceEditorContext.set_previewing(self, false)
+		if _editor_set_previewing.is_valid():
+			_editor_set_previewing.call(self, false)
 		JuiceLogger.log_info(self, _get_domain_tag(),
 				"Exited editor preview (SEQUENCER mode)", debug_enabled)
 		return
@@ -784,7 +800,8 @@ func _exit_editor_preview() -> void:
 	_active_effect_indices.clear()
 
 	# Unregister from JuiceEditorContext
-	JuiceEditorContext.set_previewing(self, false)
+	if _editor_set_previewing.is_valid():
+		_editor_set_previewing.call(self, false)
 
 	JuiceLogger.log_info(self, _get_domain_tag(),
 			"Exited editor preview", debug_enabled)
@@ -1902,8 +1919,8 @@ static func _seq_values_approx_equal(a: Variant, b: Variant) -> bool:
 # including array mutations and sub-resource property changes.
 func _on_recipe_changed() -> void:
 	if Engine.is_editor_hint():
-		if recipe != null:
-			JuiceEditorContext.register_recipe(recipe, self)
+		if recipe != null and _editor_register_recipe.is_valid():
+			_editor_register_recipe.call(recipe, self)
 		update_configuration_warnings()
 
 

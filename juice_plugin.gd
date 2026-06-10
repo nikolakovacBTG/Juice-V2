@@ -91,12 +91,16 @@ func _enter_tree() -> void:
 	_array_inspector_plugin = ArrayInspectorPluginScript.new()
 	add_inspector_plugin(_array_inspector_plugin)
 
-	# Wire PropertyTarget editor hooks — bridges runtime Resources to editor-only
-	# resolution logic without creating parse-time class dependencies.
+	# Wire editor bridge hooks — connects runtime scripts to editor-only APIs
+	# through Callables, severing the parse chain that broke export builds.
 	# See editor-singleton-safety.md rule for architectural rationale.
-	PropertyTarget._editor_node_resolver = PropertyTargetEditorHelper.resolve_node_for_target
-	PropertyTarget._editor_target_resolver = PropertyTargetEditorHelper.resolve_editor_target_for_interpolate
-	PropertyTarget._editor_host_resolver = PropertyTargetEditorHelper.get_host_node_for_resource
+	PropertyTarget._editor_node_resolver = JuiceEditorBridge.resolve_node_for_target
+	PropertyTarget._editor_target_resolver = JuiceEditorBridge.resolve_editor_target_for_interpolate
+	PropertyTarget._editor_host_resolver = JuiceEditorBridge.get_host_node_for_resource
+	JuiceBase._editor_register_recipe = JuiceEditorBridge.register_recipe_for_host
+	JuiceBase._editor_set_previewing = JuiceEditorBridge.set_previewing_for_node
+	JuiceEffectBase._editor_resolve_target = JuiceEditorBridge.resolve_editor_target_for_effect
+	JuiceEffectBase._editor_get_host = JuiceEditorBridge.get_host_node_for_effect
 
 	# Build transport UI and director
 	_build_ui()
@@ -163,11 +167,15 @@ func _exit_tree() -> void:
 		_director.queue_free()
 		_director = null
 
-	# Clear PropertyTarget editor hooks so stale Callables don't reference
+	# Clear all editor bridge hooks so stale Callables don't reference
 	# freed helper instances after plugin teardown.
 	PropertyTarget._editor_node_resolver = Callable()
 	PropertyTarget._editor_target_resolver = Callable()
 	PropertyTarget._editor_host_resolver = Callable()
+	JuiceBase._editor_register_recipe = Callable()
+	JuiceBase._editor_set_previewing = Callable()
+	JuiceEffectBase._editor_resolve_target = Callable()
+	JuiceEffectBase._editor_get_host = Callable()
 
 
 # =============================================================================

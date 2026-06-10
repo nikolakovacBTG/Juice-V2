@@ -49,6 +49,20 @@ enum TickResult {
 }
 
 # =============================================================================
+# EDITOR CALLABLE HOOKS
+# =============================================================================
+
+## Editor-time target resolver. Injected by juice_plugin.gd at _enter_tree().
+## Signature: func(effect: Resource) -> Node
+## Returns the animation target node (JuiceBase's parent), or null.
+static var _editor_resolve_target: Callable
+
+## Editor-time host resolver. Injected by juice_plugin.gd at _enter_tree().
+## Signature: func(effect: Resource) -> Node
+## Returns the JuiceBase host node, or null.
+static var _editor_get_host: Callable
+
+# =============================================================================
 # CONFIGURATION
 # =============================================================================
 
