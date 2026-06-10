@@ -280,7 +280,10 @@ func _resolve_node(host: Node) -> Node:
 # JuiceEditorContext is the primary strategy — robust, works even when the
 # inspected resource is nested deeply inside a recipe.
 func _resolve_node_for_editor() -> Node:
-	var scene_root := EditorInterface.get_edited_scene_root()
+	var ei = Engine.get_singleton("EditorInterface")
+	if ei == null:
+		return null
+	var scene_root: Node = ei.get_edited_scene_root() as Node
 	if scene_root == null:
 		return null
 
@@ -289,7 +292,7 @@ func _resolve_node_for_editor() -> Node:
 	if context_host != null:
 		if node_path == NodePath():
 			return context_host
-		var resolved := context_host.get_node_or_null(node_path)
+		var resolved: Node = context_host.get_node_or_null(node_path)
 		if resolved != null:
 			return resolved
 
@@ -299,13 +302,13 @@ func _resolve_node_for_editor() -> Node:
 	if juice_node != null:
 		if node_path == NodePath():
 			return juice_node
-		var resolved := juice_node.get_node_or_null(node_path)
+		var resolved: Node = juice_node.get_node_or_null(node_path)
 		if resolved != null:
 			return resolved
 
 	# Strategy 3: Absolute NodePath resolved from scene root.
 	if node_path != NodePath():
-		var resolved := scene_root.get_node_or_null(node_path)
+		var resolved: Node = scene_root.get_node_or_null(node_path)
 		if resolved != null:
 			return resolved
 
@@ -314,7 +317,10 @@ func _resolve_node_for_editor() -> Node:
 
 # Walk the editor selection to find a JuiceBase node.
 func _find_juice_base_from_selection() -> Node:
-	var selection := EditorInterface.get_selection()
+	var ei = Engine.get_singleton("EditorInterface")
+	if ei == null:
+		return null
+	var selection = ei.get_selection()
 	for selected in selection.get_selected_nodes():
 		if selected is JuiceBase:
 			return selected
