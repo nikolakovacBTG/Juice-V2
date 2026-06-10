@@ -87,8 +87,12 @@ var from: int = SwitchFrom.THIS_SCENE:
 var switch_from_path: NodePath = NodePath()
 ## Path to the container node whose first child will be replaced when Switch From is First Scene In Container.
 var container_path: NodePath = NodePath()
-## The target PackedScene to load for Switch Scene or Overlay Scene actions.
-var to: PackedScene = null
+# --- Target scene (UID + path, NO ext_resource) ---
+# Stored as UID + path strings to avoid ext_resource circular dependencies.
+# Inspector shows a PackedScene drag-drop slot (EDITOR only), but saves as strings (STORAGE only).
+# Self-heals on save: if file was moved, UID resolves to new path automatically.
+var _to_scene_path: String = ""
+var _to_scene_uid: String = ""
 ## What happens to the old scene after switching: Free (destroy), Hide (keep invisible), or Remove From Tree (detach).
 var old_scene_post_switch_action: int = OldScenePostSwitchAction.FREE
 
@@ -182,9 +186,15 @@ func _get_property_list() -> Array[Dictionary]:
 				"usage": PROPERTY_USAGE_DEFAULT})
 
 	if action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE:
+		# Inspector: PackedScene drag-drop slot (NOT saved — avoids ext_resource circular deps)
 		props.append({"name": "to", "type": TYPE_OBJECT,
 			"hint": PROPERTY_HINT_RESOURCE_TYPE, "hint_string": "PackedScene",
-			"usage": PROPERTY_USAGE_DEFAULT})
+			"usage": PROPERTY_USAGE_EDITOR})
+	# Storage: plain strings (always saved, never visible in inspector)
+	props.append({"name": "_to_scene_path", "type": TYPE_STRING,
+		"usage": PROPERTY_USAGE_STORAGE})
+	props.append({"name": "_to_scene_uid", "type": TYPE_STRING,
+		"usage": PROPERTY_USAGE_STORAGE})
 
 	if action == SceneAction.SWITCH_SCENE and from != SwitchFrom.THIS_SCENE:
 		props.append({"name": "old_scene_post_switch_action", "type": TYPE_INT,
@@ -274,7 +284,17 @@ func _set(property: StringName, value: Variant) -> bool:
 		&"from": from = value; return true
 		&"switch_from_path": switch_from_path = value; return true
 		&"container_path": container_path = value; return true
-		&"to": to = value; return true
+		&"to":
+			if value is PackedScene:
+				_to_scene_path = value.resource_path
+				var uid := ResourceLoader.get_resource_uid(value.resource_path)
+				_to_scene_uid = ResourceUID.id_to_text(uid) if uid != ResourceUID.INVALID_ID else ""
+			elif value == null:
+				_to_scene_path = ""
+				_to_scene_uid = ""
+			return true
+		&"_to_scene_path": _to_scene_path = value; return true
+		&"_to_scene_uid": _to_scene_uid = value; return true
 		&"old_scene_post_switch_action": old_scene_post_switch_action = value; return true
 		&"overlay_canvas_layer": overlay_canvas_layer = value; return true
 		&"use_time_effect": use_time_effect = value; return true
@@ -300,7 +320,15 @@ func _get(property: StringName) -> Variant:
 		&"from": return from
 		&"switch_from_path": return switch_from_path
 		&"container_path": return container_path
-		&"to": return to
+		&"to":
+			var path := _resolve_scene_path()
+			if path.is_empty():
+				return null
+			if not ResourceLoader.exists(path):
+				return null
+			return load(path)
+		&"_to_scene_path": return _resolve_scene_path()
+		&"_to_scene_uid": return _to_scene_uid
 		&"old_scene_post_switch_action": return old_scene_post_switch_action
 		&"overlay_canvas_layer": return overlay_canvas_layer
 		&"use_time_effect": return use_time_effect
@@ -357,7 +385,7 @@ func _on_animate_start(target: Node) -> void:
 	# --- Copy scene action config ---
 	orchestrator.scene_action = action
 	orchestrator.switch_from_mode = from
-	orchestrator.target_scene = to
+	orchestrator.target_scene_path = _resolve_scene_path()
 	orchestrator.old_scene_post_switch_action = old_scene_post_switch_action
 
 	# --- Resolve node references ---
@@ -442,9 +470,12 @@ func _supports_editor_preview() -> bool:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 
-	if (action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE) \
-			and to == null:
-		warnings.append("To scene is not set. No scene will be loaded.")
+	if (action == SceneAction.SWITCH_SCENE or action == SceneAction.OVERLAY_SCENE):
+		var resolved := _resolve_scene_path()
+		if resolved.is_empty():
+			warnings.append("To scene is not set. No scene will be loaded.")
+		elif not ResourceLoader.exists(resolved):
+			warnings.append("Target scene not found: %s" % resolved)
 
 	if action == SceneAction.SWITCH_SCENE and from == SwitchFrom.SCENE_IN_TREE:
 		if switch_from_path.is_empty():
@@ -463,6 +494,19 @@ func _get_configuration_warnings() -> PackedStringArray:
 # =============================================================================
 # HELPERS
 # =============================================================================
+
+# Self-healing scene path resolver. Uses UID as primary (survives file moves),
+# falls back to stored path. Auto-heals _to_scene_path on mismatch so the next
+# save writes the correct path to disk.
+func _resolve_scene_path() -> String:
+	if not _to_scene_uid.is_empty():
+		var uid_id := ResourceUID.text_to_id(_to_scene_uid)
+		if uid_id != ResourceUID.INVALID_ID and ResourceUID.has_id(uid_id):
+			var current := ResourceUID.get_id_path(uid_id)
+			if not current.is_empty() and current != _to_scene_path:
+				_to_scene_path = current  # Silently healed
+			return _to_scene_path if not _to_scene_path.is_empty() else current
+	return _to_scene_path
 
 # Returns true if the current action config destroys the host scene.
 func _is_destructive_action() -> bool:

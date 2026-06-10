@@ -65,7 +65,7 @@ static var _active_overlay_orchestrator: Node = null
 # --- Scene action ---
 var scene_action: int = SceneAction.SWITCH_SCENE
 var switch_from_mode: int = SwitchFrom.THIS_SCENE
-var target_scene: PackedScene = null
+var target_scene_path: String = ""
 var old_scene_post_switch_action: int = OldScenePostSwitchAction.FREE
 
 # --- Resolved node references (resolved by effect before spawn) ---
@@ -198,16 +198,18 @@ func _execute_destructive_action() -> void:
 func _perform_direct_action() -> void:
 	match scene_action:
 		SceneAction.SWITCH_SCENE:
-			if target_scene == null:
+			if target_scene_path.is_empty():
 				JuiceLogger.warn(self, "SceneAction",
-					"cannot switch — target_scene is null", debug_enabled)
+					"cannot switch — target_scene_path is empty", debug_enabled)
 				return
-			var loaded: PackedScene = _get_async_loaded(target_scene.resource_path)
+			var loaded: PackedScene = _resolve_target_scene()
 			if loaded == null:
-				loaded = target_scene
+				JuiceLogger.warn(self, "SceneAction",
+					"cannot switch — failed to load: %s" % target_scene_path, debug_enabled)
+				return
 			get_tree().change_scene_to_packed(loaded)
 			JuiceLogger.log_info(self, "SceneAction",
-					"scene switched to: %s" % target_scene.resource_path,
+					"scene switched to: %s" % target_scene_path,
 					debug_enabled)
 
 		SceneAction.RELOAD_SCENE:
@@ -230,8 +232,8 @@ func _execute_overlay_transition() -> void:
 	var my_gen := _generation
 
 	# Phase 1: Start async loading (SWITCH_SCENE only)
-	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
-		_start_async_load(target_scene.resource_path)
+	if scene_action == SceneAction.SWITCH_SCENE and not target_scene_path.is_empty():
+		_start_async_load(target_scene_path)
 
 	# Phase 2: Cover
 	var juice_node := await _create_overlay_juice_cover()
@@ -255,8 +257,8 @@ func _execute_overlay_transition() -> void:
 				"hold complete (%.2fs)" % hold_duration, debug_enabled)
 
 	# Phase 4: Ensure async load is ready
-	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
-		await _await_async_load(target_scene.resource_path)
+	if scene_action == SceneAction.SWITCH_SCENE and not target_scene_path.is_empty():
+		await _await_async_load(target_scene_path)
 
 	# Phase 5: Execute the scene action
 	_emit_action_executed()
@@ -303,8 +305,8 @@ func _execute_scene_transition() -> void:
 		return
 
 	# Phase 1: Start async loading
-	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
-		_start_async_load(target_scene.resource_path)
+	if scene_action == SceneAction.SWITCH_SCENE and not target_scene_path.is_empty():
+		_start_async_load(target_scene_path)
 
 	# Phase 2: Instance transition scene on CanvasLayer
 	_transition_canvas = CanvasLayer.new()
@@ -338,8 +340,8 @@ func _execute_scene_transition() -> void:
 		await get_tree().create_timer(hold_duration, true, false, true).timeout
 
 	# Phase 4: Ensure async load
-	if scene_action == SceneAction.SWITCH_SCENE and target_scene != null:
-		await _await_async_load(target_scene.resource_path)
+	if scene_action == SceneAction.SWITCH_SCENE and not target_scene_path.is_empty():
+		await _await_async_load(target_scene_path)
 
 	# Phase 5: Execute scene action
 	_emit_action_executed()
@@ -411,9 +413,9 @@ func _execute_child_swap() -> void:
 			return
 		from_scene = container_node.get_child(0)
 
-	if target_scene == null:
+	if target_scene_path.is_empty():
 		JuiceLogger.warn(self, "SceneAction",
-				"cannot swap — target_scene is null", debug_enabled)
+				"cannot swap — target_scene_path is empty", debug_enabled)
 		_emit_completed()
 		_self_destruct()
 		return
@@ -444,7 +446,14 @@ func _execute_child_swap() -> void:
 			_removed_nodes[from_scene.name] = from_scene
 
 	# Phase 4: Instance new scene at same position
-	var new_instance := target_scene.instantiate()
+	var target_packed := _resolve_target_scene()
+	if target_packed == null:
+		JuiceLogger.warn(self, "SceneAction",
+				"cannot swap — failed to load: %s" % target_scene_path, debug_enabled)
+		_emit_completed()
+		_self_destruct()
+		return
+	var new_instance := target_packed.instantiate()
 	parent.add_child(new_instance)
 	parent.move_child(new_instance, child_index)
 
@@ -482,9 +491,9 @@ func _show_overlay() -> void:
 		await _play_overlay_cover()
 
 	# Phase 2: Instance overlay on CanvasLayer
-	if target_scene == null:
+	if target_scene_path.is_empty():
 		JuiceLogger.warn(self, "SceneAction",
-				"cannot overlay — target_scene is null", debug_enabled)
+				"cannot overlay — target_scene_path is empty", debug_enabled)
 		_emit_completed()
 		_self_destruct()
 		return
@@ -495,7 +504,15 @@ func _show_overlay() -> void:
 	_active_canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().root.add_child(_active_canvas_layer)
 
-	_active_overlay_instance = target_scene.instantiate()
+	var target_packed := _resolve_target_scene()
+	if target_packed == null:
+		JuiceLogger.warn(self, "SceneAction",
+				"cannot overlay — failed to load: %s" % target_scene_path, debug_enabled)
+		_emit_completed()
+		_self_destruct()
+		return
+
+	_active_overlay_instance = target_packed.instantiate()
 	_active_overlay_instance.process_mode = Node.PROCESS_MODE_ALWAYS
 	_active_canvas_layer.add_child(_active_overlay_instance)
 
@@ -778,6 +795,25 @@ func _create_time_juice_node() -> void:
 	JuiceLogger.log_info(self, "SceneAction",
 			"time juice node created (mode=%d)" % time_mode,
 			debug_enabled)
+
+
+
+# =============================================================================
+# TARGET SCENE RESOLUTION
+# =============================================================================
+
+# Resolves target_scene_path to a PackedScene. Prefers async-loaded (zero hitch),
+# falls back to sync load() if async wasn't started or failed.
+func _resolve_target_scene() -> PackedScene:
+	if target_scene_path.is_empty():
+		return null
+	var loaded := _get_async_loaded(target_scene_path)
+	if loaded != null:
+		return loaded
+	# Sync fallback — only if async wasn't started or failed
+	if ResourceLoader.exists(target_scene_path):
+		return load(target_scene_path) as PackedScene
+	return null
 
 
 # =============================================================================
