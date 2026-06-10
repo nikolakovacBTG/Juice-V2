@@ -197,6 +197,28 @@ func get_target_warnings() -> Array[String]:
 
 
 # =============================================================================
+# EDITOR CALLABLE HOOK
+# =============================================================================
+
+## Editor-time node resolver. Injected by juice_plugin.gd at _enter_tree().
+## Signature: func(pt: PropertyTarget) -> Node
+## Returns the resolved target Node for this PropertyTarget, or null.
+## At runtime (export builds) this Callable is never set — _resolve_node_for_editor()
+## returns null, which is correct (editor resolution is not needed at runtime).
+static var _editor_node_resolver: Callable
+
+## Editor-time target resolver for InterpolatePropertyTarget.
+## Signature: func(res: Resource) -> Node
+## Returns the animation target (JuiceBase's parent), or null.
+static var _editor_target_resolver: Callable
+
+## Editor-time host resolver for InterpolatePropertyTarget.
+## Signature: func(res: Resource) -> Node
+## Returns the JuiceBase host node, or null.
+static var _editor_host_resolver: Callable
+
+
+# =============================================================================
 # TYPE DETECTION (editor-time only)
 # =============================================================================
 
@@ -277,56 +299,13 @@ func _resolve_node(host: Node) -> Node:
 
 
 # Editor-time node resolution.
-# JuiceEditorContext is the primary strategy — robust, works even when the
-# inspected resource is nested deeply inside a recipe.
+# Dispatches to PropertyTargetEditorHelper via static Callable hook.
+# The helper is injected by juice_plugin.gd and lives in Editor/ where
+# EditorInterface and JuiceEditorContext can be safely referenced.
+# Returns null in export builds (Callable never set).
 func _resolve_node_for_editor() -> Node:
-	var ei = Engine.get_singleton("EditorInterface")
-	if ei == null:
-		return null
-	var scene_root: Node = ei.get_edited_scene_root() as Node
-	if scene_root == null:
-		return null
-
-	# Strategy 1: JuiceEditorContext robust discovery.
-	var context_host: Node = JuiceEditorContext.get_host_node(self)
-	if context_host != null:
-		if node_path == NodePath():
-			return context_host
-		var resolved: Node = context_host.get_node_or_null(node_path)
-		if resolved != null:
-			return resolved
-
-	# Strategy 2: Editor selection fallback (less reliable — user may have
-	# selected a different node since last click).
-	var juice_node: Node = _find_juice_base_from_selection()
-	if juice_node != null:
-		if node_path == NodePath():
-			return juice_node
-		var resolved: Node = juice_node.get_node_or_null(node_path)
-		if resolved != null:
-			return resolved
-
-	# Strategy 3: Absolute NodePath resolved from scene root.
-	if node_path != NodePath():
-		var resolved: Node = scene_root.get_node_or_null(node_path)
-		if resolved != null:
-			return resolved
-
-	return scene_root
-
-
-# Walk the editor selection to find a JuiceBase node.
-func _find_juice_base_from_selection() -> Node:
-	var ei = Engine.get_singleton("EditorInterface")
-	if ei == null:
-		return null
-	var selection = ei.get_selection()
-	for selected in selection.get_selected_nodes():
-		if selected is JuiceBase:
-			return selected
-		for child in selected.get_children():
-			if child is JuiceBase:
-				return child
+	if _editor_node_resolver.is_valid():
+		return _editor_node_resolver.call(self)
 	return null
 
 

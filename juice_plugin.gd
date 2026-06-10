@@ -91,6 +91,13 @@ func _enter_tree() -> void:
 	_array_inspector_plugin = ArrayInspectorPluginScript.new()
 	add_inspector_plugin(_array_inspector_plugin)
 
+	# Wire PropertyTarget editor hooks — bridges runtime Resources to editor-only
+	# resolution logic without creating parse-time class dependencies.
+	# See editor-singleton-safety.md rule for architectural rationale.
+	PropertyTarget._editor_node_resolver = PropertyTargetEditorHelper.resolve_node_for_target
+	PropertyTarget._editor_target_resolver = PropertyTargetEditorHelper.resolve_editor_target_for_interpolate
+	PropertyTarget._editor_host_resolver = PropertyTargetEditorHelper.get_host_node_for_resource
+
 	# Build transport UI and director
 	_build_ui()
 	_setup_director()
@@ -155,6 +162,12 @@ func _exit_tree() -> void:
 		_director.deselect()
 		_director.queue_free()
 		_director = null
+
+	# Clear PropertyTarget editor hooks so stale Callables don't reference
+	# freed helper instances after plugin teardown.
+	PropertyTarget._editor_node_resolver = Callable()
+	PropertyTarget._editor_target_resolver = Callable()
+	PropertyTarget._editor_host_resolver = Callable()
 
 
 # =============================================================================

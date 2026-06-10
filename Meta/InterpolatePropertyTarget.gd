@@ -495,15 +495,16 @@ func capture_editor_values(target: Node, juice_node: Node = null) -> void:
 
 
 # Called from the from_capture_at / to_capture_at setters when the user selects
-# IN_EDITOR in the inspector. Resolves the target node via JuiceEditorContext
-# so the cache is populated immediately — no Ctrl+S required.
+# IN_EDITOR in the inspector. Resolves the target node and host via Callable
+# hooks injected by juice_plugin.gd — avoids importing editor-only classes.
 func _capture_editor_from_setter() -> void:
-	var target := JuiceEditorContext.resolve_editor_target(self)
+	if not _editor_target_resolver.is_valid() or not _editor_host_resolver.is_valid():
+		return
+	var target: Node = _editor_target_resolver.call(self)
 	if target == null:
 		return
-	# JuiceEditorContext maps this resource to its JuiceBase host; we need the
-	# host to resolve cross-node node_path correctly.
-	var host := JuiceEditorContext.get_host_node(self)
+	# The host is needed to resolve cross-node node_path correctly.
+	var host: Node = _editor_host_resolver.call(self)
 	capture_editor_values(target, host)
 
 
